@@ -73,6 +73,9 @@ in
     hyprpaper
     grim
     slurp
+    libappindicator-gtk3
+    bluez
+    blueman
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
