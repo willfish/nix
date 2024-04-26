@@ -4,7 +4,6 @@ let
   aliases = {
     ag = "rg";
     cd = "z";
-    cdr = "cd ~/Repositories";
     mux = "tmuxinator";
     tm = "tmux";
     a = "tmux attach";
@@ -18,6 +17,7 @@ let
     ag = "rg";
     cd = "z";
     cdr = "cd ~/Repositories";
+    hm = "cd ~/Repositories/hmrc";
     mux = "tmuxinator";
     tm = "tmux";
     a = "tmux attach";
@@ -35,18 +35,19 @@ in
 {
   home.username = "william";
   home.homeDirectory = "/home/william";
-
-  home.stateVersion = "23.11"; # Please read the comment before changing.
+  home.stateVersion = "23.11";
 
   home.packages = with pkgs; [
     asdf-vm
     bat
+    bat
     delta
     fd
     firefox
+    fzf
     gh
     gnumake
-    golangci-lint 
+    golangci-lint
     hclfmt
     kitty
     lsof
@@ -54,17 +55,19 @@ in
     neofetch
     nodejs
     pre-commit
+    python3
     ripgrep
+    rust-analyzer
     shellharden
     shfmt
     telegram-desktop
     tmux
     tmuxinator
+    tree
     xclip
     yarn
     zip
     zoxide
-    python3
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -107,8 +110,11 @@ in
     shellAliases = aliases;
     shellAbbrs = abbreviations;
     shellInit = ''
-      # source (${pkgs.asdf}/asdf.fish)
+      source ${pkgs.asdf-vm}/share/asdf-vm/asdf.fish
     '';
+    plugins = with pkgs.fishermanPackages; [
+      { name = "tide"; src = pkgs.fishPlugins.tide.src; }
+    ];
   };
 
   programs.zoxide.enable = true;
@@ -118,9 +124,8 @@ in
   programs.tmux = {
     enable = true;
     plugins = with pkgs.tmuxPlugins; [
-      vim-tmux-navigator
-      sensible 
-      nord 
+      sensible
+      nord
       resurrect
       yank
       tmux-thumbs
@@ -205,7 +210,7 @@ in
     extraConfig = (builtins.readFile ./kitty/kitty.conf);
   };
 
-  programs.neovim = 
+  programs.neovim =
   let
     toLua = str: "lua << EOF\n${str}\nEOF\n";
     toLuaFile = file: "luafile " + file;
@@ -216,7 +221,11 @@ in
     withPython3 = true;
     withNodeJs = true;
     defaultEditor = true;
-    extra_config = toLuaFile ./nvim/opts.lua;
+    extraConfig = ''
+      ${toLuaFile ./nvim/opts.lua}
+      ${toLuaFile ./nvim/autocmds.lua}
+      ${toLuaFile ./nvim/maps.lua}
+    '';
     plugins = with pkgs.vimPlugins;[
       {
         plugin = rose-pine;
@@ -228,6 +237,7 @@ in
       nvim-lspconfig
       neodev-nvim
       mason-nvim
+      mason-lspconfig-nvim
       neodev-nvim
       {
         plugin = nvim-cmp;
@@ -243,7 +253,7 @@ in
       cmp-nvim-ultisnips
       copilot-vim
       vim-snippets
-      { 
+      {
         plugin = telescope-nvim;
         config = toLuaFile ./nvim/telescope.lua;
       }
@@ -317,11 +327,12 @@ in
       quickfix-reflector-vim
       vim-commentary
       vim-unimpaired
-      { 
+      {
         plugin = vim-tmux-navigator;
         config = toLuaFile ./nvim/vim-tmux-navigator.lua;
       }
       vim-tmux
     ];
   };
+  programs.fzf.enable = true;
 }

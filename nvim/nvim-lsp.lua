@@ -164,6 +164,7 @@ require("lsp-setup").setup(
             ["clangd"] = {},
             ["awk_ls"] = {},
             ["marksman"] = {},
+            ["nil"] = {},
         }
     }
 )

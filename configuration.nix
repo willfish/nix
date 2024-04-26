@@ -45,6 +45,8 @@
   # Enable the GNOME Desktop Environment.
   services.xserver.displayManager.gdm.enable = true;
   services.xserver.desktopManager.gnome.enable = true;
+  programs.hyprland.enable = true;
+
 
   # Configure keymap in X11
   services.xserver = {
@@ -153,4 +155,14 @@
 
   # programs.hyprland.enable = true;
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  fonts = {
+    packages = with pkgs; [
+      jetbrains-mono
+      nerdfonts
+    ];
+    fontconfig = {
+      enable = true;
+    };
+  };
 }
