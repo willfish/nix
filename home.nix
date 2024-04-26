@@ -226,6 +226,11 @@ in
 
   programs.tmux.tmuxinator.enable = true;
 
+  programs.kitty = {
+    enable = true;
+    extraConfig = (builtins.readFile ./kitty/kitty.conf);
+  };
+
   programs.neovim = 
   let
     toLua = str: "lua << EOF\n${str}\nEOF\n";
