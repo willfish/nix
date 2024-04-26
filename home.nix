@@ -64,20 +64,8 @@ in
     yarn
     zip
     zoxide
+    python3
   ];
-
-  # Add node packages
-  # home.nodejs = {
-  #   version = "21.7.3";
-  #   packages = with pkgs.nodePackages; [
-  #     typescript
-  #     yarn
-  #     prettier
-  #     eslint
-  #     stylelint
-  #     markdownlint-cli
-  #   ];
-  # };
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
@@ -239,6 +227,7 @@ in
   {
     enable = true;
     withRuby = true;
+    withPython3 = true;
     withNodeJs = true;
     defaultEditor = true;
 
