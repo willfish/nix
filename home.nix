@@ -64,20 +64,8 @@ in
     yarn
     zip
     zoxide
+    python3
   ];
-
-  # Add node packages
-  # home.nodejs = {
-  #   version = "21.7.3";
-  #   packages = with pkgs.nodePackages; [
-  #     typescript
-  #     yarn
-  #     prettier
-  #     eslint
-  #     stylelint
-  #     markdownlint-cli
-  #   ];
-  # };
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
@@ -118,23 +106,9 @@ in
     enable = true;
     shellAliases = aliases;
     shellAbbrs = abbreviations;
-    # plugins = with pkgs.fishermanPackages; [
-    #   bass
-    #   fzf
-    #   fzf_key_bindings
-    #   fzf_files
-    #   fzf_git
-    #   fzf_history
-    #   fzf_process
-    #   fzf_pure
-    #   fzf_ssh
-    #   fzf_url
-    #   fzf_vim
-    #   fzf_z
-    #   fzf_zoxide
-    #   fzf_fd
-    #   fzf_gh
-    # ];
+    shellInit = ''
+      # source (${pkgs.asdf}/asdf.fish)
+    '';
   };
 
   programs.zoxide.enable = true;
@@ -226,6 +200,11 @@ in
 
   programs.tmux.tmuxinator.enable = true;
 
+  programs.kitty = {
+    enable = true;
+    extraConfig = (builtins.readFile ./kitty/kitty.conf);
+  };
+
   programs.neovim = 
   let
     toLua = str: "lua << EOF\n${str}\nEOF\n";
@@ -234,9 +213,10 @@ in
   {
     enable = true;
     withRuby = true;
+    withPython3 = true;
     withNodeJs = true;
     defaultEditor = true;
-
+    extra_config = toLuaFile ./nvim/opts.lua;
     plugins = with pkgs.vimPlugins;[
       {
         plugin = rose-pine;
