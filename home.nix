@@ -68,6 +68,11 @@ in
     yarn
     zip
     zoxide
+    wofi
+    pcmanfm
+    hyprpaper
+    grim
+    slurp
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -95,6 +100,7 @@ in
     PAGER = "less --raw-control-chars -F -X";
     RUBYOPT = "--enable-yjit";
     fish_greeting = "";
+    GDK_BACKEND= "x11 zoom";
   };
 
   # Let Home Manager install and manage itself.
@@ -335,4 +341,5 @@ in
     ];
   };
   programs.fzf.enable = true;
+  programs.waybar.enable = true;
 }
