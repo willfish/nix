@@ -44,7 +44,6 @@
 
   # Enable the GNOME Desktop Environment.
   services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome.enable = true;
   programs.hyprland.enable = true;
 
 
@@ -98,10 +97,18 @@
     ];
   };
 
+  services.blueman.enable = true;
+
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+
   programs.gnupg.agent = {
     enable = true;
     enableSSHSupport = true;
   };
+
   virtualisation.docker.enable = true;
 
   # Allow unfree packages
@@ -160,6 +167,7 @@
     packages = with pkgs; [
       jetbrains-mono
       nerdfonts
+      font-awesome
     ];
     fontconfig = {
       enable = true;
