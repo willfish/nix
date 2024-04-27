@@ -17,4 +17,3 @@ vim.api.nvim_set_keymap("n", "<leader>nf", ":NvimTreeFindFile<CR>", default_map_
 
 vim.g.loaded = 1
 vim.g.loaded_netrwPlugin = 1
-
