@@ -27,8 +27,8 @@ let
     sk = "bundle exec sidekiq";
     t = "bundle exec rspec --format p";
     tg = "terragrunt";
-    pbcopy = "xclip -selection clipboard";
-    pbpaste = "xclip -selection clipboard -o";
+    pbcopy = "wl-copy";
+    pbpaste = "wl-paste";
     g = "git";
   };
 in
@@ -58,21 +58,47 @@ in
     python3
     ripgrep
     rust-analyzer
+    unzip
     shellharden
     shfmt
     telegram-desktop
     tmux
     tmuxinator
     tree
-    xclip
     yarn
     zip
     zoxide
     wofi
     pcmanfm
     hyprpaper
+    pywal
+    pyprland
+    wezterm
+    pavucontrol
     grim
     slurp
+    libappindicator-gtk3
+    awscli
+    pavucontrol
+
+    # wayland clipboard tooling
+    wl-clipboard
+    wl-clipboard-x11
+
+    # Build tools
+    bison
+    flex
+    fontforge
+    makeWrapper
+    pkg-config
+    gnumake
+    gcc
+    libiconv
+    autoconf
+    automake
+    libtool
+    openssl
+    network-manager-applet
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -109,6 +135,9 @@ in
   programs.bash = {
     enable = true;
     shellAliases = aliases;
+    initExtra = ''
+      source ${pkgs.asdf-vm}/share/asdf-vm/asdf.sh
+    '';
   };
 
   programs.fish = {
@@ -143,13 +172,9 @@ in
     enable = true;
     userName = "William Fish";
     userEmail = "william.michael.fish@gmail.com";
-    delta = {
-      enable = true;
-    };
+    delta.enable = true;
     extraConfig = {
-      core = {
-        editor = "nvim";
-      };
+      core.editor = "nvim";
       delta = {
         navigate = true;
         light = false;
@@ -160,9 +185,7 @@ in
         name = "William Fish";
         email = "william.michael.fish@gmail.com";
       };
-      push = {
-        default = "simple";
-      };
+      push.default = "simple";
       alias = {
         add = "git add -p";
         branches = "for-each-ref --sort=-committerdate --format=\"%(color:blue)%(authordate:relative)\t%(color:red)%(authorname)\t%(color:white)%(color:bold)%(refname:short)\" refs/remotes";
@@ -171,9 +194,7 @@ in
         cmm = "!git checkout master && git cleanupmaster";
         cm = "!git checkout main && git cleanup";
       };
-      help = {
-        autocorrect = 1;
-      };
+      help.autocorrect = 1;
       filter = {
         lfs = {
           clean = "git-lfs clean -- %f";
@@ -240,10 +261,21 @@ in
           colorscheme rose-pine
         '';
       }
-      nvim-lspconfig
+      {
+        plugin = nvim-lspconfig;
+        # config = toLuaFile ./nvim/nvim-lsp.lua;
+      }
       neodev-nvim
       mason-nvim
       mason-lspconfig-nvim
+      # {
+      #   src = pkgs.fetchFromGitHub {
+      #     owner = "williamboman";
+      #     repo = "nvim-lsp-installer";
+      #     rev = "main";
+      #     sha256 = "";
+      #   };
+      # }
       neodev-nvim
       {
         plugin = nvim-cmp;
@@ -341,5 +373,85 @@ in
     ];
   };
   programs.fzf.enable = true;
-  programs.waybar.enable = true;
+
+  programs.waybar = {
+    enable = true;
+    systemd.enable = true;
+    style = ''
+      ${builtins.readFile "${pkgs.waybar}/etc/xdg/waybar/style.css"}
+
+      window#waybar {
+        background: transparent;
+        border-bottom: none;
+      }
+    '';
+    settings = [{
+      height = 30;
+      layer = "top";
+      position = "top";
+      tray = { spacing = 10; };
+      modules-left = [ "hyprland/workspaces" ];
+      modules-center = [ "hyprland/window" ];
+      modules-right = [
+        "pulseaudio"
+        "network"
+        "cpu"
+        "memory"
+        "temperature"
+        "clock"
+        "tray"
+      ];
+      battery = {
+        format = "{capacity}% {icon}";
+        format-alt = "{time} {icon}";
+        format-charging = "{capacity}% ";
+        format-icons = [ "" "" "" "" "" ];
+        format-plugged = "{capacity}% ";
+        states = {
+          critical = 15;
+          warning = 30;
+        };
+      };
+      clock = {
+        format-alt = "{:%Y-%m-%d}";
+        tooltip-format = "{:%Y-%m-%d | %H:%M}";
+      };
+      cpu = {
+        format = "{usage}% ";
+        tooltip = false;
+      };
+      memory = { format = "{}% "; };
+      network = {
+        interval = 1;
+        format-alt = "{ifname}: {ipaddr}/{cidr}";
+        format-disconnected = "Disconnected ⚠";
+        format-ethernet = "{ifname}: {ipaddr}/{cidr}   up: {bandwidthUpBits} down: {bandwidthDownBits}";
+        format-linked = "{ifname} (No IP) ";
+        format-wifi = "{essid} ({signalStrength}%) ";
+      };
+      pulseaudio = {
+        format = "{volume}% {icon} {format_source}";
+        format-bluetooth = "{volume}% {icon} {format_source}";
+        format-bluetooth-muted = " {icon} {format_source}";
+        format-icons = {
+          car = "";
+          default = [ "" "" "" ];
+          handsfree = "";
+          headphones = "";
+          headset = "";
+          phone = "";
+          portable = "";
+        };
+        format-muted = " {format_source}";
+        format-source = "{volume}% ";
+        format-source-muted = "";
+        on-click = "pavucontrol";
+      };
+      temperature = {
+        critical-threshold = 80;
+        format = "{temperatureC}°C {icon}";
+        format-icons = [ "" "" "" ];
+      };
+    }];
+  };
 }

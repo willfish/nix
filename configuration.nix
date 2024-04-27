@@ -39,14 +39,9 @@
     LC_TIME = "en_GB.UTF-8";
   };
 
-  # Enable the X11 windowing system.
   services.xserver.enable = true;
-
-  # Enable the GNOME Desktop Environment.
   services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome.enable = true;
   programs.hyprland.enable = true;
-
 
   # Configure keymap in X11
   services.xserver = {
@@ -98,10 +93,18 @@
     ];
   };
 
+  services.blueman.enable = true;
+
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+
   programs.gnupg.agent = {
     enable = true;
     enableSSHSupport = true;
   };
+
   virtualisation.docker.enable = true;
 
   # Allow unfree packages
@@ -111,11 +114,18 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     vim
+    neovim
     wget
     curl
     jq
     strace
     git
+    gnumake
+    unzip
+    zip
+    libappindicator-gtk3
+    tree
+    lsof
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;
@@ -160,6 +170,7 @@
     packages = with pkgs; [
       jetbrains-mono
       nerdfonts
+      font-awesome
     ];
     fontconfig = {
       enable = true;
