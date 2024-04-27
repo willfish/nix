@@ -114,11 +114,18 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     vim
+    neovim
     wget
     curl
     jq
     strace
     git
+    gnumake
+    unzip
+    zip
+    libappindicator-gtk3
+    tree
+    lsof
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;

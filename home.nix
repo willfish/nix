@@ -58,13 +58,13 @@ in
     python3
     ripgrep
     rust-analyzer
+    unzip
     shellharden
     shfmt
     telegram-desktop
     tmux
     tmuxinator
     tree
-    # xclip - only for x11
     yarn
     zip
     zoxide
@@ -79,6 +79,7 @@ in
     slurp
     libappindicator-gtk3
     awscli
+    pavucontrol
 
     # wayland clipboard tooling
     wl-clipboard
@@ -97,6 +98,7 @@ in
     automake
     libtool
     openssl
+    network-manager-applet
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -170,13 +172,9 @@ in
     enable = true;
     userName = "William Fish";
     userEmail = "william.michael.fish@gmail.com";
-    delta = {
-      enable = true;
-    };
+    delta.enable = true;
     extraConfig = {
-      core = {
-        editor = "nvim";
-      };
+      core.editor = "nvim";
       delta = {
         navigate = true;
         light = false;
@@ -187,9 +185,7 @@ in
         name = "William Fish";
         email = "william.michael.fish@gmail.com";
       };
-      push = {
-        default = "simple";
-      };
+      push.default = "simple";
       alias = {
         add = "git add -p";
         branches = "for-each-ref --sort=-committerdate --format=\"%(color:blue)%(authordate:relative)\t%(color:red)%(authorname)\t%(color:white)%(color:bold)%(refname:short)\" refs/remotes";
@@ -198,9 +194,7 @@ in
         cmm = "!git checkout master && git cleanupmaster";
         cm = "!git checkout main && git cleanup";
       };
-      help = {
-        autocorrect = 1;
-      };
+      help.autocorrect = 1;
       filter = {
         lfs = {
           clean = "git-lfs clean -- %f";
