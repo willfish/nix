@@ -267,10 +267,21 @@ in
           colorscheme rose-pine
         '';
       }
-      nvim-lspconfig
+      {
+        plugin = nvim-lspconfig;
+        # config = toLuaFile ./nvim/nvim-lsp.lua;
+      }
       neodev-nvim
       mason-nvim
       mason-lspconfig-nvim
+      # {
+      #   src = pkgs.fetchFromGitHub {
+      #     owner = "williamboman";
+      #     repo = "nvim-lsp-installer";
+      #     rev = "main";
+      #     sha256 = "";
+      #   };
+      # }
       neodev-nvim
       {
         plugin = nvim-cmp;
