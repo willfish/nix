@@ -98,7 +98,6 @@ in
     automake
     libtool
     openssl
-    network-manager-applet
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -454,4 +453,6 @@ in
       };
     }];
   };
+
+  services.network-manager-applet.enable = true;
 }
