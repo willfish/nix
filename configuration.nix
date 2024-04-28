@@ -77,17 +77,13 @@
   users.users.william = {
     isNormalUser = true;
     description = "William Fish";
-    extraGroups = [ "networkmanager" "wheel" "docker" ];
+    extraGroups = [ "networkmanager" "wheel" "docker" "audio" "video" "libvirt" "input" "bluetooth" ];
     packages = with pkgs; [
-      zoom-us
-      slack
-      discord
-      spotify
-      steam
       docker
       docker-compose
       htop
     ];
+
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEodOKhGXEeHpinEPh5po/D+RTmLXPoMbdjtR2ESxGVi william@andromeda"
     ];
@@ -108,10 +104,9 @@
   virtualisation.docker.enable = true;
 
   # Allow unfree packages
-  nixpkgs.config.allowUnfree = true;
+  # nixpkgs.config.allowUnfree = true;
+  # unstable.config.allowUnfree = true;
 
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
   environment.systemPackages = with pkgs; [
     vim
     neovim
@@ -131,39 +126,14 @@
   users.defaultUserShell = pkgs.fish;
   programs.fish.enable = true;
 
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
-
-  # List services that you want to enable:
-
-  # Enable the OpenSSH daemon.
   services.openssh = {
     enable = true;
     settings.PasswordAuthentication = false;
     settings.KbdInteractiveAuthentication = false;
-    # settings.PermitRootLogin = "yes";
   };
 
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
+  system.stateVersion = "23.11";
 
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "23.11"; # Did you read the comment?
-
-  # programs.hyprland.enable = true;
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   fonts = {

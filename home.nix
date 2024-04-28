@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, pkgs-unstable, home-manager, ... }:
 
 let
   aliases = {
@@ -81,8 +81,9 @@ in
     libappindicator-gtk3
     awscli
     pavucontrol
+    ruff
 
-    # wayland clipboard tooling
+    # Wayland clipboard tooling
     wl-clipboard
     wl-clipboard-x11
 
@@ -99,6 +100,17 @@ in
     automake
     libtool
     openssl
+
+    # unfree
+    # For zoom
+    zoom-us
+    glxinfo
+    pulseaudioFull
+
+    slack
+    discord
+    spotify
+    steam
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -126,7 +138,7 @@ in
     PAGER = "less --raw-control-chars -F -X";
     RUBYOPT = "--enable-yjit";
     fish_greeting = "";
-    GDK_BACKEND= "x11 zoom";
+    XDG_CURRENT_DESKTOP = "gnome";
   };
 
   # Let Home Manager install and manage itself.
@@ -175,17 +187,22 @@ in
     delta.enable = true;
     extraConfig = {
       core.editor = "nvim";
+      # user.name = "William Fish";
+      # user.email = "william.michael.fish@gmail.com";
+      push.default = "simple";
+      help.autocorrect = 1;
+      github.user = "willfish";
+      web.browser = "firefox";
+      init.defaultBranch = "main";
+      merge.conflictstyle = "diff3";
+      diff.colorMoved = "default";
+
       delta = {
         navigate = true;
         light = false;
         features = "line-numbers decorations";
         theme = "Github";
       };
-      user = {
-        name = "William Fish";
-        email = "william.michael.fish@gmail.com";
-      };
-      push.default = "simple";
       alias = {
         add = "git add -p";
         branches = "for-each-ref --sort=-committerdate --format=\"%(color:blue)%(authordate:relative)\t%(color:red)%(authorname)\t%(color:white)%(color:bold)%(refname:short)\" refs/remotes";
@@ -194,7 +211,6 @@ in
         cmm = "!git checkout master && git cleanupmaster";
         cm = "!git checkout main && git cleanup";
       };
-      help.autocorrect = 1;
       filter = {
         lfs = {
           clean = "git-lfs clean -- %f";
@@ -203,15 +219,6 @@ in
           required = true;
         };
       };
-      github = {
-        user = "willfish";
-      };
-      web = {
-        browser = "firefox";
-      };
-      init = {
-        defaultBranch = "main";
-      };
       credential = {
         "https://github.com" = {
           helper = "!/usr/bin/gh auth git-credential";
@@ -219,12 +226,6 @@ in
         "https://gist.github.com" = {
           helper = "!/usr/bin/gh auth git-credential";
         };
-      };
-      merge = {
-        conflictstyle = "diff3";
-      };
-      diff = {
-        colorMoved = "default";
       };
     };
   };
@@ -291,6 +292,7 @@ in
       cmp-nvim-ultisnips
       copilot-vim
       vim-snippets
+      vim-polyglot
       {
         plugin = telescope-nvim;
         config = toLuaFile ./nvim/telescope.lua;
@@ -324,31 +326,13 @@ in
         p.tree-sitter-rust
         p.tree-sitter-fish
       ]))
-
       vim-nix
       vim-go
       nvim-treesitter-textsubjects
       nvim-treesitter-endwise
       vim-textobj-user
-      # {
-      #   src = pkgs.fetchFromGitHub {
-      #     owner = "tek";
-      #     repo = "vim-textobj-ruby";
-      #     rev = "master";
-      #     sha256 = "";
-      #   };
-      # }
       vim-indent-object
       vim-sort-motion
-      # {
-      #   src = pkgs.fetchFromGitHub {
-      #     owner = "Wansmer";
-      #     repo = "treesj";
-      #     rev = "main";
-      #     sha256 = "";
-      #   };
-      #   config = toLuaFile ./nvim/treesj.lua;
-      # }
       vim-sort-motion
       vim-matchup
       nvim-surround
@@ -370,6 +354,23 @@ in
         config = toLuaFile ./nvim/vim-tmux-navigator.lua;
       }
       vim-tmux
+      # {
+      #   src = pkgs.fetchFromGitHub {
+      #     owner = "tek";
+      #     repo = "vim-textobj-ruby";
+      #     rev = "master";
+      #     sha256 = "";
+      #   };
+      # }
+      # {
+      #   src = pkgs.fetchFromGitHub {
+      #     owner = "Wansmer";
+      #     repo = "treesj";
+      #     rev = "main";
+      #     sha256 = "";
+      #   };
+      #   config = toLuaFile ./nvim/treesj.lua;
+      # }
     ];
   };
   programs.fzf.enable = true;
