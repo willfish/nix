@@ -145,6 +145,27 @@
     glib
     gsettings-desktop-schemas
     nwg-look
+
+    bat
+    btop
+    eza
+    fzf
+    lm_sensors
+    libsForQt5.qt5.qtquickcontrols2
+    libsForQt5.qt5.qtgraphicaleffects
+    libsForQt5.qt5.qtsvg
+    neofetch
+    neovim
+    ripgrep
+    tldr
+    unzip
+    openssl
+    openssl.dev
+    pkg-config
+    xfce.thunar
+    xdg-desktop-portal-gtk
+    xdg-desktop-portal-wlr
+    zoxide
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;
