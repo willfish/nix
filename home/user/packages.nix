@@ -1,4 +1,3 @@
-
 { pkgs, pkgs-unstable, ... }:
 {
   home.packages = with pkgs; [
@@ -78,13 +77,24 @@
     zoom-us
     glxinfo
     pulseaudioFull
-
     slack
     discord
     spotify
     steam
+    pkgs.libreoffice-qt
 
     # libs
     zlib
+
+    # languages
+    pkgs.gcc
+    pkgs.go
+    pkgs.lua
+    pkgs.nodejs_21
+    pkgs.rustup
+
+    pkgs.catppuccin-cursors.macchiatoBlue
+    pkgs.catppuccin-gtk
+    pkgs.papirus-folders
   ];
 }

@@ -11,6 +11,9 @@ let
     vim = "nvim";
     vi = "nvim";
     vimdiff = "nvim -d";
+    system-rebuild = "sudo nixos-rebuild switch --flake ~/.dotfiles/";
+    home-rebuild = "home-manager switch --flake ~/.dotfiles/ -b backup";
+    full-rebuild = "sudo nixos-rebuild switch --flake ~/.dotfiles/ && home-manager switch --flake ~/.dotfiles/ -b backup";
   };
   abbreviations = {
     ag = "rg";

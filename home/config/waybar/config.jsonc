@@ -13,7 +13,6 @@
     "modules-right": [
         "tray",
         "custom/updates",
-        "hyprland/language",
         "pulseaudio",
         "pulseaudio#microphone",
         "clock",
@@ -30,12 +29,6 @@
         "persistent_workspaces": {
             "1": []
         }
-    },
-    "hyprland/language": {
-        "format": "{}",
-        "format-en": "US",
-        "format-ru": "RU",
-        "format-ka": "GE"
     },
    "custom/weather" : {
         "tooltip" : true,

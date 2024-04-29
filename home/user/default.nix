@@ -4,10 +4,10 @@
     ./nvim.nix
     ./config.nix
     ./tmux.nix
-    # ./gtk.nix
+    ./gtk.nix
     ./shells.nix
     ./packages.nix
     ./programs.nix
-    # ./environment.nix
+    ./environment.nix
   ];
 }
