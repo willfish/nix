@@ -190,7 +190,7 @@ in
       yank
       tmux-thumbs
     ];
-    extraConfig = (builtins.readFile ./tmux/tmux.conf);
+    extraConfig = (builtins.readFile ./config/tmux/tmux.conf);
   };
 
 
@@ -198,7 +198,7 @@ in
 
   programs.kitty = {
     enable = true;
-    extraConfig = (builtins.readFile ./kitty/kitty.conf);
+    extraConfig = (builtins.readFile ./config/kitty/kitty.conf);
   };
 
   programs.fzf.enable = true;

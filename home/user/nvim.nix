@@ -12,9 +12,9 @@
     withNodeJs = true;
     defaultEditor = true;
     extraConfig = ''
-      ${toLuaFile .config/nvim/opts.lua}
-      ${toLuaFile .config/nvim/autocmds.lua}
-      ${toLuaFile .config/nvim/maps.lua}
+      ${toLuaFile ../config/nvim/opts.lua}
+      ${toLuaFile ../config/nvim/autocmds.lua}
+      ${toLuaFile ../config/nvim/maps.lua}
     '';
     plugins = with pkgs.vimPlugins;[
       {
@@ -26,7 +26,7 @@
       }
       {
         plugin = nvim-lspconfig;
-        # config = toLuaFile .config/nvim/nvim-lsp.lua;
+        # config = toLuaFile ./config/nvim/nvim-lsp.lua;
       }
       neodev-nvim
       mason-nvim
@@ -34,7 +34,7 @@
       neodev-nvim
       {
         plugin = nvim-cmp;
-        config = toLuaFile .config/nvim/nvim-cmp.lua;
+        config = toLuaFile ../config/nvim/nvim-cmp.lua;
       }
       cmp_luasnip
       cmp-nvim-lsp
@@ -48,7 +48,7 @@
       vim-snippets
       {
         plugin = telescope-nvim;
-        config = toLuaFile .config/nvim/telescope.lua;
+        config = toLuaFile ../config/nvim/telescope.lua;
       }
       telescope-fzf-native-nvim
       telescope-github-nvim
@@ -58,11 +58,11 @@
       nvim-web-devicons
       {
         plugin = nvim-tree-lua;
-        config = toLuaFile .config/nvim/nvim-tree.lua;
+        config = toLuaFile ../config/nvim/nvim-tree.lua;
       }
       {
         plugin = null-ls-nvim;
-        config = toLuaFile .config/nvim/null-ls.lua;
+        config = toLuaFile ../config/nvim/null-ls.lua;
       }
       (nvim-treesitter.withPlugins (p: [
         p.tree-sitter-nix
@@ -92,7 +92,7 @@
       vim-dispatch
       {
         plugin = vim-test;
-        config = toLuaFile .config/nvim/vim-test.lua;
+        config = toLuaFile ../config/nvim/vim-test.lua;
       }
       vim-fugitive
       vim-rhubarb
@@ -101,7 +101,7 @@
       vim-unimpaired
       {
         plugin = vim-tmux-navigator;
-        config = toLuaFile .config/nvim/vim-tmux-navigator.lua;
+        config = toLuaFile ../config/nvim/vim-tmux-navigator.lua;
       }
       vim-tmux
     ];
