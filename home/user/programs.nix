@@ -7,7 +7,6 @@
         extensions = with inputs.firefox-addons.packages."x86_64-linux"; [
           bitwarden
           vimium
-          bypass-paywalls-clean
           i-dont-care-about-cookies
           to-google-translate
           view-image
