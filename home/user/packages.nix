@@ -21,7 +21,6 @@
     pre-commit
     python3
     ripgrep
-    rust-analyzer
     unzip
     shellharden
     shfmt
@@ -81,20 +80,21 @@
     discord
     spotify
     steam
-    pkgs.libreoffice-qt
+
+    libreoffice-qt
 
     # libs
     zlib
 
     # languages
-    pkgs.gcc
-    pkgs.go
-    pkgs.lua
-    pkgs.nodejs_21
-    pkgs.rustup
+    gcc
+    go
+    lua
+    nodejs_21
+    rustup
 
-    pkgs.catppuccin-cursors.macchiatoBlue
-    pkgs.catppuccin-gtk
-    pkgs.papirus-folders
+    catppuccin-cursors.macchiatoBlue
+    catppuccin-gtk
+    papirus-folders
   ];
 }

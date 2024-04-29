@@ -30,7 +30,6 @@
     XDG_CACHE_HOME = "\${HOME}/.cache";
     XDG_CONFIG_HOME = "\${HOME}/.config";
     XDG_CURRENT_DESKTOP = "Hyprland";
-    XDG_CURRENT_DESKTOP = "gnome";
     XDG_DATA_HOME = "\${HOME}/.local/share";
     XDG_SESSION_DESKTOP = "Hyprland";
     XDG_SESSION_TYPE = "wayland";
