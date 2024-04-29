@@ -140,6 +140,11 @@
     wl-clipboard
     wofi
     waybar
+
+    gnome3.adwaita-icon-theme # default gnome cursors
+    glib
+    gsettings-desktop-schemas
+    nwg-look
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;
@@ -216,4 +221,14 @@
       options = "--delete-older-than 7d";
     };
   };
+
+ xdg.portal = {
+    enable = true;
+    wlr.enable = false;
+    xdgOpenUsePortal = false;
+    extraPortals = [
+      pkgs.xdg-desktop-portal-hyprland
+      pkgs.xdg-desktop-portal-gtk
+    ];
+ };
 }
