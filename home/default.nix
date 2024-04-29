@@ -33,6 +33,8 @@ let
   };
 in
 {
+  imports = [./user];
+
   home.username = "william";
   home.homeDirectory = "/home/william";
   home.stateVersion = "23.11";
@@ -79,9 +81,17 @@ in
     grim
     slurp
     libappindicator-gtk3
-    awscli
+    awscli2
+    packer
     pavucontrol
     ruff
+    tflint
+    terraform
+    terragrunt
+    dive
+    xdg-utils
+    terraform-docs
+    circleci-cli
 
     # Wayland clipboard tooling
     wl-clipboard
@@ -111,6 +121,9 @@ in
     discord
     spotify
     steam
+
+    # libs
+    zlib
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -129,7 +142,7 @@ in
   };
 
   home.sessionVariables = {
-    # VISUAL = "nvim";
+    VISUAL = "nvim";
     EDITOR = "nvim";
     ASDF_RUBY_BUILD_VERSION = "master";
     LESS = "-R";
@@ -172,62 +185,12 @@ in
     enable = true;
     plugins = with pkgs.tmuxPlugins; [
       sensible
-      nord
+      catppuccin
       resurrect
       yank
       tmux-thumbs
     ];
     extraConfig = (builtins.readFile ./tmux/tmux.conf);
-  };
-
-  programs.git =  {
-    enable = true;
-    userName = "William Fish";
-    userEmail = "william.michael.fish@gmail.com";
-    delta.enable = true;
-    extraConfig = {
-      core.editor = "nvim";
-      # user.name = "William Fish";
-      # user.email = "william.michael.fish@gmail.com";
-      push.default = "simple";
-      help.autocorrect = 1;
-      github.user = "willfish";
-      web.browser = "firefox";
-      init.defaultBranch = "main";
-      merge.conflictstyle = "diff3";
-      diff.colorMoved = "default";
-
-      delta = {
-        navigate = true;
-        light = false;
-        features = "line-numbers decorations";
-        theme = "Github";
-      };
-      alias = {
-        add = "git add -p";
-        branches = "for-each-ref --sort=-committerdate --format=\"%(color:blue)%(authordate:relative)\t%(color:red)%(authorname)\t%(color:white)%(color:bold)%(refname:short)\" refs/remotes";
-        cleanupmaster = "!git fetch -p && git pull && git branch --merged | grep -v main | xargs -n 1 -r git branch -d";
-        cleanup = "!git fetch -p && git pull && git branch --merged | grep -v main | xargs -n 1 -r git branch -d";
-        cmm = "!git checkout master && git cleanupmaster";
-        cm = "!git checkout main && git cleanup";
-      };
-      filter = {
-        lfs = {
-          clean = "git-lfs clean -- %f";
-          smudge = "git-lfs smudge -- %f";
-          process = "git-lfs filter-process";
-          required = true;
-        };
-      };
-      credential = {
-        "https://github.com" = {
-          helper = "!/usr/bin/gh auth git-credential";
-        };
-        "https://gist.github.com" = {
-          helper = "!/usr/bin/gh auth git-credential";
-        };
-      };
-    };
   };
 
 
@@ -238,141 +201,6 @@ in
     extraConfig = (builtins.readFile ./kitty/kitty.conf);
   };
 
-  programs.neovim =
-  let
-    toLua = str: "lua << EOF\n${str}\nEOF\n";
-    toLuaFile = file: "luafile " + file;
-  in
-  {
-    enable = true;
-    withRuby = true;
-    withPython3 = true;
-    withNodeJs = true;
-    defaultEditor = true;
-    extraConfig = ''
-      ${toLuaFile ./nvim/opts.lua}
-      ${toLuaFile ./nvim/autocmds.lua}
-      ${toLuaFile ./nvim/maps.lua}
-    '';
-    plugins = with pkgs.vimPlugins;[
-      {
-        plugin = rose-pine;
-        config = ''
-          let g:rose_pine_variant = 'moon'
-          colorscheme rose-pine
-        '';
-      }
-      {
-        plugin = nvim-lspconfig;
-        # config = toLuaFile ./nvim/nvim-lsp.lua;
-      }
-      neodev-nvim
-      mason-nvim
-      mason-lspconfig-nvim
-      # {
-      #   src = pkgs.fetchFromGitHub {
-      #     owner = "williamboman";
-      #     repo = "nvim-lsp-installer";
-      #     rev = "main";
-      #     sha256 = "";
-      #   };
-      # }
-      neodev-nvim
-      {
-        plugin = nvim-cmp;
-        config = toLuaFile ./nvim/nvim-cmp.lua;
-      }
-      cmp_luasnip
-      cmp-nvim-lsp
-      cmp-buffer
-      cmp-path
-      cmp-cmdline
-      cmp-git
-      ultisnips
-      cmp-nvim-ultisnips
-      copilot-vim
-      vim-snippets
-      vim-polyglot
-      {
-        plugin = telescope-nvim;
-        config = toLuaFile ./nvim/telescope.lua;
-      }
-      telescope-fzf-native-nvim
-      telescope-github-nvim
-      telescope-live-grep-args-nvim
-      luasnip
-      lualine-nvim
-      nvim-web-devicons
-      {
-        plugin = nvim-tree-lua;
-        config = toLuaFile ./nvim/nvim-tree.lua;
-      }
-      {
-        plugin = null-ls-nvim;
-        config = toLuaFile ./nvim/null-ls.lua;
-      }
-      (nvim-treesitter.withPlugins (p: [
-        p.tree-sitter-nix
-        p.tree-sitter-vim
-        p.tree-sitter-bash
-        p.tree-sitter-lua
-        p.tree-sitter-python
-        p.tree-sitter-json
-        p.tree-sitter-yaml
-        p.tree-sitter-ruby
-        p.tree-sitter-typescript
-        p.tree-sitter-javascript
-        p.tree-sitter-go
-        p.tree-sitter-rust
-        p.tree-sitter-fish
-      ]))
-      vim-nix
-      vim-go
-      nvim-treesitter-textsubjects
-      nvim-treesitter-endwise
-      vim-textobj-user
-      vim-indent-object
-      vim-sort-motion
-      vim-sort-motion
-      vim-matchup
-      nvim-surround
-      vim-dispatch
-      {
-        plugin = vim-test;
-        config = toLuaFile ./nvim/vim-test.lua;
-      }
-      {
-        plugin = vim-fugitive;
-        config = toLuaFile ./nvim/fugitive.lua;
-      }
-      vim-rhubarb
-      quickfix-reflector-vim
-      vim-commentary
-      vim-unimpaired
-      {
-        plugin = vim-tmux-navigator;
-        config = toLuaFile ./nvim/vim-tmux-navigator.lua;
-      }
-      vim-tmux
-      # {
-      #   src = pkgs.fetchFromGitHub {
-      #     owner = "tek";
-      #     repo = "vim-textobj-ruby";
-      #     rev = "master";
-      #     sha256 = "";
-      #   };
-      # }
-      # {
-      #   src = pkgs.fetchFromGitHub {
-      #     owner = "Wansmer";
-      #     repo = "treesj";
-      #     rev = "main";
-      #     sha256 = "";
-      #   };
-      #   config = toLuaFile ./nvim/treesj.lua;
-      # }
-    ];
-  };
   programs.fzf.enable = true;
 
   programs.waybar = {

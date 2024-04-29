@@ -18,8 +18,6 @@
       lib = nixpkgs.lib;
       system = "x86_64-linux";
 
-      # pkgs = nixpkgs.legacyPackages.${system};
-      # unstable = nixpkgs-unstable.legacyPackages.${system};
       pkgs = import nixpkgs {inherit system; config.allowUnfree = true; };
       pkgs-unstable = import nixpkgs-unstable {inherit system; config.allowUnfree = true; };
     in {
@@ -27,7 +25,7 @@
     nixosConfigurations = {
       andromeda = lib.nixosSystem {
         inherit pkgs;
-        modules = [./configuration.nix];
+        modules = [./system/configuration.nix];
         specialArgs = { inherit pkgs-unstable; };
       };
     };
@@ -35,7 +33,7 @@
     homeConfigurations = {
       william = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        modules = [./home.nix];
+        modules = [./home];
         extraSpecialArgs = { inherit pkgs-unstable; };
       };
     };
