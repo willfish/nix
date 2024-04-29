@@ -39,14 +39,17 @@
     LC_TIME = "en_GB.UTF-8";
   };
 
-  services.xserver.enable = true;
-  services.xserver.displayManager.gdm.enable = true;
-  programs.hyprland.enable = true;
 
-  # Configure keymap in X11
-  services.xserver = {
-    layout = "us";
-    xkbVariant = "";
+  programs = {
+    hyprland = {
+      enable = true;
+
+      xwayland = {
+        enable = true;
+      };
+
+      portalPackage = pkgs.xdg-desktop-portal-hyprland;
+    };
   };
 
   # Enable CUPS to print documents.
@@ -121,20 +124,82 @@
     libappindicator-gtk3
     tree
     lsof
+    image-roll
+
+    # Hyprland
+    polkit
+    polkit_gnome
+    hyprpaper
+    kitty
+    libnotify
+    mako
+    qt5.qtwayland
+    qt6.qtwayland
+    swayidle
+    swaylock-effects
+    wlogout
+    wl-clipboard
+    wofi
+    waybar
+
+    gnome3.adwaita-icon-theme # default gnome cursors
+    glib
+    gsettings-desktop-schemas
+    nwg-look
+
+    bat
+    btop
+    eza
+    fzf
+    lm_sensors
+    libsForQt5.qt5.qtquickcontrols2
+    libsForQt5.qt5.qtgraphicaleffects
+    libsForQt5.qt5.qtsvg
+    neofetch
+    neovim
+    ripgrep
+    tldr
+    unzip
+    openssl
+    openssl.dev
+    pkg-config
+    xfce.thunar
+    xdg-desktop-portal-gtk
+    xdg-desktop-portal-wlr
+    zoxide
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;
   programs.fish.enable = true;
 
-  services.openssh = {
-    enable = true;
-    settings.PasswordAuthentication = false;
-    settings.KbdInteractiveAuthentication = false;
+  services = {
+
+
+    openssh = {
+      enable = true;
+      settings.PasswordAuthentication = false;
+      settings.KbdInteractiveAuthentication = false;
+    };
+
+    dbus.enable = true;
+    spice-vdagentd.enable = true;
+
+    # services.xserver.displayManager.gdm.enable = true;
+    xserver = {
+      enable = true;
+      layout = "us";
+      xkbVariant = "";
+      # xkbOptions = "grp:alt_shift_toggle, caps:swapescape";
+
+      displayManager = {
+        sddm.enable = true;
+        sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
+      };
+    };
   };
 
   system.stateVersion = "23.11";
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   fonts = {
     packages = with pkgs; [
@@ -142,8 +207,50 @@
       nerdfonts
       font-awesome
     ];
-    fontconfig = {
-      enable = true;
+  };
+
+  systemd = {
+    user.services.polkit-gnome-authentication-agent-1 = {
+        description = "polkit-gnome-authentication-agent-1";
+        wantedBy = [ "graphical-session.target" ];
+        wants = [ "graphical-session.target" ];
+        after = [ "graphical-session.target" ];
+        serviceConfig = {
+            Type = "simple";
+            ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+            Restart = "on-failure";
+            RestartSec = 1;
+            TimeoutStopSec = 10;
+        };
+    };
+    extraConfig = ''
+        DefaultTimeoutStopSec=10s
+    '';
+  };
+
+  documentation.nixos.enable = false;
+
+  nix = {
+    settings = {
+      warn-dirty = false;
+      experimental-features = [ "nix-command" "flakes" ];
+      auto-optimise-store = true;
+    };
+
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 7d";
     };
   };
+
+ xdg.portal = {
+    enable = true;
+    wlr.enable = false;
+    xdgOpenUsePortal = false;
+    extraPortals = [
+      pkgs.xdg-desktop-portal-hyprland
+      pkgs.xdg-desktop-portal-gtk
+    ];
+ };
 }
