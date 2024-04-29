@@ -94,3 +94,18 @@ vim.api.nvim_set_keymap('n', '<leader>p', '<cmd>lua insertJiraTicketNumber()<CR>
 vim.api.nvim_set_keymap("n", "<Leader>wn", ":lua os.execute('/usr/bin/variety -n > /dev/null 2>&1')<CR>", default_opts)
 vim.api.nvim_set_keymap("n", "<Leader>wp", ":lua os.execute('/usr/bin/variety -p > /dev/null 2>&1')<CR>", default_opts)
 vim.api.nvim_set_keymap("n", "<Leader>m", ":Make<CR>", default_opts)
+
+-- Plugin maps
+vim.api.nvim_set_keymap("n", "<Leader>i", ":Git ", default_opts)
+vim.api.nvim_set_keymap("n", "<Leader>b", ":Git blame<CR>", default_opts)
+vim.api.nvim_set_keymap("n", "<Leader>o", ":GBrowse<CR>", default_opts)
+vim.api.nvim_set_keymap("n", "<Leader>s", ":Git<CR>", default_opts)
+vim.api.nvim_set_keymap("n", "<Leader>c", ":Git commit<CR>", default_opts)
+vim.api.nvim_set_keymap("n", "<Leader>]", ":Git push<CR>", default_opts)
+vim.api.nvim_set_keymap("n", "<Leader>[", ":Git pull<CR>", default_opts)
+
+vim.api.nvim_set_keymap("n", "<leader>n", ":NvimTreeToggle<CR>", default_opts)
+vim.api.nvim_set_keymap("n", "<leader>nf", ":NvimTreeFindFile<CR>", default_opts)
+
+vim.g.loaded = 1
+vim.g.loaded_netrwPlugin = 1

@@ -4,6 +4,7 @@
 
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-23.11";
+    nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-23.11";
@@ -12,24 +13,28 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, ... }@inputs:
     let
-      system = "x86_64-linux";
       lib = nixpkgs.lib;
-      pkgs = nixpkgs.legacyPackages.${system};
+      system = "x86_64-linux";
+
+      pkgs = import nixpkgs {inherit system; config.allowUnfree = true; };
+      pkgs-unstable = import nixpkgs-unstable {inherit system; config.allowUnfree = true; };
     in {
 
     nixosConfigurations = {
       andromeda = lib.nixosSystem {
-        inherit system;
-        modules = [./configuration.nix];
+        inherit pkgs;
+        modules = [./system/configuration.nix];
+        specialArgs = { inherit pkgs-unstable; };
       };
     };
 
     homeConfigurations = {
-      william = home-manager.lib.homeManagerConfiguration {
+      william = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        modules = [./home.nix];
+        modules = [./home];
+        extraSpecialArgs = { inherit pkgs-unstable; };
       };
     };
   };
