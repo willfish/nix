@@ -7,7 +7,7 @@
     # ./gtk.nix
     ./shells.nix
     ./packages.nix
-    # ./programs.nix
+    ./programs.nix
     # ./environment.nix
   ];
 }
