@@ -4,7 +4,6 @@
     BROWSER = "firefox";
     CLUTTER_BACKEND = "wayland";
     EDITOR = "nvim";
-    EDITOR = "nvim";
     GIT_PAGER = "delta";
     GTK_CSD = "0";
     GTK_THEME="Catppuccin-Macchiato-Compact-Blue-Dark";
