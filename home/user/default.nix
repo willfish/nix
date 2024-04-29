@@ -5,8 +5,8 @@
     ./config.nix
     ./tmux.nix
     # ./gtk.nix
-    # ./shell.nix
-    # ./packages.nix
+    ./shells.nix
+    ./packages.nix
     # ./programs.nix
     # ./environment.nix
   ];
