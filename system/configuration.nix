@@ -124,6 +124,7 @@
     libappindicator-gtk3
     tree
     lsof
+    image-roll
 
     # Hyprland
     polkit
