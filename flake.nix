@@ -11,6 +11,11 @@
 
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    firefox-addons = {
+      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, ... }@inputs:
@@ -20,6 +25,7 @@
 
       pkgs = import nixpkgs {inherit system; config.allowUnfree = true; };
       pkgs-unstable = import nixpkgs-unstable {inherit system; config.allowUnfree = true; };
+
     in {
 
     nixosConfigurations = {
@@ -34,7 +40,10 @@
       william = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [./home];
-        extraSpecialArgs = { inherit pkgs-unstable; };
+        extraSpecialArgs = {
+          inherit pkgs-unstable;
+          inherit inputs;
+        };
       };
     };
   };
