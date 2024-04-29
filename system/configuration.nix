@@ -50,7 +50,7 @@
 
       portalPackage = pkgs.xdg-desktop-portal-hyprland;
     };
-  }
+  };
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
