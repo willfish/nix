@@ -166,7 +166,7 @@
 
       displayManager = {
         sddm.enable = true;
-        sddm.theme = "${import ./sddm-theme.nix { inherit pkgs; }}";
+        sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
       };
     };
   };
