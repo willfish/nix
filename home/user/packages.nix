@@ -48,7 +48,6 @@
     tmuxinator
     tree
     yarn
-    zoxide
     wofi
     pcmanfm
     hyprpaper
