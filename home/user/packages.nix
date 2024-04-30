@@ -51,6 +51,8 @@
     terraform-docs
     circleci-cli
     gopls
+    solargraph
+    nil
 
     # Wayland clipboard tooling
     wl-clipboard
