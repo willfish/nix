@@ -17,7 +17,6 @@
     lsof
     markdownlint-cli
     neofetch
-    nodejs
     pre-commit
     python3
     ripgrep
@@ -36,7 +35,6 @@
     hyprpaper
     pywal
     pyprland
-    wezterm
     pavucontrol
     grim
     slurp
@@ -73,7 +71,7 @@
 
     # unfree
     # For zoom
-    zoom-us
+    pkgs-unstable.zoom-us # sharing does not work with zoom-us :(
     glxinfo
     pulseaudioFull
     slack
