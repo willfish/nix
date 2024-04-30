@@ -1,7 +1,6 @@
 { pkgs, pkgs-unstable, lib, config, ...}:
 {
   programs.tmux = {
-    enable = true;
     plugins = with pkgs-unstable.tmuxPlugins; [
       sensible
       catppuccin
