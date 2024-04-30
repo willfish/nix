@@ -52,7 +52,7 @@
     circleci-cli
     gopls
     solargraph
-    nil
+    nixd
 
     # Wayland clipboard tooling
     wl-clipboard
