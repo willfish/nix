@@ -18,6 +18,10 @@
     pulseaudioFull
     gsettings-desktop-schemas
 
+    # Strong integration with home-manager so need to work out using unstable pkgs
+    pkgs.zoxide
+    pkgs.tmux
+    pkgs.tmuxinator
 
     # Utilities
     tldr
@@ -33,7 +37,6 @@
     delta
     fd
     fzf
-    pkgs.zoxide
     gh
     lsof
     markdownlint-cli
@@ -45,8 +48,6 @@
     strace
     shellharden
     shfmt
-    tmux
-    tmuxinator
     tree
     yarn
     wofi
