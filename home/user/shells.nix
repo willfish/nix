@@ -37,7 +37,7 @@ in
     enable = true;
     shellAliases = aliases;
     initExtra = ''
-      source ${pkgs.asdf-vm}/share/asdf-vm/asdf.sh
+      source ${pkgs-unstable.asdf-vm}/share/asdf-vm/asdf.sh
     '';
   };
 
@@ -55,7 +55,7 @@ in
     '';
 
     plugins = [
-      { name = "tide"; src = pkgs-unstable.fishPlugins.tide.src; }
+      { name = "tide"; src = pkgs.fishPlugins.tide.src; }
     ];
   };
 
