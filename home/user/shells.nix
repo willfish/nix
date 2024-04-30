@@ -54,8 +54,8 @@ in
       source ${pkgs-unstable.fzf}/share/fzf/key-bindings.fish
       source ${pkgs-unstable.zoxide}/share/fish/vendor_completions.d/zoxide.fish
     '';
-    plugins = with pkgs.fishermanPackages; [
-      { name = "tide"; src = pkgs.fishPlugins.tide.src; }
+    plugins = with pkgs-unstable.fishermanPackages; [
+      { name = "tide"; src = pkgs-unstable.fishPlugins.tide.src; }
     ];
   };
 }
