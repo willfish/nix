@@ -40,6 +40,7 @@
     pavucontrol
     grim
     slurp
+    swappy
     libappindicator-gtk3
     awscli2
     packer
