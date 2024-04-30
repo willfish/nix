@@ -20,7 +20,6 @@
 
 
     # Utilities
-    zoxide
     tldr
     jq
     wget
@@ -34,7 +33,7 @@
     delta
     fd
     fzf
-    zoxide
+    pkgs.zoxide
     gh
     lsof
     markdownlint-cli
