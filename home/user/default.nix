@@ -1,7 +1,6 @@
 {
   imports = [
     ./git.nix
-    # ./nvim.nix
     ./config.nix
     ./tmux.nix
     ./gtk.nix
