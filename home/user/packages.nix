@@ -12,6 +12,13 @@
     steam
     image-roll
 
+    # For zoom
+    pkgs.zoom-us
+    glxinfo
+    pulseaudioFull
+    gsettings-desktop-schemas
+
+
     # Utilities
     tldr
     jq
@@ -79,13 +86,6 @@
     automake
     libtool
     openssl
-
-    # unfree
-    # For zoom
-    zoom-us # sharing does not work with zoom-us :(
-    glxinfo # For zoom
-    pulseaudioFull # For zoom
-    gsettings-desktop-schemas # For zoom
 
     # libs
     zlib
