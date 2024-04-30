@@ -1,6 +1,6 @@
 return {
   "vim-test/vim-test",
-  config = function() do
+  config = function()
     local default_map_opts = {noremap = true, silent = true}
 
     vim.api.nvim_set_var(
@@ -19,6 +19,5 @@ return {
     vim.api.nvim_set_keymap("n", "<Leader>r", ":TestSuite<CR>", default_map_opts)
     vim.api.nvim_set_keymap("n", "<Leader>e", ":TestLast<CR>", default_map_opts)
     vim.api.nvim_set_keymap("n", "<Leader>l", ":TestVisit<CR>", default_map_opts)
-
-  end
+  end,
 }
