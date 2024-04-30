@@ -4,7 +4,7 @@ return {
 	"christoomey/vim-tmux-navigator", -- tmux & split window navigation
 	"inkarkat/vim-ReplaceWithRegister",
 	"fedepujol/move.nvim",
-  "xiyaowong/transparent.nvim"
+  "xiyaowong/transparent.nvim",
   "tpope/vim-bundler",
   "sheerun/vim-polyglot",
   "junegunn/vim-easy-align",
