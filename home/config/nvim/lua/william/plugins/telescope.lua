@@ -52,7 +52,7 @@ return {
     }
 
     require("telescope").load_extension("gh")
-    require("telescope").load_extension("fzy")
+    require("telescope").load_extension("fzf")
     require("telescope").load_extension("live_grep_args")
     require("telescope").load_extension("emoji")
 
