@@ -94,7 +94,7 @@
     gcc
     go
     lua
-    nodejs_21
+    nodejs
     rustup
     ruby
     python3
