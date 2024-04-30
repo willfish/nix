@@ -50,6 +50,7 @@
     xdg-utils
     terraform-docs
     circleci-cli
+    gopls
 
     # Wayland clipboard tooling
     wl-clipboard

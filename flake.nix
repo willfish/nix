@@ -1,5 +1,4 @@
 {
-
   description = "My personal NixOS configuration";
 
   inputs = {
