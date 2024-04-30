@@ -65,32 +65,8 @@ function M.create_augroups_and_aucmds()
                                 default_map_opts
                             )
                         end
-
-                        -- vim.opt.background = "dark"
-                        vim.cmd.colorscheme "rose-pine-main"
-                        -- Set transparent background for non-active buffer
-                        -- highlight Normal guibg=none
-                        -- highlight NonText guibg=none
-                        -- highlight Normal ctermbg=none
-                        -- highlight NonText ctermbg=none
-                        vim.cmd [[highlight Normal guibg=NONE]]
-                        vim.cmd [[highlight NonText guibg=NONE]]
-                        vim.cmd [[highlight Normal ctermbg=NONE]]
-                        vim.cmd [[highlight NonText ctermbg=NONE]]
-                        vim.cmd [[highlight SignColumn guibg=NONE]]
                     end
                 )
-            end,
-            group = style_group_id
-        }
-    )
-    vim.api.nvim_create_autocmd(
-        "BufRead",
-        {
-            pattern = "/home/william/.i3/config",
-            nested = true,
-            callback = function()
-                vim.api.nvim_command("set filetype=i3config")
             end,
             group = style_group_id
         }
