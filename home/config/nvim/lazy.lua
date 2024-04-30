@@ -12,9 +12,7 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({ { import = "william.plugins" }, { import = "william.plugins.lsp" } }, {
-  install = {
-    colorscheme = { "nightfly" },
-  },
+  lockfile = "/home/william/lazy-lock.json"
   checker = {
     enabled = true,
     notify = false,
