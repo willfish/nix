@@ -33,6 +33,7 @@
     delta
     fd
     fzf
+    zoxide
     gh
     lsof
     markdownlint-cli
