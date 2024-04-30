@@ -18,7 +18,7 @@ return {
         "stylua", -- lua formatter
         "black", -- python formatter
         "pylint", -- python linter
-        "eslint_d", -- js linter
+        "eslint-lsp", -- js linter
       },
     })
 
@@ -62,20 +62,24 @@ return {
       },
       -- configure format on save
       on_attach = function(current_client, bufnr)
+        -- fetch normal mode keymaps for the current buffer
+        local norm_maps = vim.api.nvim_buf_get_keymap(bufnr, "n")
+
         -- filter down to only the keymap we're interested in
-        -- norm_maps = vim.tbl_filter(function(v)
-        --     return v.lhs == "<leader>a"
-        -- end, norm_maps)
-        --
-        -- if #norm_maps == 0 then
-        vim.keymap.set(
-          "n",
-          "<leader>a",
-          function()
-            vim.lsp.buf.format { async = true }
-          end,
-          { noremap = true, silent = true }
-        )
+        norm_maps = vim.tbl_filter(function(v)
+            return v.lhs == "<leader>a"
+        end, norm_maps)
+
+        if #norm_maps == 0 then
+            vim.keymap.set(
+                "n",
+                "<leader>a",
+                function()
+                    vim.lsp.buf.format { async = true }
+                end,
+                { noremap = true, silent = true }
+            )
+        end
         -- end
         -- if current_client.supports_method("textDocument/formatting") then
         --   vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
