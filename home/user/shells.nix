@@ -2,7 +2,6 @@
 let
   aliases = {
     ag = "rg";
-    cd = "z";
     mux = "tmuxinator";
     tm = "tmux";
     a = "tmux attach";
@@ -54,7 +53,7 @@ in
       source ${pkgs-unstable.fzf}/share/fzf/key-bindings.fish
       source ${pkgs-unstable.zoxide}/share/fish/vendor_completions.d/zoxide.fish
     '';
-    plugins = with pkgs-unstable.fishermanPackages; [
+    plugins = [
       { name = "tide"; src = pkgs-unstable.fishPlugins.tide.src; }
     ];
   };
