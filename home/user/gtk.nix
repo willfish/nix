@@ -5,12 +5,12 @@
 
     cursorTheme = {
         name = "Catppuccin-Macchiato-Blue";
-        package = pkgs.catppuccin-cursors.macchiatoBlue;
+        package = pkgs-unstable.catppuccin-cursors.macchiatoBlue;
     };
 
     theme = {
       name = "Catppuccin-Macchiato-Compact-Blue-dark";
-      package = pkgs.catppuccin-gtk.override {
+      package = pkgs-unstable.catppuccin-gtk.override {
         size = "compact";
         accents = ["blue"];
         variant = "macchiato";
