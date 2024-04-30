@@ -37,7 +37,7 @@ in
     enable = true;
     shellAliases = aliases;
     initExtra = ''
-      source ${pkgs-unstable.asdf-vm}/share/asdf-vm/asdf.sh
+      source ${pkgs.asdf-vm}/share/asdf-vm/asdf.sh
     '';
   };
 
@@ -46,12 +46,7 @@ in
     shellAliases = aliases;
     shellAbbrs = abbreviations;
     shellInit = ''
-      source ${pkgs-unstable.zoxide}/share/fish/vendor_completions.d/zoxide.fish
       source ${pkgs-unstable.asdf-vm}/share/asdf-vm/asdf.fish
-      source ${pkgs-unstable.fzf}/share/fish/vendor_functions.d/fzf_key_bindings.fish
-      source ${pkgs-unstable.fzf}/share/fish/vendor_conf.d/load-fzf-key-bindings.fish
-      source ${pkgs-unstable.fzf}/share/fzf/key-bindings.fish
-      source ${pkgs-unstable.zoxide}/share/fish/vendor_completions.d/zoxide.fish
     '';
 
     plugins = [
