@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, pkgs-unstable, ... }:
 {
   gtk = {
     enable = true;
@@ -19,7 +19,7 @@
 
     iconTheme = {
       name = "Papirus-Dark";
-      package = pkgs.papirus-folders;
+      package = pkgs-unstable.papirus-folders;
     };
 
     gtk3.extraConfig = {
