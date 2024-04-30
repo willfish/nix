@@ -1,6 +1,8 @@
 { pkgs, pkgs-unstable, ... }:
 {
   home.packages = with pkgs; [
+    pkgs-unstable.dust
+    bats
     nix-prefetch-git
     asdf-vm
     bat
@@ -51,6 +53,8 @@
     terraform-docs
     circleci-cli
     gopls
+    solargraph
+    nixd
 
     # Wayland clipboard tooling
     wl-clipboard
