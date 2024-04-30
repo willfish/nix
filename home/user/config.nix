@@ -1,8 +1,13 @@
-let configDir = ../config;
+{ config, lib, ... }:
+let
+  configDir = ../config;
+
+  configure = directory:
+    config.lib.file.mkOutOfStoreSymlink "${configDir}/${directory}";
 in
 {
   home.file = {
-      ".config/nvim".source = "${configDir}/nvim";
+      ".config/nvim".source = configure "nvim";
       ".config/kitty".source = "${configDir}/kitty";
       ".config/hypr".source = "${configDir}/hypr";
       ".config/swayidle".source = "${configDir}/swayidle";
