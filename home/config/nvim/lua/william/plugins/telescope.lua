@@ -96,7 +96,6 @@ return {
       ":lua require('telescope').extensions.gh.run()<CR>",
       default_map_opts
     )
-    vim.api.nvim_set_keym		})
 
     telescope.load_extension("fzf")
 
