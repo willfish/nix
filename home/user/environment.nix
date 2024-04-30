@@ -20,12 +20,12 @@
     QT_SCALE_FACTOR = "1";
     QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
     RUBYOPT = "--enable-yjit";
-    SDL_VIDEODRIVER = "wayland";
+    # SDL_VIDEODRIVER = "wayland";
     TERMINAL = "kitty";
     VISUAL = "nvim";
-    WLR_DRM_DEVICES = "/dev/dri/card0";
+    # WLR_DRM_DEVICES = "/dev/dri/card0";
     WLR_NO_HARDWARE_CURSORS = "1";
-    WLR_RENDERER = "vulkan";
+    # WLR_RENDERER = "vulkan";
     XCURSOR_SIZE = "32";
     XDG_CACHE_HOME = "\${HOME}/.cache";
     XDG_CONFIG_HOME = "\${HOME}/.config";

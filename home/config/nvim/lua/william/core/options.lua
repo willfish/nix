@@ -4,6 +4,7 @@ vim.g.rubypath = {}
 vim.g.mapleader = ","
 
 -- Set global options
+
 vim.o.mouse = "a"
 vim.o.clipboard = "unnamedplus"
 vim.o.history = 200
