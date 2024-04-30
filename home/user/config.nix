@@ -2,7 +2,7 @@
 let
   configDir = ../config
 
-  configure = directory;
+  configure = directory:
     config.lib.file.mkOutOfStoreSymLink "${configDir}/${directory}";
 in
 {
