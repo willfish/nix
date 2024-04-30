@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, pkgs-unstable, ... }:
+{ pkgs, pkgs-unstable, ... }:
 
 {
   imports = [./hardware-configuration.nix];
@@ -234,5 +234,13 @@
       pkgs.xdg-desktop-portal-hyprland
       pkgs.xdg-desktop-portal-gtk
     ];
+ };
+
+ programs = {
+   steam = {
+     enable = true;
+     remotePlay.openFirewall = true;
+     dedicatedServer.openFirewall = true;
+   };
  };
 }
