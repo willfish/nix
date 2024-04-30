@@ -12,5 +12,5 @@
   };
 
 
-  programs.tmux.tmuxinator.enable = true;
+  # programs.tmux.tmuxinator.enable = true;
 }
