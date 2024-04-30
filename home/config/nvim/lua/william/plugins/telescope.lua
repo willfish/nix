@@ -4,7 +4,11 @@ return {
 	dependencies = {
 		"nvim-lua/plenary.nvim",
 		{ "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+    "nvim-telescope/telescope-github.nvim",
+    "xiyaowong/telescope-emoji.nvim",
 		"nvim-tree/nvim-web-devicons",
+    "nvim-telescope/telescope-live-grep-args.nvim",
+    "tsakirist/telescope-lazy.nvim",
 	},
 	config = function()
 		local telescope = require("telescope")
