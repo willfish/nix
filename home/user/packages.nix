@@ -20,6 +20,7 @@
 
 
     # Utilities
+    zoxide
     tldr
     jq
     wget
