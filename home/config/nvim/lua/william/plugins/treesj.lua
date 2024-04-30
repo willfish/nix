@@ -1,6 +1,6 @@
 return {
  'Wansmer/treesj',
-  config = function() do
+  config = function()
     require('treesj').setup {}
 
     vim.keymap.set('n', '<leader>j', require('treesj').toggle)
