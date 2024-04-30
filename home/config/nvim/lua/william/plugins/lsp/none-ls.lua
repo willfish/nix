@@ -35,15 +35,25 @@ return {
       root_dir = null_ls_utils.root_pattern(".null-ls-root", "Makefile", ".git", "package.json"),
       -- setup formatters & linters
       sources = {
-        --  to disable file types use
-        --  "formatting.prettier.with({disabled_filetypes: {}})" (see null-ls docs)
-        formatting.prettier.with({
-          extra_filetypes = { "svelte" },
-        }), -- js/ts formatter
-        formatting.stylua, -- lua formatter
-        formatting.isort,
+        diagnostics.erb_lint,
+        diagnostics.eslint,
+        diagnostics.fish,
+        diagnostics.flake8,
+        diagnostics.golangci_lint,
+        diagnostics.markdownlint,
+        formatting.autopep8,
         formatting.black,
-        diagnostics.pylint,
+        formatting.erb_lint,
+        formatting.fish_indent,
+        formatting.hclfmt,
+        formatting.isort,
+        formatting.markdownlint,
+        formatting.shellharden,
+        formatting.sql_formatter,
+        formatting.stylua, -- lua formatter
+        formatting.trim_whitespace,
+        formatting.xmllint,
+
         diagnostics.eslint_d.with({ -- js/ts linter
           condition = function(utils)
             return utils.root_has_file({ ".eslintrc.js", ".eslintrc.cjs" }) -- only enable if root has .eslintrc.js or .eslintrc.cjs
@@ -52,6 +62,21 @@ return {
       },
       -- configure format on save
       on_attach = function(current_client, bufnr)
+        -- filter down to only the keymap we're interested in
+        norm_maps = vim.tbl_filter(function(v)
+            return v.lhs == "<leader>a"
+        end, norm_maps)
+
+        if #norm_maps == 0 then
+            vim.keymap.set(
+                "n",
+                "<leader>a",
+                function()
+                    vim.lsp.buf.format { async = true }
+                end,
+                { noremap = true, silent = true }
+            )
+        end
         if current_client.supports_method("textDocument/formatting") then
           vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
           vim.api.nvim_create_autocmd("BufWritePre", {

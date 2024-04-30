@@ -16,6 +16,9 @@ return {
 
     local opts = { noremap = true, silent = true }
     local on_attach = function(client, bufnr)
+      if client.name == "tsserver" then
+        require('lsp-setup.utils').disable_formatting(client)
+      end
       opts.buffer = bufnr
 
       -- set keybinds
