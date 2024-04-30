@@ -3,7 +3,6 @@
     enable = true;
     userName = "William Fish";
     userEmail = "william.michael.fish@gmail.com";
-    delta.enable = true;
     extraConfig = {
       core.editor = "nvim";
       push.default = "simple";
