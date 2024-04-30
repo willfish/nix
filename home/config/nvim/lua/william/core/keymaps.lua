@@ -1,32 +1,5 @@
 local default_opts = { noremap = true, silent = true }
 
-local init_vim = "~/.config/nvim/init.lua"
-local init_lua = "~/.config/nvim/lua/willfish/init.lua"
-local opts = "~/.config/nvim/lua/willfish/opts.lua"
-local maps = "~/.config/nvim/lua/willfish/maps.lua"
-local autocmds = "~/.config/nvim/lua/willfish/autocmds.lua"
-local plugins = "~/.config/nvim/lua/willfish/plugins.lua"
-
-local fish_config = "~/.config/fish/config.fish"
-local i3_config = "~/.i3/config"
-local tmux_config = "~/.tmux.conf"
-
--- xrandr --output DP-1-2 --auto --primary --rotate normal --output eDP-1 --preferred --rotate normal --below DP-2
-
--- Config file normal maps
-
-vim.api.nvim_set_keymap("n", "<Leader>ef", ":edit" .. fish_config .. "<CR>", default_opts)
-vim.api.nvim_set_keymap("n", "<Leader>ei", ":edit" .. i3_config .. "<CR>", default_opts)
-vim.api.nvim_set_keymap("n", "<Leader>et", ":edit" .. tmux_config .. "<CR>", default_opts)
-
-vim.api.nvim_set_keymap("n", "<Leader>ev", ":edit" .. init_vim .. "<CR>", default_opts)
-vim.api.nvim_set_keymap("n", "<Leader>evi", ":edit" .. init_lua .. "<CR>", default_opts)
-vim.api.nvim_set_keymap("n", "<Leader>evo", ":edit" .. opts .. "<CR>", default_opts)
-vim.api.nvim_set_keymap("n", "<Leader>evm", ":edit" .. maps .. "<CR>", default_opts)
-vim.api.nvim_set_keymap("n", "<Leader>evp", ":edit" .. plugins .. "<CR>", default_opts)
-vim.api.nvim_set_keymap("n", "<Leader>evd", ":edit" .. autocmds .. "<CR>", default_opts)
-vim.api.nvim_set_keymap("n", "<Leader>sv", ":source" .. init_vim .. "<CR>", default_opts)
-
 -- Awesome bindings -- primeagen
 vim.api.nvim_set_keymap("n", "Y", "y$", default_opts)
 vim.api.nvim_set_keymap("n", "n", "nzzzv", default_opts)

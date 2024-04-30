@@ -71,13 +71,15 @@
 
     # unfree
     # For zoom
-    pkgs-unstable.zoom-us # sharing does not work with zoom-us :(
-    glxinfo
-    pulseaudioFull
+    zoom-us # sharing does not work with zoom-us :(
+    glxinfo # For zoom
+    pulseaudioFull # For zoom
+    gsettings-desktop-schemas # For zoom
+
     slack
     discord
     spotify
-    steam
+    pkgs-unstable.steam
 
     libreoffice-qt
 

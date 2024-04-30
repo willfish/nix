@@ -11,11 +11,13 @@
     withPython3 = true;
     withNodeJs = true;
     defaultEditor = true;
-    extraConfig = ''
-      ${toLuaFile ../config/nvim/opts.lua}
-      ${toLuaFile ../config/nvim/autocmds.lua}
-      ${toLuaFile ../config/nvim/maps.lua}
-    '';
+    # extraConfig = ''
+    #   require("william.core")
+    #   require("william.lazy")
+    #   ${toLuaFile ../config/nvim/opts.lua}
+    #   ${toLuaFile ../config/nvim/autocmds.lua}
+    #   ${toLuaFile ../config/nvim/maps.lua}
+    # '';
     plugins = with pkgs.vimPlugins;[
       {
         plugin = rose-pine;
