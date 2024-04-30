@@ -1,6 +1,6 @@
 { config, lib, ... }:
 let
-  configDir = ../config
+  configDir = ../config;
 
   configure = directory:
     config.lib.file.mkOutOfStoreSymLink "${configDir}/${directory}";
