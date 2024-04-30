@@ -55,6 +55,11 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
+  security.pam.services.swaylock = {
+    text = ''
+      auth include login
+    '';
+  };
   hardware.system76.enableAll = true;
   # Enable sound with pipewire.
   sound.enable = true;
