@@ -63,7 +63,6 @@
   security.rtkit.enable = true;
   security.pam.services.swaylock = {};
   security.pam.services.swaylock.fprintAuth = false;
-  security.pam.services.swaylock = {
 
   services.pipewire = {
     enable = true;
