@@ -10,6 +10,7 @@
     discord
     spotify
     steam
+    steam-run
     image-roll
 
     # For zoom
