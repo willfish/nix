@@ -71,7 +71,7 @@
 
     # unfree
     # For zoom
-    pkgs-unstable.zoom-us # sharing does not work with zoom-us :(
+    zoom-us # sharing does not work with zoom-us :(
     glxinfo
     pulseaudioFull
     slack
