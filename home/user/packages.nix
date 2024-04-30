@@ -1,43 +1,52 @@
 { pkgs, pkgs-unstable, ... }:
 {
-  home.packages = with pkgs; [
-    pkgs-unstable.dust
+  home.packages = with pkgs-unstable; [
+    # Desktop apps
+    pkgs.firefox
+    telegram-desktop
+    pavucontrol
+    libreoffice-qt
+    slack
+    discord
+    spotify
+    steam
+    image-roll
+
+    # Utilities
+    tldr
+    jq
+    wget
+    htop
+    btop
+    dust
+    bat
     bats
     nix-prefetch-git
     asdf-vm
-    bat
-    bat
     delta
     fd
-    firefox
     fzf
     gh
-    gnumake
-    golangci-lint
-    hclfmt
-    kitty
     lsof
     markdownlint-cli
     neofetch
     pre-commit
-    python3
     ripgrep
     unzip
+    zip
+    strace
     shellharden
     shfmt
-    telegram-desktop
     tmux
     tmuxinator
     tree
     yarn
-    zip
     zoxide
     wofi
     pcmanfm
     hyprpaper
     pywal
     pyprland
-    pavucontrol
     grim
     slurp
     swappy
@@ -45,7 +54,6 @@
     awscli2
     packer
     pavucontrol
-    ruff
     tflint
     terraform
     terragrunt
@@ -53,9 +61,6 @@
     xdg-utils
     terraform-docs
     circleci-cli
-    gopls
-    solargraph
-    nixd
 
     # Wayland clipboard tooling
     wl-clipboard
@@ -82,23 +87,25 @@
     pulseaudioFull # For zoom
     gsettings-desktop-schemas # For zoom
 
-    slack
-    discord
-    spotify
-    pkgs-unstable.steam
-
-    libreoffice-qt
-
     # libs
     zlib
 
-    # languages
+    # languages and their tools
     gcc
     go
     lua
     nodejs_21
     rustup
+    ruby
+    python3
+    gopls
+    solargraph
+    ruff
+    golangci-lint
+    hclfmt
+    nixd
 
+    # themeing and fonts
     catppuccin-cursors.macchiatoBlue
     catppuccin-gtk
     papirus-folders
