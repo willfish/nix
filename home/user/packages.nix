@@ -72,8 +72,10 @@
     # unfree
     # For zoom
     zoom-us # sharing does not work with zoom-us :(
-    glxinfo
-    pulseaudioFull
+    glxinfo # For zoom
+    pulseaudioFull # For zoom
+    gsettings-desktop-schemas # For zoom
+
     slack
     discord
     spotify
