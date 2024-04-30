@@ -79,7 +79,7 @@
     slack
     discord
     spotify
-    steam
+    pkgs-unstable.steam
 
     libreoffice-qt
 
