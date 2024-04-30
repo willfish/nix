@@ -1,6 +1,7 @@
 { pkgs, pkgs-unstable, ... }:
 {
   home.packages = with pkgs; [
+    bats
     nix-prefetch-git
     asdf-vm
     bat
