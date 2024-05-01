@@ -16,9 +16,6 @@ return {
 
     local opts = { noremap = true, silent = true }
     local on_attach = function(client, bufnr)
-      -- if client.name == "tsserver" then
-      --   require('lsp-setup.utils').disable_formatting(client)
-      -- end
       opts.buffer = bufnr
 
       -- set keybinds
@@ -55,14 +52,18 @@ return {
       opts.desc = "Restart LSP"
       keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts) -- mapping to restart lsp if necessary
 
-      vim.keymap.set(
-        "n",
-        "<leader>a",
-        function()
-          vim.lsp.buf.format { async = true }
-        end,
-        bufopts
-      )
+      if client.name == "tsserver" then
+        require('lsp-setup.utils').disable_formatting(client)
+      else
+        vim.keymap.set(
+          "n",
+          "<leader>a",
+          function()
+            vim.lsp.buf.format { async = true }
+          end,
+          bufopts
+        )
+      end
     end
 
     -- used to enable autocompletion (assign to every lsp server config)
@@ -82,18 +83,18 @@ return {
       on_attach = on_attach,
     })
 
-    -- configure typescript server with plugin
-    -- lspconfig["tsserver"].setup({
-    --   capabilities = capabilities,
-    --   on_attach = on_attach,
-    --   settings = {
-    --     ["typescript"] = {
-    --       format = {
-    --         enable = false
-    --       }
-    --     }
-    --   }
-    -- })
+    configure typescript server with plugin
+    lspconfig["tsserver"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = {
+        ["typescript"] = {
+          format = {
+            enable = false
+          }
+        }
+      }
+    })
 
     lspconfig["eslint"].setup({
       capabilities = capabilities,
