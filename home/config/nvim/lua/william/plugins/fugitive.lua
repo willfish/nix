@@ -11,5 +11,12 @@ return {
     vim.api.nvim_set_keymap("n", "<Leader>c", ":Git commit<CR>", default_map_opts)
     vim.api.nvim_set_keymap("n", "<Leader>]", ":Git push<CR>", default_map_opts)
     vim.api.nvim_set_keymap("n", "<Leader>[", ":Git pull<CR>", default_map_opts)
+    vim.api.nvim_create_user_command(
+      'Browse',
+      function (opts)
+        vim.fn.system { 'xdg-open', opts.fargs[1] }
+      end,
+      { nargs = 1 }
+    )
   end
 }
