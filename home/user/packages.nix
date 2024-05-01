@@ -97,10 +97,7 @@
     nodejs
     rustup
     ruby_3_3
-    python311Full
-    python311Packages.pip
-    python311Packages.virtualenv
-    python311Packages.requests # Used by weather script
+    python311Full.withPackages (ps: [ps.requests])
     gopls
     solargraph
     ruff
