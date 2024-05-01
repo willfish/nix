@@ -50,7 +50,6 @@ return {
 
         -- filter down to only the keymap we're interested in
         norm_maps = vim.tbl_filter(function(v)
-          print("Setting up format on leader a")
           return v.lhs == "<leader>a"
         end, norm_maps)
 
