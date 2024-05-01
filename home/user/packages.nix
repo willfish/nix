@@ -93,7 +93,6 @@
 
     # languages and their tools
     gcc
-    go
     nodejs
     rustup
     ruby_3_3
