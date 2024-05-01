@@ -1,8 +1,6 @@
 return {
   "tpope/vim-fugitive",
-  dependencies = {
-    "tpope/vim-rhubarb"
-  },
+  dependencies = { "tpope/vim-rhubarb" },
   config = function()
     local default_map_opts = {noremap = true, silent = true}
 
