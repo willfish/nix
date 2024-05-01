@@ -29,7 +29,7 @@ return {
     -- configure null_ls
     null_ls.setup({
       -- add package.json as identifier for root (for typescript monorepos)
-      root_dir = null_ls_utils.root_pattern(".null-ls-root", "Makefile", ".git", "package.json"),
+      -- root_dir = null_ls_utils.root_pattern(".null-ls-root", "Makefile", ".git", "package.json"),
       -- setup formatters & linters
       sources = {
         diagnostics.erb_lint,
