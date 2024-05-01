@@ -88,6 +88,11 @@ return {
       on_attach = on_attach,
     })
 
+    lspconfig["eslint"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+    })
+
     -- configure css server
     lspconfig["cssls"].setup({
       capabilities = capabilities,
