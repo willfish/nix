@@ -44,11 +44,6 @@ in
     enable = true;
     shellAliases = aliases;
     shellAbbrs = abbreviations;
-    shellInit = ''
-      if test -e ~/.asdf/asdf.fish
-        source ~/.asdf/asdf.fish
-      end
-    '';
 
     plugins = [
       { name = "tide"; src = pkgs.fishPlugins.tide.src; }
