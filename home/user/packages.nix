@@ -94,11 +94,10 @@
     # languages and their tools
     gcc
     go
-    lua
     nodejs
     rustup
-    ruby
-    python3
+    ruby_3_3
+    python311Full
     gopls
     solargraph
     ruff
