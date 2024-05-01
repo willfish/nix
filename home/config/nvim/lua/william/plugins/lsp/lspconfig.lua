@@ -52,14 +52,24 @@ return {
       opts.desc = "Restart LSP"
       keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts) -- mapping to restart lsp if necessary
 
+      -- print out the client name
+      print("LSP started: " .. client.name)
       if client.name == "tsserver" then
+        print("Disabling tsserver formatting")
         require('lsp-setup.utils').disable_formatting(client)
+        client.server_capabilities.documentFormattingProvider = false
+        client.server_capabilities.documentRangeFormattingProvider = false
       else
         vim.keymap.set(
           "n",
           "<leader>a",
           function()
-            vim.lsp.buf.format { async = true }
+            if client.name == "eslint" then
+              print("Running eslint fix all")
+              vim.command("EslintFixAll")
+            else
+              vim.lsp.buf.format { async = true }
+            end
           end,
           opts
         )
@@ -88,17 +98,17 @@ return {
       on_attach = on_attach,
     })
 
-    -- -- configure typescript server with plugin
-    -- lspconfig["tsserver"].setup({
-    --   capabilities = capabilities,
-    --   on_attach = on_attach,
-    --   settings = {
-    --     format = {
-    --       enable = false
-    --     }
-    --   }
-    -- })
-    --
+    -- configure typescript server with plugin
+    lspconfig["tsserver"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = {
+        format = {
+          enable = false
+        }
+      }
+    })
+
     -- configure css server
     lspconfig["cssls"].setup({
       capabilities = capabilities,

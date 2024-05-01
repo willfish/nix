@@ -50,18 +50,19 @@ return {
 
         -- filter down to only the keymap we're interested in
         norm_maps = vim.tbl_filter(function(v)
-            return v.lhs == "<leader>a"
+          print("Setting up format on leader a")
+          return v.lhs == "<leader>a"
         end, norm_maps)
 
         if #norm_maps == 0 then
-            vim.keymap.set(
-                "n",
-                "<leader>a",
-                function()
-                    vim.lsp.buf.format { async = true }
-                end,
-                { noremap = true, silent = true }
-            )
+          vim.keymap.set(
+            "n",
+            "<leader>a",
+            function()
+              vim.lsp.buf.format { async = true }
+            end,
+            { noremap = true, silent = true }
+          )
         end
       end,
     })
