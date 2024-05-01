@@ -36,12 +36,19 @@ in
   programs.bash = {
     enable = true;
     shellAliases = aliases;
+    initExtra = ''
+    '';
   };
 
   programs.fish = {
     enable = true;
     shellAliases = aliases;
     shellAbbrs = abbreviations;
+    shellInit = ''
+      if test -e ~/.asdf/asdf.fish
+        source ~/.asdf/asdf.fish
+      end
+    '';
 
     plugins = [
       { name = "tide"; src = pkgs.fishPlugins.tide.src; }
