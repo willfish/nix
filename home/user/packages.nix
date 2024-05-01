@@ -96,7 +96,7 @@
     nodejs
     rustup
     ruby_3_3
-    (python3.withPackages (python-pkgs: [
+    (python311.withPackages (python-pkgs: [
       python-pkgs.venv
       python-pkgs.requests
       python-pkgs.setup-tools
