@@ -10,6 +10,7 @@
     discord
     spotify
     steam
+    steam-run
     image-roll
 
     # For zoom
@@ -18,9 +19,12 @@
     pulseaudioFull
     gsettings-desktop-schemas
 
+    # Strong integration with home-manager so need to work out using unstable pkgs
+    pkgs.zoxide
+    pkgs.tmux
+    pkgs.tmuxinator
 
     # Utilities
-    zoxide
     tldr
     jq
     wget
@@ -30,11 +34,9 @@
     bat
     bats
     nix-prefetch-git
-    asdf-vm
     delta
     fd
     fzf
-    zoxide
     gh
     lsof
     markdownlint-cli
@@ -46,8 +48,6 @@
     strace
     shellharden
     shfmt
-    tmux
-    tmuxinator
     tree
     yarn
     wofi
@@ -94,11 +94,10 @@
     # languages and their tools
     gcc
     go
-    lua
     nodejs
     rustup
-    ruby
-    python3
+    ruby_3_3
+    python311.withPackages (ps: [ps.requests])
     gopls
     solargraph
     ruff
