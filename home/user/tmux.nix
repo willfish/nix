@@ -1,6 +1,7 @@
-{ pkgs, pkgs-unstable, lib, config, ...}:
+{ pkgs-unstable, ...}:
 {
   programs.tmux = {
+    enable = true;
     plugins = with pkgs-unstable.tmuxPlugins; [
       sensible
       catppuccin
@@ -11,6 +12,5 @@
     extraConfig = (builtins.readFile ../config/tmux/tmux.conf);
   };
 
-
-  # programs.tmux.tmuxinator.enable = true;
+  programs.tmux.tmuxinator.enable = true;
 }

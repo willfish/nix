@@ -16,9 +16,6 @@ return {
 
     local opts = { noremap = true, silent = true }
     local on_attach = function(client, bufnr)
-      if client.name == "tsserver" then
-        require('lsp-setup.utils').disable_formatting(client)
-      end
       opts.buffer = bufnr
 
       -- set keybinds
@@ -55,14 +52,25 @@ return {
       opts.desc = "Restart LSP"
       keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts) -- mapping to restart lsp if necessary
 
-      vim.keymap.set(
-        "n",
-        "<leader>a",
-        function()
-          vim.lsp.buf.format { async = true }
-        end,
-        bufopts
-      )
+      if client.name == "tsserver" then
+        require('lsp-setup.utils').disable_formatting(client)
+        client.server_capabilities.documentFormattingProvider = false
+        client.server_capabilities.documentRangeFormattingProvider = false
+      else
+        vim.keymap.set(
+          "n",
+          "<leader>a",
+          function()
+            if client.name == "eslint" then
+              print("Running eslint fix all")
+              vim.cmd("EslintFixAll")
+            else
+              vim.lsp.buf.format { async = true }
+            end
+          end,
+          opts
+        )
+      end
     end
 
     -- used to enable autocompletion (assign to every lsp server config)
@@ -82,10 +90,20 @@ return {
       on_attach = on_attach,
     })
 
+    lspconfig["eslint"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+    })
+
     -- configure typescript server with plugin
     lspconfig["tsserver"].setup({
       capabilities = capabilities,
       on_attach = on_attach,
+      settings = {
+        format = {
+          enable = false
+        }
+      }
     })
 
     -- configure css server
