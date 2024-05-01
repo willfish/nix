@@ -97,7 +97,6 @@
     rustup
     ruby_3_3
     (python311.withPackages (python-pkgs: [
-      python-pkgs.venv
       python-pkgs.requests
       python-pkgs.setup-tools
       python-pkgs.black
