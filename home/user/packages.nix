@@ -97,7 +97,7 @@
     nodejs
     rustup
     ruby_3_3
-    python311.withPackages (ps: [ps.requests])
+    python3.withPackages (ps: [ ps.pyramid ])
     gopls
     solargraph
     ruff
