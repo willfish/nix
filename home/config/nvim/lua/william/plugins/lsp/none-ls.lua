@@ -22,6 +22,7 @@ return {
         "shellharden", -- shell formatter
         "shfmt", -- shell formatter
         "stylua", -- lua formatter
+        "xmllint", -- xml formatter
       },
     })
 
@@ -42,13 +43,7 @@ return {
         formatting.shellharden,
         formatting.stylua,
         formatting.xmllint,
-
-      --   diagnostics.eslint_d.with({
-      --     condition = function(utils)
-      --       return utils.root_has_file({ ".eslintrc.js", ".eslintrc.cjs" })
-      --     end,
-      --   }),
-      -- },
+      },
       -- configure format on save
       on_attach = function(current_client, bufnr)
         -- fetch normal mode keymaps for the current buffer
