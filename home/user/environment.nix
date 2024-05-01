@@ -1,6 +1,5 @@
 {
   home.sessionVariables = {
-    ASDF_RUBY_BUILD_VERSION = "master";
     BROWSER = "firefox";
     CLUTTER_BACKEND = "wayland";
     EDITOR = "nvim";

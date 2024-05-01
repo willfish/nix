@@ -34,7 +34,6 @@
     bat
     bats
     nix-prefetch-git
-    asdf-vm
     delta
     fd
     fzf

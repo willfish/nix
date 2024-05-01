@@ -36,18 +36,12 @@ in
   programs.bash = {
     enable = true;
     shellAliases = aliases;
-    initExtra = ''
-      source ${pkgs.asdf-vm}/share/asdf-vm/asdf.sh
-    '';
   };
 
   programs.fish = {
     enable = true;
     shellAliases = aliases;
     shellAbbrs = abbreviations;
-    shellInit = ''
-      source ${pkgs-unstable.asdf-vm}/share/asdf-vm/asdf.fish
-    '';
 
     plugins = [
       { name = "tide"; src = pkgs.fishPlugins.tide.src; }
