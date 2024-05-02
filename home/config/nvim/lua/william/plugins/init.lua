@@ -31,4 +31,5 @@ return {
   'fadein/vim-FIGlet',
   'sotte/presenting.vim',
   'xiyaowong/telescope-emoji.nvim',
+  'stefandtw/quickfix-reflector.vim'
 }
