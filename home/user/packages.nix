@@ -93,11 +93,13 @@
 
     # languages and their tools
     gcc
-    go
     nodejs
     rustup
     ruby_3_3
-    python311.withPackages (ps: [ps.requests])
+    (python311.withPackages (python-pkgs: [
+      python-pkgs.requests
+      python-pkgs.black
+    ]))
     gopls
     solargraph
     ruff
