@@ -225,7 +225,6 @@
     wlr.enable = false;
     xdgOpenUsePortal = false;
     extraPortals = [
-      pkgs.xdg-desktop-portal-gnome
       pkgs.xdg-desktop-portal-hyprland
       pkgs.xdg-desktop-portal-gtk
     ];
