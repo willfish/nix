@@ -18,6 +18,7 @@
     glxinfo
     pulseaudioFull
     gsettings-desktop-schemas
+    pamixer
 
     # Strong integration with home-manager so need to work out using unstable pkgs
     pkgs.zoxide
