@@ -70,6 +70,7 @@
     xdg-utils
     terraform-docs
     circleci-cli
+    serverless
 
     # Wayland clipboard tooling
     wl-clipboard
