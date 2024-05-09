@@ -61,6 +61,7 @@
     swappy
     libappindicator-gtk3
     awscli2
+    ssm-session-manager-plugin # enables ecs exec
     packer
     pavucontrol
     tflint
