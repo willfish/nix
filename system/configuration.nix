@@ -107,50 +107,48 @@
   # nixpkgs.config.allowUnfree = true;
   # unstable.config.allowUnfree = true;
 
-  environment.systemPackages = with pkgs; [
+  environment.systemPackages = with pkgs-unstable; [
     # Minimum packages
-    pkgs-unstable.vim
-    pkgs-unstable.neovim
-    pkgs-unstable.curl
-    pkgs-unstable.git
+    vim
+    neovim
+    curl
+    git
 
     # Hyprland
-    pkgs-unstable.hyprpaper
-    pkgs-unstable.kitty
-    pkgs-unstable.libnotify
-    pkgs-unstable.mako
-    pkgs-unstable.qt5.qtwayland
-    pkgs-unstable.qt6.qtwayland
-    pkgs-unstable.swayidle
-    pkgs-unstable.swaylock-effects
-    pkgs-unstable.wlogout
-    pkgs-unstable.wl-clipboard
-    pkgs-unstable.wofi
-    pkgs-unstable.waybar
+    hyprpaper
+    kitty
+    libnotify
+    mako
+    qt5.qtwayland
+    qt6.qtwayland
+    swayidle
+    swaylock-effects
+    wlogout
+    wl-clipboard
+    wofi
+    waybar
 
-    pkgs-unstable.gnome3.adwaita-icon-theme # default gnome cursors
-    pkgs-unstable.glib
-    pkgs-unstable.gsettings-desktop-schemas
-    pkgs-unstable.nwg-look
+    gnome3.adwaita-icon-theme # default gnome cursors
+    glib
+    gsettings-desktop-schemas
+    nwg-look
 
     pkgs.lm_sensors
-    pkgs-unstable.libsForQt5.qt5.qtquickcontrols2
-    pkgs-unstable.libsForQt5.qt5.qtgraphicaleffects
-    pkgs-unstable.libsForQt5.qt5.qtsvg
-    pkgs-unstable.openssl
-    pkgs-unstable.openssl.dev
-    pkgs-unstable.pkg-config
-    pkgs-unstable.xfce.thunar
-    pkgs-unstable.xdg-desktop-portal-gtk
-    pkgs-unstable.xdg-desktop-portal-wlr
+    libsForQt5.qt5.qtquickcontrols2
+    libsForQt5.qt5.qtgraphicaleffects
+    libsForQt5.qt5.qtsvg
+    openssl
+    openssl.dev
+    pkg-config
+    xfce.thunar
+    xdg-desktop-portal-gtk
+    xdg-desktop-portal-wlr
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;
   programs.fish.enable = true;
 
   services = {
-
-
     openssh = {
       enable = true;
       settings.PasswordAuthentication = false;

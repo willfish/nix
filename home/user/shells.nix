@@ -151,6 +151,54 @@ in
         admin_log
         search_query_log
       '';
+      ecs = ''
+        set REGION "eu-west-2"
+
+        # Check if AWS credentials are loaded
+        if not aws sts get-caller-identity >/dev/null
+            echo "AWS credentials are not loaded or are invalid. Please pull credentials from https://d-9c677042e2.awsapps.com/start/"
+            exit 1
+        end
+
+        # List ECS clusters and select one
+        set cluster (aws ecs list-clusters --region $REGION | jq -r '.clusterArns[] | split("/") | .[1]' | fzf --height 40% --prompt "Select a Cluster: ")
+
+        if test -z "$cluster"
+            echo "No cluster selected. Exiting."
+            exit 1
+        end
+
+        echo "Selected Cluster: $cluster"
+
+        # List services in the selected cluster and select one
+        set service (aws ecs list-services --cluster "$cluster" --region $REGION | jq -r '.serviceArns[] | split("/") | .[2]' | grep -e worker- -e hub -e admin | fzf --height 40% --prompt "Select a Service: ")
+
+        if test -z "$service"
+            echo "No service selected. Exiting."
+            exit 1
+        end
+
+        echo "Selected Service: $service"
+
+        # List tasks in the selected service and select one
+        set task (aws ecs list-tasks --cluster "$cluster" --service-name "$service" --region $REGION | jq -r '.taskArns[] | split("/") | .[2]' | fzf --height 40% --prompt "Select a Task: ")
+
+        if test -z "$task"
+            echo "No task selected. Exiting."
+            exit 1
+        end
+
+        echo "Selected Task: $task"
+
+# Execute command in the selected task
+        aws ecs execute-command \
+          --cluster "$cluster" \
+          --container "$service" \
+          --region "eu-west-2" \
+          --task "$task" \
+          --interactive \
+          --command /bin/sh
+      '';
     };
   };
   programs.zoxide.enable = true;
