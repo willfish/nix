@@ -15,9 +15,9 @@
         "custom/updates",
         "pulseaudio",
         "pulseaudio#microphone",
-        "clock"
+        "clock",
+        "custom/weather"
     ],
-
     "hyprland/window": {
         "format": "{}"
     },
