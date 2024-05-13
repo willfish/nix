@@ -106,6 +106,7 @@
       python-pkgs.setuptools
       python-pkgs.wheel
       python-pkgs.pip
+      python-pkgs.wcwidth
     ]))
     gopls
     solargraph
