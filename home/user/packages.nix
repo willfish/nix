@@ -93,7 +93,7 @@
     libffi
     libxml2
     libxslt
-    libstdcxx5
+    stdenv
 
     # libs
     zlib
