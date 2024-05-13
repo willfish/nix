@@ -100,19 +100,11 @@
     rustup
     ruby_3_3
     (python311.withPackages (python-pkgs: [
-      python-pkgs.requests
       python-pkgs.black
-      python-pkgs.ruff-lsp
+      python-pkgs.requests
       python-pkgs.setuptools
       python-pkgs.wheel
       python-pkgs.pip
-      python-pkgs.wcwidth
-      python-pkgs.mpmath
-      python-pkgs.distlib
-      # python-pkgs.typing-extensions
-      python-pkgs.nptyping
-      python-pkgs.future-typing
-      python-pkgs.typing-inspect
     ]))
     gopls
     solargraph
