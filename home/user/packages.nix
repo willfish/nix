@@ -93,7 +93,7 @@
     libffi
     libxml2
     libxslt
-    pkgs."libstdc++5"
+    libstdcxx5
 
     # libs
     zlib
