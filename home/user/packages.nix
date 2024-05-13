@@ -110,6 +110,9 @@
       python-pkgs.mpmath
       python-pkgs.distlib
       python-pkgs.typing-extensions
+      python-pkgs.nptyping
+      python-pkgs.future-typing
+      python-pkgs.typing-inspect
     ]))
     gopls
     solargraph
