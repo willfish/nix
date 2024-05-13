@@ -107,6 +107,7 @@
       python-pkgs.wheel
       python-pkgs.pip
       python-pkgs.wcwidth
+      python-pkgs.mpmath
     ]))
     gopls
     solargraph
