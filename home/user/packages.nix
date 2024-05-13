@@ -90,6 +90,10 @@
     automake
     libtool
     openssl
+    libffi
+    libxml2
+    libxslt
+    "libstdc++5"
 
     # libs
     zlib
