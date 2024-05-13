@@ -93,7 +93,7 @@
     libffi
     libxml2
     libxslt
-    "libstdc++5"
+    pkgs-unstable."libstdc++5"
 
     # libs
     zlib
