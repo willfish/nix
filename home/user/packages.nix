@@ -108,6 +108,7 @@
       python-pkgs.pip
       python-pkgs.wcwidth
       python-pkgs.mpmath
+      python-pkgs.distlib
     ]))
     gopls
     solargraph
