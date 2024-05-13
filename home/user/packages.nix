@@ -102,7 +102,6 @@
     (python311.withPackages (python-pkgs: [
       python-pkgs.requests
       python-pkgs.black
-      python-pkgs.ruff
     ]))
     gopls
     solargraph
