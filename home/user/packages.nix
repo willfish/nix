@@ -104,6 +104,8 @@
       python-pkgs.black
       python-pkgs.ruff-lsp
       python-pkgs.setuptools
+      python-pkgs.wheel
+      python-pkgs.pip
     ]))
     gopls
     solargraph
