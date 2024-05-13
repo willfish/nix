@@ -103,6 +103,7 @@
       python-pkgs.requests
       python-pkgs.black
       python-pkgs.ruff-lsp
+      python-pkgs.setuptools
     ]))
     gopls
     solargraph
