@@ -109,6 +109,7 @@
       python-pkgs.wcwidth
       python-pkgs.mpmath
       python-pkgs.distlib
+      python-pkgs.typing-extensions
     ]))
     gopls
     solargraph
