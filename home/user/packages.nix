@@ -102,7 +102,7 @@
     gcc
     nodejs
     rustup
-    ruby_3_2_2
+    ruby_3_2
     (python311.withPackages (python-pkgs: [
       python-pkgs.black
       python-pkgs.requests
