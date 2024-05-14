@@ -33,5 +33,6 @@
     XDG_SESSION_DESKTOP = "Hyprland";
     XDG_SESSION_TYPE = "wayland";
     fish_greeting = "";
+    NIXPKGS_ALLOW_UNFREE=1;
   };
 }
