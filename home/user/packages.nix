@@ -104,6 +104,7 @@
     rustup
     ruby_3_2
     libpqxx
+    libyaml
     (python311.withPackages (python-pkgs: [
       python-pkgs.black
       python-pkgs.requests
