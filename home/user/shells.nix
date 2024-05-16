@@ -48,7 +48,6 @@ in
 
     plugins = [
       { name = "tide"; src = pkgs.fishPlugins.tide.src; }
-      { name = "nix"; src = pkgs.fishPlugins.nix.src; }
     ];
 
     interactiveShellInit = ''
