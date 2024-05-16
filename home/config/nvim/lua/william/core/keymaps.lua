@@ -66,10 +66,21 @@ vim.api.nvim_set_keymap("n", "<leader>n", ":NvimTreeToggle<CR>", default_opts)
 vim.api.nvim_set_keymap("n", "<leader>nf", ":NvimTreeFindFile<CR>", default_opts)
 
 function toggle_quickfix()
-    if vim.fn.exists(":copen") == 2 then
-        vim.cmd("cclose")
+    local quickfix_open = false
+    -- Check all windows to see if the quickfix window is open
+    for _, win in pairs(vim.fn.getwininfo()) do
+        if win.quickfix == 1 then
+            quickfix_open = true
+            break
+        end
+    end
+
+    if quickfix_open then
+        -- Use API function to close the quickfix window safely
+        vim.api.nvim_command('cclose')
     else
-        vim.cmd("copen")
+        -- Use API function to open the quickfix window safely
+        vim.api.nvim_command('copen')
     end
 end
 
