@@ -123,5 +123,7 @@
     catppuccin-cursors.macchiatoBlue
     catppuccin-gtk
     papirus-folders
+
+    cowsay
   ];
 }
