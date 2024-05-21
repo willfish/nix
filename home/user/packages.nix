@@ -125,5 +125,6 @@
     papirus-folders
 
     cowsay
+    direnv
   ];
 }
