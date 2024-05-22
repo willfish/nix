@@ -17,4 +17,12 @@
         ];
     };
   };
+
+  programs.brave = {
+    enable = true;
+
+    dictionaries = [
+      inputs.nixpkgs-unstable.hunspellDictionaries.en_GB
+    ];
+  };
 }
