@@ -22,7 +22,7 @@
     enable = true;
 
     dictionaries = [
-      inputs.nixpkgs-unstable.hunspellDictionaries.en_GB
+      inputs.nixpkgs.hunspellDictsChromium.en_GB
     ];
   };
 }
