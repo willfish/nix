@@ -11,8 +11,8 @@
     ],
     "modules-center": ["hyprland/window"],
     "modules-right": [
-        "tray",
         "clock",
+        "tray",
         "custom/updates",
         "pulseaudio",
         "pulseaudio#microphone",
