@@ -10,10 +10,10 @@
         "hyprland/workspaces"
     ],
     "modules-center": [
-        "clock",
+        "clock"
     ],
     "modules-right": [
-        "hyprland/window"
+        "hyprland/window",
         "tray",
         "custom/updates",
         "pulseaudio",
