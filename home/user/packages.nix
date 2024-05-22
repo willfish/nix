@@ -45,6 +45,7 @@
     pre-commit
     ripgrep
     unzip
+    7zip
     zip
     strace
     shellharden
