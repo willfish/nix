@@ -2,7 +2,6 @@
 {
   home.packages = with pkgs-unstable; [
     # Desktop apps
-    pkgs.firefox
     telegram-desktop
     pavucontrol
     libreoffice-qt

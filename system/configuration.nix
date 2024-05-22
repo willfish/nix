@@ -180,7 +180,6 @@
 
   system.stateVersion = "23.11";
 
-
   fonts = {
     packages = with pkgs; [
       jetbrains-mono
