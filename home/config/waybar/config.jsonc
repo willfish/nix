@@ -12,10 +12,10 @@
     "modules-center": ["hyprland/window"],
     "modules-right": [
         "tray",
+        "clock",
         "custom/updates",
         "pulseaudio",
         "pulseaudio#microphone",
-        "clock",
         "custom/weather"
     ],
     "hyprland/window": {
