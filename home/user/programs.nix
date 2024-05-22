@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ nixpkgs-unstable, inputs, ... }:
 {
   programs.firefox = {
     enable = true;
@@ -22,7 +22,7 @@
     enable = true;
 
     dictionaries = [
-      inputs.nixpkgs.hunspellDictsChromium.en_GB
+      nixpkgs-unstable.hunspellDictsChromium.en_GB
     ];
   };
 }
