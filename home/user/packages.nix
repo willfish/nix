@@ -126,5 +126,6 @@
 
     cowsay
     direnv
+    pwgen
   ];
 }
