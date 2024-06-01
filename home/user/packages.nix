@@ -13,7 +13,7 @@
     image-roll
 
     # For zoom
-    pkgs-unstable.zoom-us
+    pkgs.zoom-us
     glxinfo
     pulseaudioFull
     gsettings-desktop-schemas
