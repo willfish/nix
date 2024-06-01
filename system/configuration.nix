@@ -48,7 +48,7 @@
         enable = true;
       };
 
-      portalPackage = pkgs.xdg-desktop-portal-hyprland;
+      portalPackage = pkgs-unstable.xdg-desktop-portal-hyprland;
     };
   };
 
@@ -228,8 +228,7 @@
     wlr.enable = false;
     xdgOpenUsePortal = false;
     extraPortals = [
-      pkgs.xdg-desktop-portal-hyprland
-      pkgs.xdg-desktop-portal-gtk
+      pkgs-unstable.xdg-desktop-portal-gtk
     ];
  };
 
