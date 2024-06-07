@@ -153,8 +153,8 @@
           pa_applet
           networkmanagerapplet
           polybar
-          variety
           feh
+          pkgs.variety
         ];
       };
 
