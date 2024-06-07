@@ -40,17 +40,17 @@
   };
 
 
-  programs = {
-    hyprland = {
-      enable = true;
-
-      xwayland = {
-        enable = true;
-      };
-
-      portalPackage = pkgs-unstable.xdg-desktop-portal-hyprland;
-    };
-  };
+  # programs = {
+  #   hyprland = {
+  #     enable = false;
+  #
+  #     xwayland = {
+  #       enable = true;
+  #     };
+  #
+  #     portalPackage = pkgs-unstable.xdg-desktop-portal-hyprland;
+  #   };
+  # };
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
@@ -121,18 +121,18 @@
     git
 
     # Hyprland
-    hyprpaper
+    # hyprpaper
     kitty
-    libnotify
-    mako
-    qt5.qtwayland
-    qt6.qtwayland
-    swayidle
-    swaylock-effects
-    wlogout
-    wl-clipboard
-    wofi
-    waybar
+    # libnotify
+    # mako
+    # qt5.qtwayland
+    # qt6.qtwayland
+    # swayidle
+    # swaylock-effects
+    # wlogout
+    # wl-clipboard
+    # wofi
+    # waybar
 
     gnome3.adwaita-icon-theme # default gnome cursors
     glib
