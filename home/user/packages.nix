@@ -19,6 +19,8 @@
     gsettings-desktop-schemas
     pamixer
 
+    dconf
+
     # Strong integration with home-manager so need to work out using unstable pkgs
     pkgs.zoxide
     pkgs.tmux
