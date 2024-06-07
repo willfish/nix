@@ -204,6 +204,7 @@
       nerdfonts
       font-awesome
       fira-code
+      nerdfonts
     ];
   };
 

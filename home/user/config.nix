@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, ... }:
 let
   configDir = ../config;
 
@@ -17,5 +17,10 @@ in
       ".config/btop".source = "${configDir}/btop";
       ".config/wofi".source = "${configDir}/wofi";
       ".config/mako".source = "${configDir}/mako";
+      ".i3".source = "${configDir}/i3";
+      ".config/polybar".source = "${configDir}/polybar";
+      ".config/rofi".source = "${configDir}/rofi";
+      ".config/picom.conf".source = "${configDir}/picom.conf";
+      ".wallpapers".source = "${configDir}/variety/Favorites";
   };
 }
