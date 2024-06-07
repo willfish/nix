@@ -170,6 +170,24 @@
       layout = "us";
       xkbVariant = "";
       # xkbOptions = "grp:alt_shift_toggle, caps:swapescape";
+      windowManager.i3 = {
+        enable = true;
+        extraPackages = with pkgs-unstable; [
+          i3scrot
+          i3status
+          i3lock
+          i3lock-blur
+          i3blocks
+          rofi
+          dmenu
+          picom
+          dunst
+          pa_applet
+          networkmanagerapplet
+          polybar
+          variety
+        ];
+      };
 
       displayManager = {
         sddm.enable = true;
@@ -185,6 +203,7 @@
       jetbrains-mono
       nerdfonts
       font-awesome
+      fira-code
     ];
   };
 
