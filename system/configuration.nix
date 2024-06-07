@@ -156,7 +156,7 @@
           libayatana-indicator-gtk3
           nitrogen
           feh
-          variety
+          xautolock
           gexiv2
           libnotify
           gtk3
