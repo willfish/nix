@@ -176,11 +176,11 @@
 
   xdg.portal = {
     enable = true;
-    # wlr.enable = false;
-    # xdgOpenUsePortal = false;
-    # extraPortals = [
-    #   pkgs-unstable.xdg-desktop-portal-gtk
-    # ];
+    wlr.enable = false;
+    xdgOpenUsePortal = true;
+    extraPortals = [
+      pkgs-unstable.xdg-desktop-portal-gtk
+    ];
   };
 
 
