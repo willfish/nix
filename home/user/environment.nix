@@ -1,6 +1,7 @@
 {
   home.sessionVariables = {
-    BROWSER = "firefox";
+    DEFAULT_BROWSER = "brave";
+    BROWSER = "brave";
     CLUTTER_BACKEND = "wayland";
     EDITOR = "nvim";
     GIT_PAGER = "delta";
@@ -33,5 +34,6 @@
     XDG_SESSION_DESKTOP = "Hyprland";
     XDG_SESSION_TYPE = "wayland";
     fish_greeting = "";
+    NIXPKGS_ALLOW_UNFREE=1;
   };
 }

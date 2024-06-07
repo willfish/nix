@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ pkgs-unstable, inputs, ... }:
 {
   programs.firefox = {
     enable = true;
@@ -16,5 +16,13 @@
           elasticvue
         ];
     };
+  };
+
+  programs.brave = {
+    enable = true;
+
+    dictionaries = [
+      pkgs-unstable.hunspellDictsChromium.en_GB
+    ];
   };
 }

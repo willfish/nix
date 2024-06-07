@@ -1,0 +1,20 @@
+configuration {
+  font: "hack 10";
+  show-icons: true;
+  sort: true;
+  sorting-method: "fzf";
+  terminal: "alacritty";
+  matching: "glob";
+  display-window: "";
+  display-run: "";
+  display-ssh: "~#";
+  display-drun: "";
+  display-combi: "";
+}
+# configuration {
+#  modi: "window,drun,ssh,combi";
+#  show-icons: true;
+#  font: "hack 10";
+#  combi-modi: "window,drun,ssh";
+# }
+@theme: ~/.config/rofi/themes/macos.rasi

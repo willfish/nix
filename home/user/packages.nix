@@ -2,7 +2,6 @@
 {
   home.packages = with pkgs-unstable; [
     # Desktop apps
-    pkgs.firefox
     telegram-desktop
     pavucontrol
     libreoffice-qt
@@ -18,6 +17,7 @@
     glxinfo
     pulseaudioFull
     gsettings-desktop-schemas
+    pamixer
 
     # Strong integration with home-manager so need to work out using unstable pkgs
     pkgs.zoxide
@@ -44,6 +44,7 @@
     pre-commit
     ripgrep
     unzip
+    p7zip
     zip
     strace
     shellharden
@@ -60,6 +61,7 @@
     swappy
     libappindicator-gtk3
     awscli2
+    ssm-session-manager-plugin # enables ecs exec
     packer
     pavucontrol
     tflint
@@ -69,6 +71,7 @@
     xdg-utils
     terraform-docs
     circleci-cli
+    serverless
 
     # Wayland clipboard tooling
     wl-clipboard
@@ -87,6 +90,10 @@
     automake
     libtool
     openssl
+    libffi
+    libxml2
+    libxslt
+    stdenv
 
     # libs
     zlib
@@ -95,10 +102,15 @@
     gcc
     nodejs
     rustup
-    ruby_3_3
+    ruby_3_2
+    libpqxx
+    libyaml
     (python311.withPackages (python-pkgs: [
-      python-pkgs.requests
       python-pkgs.black
+      python-pkgs.requests
+      python-pkgs.setuptools
+      python-pkgs.wheel
+      python-pkgs.pip
     ]))
     gopls
     solargraph
@@ -111,5 +123,9 @@
     catppuccin-cursors.macchiatoBlue
     catppuccin-gtk
     papirus-folders
+
+    cowsay
+    direnv
+    pwgen
   ];
 }
