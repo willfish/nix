@@ -73,9 +73,10 @@
     circleci-cli
     serverless
 
+    xclip
     # Wayland clipboard tooling
-    wl-clipboard
-    wl-clipboard-x11
+    # wl-clipboard
+    # wl-clipboard-x11
 
     # Build tools
     bison
