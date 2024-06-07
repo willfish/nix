@@ -161,6 +161,7 @@
           libnotify
           gtk3
           imagemagick
+          dconf
         ];
       };
 
