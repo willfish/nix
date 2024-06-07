@@ -5,7 +5,9 @@
 { pkgs, pkgs-unstable, ... }:
 
 {
+  system.stateVersion = "23.11";
   imports = [./hardware-configuration.nix];
+
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -172,7 +174,15 @@
     };
   };
 
-  system.stateVersion = "23.11";
+  xdg.portal = {
+    enable = true;
+    # wlr.enable = false;
+    # xdgOpenUsePortal = false;
+    # extraPortals = [
+    #   pkgs-unstable.xdg-desktop-portal-gtk
+    # ];
+  };
+
 
   fonts = {
     packages = with pkgs; [
