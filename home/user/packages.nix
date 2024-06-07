@@ -114,7 +114,7 @@
       python-pkgs.pillow
       python-pkgs.pip
       python-pkgs.pycairo
-      python-pkgs.pygoobject3
+      python-pkgs.pygobject3
       python-pkgs.requests
       python-pkgs.setuptools
       python-pkgs.wheel
