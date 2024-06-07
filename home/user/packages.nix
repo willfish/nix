@@ -20,7 +20,7 @@
     pamixer
 
     # Strong integration with home-manager so need to work out using unstable pkgs
-    zoxide
+    pkgs.zoxide
     tmux
     tmuxinator
 
