@@ -119,27 +119,14 @@
     neovim
     curl
     git
-
-    # Hyprland
-    # hyprpaper
     kitty
-    # libnotify
-    # mako
-    # qt5.qtwayland
-    # qt6.qtwayland
-    # swayidle
-    # swaylock-effects
-    # wlogout
-    # wl-clipboard
-    # wofi
-    # waybar
 
     gnome3.adwaita-icon-theme # default gnome cursors
     glib
     gsettings-desktop-schemas
     nwg-look
 
-    pkgs.lm_sensors
+    lm_sensors
     libsForQt5.qt5.qtquickcontrols2
     libsForQt5.qt5.qtgraphicaleffects
     libsForQt5.qt5.qtsvg
@@ -147,8 +134,6 @@
     openssl.dev
     pkg-config
     xfce.thunar
-    xdg-desktop-portal-gtk
-    xdg-desktop-portal-wlr
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;
@@ -242,15 +227,6 @@
       options = "--delete-older-than 7d";
     };
   };
-
- xdg.portal = {
-    enable = true;
-    wlr.enable = false;
-    xdgOpenUsePortal = false;
-    extraPortals = [
-      pkgs-unstable.xdg-desktop-portal-gtk
-    ];
- };
 
  programs = {
    steam = {
