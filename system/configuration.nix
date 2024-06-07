@@ -40,20 +40,14 @@
   };
 
 
-  programs = {
-    hyprland = {
-      enable = true;
-
-      xwayland = {
-        enable = true;
-      };
-
-      portalPackage = pkgs.xdg-desktop-portal-hyprland;
-    };
-  };
-
   # Enable CUPS to print documents.
   services.printing.enable = true;
+
+  services.avahi = {
+    enable = true;
+    nssmdns = true;
+    openFirewall = true;
+  };
 
   hardware.system76.enableAll = true;
   # Enable sound with pipewire.
@@ -103,54 +97,33 @@
 
   virtualisation.docker.enable = true;
 
-  # Allow unfree packages
-  # nixpkgs.config.allowUnfree = true;
-  # unstable.config.allowUnfree = true;
-
-  environment.systemPackages = with pkgs; [
+  environment.systemPackages = with pkgs-unstable; [
     # Minimum packages
-    pkgs-unstable.vim
-    pkgs-unstable.neovim
-    pkgs-unstable.curl
-    pkgs-unstable.git
+    vim
+    neovim
+    curl
+    git
+    kitty
 
-    # Hyprland
-    pkgs-unstable.hyprpaper
-    pkgs-unstable.kitty
-    pkgs-unstable.libnotify
-    pkgs-unstable.mako
-    pkgs-unstable.qt5.qtwayland
-    pkgs-unstable.qt6.qtwayland
-    pkgs-unstable.swayidle
-    pkgs-unstable.swaylock-effects
-    pkgs-unstable.wlogout
-    pkgs-unstable.wl-clipboard
-    pkgs-unstable.wofi
-    pkgs-unstable.waybar
+    gnome3.adwaita-icon-theme # default gnome cursors
+    glib
+    gsettings-desktop-schemas
+    nwg-look
 
-    pkgs-unstable.gnome3.adwaita-icon-theme # default gnome cursors
-    pkgs-unstable.glib
-    pkgs-unstable.gsettings-desktop-schemas
-    pkgs-unstable.nwg-look
-
-    pkgs.lm_sensors
-    pkgs-unstable.libsForQt5.qt5.qtquickcontrols2
-    pkgs-unstable.libsForQt5.qt5.qtgraphicaleffects
-    pkgs-unstable.libsForQt5.qt5.qtsvg
-    pkgs-unstable.openssl
-    pkgs-unstable.openssl.dev
-    pkgs-unstable.pkg-config
-    pkgs-unstable.xfce.thunar
-    pkgs-unstable.xdg-desktop-portal-gtk
-    pkgs-unstable.xdg-desktop-portal-wlr
+    lm_sensors
+    libsForQt5.qt5.qtquickcontrols2
+    libsForQt5.qt5.qtgraphicaleffects
+    libsForQt5.qt5.qtsvg
+    openssl
+    openssl.dev
+    pkg-config
+    xfce.thunar
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;
   programs.fish.enable = true;
 
   services = {
-
-
     openssh = {
       enable = true;
       settings.PasswordAuthentication = false;
@@ -166,6 +139,24 @@
       layout = "us";
       xkbVariant = "";
       # xkbOptions = "grp:alt_shift_toggle, caps:swapescape";
+      windowManager.i3 = {
+        enable = true;
+        extraPackages = with pkgs-unstable; [
+          i3status
+          i3lock
+          i3lock-blur
+          i3blocks
+          rofi
+          dmenu
+          picom
+          dunst
+          pa_applet
+          networkmanagerapplet
+          polybar
+          variety
+          feh
+        ];
+      };
 
       displayManager = {
         sddm.enable = true;
@@ -176,12 +167,13 @@
 
   system.stateVersion = "23.11";
 
-
   fonts = {
     packages = with pkgs; [
       jetbrains-mono
       nerdfonts
       font-awesome
+      fira-code
+      nerdfonts
     ];
   };
 
@@ -219,17 +211,6 @@
       options = "--delete-older-than 7d";
     };
   };
-
- xdg.portal = {
-    enable = true;
-    wlr.enable = false;
-    xdgOpenUsePortal = false;
-    extraPortals = [
-      pkgs.xdg-desktop-portal-gnome
-      pkgs.xdg-desktop-portal-hyprland
-      pkgs.xdg-desktop-portal-gtk
-    ];
- };
 
  programs = {
    steam = {
