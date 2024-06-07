@@ -13,16 +13,16 @@
     image-roll
 
     # For zoom
-    pkgs.zoom-us
+    zoom-us
     glxinfo
     pulseaudioFull
     gsettings-desktop-schemas
     pamixer
 
     # Strong integration with home-manager so need to work out using unstable pkgs
-    pkgs.zoxide
-    pkgs.tmux
-    pkgs.tmuxinator
+    zoxide
+    tmux
+    tmuxinator
 
     # Utilities
     tldr
@@ -72,11 +72,7 @@
     terraform-docs
     circleci-cli
     serverless
-
     xclip
-    # Wayland clipboard tooling
-    # wl-clipboard
-    # wl-clipboard-x11
 
     # Build tools
     bison
