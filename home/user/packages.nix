@@ -107,11 +107,17 @@
     libpqxx
     libyaml
     (python311.withPackages (python-pkgs: [
+      python-pkgs.beautifulsoup4
       python-pkgs.black
+      python-pkgs.configobj
+      python-pkgs.lxml
+      python-pkgs.pillow
+      python-pkgs.pip
+      python-pkgs.pycairo
+      python-pkgs.pygoobject3
       python-pkgs.requests
       python-pkgs.setuptools
       python-pkgs.wheel
-      python-pkgs.pip
     ]))
     gopls
     solargraph

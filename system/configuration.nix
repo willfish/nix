@@ -153,8 +153,14 @@
           pa_applet
           networkmanagerapplet
           polybar
+          libayatana-indicator-gtk3
+          nitrogen
           feh
-          pkgs.variety
+          variety
+          gexiv2
+          libnotify
+          gtk3
+          imagemagick
         ];
       };
 
@@ -169,10 +175,9 @@
 
   fonts = {
     packages = with pkgs; [
-      jetbrains-mono
-      nerdfonts
-      font-awesome
       fira-code
+      font-awesome
+      jetbrains-mono
       nerdfonts
     ];
   };
