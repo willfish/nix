@@ -173,7 +173,6 @@
       windowManager.i3 = {
         enable = true;
         extraPackages = with pkgs-unstable; [
-          i3scrot
           i3status
           i3lock
           i3lock-blur
@@ -186,6 +185,7 @@
           networkmanagerapplet
           polybar
           variety
+          feh
         ];
       };
 
