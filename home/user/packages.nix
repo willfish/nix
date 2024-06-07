@@ -21,8 +21,8 @@
 
     # Strong integration with home-manager so need to work out using unstable pkgs
     pkgs.zoxide
-    tmux
-    tmuxinator
+    pkgs.tmux
+    pkgs.tmuxinator
 
     # Utilities
     tldr
