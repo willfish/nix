@@ -364,7 +364,7 @@ client.background #2B2C2B
 gaps outer 5
 gaps inner 5
 # Handle polybar top gap
-gaps top 32
+gaps top 25
 
 # Smart gaps (gaps used if only more than one container on the workspace)
 smart_gaps off
