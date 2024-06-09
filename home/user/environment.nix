@@ -29,9 +29,9 @@
     XCURSOR_SIZE = "32";
     XDG_CACHE_HOME = "\${HOME}/.cache";
     XDG_CONFIG_HOME = "\${HOME}/.config";
-    # XDG_CURRENT_DESKTOP = "Hyprland";
+    # XDG_CURRENT_DESKTOP = "i3";
     XDG_DATA_HOME = "\${HOME}/.local/share";
-    # XDG_SESSION_DESKTOP = "Hyprland";
+    # XDG_SESSION_DESKTOP = "i3";
     # XDG_SESSION_TYPE = "wayland";
     fish_greeting = "";
     NIXPKGS_ALLOW_UNFREE=1;
