@@ -46,7 +46,7 @@ exec --no-startup-id pa-applet
 
 # Start Applications
 bindsym $mod+x exec --no-startup-id "rofi -show combi -combi-modes 'run,ssh' -show-icons -display-run '' -modes combi -theme macos"
-bindsym $mod+l exec --no-startup-id "~/.dotfiles/home/config/wofi/power_menu.sh"
+bindsym $mod+l exec --no-startup-id "~/.dotfiles/home/config/rofi/power_menu.sh"
 bindsym $mod+t exec --no-startup-id pkill picom
 bindsym $mod+Ctrl+t exec --no-startup-id picom -b
 bindsym $mod+Shift+d --release exec "killall dunst; exec notify-send 'restart dunst'"
