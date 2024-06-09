@@ -361,8 +361,8 @@ client.background #2B2C2B
 #############################
 
 # Set inner/outer gaps
-gaps outer 20
-gaps inner 20
+gaps outer 5
+gaps inner 5
 # Handle polybar top gap
 gaps top 27
 
