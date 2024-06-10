@@ -126,5 +126,7 @@
     cowsay
     direnv
     pwgen
+
+    postgresql
   ];
 }
