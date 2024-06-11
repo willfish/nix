@@ -164,7 +164,7 @@
           gtk3
           imagemagick
           dconf
-          xdg-desktop-portal
+          # xdg-desktop-portal
         ];
       };
 
@@ -186,14 +186,14 @@
   # portal implementation found in lexicographical order, use the following:
   #
   # xdg.portal.config.common.default = "*";
-  xdg.portal = {
-    enable = true;
-    wlr.enable = false;
-    xdgOpenUsePortal = true;
-    extraPortals = [
-      pkgs-unstable.xdg-desktop-portal-gtk
-    ];
-  };
+  # xdg.portal = {
+  #   enable = true;
+  #   wlr.enable = false;
+  #   xdgOpenUsePortal = true;
+  #   extraPortals = [
+  #     pkgs-unstable.xdg-desktop-portal-gtk
+  #   ];
+  # };
 
 
   fonts = {
