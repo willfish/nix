@@ -148,6 +148,7 @@
           i3lock
           i3lock-blur
           i3blocks
+          maim
           rofi
           dmenu
           picom
