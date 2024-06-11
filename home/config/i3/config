@@ -49,7 +49,7 @@ bindsym $mod+x exec --no-startup-id "rofi -show combi -combi-modes 'run,ssh' -sh
 bindsym $mod+l exec --no-startup-id "~/.dotfiles/home/config/rofi/power_menu.sh"
 bindsym $mod+t exec --no-startup-id pkill picom
 bindsym $mod+Ctrl+t exec --no-startup-id picom -b
-bindsym Ctrl+Shift+s exec --no-startup-id maim -s -u | xclip -selection clipboard -t image/png -i
+bindsym Ctrl+Shift+s exec "maim -s -u | xclip -selection clipboard -t image/png -i"
 bindsym $mod+Shift+d --release exec "killall dunst; exec notify-send 'restart dunst'"
 
 bindsym Print exec --no-startup-id i3-scrot
