@@ -164,6 +164,7 @@
           gtk3
           imagemagick
           dconf
+          xdg-desktop-portal
         ];
       };
 
