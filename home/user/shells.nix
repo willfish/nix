@@ -190,7 +190,7 @@ in
 
         echo "Selected Task: $task"
 
-# Execute command in the selected task
+        # Execute command in the selected task
         aws ecs execute-command \
           --cluster "$cluster" \
           --container "$service" \
