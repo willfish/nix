@@ -129,5 +129,7 @@
     pwgen
 
     postgresql
+
+    csvtool
   ];
 }
