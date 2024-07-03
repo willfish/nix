@@ -131,6 +131,6 @@
     postgresql
 
     csvtool
-    telnet
+    inetutils
   ];
 }
