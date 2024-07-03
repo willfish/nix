@@ -131,5 +131,6 @@
     postgresql
 
     csvtool
+    telnet
   ];
 }
