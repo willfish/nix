@@ -132,5 +132,7 @@
 
     csvtool
     inetutils
+
+    dig
   ];
 }
