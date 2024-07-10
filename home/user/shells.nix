@@ -17,6 +17,7 @@ let
   abbreviations = {
     ag = "rg";
     cdr = "cd ~/Repositories";
+    book = "cd ~/Repositories/books";
     hm = "cd ~/Repositories/hmrc";
     cdn = "cd ~/Notes";
     mux = "tmuxinator";
