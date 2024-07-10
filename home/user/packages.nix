@@ -12,6 +12,7 @@
     steam-run
     image-roll
     vscode
+    gimp
 
     # For zoom
     pkgs.zoom-us
