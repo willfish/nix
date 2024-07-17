@@ -135,5 +135,6 @@
     inetutils
 
     dig
+    kitty
   ];
 }
