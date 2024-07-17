@@ -5,7 +5,9 @@
 { pkgs, pkgs-unstable, ... }:
 
 {
+  system.stateVersion = "23.11";
   imports = [./hardware-configuration.nix];
+
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -146,6 +148,7 @@
           i3lock
           i3lock-blur
           i3blocks
+          maim
           rofi
           dmenu
           picom
@@ -153,8 +156,16 @@
           pa_applet
           networkmanagerapplet
           polybar
-          variety
+          libayatana-indicator-gtk3
+          nitrogen
           feh
+          xautolock
+          gexiv2
+          libnotify
+          gtk3
+          imagemagick
+          dconf
+          # xdg-desktop-portal
         ];
       };
 
@@ -165,14 +176,32 @@
     };
   };
 
-  system.stateVersion = "23.11";
+  #   building the system configuration...
+  # trace: warning: xdg-desktop-portal 1.17 reworked how portal implementations are loaded, you
+  # should either set `xdg.portal.config` or `xdg.portal.configPackages`
+  # to specify which portal backend to use for the requested interface.
+  #
+  # https://github.com/flatpak/xdg-desktop-portal/blob/1.18.1/doc/portals.conf.rst.in
+  #
+  # If you simply want to keep the behaviour in < 1.17, which uses the first
+  # portal implementation found in lexicographical order, use the following:
+  #
+  # xdg.portal.config.common.default = "*";
+  # xdg.portal = {
+  #   enable = true;
+  #   wlr.enable = false;
+  #   xdgOpenUsePortal = true;
+  #   extraPortals = [
+  #     pkgs-unstable.xdg-desktop-portal-gtk
+  #   ];
+  # };
+
 
   fonts = {
     packages = with pkgs; [
-      jetbrains-mono
-      nerdfonts
-      font-awesome
       fira-code
+      font-awesome
+      jetbrains-mono
       nerdfonts
     ];
   };
