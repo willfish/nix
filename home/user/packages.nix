@@ -135,6 +135,6 @@
     inetutils
 
     dig
-    kitty
+    alacritty
   ];
 }
