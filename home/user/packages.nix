@@ -11,6 +11,8 @@
     steam
     steam-run
     image-roll
+    vscode
+    gimp
 
     # For zoom
     pkgs.zoom-us
@@ -18,6 +20,8 @@
     pulseaudioFull
     gsettings-desktop-schemas
     pamixer
+
+    dconf
 
     # Strong integration with home-manager so need to work out using unstable pkgs
     pkgs.zoxide
@@ -72,10 +76,7 @@
     terraform-docs
     circleci-cli
     serverless
-
-    # Wayland clipboard tooling
-    wl-clipboard
-    wl-clipboard-x11
+    xclip
 
     # Build tools
     bison
@@ -127,5 +128,15 @@
     cowsay
     direnv
     pwgen
+
+    postgresql
+
+    csvtool
+    inetutils
+
+    dig
+    alacritty
+
+    ansible
   ];
 }

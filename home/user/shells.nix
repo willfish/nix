@@ -17,6 +17,7 @@ let
   abbreviations = {
     ag = "rg";
     cdr = "cd ~/Repositories";
+    book = "cd ~/Repositories/books";
     hm = "cd ~/Repositories/hmrc";
     cdn = "cd ~/Notes";
     mux = "tmuxinator";
@@ -143,13 +144,11 @@ in
       backend_log = ''log_for "https://www.trade-tariff.service.gov.uk/api/v2/healthcheck" trade-tariff-backend'';
       duty_log = ''log_for "https://www.trade-tariff.service.gov.uk/duty-calculator/healthcheck" trade-tariff-duty-calculator'';
       admin_log = ''log_for "https://admin.trade-tariff.service.gov.uk/healthcheck" trade-tariff-admin'';
-      search_query_log = ''log_for "https://www.trade-tariff.service.gov.uk/api/search/healthcheck" trade-tariff-search-query-parser'';
       all_logs = ''
         frontend_log
         backend_log
         duty_log
         admin_log
-        search_query_log
       '';
       ecs = ''
         set REGION "eu-west-2"
@@ -190,7 +189,7 @@ in
 
         echo "Selected Task: $task"
 
-# Execute command in the selected task
+        # Execute command in the selected task
         aws ecs execute-command \
           --cluster "$cluster" \
           --container "$service" \

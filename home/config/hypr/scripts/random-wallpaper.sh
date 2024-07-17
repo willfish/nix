@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-directory=~/Pictures/
+directory=~/.wallpapers/
 monitor=`hyprctl monitors | grep Monitor | awk '{print $2}'`
 
 if [ -d "$directory" ]; then
