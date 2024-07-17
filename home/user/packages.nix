@@ -136,5 +136,7 @@
 
     dig
     alacritty
+
+    ansible
   ];
 }
