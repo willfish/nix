@@ -107,7 +107,7 @@
     git
     kitty
 
-    gnome3.adwaita-icon-theme # default gnome cursors
+    adwaita-icon-theme # default gnome cursors
     glib
     gsettings-desktop-schemas
     nwg-look
