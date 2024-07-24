@@ -56,6 +56,7 @@ in
       set -gx ERL_AFLAGS "-kernel shell_history enabled"
       set -gx SAM_CLI_TELEMETRY 0
       set -gx RUBYOPT --enable-yjit
+      set -gx PATH $HOME/go/bin $PATH
     '';
 
     functions = {
