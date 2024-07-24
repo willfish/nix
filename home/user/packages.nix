@@ -117,7 +117,6 @@
     solargraph
     ruff
     golangci-lint
-    bee
     hclfmt
     nixd
 
