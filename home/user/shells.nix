@@ -171,7 +171,7 @@ in
         echo "Selected Cluster: $cluster"
 
         # List services in the selected cluster and select one
-        set service (aws ecs list-services --cluster "$cluster" --region $REGION | jq -r '.serviceArns[] | split("/") | .[2]' | grep -e worker- -e hub -e admin -e backend- | fzf --height 40% --prompt "Select a Service: ")
+        set service (aws ecs list-services --cluster "$cluster" --region $REGION | jq -r '.serviceArns[] | split("/") | .[2]' | grep -e worker- -e hub -e admin -e backend- -e commod | fzf --height 40% --prompt "Select a Service: ")
 
         if test -z "$service"
             echo "No service selected. Exiting."
