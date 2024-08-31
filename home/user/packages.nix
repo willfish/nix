@@ -139,5 +139,6 @@
 
     ansible
     nyancat
+    lsd
   ];
 }
