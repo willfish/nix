@@ -140,5 +140,6 @@
     ansible
     nyancat
     lsd
+    pandoc
   ];
 }
