@@ -98,6 +98,7 @@
 
     # libs
     zlib
+    zlib.dev
 
     # languages and their tools
     gcc
