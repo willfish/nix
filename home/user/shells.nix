@@ -57,6 +57,7 @@ in
       set -gx SAM_CLI_TELEMETRY 0
       set -gx RUBYOPT --enable-yjit
       set -gx PATH $HOME/go/bin $PATH
+      source "$HOME/.nix-profile/share/asdf-vm/asdf.fish"
     '';
 
     functions = {

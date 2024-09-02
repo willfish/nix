@@ -103,7 +103,9 @@
     gcc
     nodejs
     rustup
-    ruby_3_2
+    asdf-vm
+    libyaml
+    yarn
     libpqxx
     libyaml
     (python311.withPackages (python-pkgs: [
