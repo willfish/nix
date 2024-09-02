@@ -56,6 +56,9 @@ in
       set -gx ERL_AFLAGS "-kernel shell_history enabled"
       set -gx SAM_CLI_TELEMETRY 0
       set -gx RUBYOPT --enable-yjit
+      set -gx PATH $HOME/go/bin $PATH
+      set -gx LD_LIBRARY_PATH $HOME/.nix-profile/lib
+      source "$HOME/.nix-profile/share/asdf-vm/asdf.fish"
     '';
 
     functions = {
@@ -170,7 +173,7 @@ in
         echo "Selected Cluster: $cluster"
 
         # List services in the selected cluster and select one
-        set service (aws ecs list-services --cluster "$cluster" --region $REGION | jq -r '.serviceArns[] | split("/") | .[2]' | grep -e worker- -e hub -e admin | fzf --height 40% --prompt "Select a Service: ")
+        set service (aws ecs list-services --cluster "$cluster" --region $REGION | jq -r '.serviceArns[] | split("/") | .[2]' | grep -e worker- -e hub -e admin -e backend- -e tea | fzf --height 40% --prompt "Select a Service: ")
 
         if test -z "$service"
             echo "No service selected. Exiting."
