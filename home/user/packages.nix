@@ -99,6 +99,7 @@
     # libs
     zlib
     zlib.dev
+    zlib.out
 
     # languages and their tools
     gcc
