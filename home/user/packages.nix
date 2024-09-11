@@ -145,5 +145,7 @@
     nyancat
     lsd
     pandoc
+
+    xmllint
   ];
 }
