@@ -229,6 +229,7 @@
 
   nix = {
     settings = {
+      substituters = [ "https://cache.nixos.org" "https://nixpkgs-ruby.cachix.org" ];
       warn-dirty = false;
       experimental-features = [ "nix-command" "flakes" ];
       auto-optimise-store = true;
