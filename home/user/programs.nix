@@ -25,4 +25,8 @@
       pkgs-unstable.hunspellDictsChromium.en_GB
     ];
   };
+
+  programs.google-chrome = {
+    enable = true;
+  };
 }

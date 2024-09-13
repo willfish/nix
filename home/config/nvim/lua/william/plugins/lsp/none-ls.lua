@@ -17,7 +17,6 @@ return {
         "black", -- python formatter
         "golangci_lint", -- golang linter
         "markdownlint", -- markdown linter
-        "rubyfmt", -- ruby formatter
         "shellharden", -- shell formatter
         "shfmt", -- shell formatter
         "stylua", -- lua formatter

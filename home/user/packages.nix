@@ -63,7 +63,6 @@
     grim
     slurp
     swappy
-    libappindicator-gtk3
     awscli2
     ssm-session-manager-plugin # enables ecs exec
     packer
@@ -123,11 +122,6 @@
     golangci-lint
     hclfmt
     nixd
-
-    # themeing and fonts
-    catppuccin-cursors.macchiatoBlue
-    catppuccin-gtk
-    papirus-folders
 
     cowsay
     direnv
