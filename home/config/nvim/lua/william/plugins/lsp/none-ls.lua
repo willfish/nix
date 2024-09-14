@@ -37,7 +37,6 @@ return {
         formatting.black,
         formatting.hclfmt,
         formatting.markdownlint,
-        formatting.rubyfmt,
         formatting.shellharden,
         formatting.stylua,
         formatting.xmllint,
