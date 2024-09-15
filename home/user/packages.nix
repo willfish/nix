@@ -8,9 +8,7 @@
     slack
     discord
     spotify
-    steam
-    steam-run
-    glxinfo # for steam
+    glxinfo
     vscode
     gimp
 
