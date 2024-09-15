@@ -11,7 +11,6 @@
     steam
     steam-run
     glxinfo # for steam
-    bumblebee # for steam
     vscode
     gimp
 
