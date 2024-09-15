@@ -58,7 +58,7 @@ in
       set -gx RUBYOPT --enable-yjit
       set -gx PATH $HOME/go/bin $PATH
       set -gx LD_LIBRARY_PATH $HOME/.nix-profile/lib
-      source "$HOME/.nix-profile/share/asdf-vm/asdf.fish"
+      # source "$HOME/.nix-profile/share/asdf-vm/asdf.fish"
     '';
 
     functions = {
