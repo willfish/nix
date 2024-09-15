@@ -10,7 +10,6 @@
     spotify
     steam
     steam-run
-    steam-original
     glxinfo # for steam
     bumblebee # for steam
     vscode
