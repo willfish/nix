@@ -55,14 +55,7 @@
     shfmt
     tree
     yarn
-    wofi
     pcmanfm
-    hyprpaper
-    pywal
-    pyprland
-    grim
-    slurp
-    swappy
     awscli2
     ssm-session-manager-plugin # enables ecs exec
     packer
@@ -89,26 +82,24 @@
     autoconf
     automake
     libtool
-    openssl
-    libffi
-    libxml2
-    libxslt
     stdenv
 
     # libs
     zlib
     zlib.dev
     zlib.out
-
-    # languages and their tools
-    gcc
-    nodejs
-    rustup
-    asdf-vm
+    libffi
+    libxml2
+    libxslt
+    openssl
     libyaml
-    yarn
     libpqxx
     libyaml
+
+    # languages and their tools
+    nodejs
+    yarn
+    rustup
     (python311.withPackages (python-pkgs: [
       python-pkgs.black
       python-pkgs.requests
@@ -117,9 +108,8 @@
       python-pkgs.pip
     ]))
     gopls
-    solargraph
-    ruff
     golangci-lint
+    ruff
     hclfmt
     nixd
 
