@@ -10,13 +10,14 @@
     spotify
     steam
     steam-run
-    image-roll
+    steam-original
+    glxinfo # for steam
+    bumblebee # for steam
     vscode
     gimp
 
     # For zoom
     pkgs.zoom-us
-    glxinfo
     pulseaudioFull
     gsettings-desktop-schemas
     pamixer
