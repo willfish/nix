@@ -47,7 +47,7 @@
 
   services.avahi = {
     enable = true;
-    nssmdns = true;
+    nssmdns4 = true;
     openFirewall = true;
   };
 
@@ -126,6 +126,10 @@
   programs.fish.enable = true;
 
   services = {
+    displayManager = {
+      sddm.enable = true;
+      # sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
+    };
     openssh = {
       enable = true;
       settings.PasswordAuthentication = false;
@@ -137,8 +141,8 @@
 
     xserver = {
       enable = true;
-      layout = "us";
-      xkbVariant = "";
+      xkb.layout = "us";
+      xkb.variant = "";
       # xkbOptions = "grp:alt_shift_toggle, caps:swapescape";
       windowManager.i3 = {
         enable = true;
@@ -165,11 +169,6 @@
           imagemagick
           dconf
         ];
-      };
-
-      displayManager = {
-        sddm.enable = true;
-        sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
       };
     };
   };
