@@ -11,6 +11,8 @@
     glxinfo
     vscode
     gimp
+    steamcmd
+    protontricks
 
     # For zoom
     pkgs.zoom-us
