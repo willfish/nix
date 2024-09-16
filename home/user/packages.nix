@@ -13,6 +13,7 @@
     gimp
     steamcmd
     protontricks
+    wine
 
     # For zoom
     pkgs.zoom-us
