@@ -44,7 +44,6 @@
     gh
     lsof
     markdownlint-cli
-    neofetch
     pre-commit
     ripgrep
     unzip
@@ -128,9 +127,11 @@
     lsd
     pandoc
 
+    # fun stuff
     cowsay
     nyancat
     fortune
     lolcat
+    neofetch
   ];
 }

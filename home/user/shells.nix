@@ -58,7 +58,9 @@ in
       set -gx RUBYOPT --enable-yjit
       set -gx PATH $HOME/go/bin $PATH
       set -gx LD_LIBRARY_PATH $HOME/.nix-profile/lib
-      # source "$HOME/.nix-profile/share/asdf-vm/asdf.fish"
+
+      cow=$(cowsay -l | grep -v 'Cow files' | shuf -n 1)
+      fortune | cowsay -f cow | lolcat
     '';
 
     functions = {
