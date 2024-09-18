@@ -130,5 +130,7 @@
 
     cowsay
     nyancat
+    fortune
+    lolcat
   ];
 }
