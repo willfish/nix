@@ -97,7 +97,9 @@
     libyaml
 
     # languages and their tools
-    nodejs
+    (nodejs.withPackages (node-pkgs: [
+      node-pkgs.quote-cli
+    ]))
     yarn
     rustup
     (python311.withPackages (python-pkgs: [
@@ -113,7 +115,6 @@
     hclfmt
     nixd
 
-    cowsay
     direnv
     pwgen
 
@@ -126,8 +127,11 @@
     alacritty
 
     ansible
-    nyancat
     lsd
     pandoc
+
+    cowsay
+    nyancat
+    quote-cli
   ];
 }
