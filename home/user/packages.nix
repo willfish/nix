@@ -97,9 +97,7 @@
     libyaml
 
     # languages and their tools
-    (nodejs.withPackages (node-pkgs: [
-      node-pkgs.quote-cli
-    ]))
+    nodejs_latest
     yarn
     rustup
     (python311.withPackages (python-pkgs: [
