@@ -33,7 +33,7 @@ return {
         "lua_ls",
         "pyright",
         "terraformls",
-        "bash-language-server"
+        "bashls"
       },
       -- auto-install configured servers (with lspconfig)
       automatic_installation = true, -- not the same as ensure_installed
