@@ -47,7 +47,7 @@
 
   services.avahi = {
     enable = true;
-    nssmdns = true;
+    nssmdns4 = true;
     openFirewall = true;
   };
 
@@ -126,6 +126,10 @@
   programs.fish.enable = true;
 
   services = {
+    displayManager = {
+      sddm.enable = true;
+      # sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
+    };
     openssh = {
       enable = true;
       settings.PasswordAuthentication = false;
@@ -135,11 +139,10 @@
     dbus.enable = true;
     spice-vdagentd.enable = true;
 
-    # services.xserver.displayManager.gdm.enable = true;
     xserver = {
       enable = true;
-      layout = "us";
-      xkbVariant = "";
+      xkb.layout = "us";
+      xkb.variant = "";
       # xkbOptions = "grp:alt_shift_toggle, caps:swapescape";
       windowManager.i3 = {
         enable = true;
@@ -165,37 +168,10 @@
           gtk3
           imagemagick
           dconf
-          # xdg-desktop-portal
         ];
-      };
-
-      displayManager = {
-        sddm.enable = true;
-        sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
       };
     };
   };
-
-  #   building the system configuration...
-  # trace: warning: xdg-desktop-portal 1.17 reworked how portal implementations are loaded, you
-  # should either set `xdg.portal.config` or `xdg.portal.configPackages`
-  # to specify which portal backend to use for the requested interface.
-  #
-  # https://github.com/flatpak/xdg-desktop-portal/blob/1.18.1/doc/portals.conf.rst.in
-  #
-  # If you simply want to keep the behaviour in < 1.17, which uses the first
-  # portal implementation found in lexicographical order, use the following:
-  #
-  # xdg.portal.config.common.default = "*";
-  # xdg.portal = {
-  #   enable = true;
-  #   wlr.enable = false;
-  #   xdgOpenUsePortal = true;
-  #   extraPortals = [
-  #     pkgs-unstable.xdg-desktop-portal-gtk
-  #   ];
-  # };
-
 
   fonts = {
     packages = with pkgs; [
@@ -229,6 +205,7 @@
 
   nix = {
     settings = {
+      substituters = [ "https://cache.nixos.org" "https://nixpkgs-ruby.cachix.org" ];
       warn-dirty = false;
       experimental-features = [ "nix-command" "flakes" ];
       auto-optimise-store = true;
@@ -241,11 +218,12 @@
     };
   };
 
- programs = {
-   steam = {
-     enable = true;
-     remotePlay.openFirewall = true;
-     dedicatedServer.openFirewall = true;
-   };
- };
+  programs = {
+    steam = {
+      enable = true;
+      remotePlay.openFirewall = true;
+      dedicatedServer.openFirewall = true;
+      localNetworkGameTransfers.openFirewall = true;
+    };
+  };
 }
