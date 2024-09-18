@@ -130,6 +130,5 @@
 
     cowsay
     nyancat
-    quote-cli
   ];
 }
