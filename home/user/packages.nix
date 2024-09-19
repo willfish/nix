@@ -6,7 +6,6 @@
     pavucontrol
     libreoffice-qt
     slack
-    discord
     spotify
     glxinfo
     vscode
