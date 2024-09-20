@@ -1,6 +1,8 @@
 { pkgs, pkgs-unstable, ... }:
 {
   home.packages = with pkgs-unstable; [
+    xdg-utils
+
     # Desktop apps
     telegram-desktop
     pavucontrol
@@ -28,6 +30,11 @@
     pkgs.tmux
     pkgs.tmuxinator
 
+    # Nix tools
+    nil
+    nixd
+    nix-prefetch-git
+
     # Utilities
     tldr
     jq
@@ -37,7 +44,6 @@
     dust
     bat
     bats
-    nix-prefetch-git
     delta
     fd
     fzf
@@ -59,11 +65,10 @@
     ssm-session-manager-plugin # enables ecs exec
     packer
     pavucontrol
+    dive
     tflint
     terraform
     terragrunt
-    dive
-    xdg-utils
     terraform-docs
     circleci-cli
     serverless
@@ -84,16 +89,15 @@
     stdenv
 
     # libs
+    libffi
+    libpqxx
+    libxml2
+    libxslt
+    libyaml
+    openssl
     zlib
     zlib.dev
     zlib.out
-    libffi
-    libxml2
-    libxslt
-    openssl
-    libyaml
-    libpqxx
-    libyaml
 
     # languages and their tools
     nodejs_latest
@@ -110,7 +114,6 @@
     golangci-lint
     ruff
     hclfmt
-    nixd
 
     direnv
     pwgen
