@@ -139,7 +139,7 @@ return {
       },
     })
 
-    lspconfig["nixd"].setup({
+    lspconfig["nil"].setup({
       capabilities = capabilities,
       on_attach = on_attach,
     })
