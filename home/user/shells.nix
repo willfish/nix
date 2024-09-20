@@ -29,8 +29,8 @@ let
     sk = "bundle exec sidekiq";
     t = "bundle exec rspec --format p";
     tg = "terragrunt";
-    pbcopy = "wl-copy";
-    pbpaste = "wl-paste";
+    pbcopy = "xclip -selection clipboard";
+    pbpaste = "xclip -selection clipboard -o";
     g = "git";
   };
 in

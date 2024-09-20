@@ -136,5 +136,6 @@
     fortune
     lolcat
     neofetch
+    gnome-mahjongg
   ];
 }
