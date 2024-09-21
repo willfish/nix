@@ -3,11 +3,15 @@
   programs.tmux = {
     enable = true;
     plugins = with pkgs-unstable.tmuxPlugins; [
-      sensible
       catppuccin
+      fuzzback
+      fzf-tmux-url
+      jump
+      mode-indicator
       resurrect
-      yank
+      sensible
       tmux-thumbs
+      yank
     ];
     extraConfig = (builtins.readFile ../config/tmux/tmux.conf);
   };
