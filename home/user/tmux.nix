@@ -19,8 +19,7 @@
           set -g @dracula-show-powerline true
           set -g @dracula-refresh-rate 10
           set -g @dracula-show-fahrenheit false
-          set -g @dracula-fixed-location "Royal Tunbdige Wells, UK"
-          set -g @dracula-plugins "cpu-usage gpu-usage ram-usage weather git synchronize-panes"
+          set -g @dracula-plugins "cpu-usage ram-usage weather git synchronize-panes"
         '';
       }
     ];
