@@ -18,7 +18,7 @@
           set -g @dracula-show-battery false
           set -g @dracula-show-powerline true
           set -g @dracula-refresh-rate 10
-          set -g @dracula-plugins "attached-clients git"
+          set -g @dracula-plugins "git attached-clients network-bandwidth"
         '';
       }
     ];
