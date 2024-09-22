@@ -179,6 +179,7 @@
       font-awesome
       jetbrains-mono
       nerdfonts
+      powerline-fonts
     ];
   };
 
