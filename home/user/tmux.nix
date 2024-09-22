@@ -7,7 +7,7 @@
       fuzzback
       fzf-tmux-url
       jump
-      mode-indicator
+      # mode-indicator
       resurrect
       sensible
       tmux-thumbs
