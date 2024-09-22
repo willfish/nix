@@ -4,7 +4,6 @@
     enable = true;
     clock24 = true;
     plugins = with pkgs-unstable.tmuxPlugins; [
-      # catppuccin
       fuzzback
       fzf-tmux-url
       jump
