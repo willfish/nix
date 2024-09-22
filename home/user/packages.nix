@@ -1,6 +1,24 @@
 { pkgs, pkgs-unstable, ... }:
 {
   home.packages = with pkgs-unstable; [
+    # Strong integration with home-manager
+    pkgs.zoxide
+    pkgs.tmux
+    pkgs.tmuxinator
+
+    # For zoom
+    pkgs.zoom-us
+    pulseaudioFull
+    gsettings-desktop-schemas
+    pamixer
+    dconf
+
+    # For work
+    redis
+    postgresql
+    cloudflare-warp
+    warpd
+
     xdg-utils
 
     # Desktop apps
@@ -16,24 +34,13 @@
     steamcmd
     protontricks
     wine
-
-    # For zoom
-    pkgs.zoom-us
-    pulseaudioFull
-    gsettings-desktop-schemas
-    pamixer
-
-    dconf
-
-    # Strong integration with home-manager so need to work out using unstable pkgs
-    pkgs.zoxide
-    pkgs.tmux
-    pkgs.tmuxinator
+    shotwell
 
     # Nix tools
     nil
     nixd
     nix-prefetch-git
+    direnv
 
     # Utilities
     tldr
@@ -73,6 +80,8 @@
     circleci-cli
     serverless
     xclip
+    usbutils
+    sysz
 
     # Build tools
     bison
@@ -91,6 +100,7 @@
     # libs
     libffi
     libpqxx
+    libstdcxx5
     libxml2
     libxslt
     libyaml
@@ -102,7 +112,6 @@
     # languages and their tools
     nodejs_latest
     yarn
-    rustup
     (python311.withPackages (python-pkgs: [
       python-pkgs.black
       python-pkgs.requests
@@ -115,17 +124,10 @@
     ruff
     hclfmt
 
-    direnv
-    pwgen
-
-    postgresql
-
     csvtool
+    pwgen
     inetutils
-
     dig
-    alacritty
-
     ansible
     lsd
     pandoc
