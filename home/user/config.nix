@@ -13,6 +13,7 @@ in
       ".config/picom.conf".source = "${configDir}/picom.conf";
       ".config/polybar".source = "${configDir}/polybar";
       ".config/rofi".source = "${configDir}/rofi";
+      ".gitignore_global".source = "${configDir}/gitignore_global";
       ".i3".source = "${configDir}/i3";
       ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
       ".wallpapers".source = "${configDir}/variety/Favorites";
