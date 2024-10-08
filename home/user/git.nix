@@ -12,6 +12,7 @@
       init.defaultBranch = "main";
       merge.conflictstyle = "diff3";
       diff.colorMoved = "default";
+      core.excludesfile = "~/.gitignore_global";
 
       delta = {
         navigate = true;
