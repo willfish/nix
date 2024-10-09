@@ -7,20 +7,48 @@ let
 in
 {
   home.file = {
-      ".config/nvim".source = configure "nvim";
-      ".config/kitty".source = "${configDir}/kitty";
-      ".config/hypr".source = "${configDir}/hypr";
-      ".config/swayidle".source = "${configDir}/swayidle";
-      ".config/swaylock".source = "${configDir}/swaylock";
-      ".config/wlogout".source = "${configDir}/wlogout";
-      ".config/waybar".source = "${configDir}/waybar";
+      ".aprc".source = "${configDir}/aprc";
+      ".bin/".source = "${configDir}/bin";
       ".config/btop".source = "${configDir}/btop";
-      ".config/wofi".source = "${configDir}/wofi";
-      ".config/mako".source = "${configDir}/mako";
-      ".i3".source = "${configDir}/i3";
+      ".config/kitty".source = "${configDir}/kitty";
+      ".config/nvim".source = configure "nvim";
+      ".config/picom.conf".source = "${configDir}/picom.conf";
       ".config/polybar".source = "${configDir}/polybar";
       ".config/rofi".source = "${configDir}/rofi";
-      ".config/picom.conf".source = "${configDir}/picom.conf";
+      ".gemrc".source = "${configDir}/gemrc";
+      ".gitignore_global".source = "${configDir}/gitignore_global";
+      ".i3".source = "${configDir}/i3";
+      ".pryrc".source = "${configDir}/pryrc";
+      ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
       ".wallpapers".source = "${configDir}/variety/Favorites";
+  };
+
+  systemd.user.timers.wallpaper = {
+      Unit = {
+          Description = "Random wallpaper scheduler";
+      };
+
+      Timer = {
+          OnBootSec = "20s";
+          OnUnitActiveSec = "20s";
+          Unit = "wallpaper.service";
+      };
+  };
+
+
+  systemd.user.services.wallpaper = {
+      Unit = {
+          Description = "Random wallpaper";
+      };
+      Install = {
+          WantedBy = [ "default.target" ];
+      };
+      Service = {
+          Type = "oneshot";
+          ExecStart="${configDir}/random-wallpaper.sh";
+          Environment = [
+              "\"PATH=/run/current-system/sw/bin\""
+          ];
+      };
   };
 }

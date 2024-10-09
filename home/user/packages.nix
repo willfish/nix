@@ -1,6 +1,26 @@
 { pkgs, pkgs-unstable, ... }:
 {
   home.packages = with pkgs-unstable; [
+    # Strong integration with home-manager
+    pkgs.zoxide
+    pkgs.tmux
+    pkgs.tmuxinator
+
+    # For zoom
+    pkgs.zoom-us
+    pulseaudioFull
+    gsettings-desktop-schemas
+    pamixer
+    dconf
+
+    # For work
+    redis
+    postgresql
+    cloudflare-warp
+    warpd
+
+    xdg-utils
+
     # Desktop apps
     telegram-desktop
     pavucontrol
@@ -14,19 +34,13 @@
     steamcmd
     protontricks
     wine
+    shotwell
 
-    # For zoom
-    pkgs.zoom-us
-    pulseaudioFull
-    gsettings-desktop-schemas
-    pamixer
-
-    dconf
-
-    # Strong integration with home-manager so need to work out using unstable pkgs
-    pkgs.zoxide
-    pkgs.tmux
-    pkgs.tmuxinator
+    # Nix tools
+    nil
+    nixd
+    nix-prefetch-git
+    direnv
 
     # Utilities
     tldr
@@ -37,14 +51,12 @@
     dust
     bat
     bats
-    nix-prefetch-git
     delta
     fd
     fzf
     gh
     lsof
     markdownlint-cli
-    neofetch
     pre-commit
     ripgrep
     unzip
@@ -60,15 +72,16 @@
     ssm-session-manager-plugin # enables ecs exec
     packer
     pavucontrol
+    dive
     tflint
     terraform
     terragrunt
-    dive
-    xdg-utils
     terraform-docs
     circleci-cli
     serverless
     xclip
+    usbutils
+    sysz
 
     # Build tools
     bison
@@ -85,21 +98,20 @@
     stdenv
 
     # libs
+    libffi
+    libpqxx
+    libstdcxx5
+    libxml2
+    libxslt
+    libyaml
+    openssl
     zlib
     zlib.dev
     zlib.out
-    libffi
-    libxml2
-    libxslt
-    openssl
-    libyaml
-    libpqxx
-    libyaml
 
     # languages and their tools
-    nodejs
+    nodejs_latest
     yarn
-    rustup
     (python311.withPackages (python-pkgs: [
       python-pkgs.black
       python-pkgs.requests
@@ -111,23 +123,21 @@
     golangci-lint
     ruff
     hclfmt
-    nixd
-
-    cowsay
-    direnv
-    pwgen
-
-    postgresql
 
     csvtool
+    pwgen
     inetutils
-
     dig
-    alacritty
-
     ansible
-    nyancat
     lsd
     pandoc
+
+    # fun stuff
+    cowsay
+    nyancat
+    fortune
+    lolcat
+    neofetch
+    gnome-mahjongg
   ];
 }

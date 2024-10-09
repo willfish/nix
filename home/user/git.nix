@@ -12,6 +12,7 @@
       init.defaultBranch = "main";
       merge.conflictstyle = "diff3";
       diff.colorMoved = "default";
+      core.excludesfile = "~/.gitignore_global";
 
       delta = {
         navigate = true;
@@ -22,10 +23,8 @@
       alias = {
         add = "git add -p";
         branches = "for-each-ref --sort=-committerdate --format=\"%(color:blue)%(authordate:relative)\t%(color:red)%(authorname)\t%(color:white)%(color:bold)%(refname:short)\" refs/remotes";
-        cleanupmaster = "!git fetch -p && git pull && git branch --merged | grep -v main | xargs -n 1 -r git branch -d";
-        cleanup = "!git fetch -p && git pull && git branch --merged | grep -v main | xargs -n 1 -r git branch -d";
-        cmm = "!git checkout master && git cleanupmaster";
-        cm = "!git checkout main && git cleanup";
+        cleanup = "!git fetch -p && git pull && git branch --merged | grep -v master | xargs -n 1 -r git branch -d";
+        cm = "!git checkout master && git cleanup";
       };
       filter = {
         lfs = {

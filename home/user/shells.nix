@@ -10,14 +10,12 @@ let
     vim = "nvim";
     vi = "nvim";
     vimdiff = "nvim -d";
-    system-rebuild = "sudo nixos-rebuild switch --flake ~/.dotfiles/";
-    home-rebuild = "home-manager switch --flake ~/.dotfiles/ -b backup";
-    full-rebuild = "sudo nixos-rebuild switch --flake ~/.dotfiles/ && home-manager switch --flake ~/.dotfiles/ -b backup";
   };
   abbreviations = {
     ag = "rg";
     cdr = "cd ~/Repositories";
     book = "cd ~/Repositories/books";
+    cdi = "cd ~/Repositories/indeed";
     hm = "cd ~/Repositories/hmrc";
     cdn = "cd ~/Notes";
     mux = "tmuxinator";
@@ -29,8 +27,8 @@ let
     sk = "bundle exec sidekiq";
     t = "bundle exec rspec --format p";
     tg = "terragrunt";
-    pbcopy = "wl-copy";
-    pbpaste = "wl-paste";
+    pbcopy = "xclip -selection clipboard";
+    pbpaste = "xclip -selection clipboard -o";
     g = "git";
   };
 in
@@ -57,8 +55,11 @@ in
       set -gx SAM_CLI_TELEMETRY 0
       set -gx RUBYOPT --enable-yjit
       set -gx PATH $HOME/go/bin $PATH
+      set -gx PATH $HOME/.bin $PATH
       set -gx LD_LIBRARY_PATH $HOME/.nix-profile/lib
-      # source "$HOME/.nix-profile/share/asdf-vm/asdf.fish"
+
+      # set -gx cow (cowsay -l | grep -v 'Cow files' | shuf -n 1)
+      # fortune | cowsay -f $cow | lolcat
     '';
 
     functions = {
@@ -200,6 +201,34 @@ in
           --task "$task" \
           --interactive \
           --command /bin/sh
+      '';
+      full_rebuild = ''
+        pushd ~/.dotfiles
+        git add .
+        git commit -m '.'
+        sudo nixos-rebuild switch --flake .
+        home-manager switch --flake .
+        popd
+      '';
+      system_rebuild = ''
+        pushd ~/.dotfiles
+        git add .
+        git commit -m '.'
+        sudo nixos-rebuild switch --flake .
+        popd
+      '';
+      home_rebuild = ''
+        pushd ~/.dotfiles
+        git add .
+        git commit -m '.'
+        home-manager switch --flake .
+        popd
+      '';
+
+      patch_sorbet = ''
+        set -l INTERPRETER ${pkgs-unstable.glibc}/lib/ld-linux-x86-64.so.2
+
+        patch-sorbet $INTERPRETER
       '';
     };
   };
