@@ -224,6 +224,12 @@ in
         home-manager switch --flake .
         popd
       '';
+
+      patch_sorbet = ''
+        set -l INTERPRETER ${pkgs-unstable.glibc}/lib/ld-linux-x86-64.so.2
+
+        patch-sorbet $INTERPRETER
+      '';
     };
   };
   programs.zoxide.enable = true;
