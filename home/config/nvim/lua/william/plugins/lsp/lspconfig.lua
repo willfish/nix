@@ -154,6 +154,11 @@ return {
       on_attach = on_attach,
     })
 
+    lspconfig["sorbet"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+    })
+
     lspconfig["terraformls"].setup({
       capabilities = capabilities,
       on_attach = on_attach,
