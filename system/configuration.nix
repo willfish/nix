@@ -6,12 +6,16 @@
 
 {
   system.stateVersion = "23.11";
-  imports = [./hardware-configuration.nix];
+  imports = [
+    ./hardware-configuration.nix
+    "${pkgs-unstable.path}/nixos/modules/services/networking/cloudflare-warp.nix"
+  ];
 
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.kernelParams = ["btiso.enable=1"];
 
   networking.hostName = "andromeda"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -41,6 +45,11 @@
     LC_TIME = "en_GB.UTF-8";
   };
 
+  services.udev = {
+    extraRules = ''
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="0ab7", TEST=="power/control", ATTR{power/control}="on"
+    '';
+  };
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
@@ -87,9 +96,22 @@
 
   services.blueman.enable = true;
 
+  services.cloudflare-warp.enable = true;
+
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
+    settings = {
+      # Devices = {
+      #   "AC:A9:B4:00:0E:21" = {
+      #     name = "Audioengine 2+";
+      #     trusted = true;
+      #   };
+      # };
+      General = {
+        Experimental = true;
+      };
+    };
   };
 
   programs.gnupg.agent = {
@@ -120,6 +142,8 @@
     openssl.dev
     pkg-config
     xfce.thunar
+
+    bluez
   ];
   environment.shells = with pkgs; [bash fish];
   users.defaultUserShell = pkgs.fish;
@@ -128,7 +152,7 @@
   services = {
     displayManager = {
       sddm.enable = true;
-      # sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
+      sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
     };
     openssh = {
       enable = true;
@@ -136,14 +160,18 @@
       settings.KbdInteractiveAuthentication = false;
     };
 
-    dbus.enable = true;
+    dbus = {
+      enable = true;
+      packages = with pkgs-unstable; [
+        bluez
+      ];
+    };
     spice-vdagentd.enable = true;
 
     xserver = {
       enable = true;
       xkb.layout = "us";
       xkb.variant = "";
-      # xkbOptions = "grp:alt_shift_toggle, caps:swapescape";
       windowManager.i3 = {
         enable = true;
         extraPackages = with pkgs-unstable; [
@@ -179,6 +207,7 @@
       font-awesome
       jetbrains-mono
       nerdfonts
+      powerline-fonts
     ];
   };
 

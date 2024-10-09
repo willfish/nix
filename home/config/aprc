@@ -1,0 +1,4 @@
+AwesomePrint.defaults = {
+  indent: -2,      # left align keys
+  sort_keys: true,
+}

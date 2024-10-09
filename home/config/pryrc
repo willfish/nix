@@ -1,0 +1,29 @@
+Pry.editor = 'nvim'
+
+# Shows the ruby version
+prompt_procs = [
+  proc { |obj, nest_level, _| "#{RUBY_VERSION} (#{obj}):#{nest_level} > " },
+  proc { |obj, nest_level, _| "#{RUBY_VERSION} (#{obj}):#{nest_level} * " },
+]
+
+prompt = if Pry::Prompt.is_a?(Class)
+  Pry::Prompt.new(
+    "local",
+    "Locally configured pry prompt",
+    prompt_procs
+  )
+else
+  prompt_procs
+end
+
+config = Pry.config
+config.prompt = prompt
+
+# awesome_print gem: great syntax colorized printing
+# look at ~/.aprc for more settings for awesome_print
+begin
+  require 'awesome_print'
+  AwesomePrint.pry!
+rescue LoadError => err
+  puts "gem install awesome_print  # <-- highly recommended"
+end
