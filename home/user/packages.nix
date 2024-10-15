@@ -142,6 +142,6 @@
     gnome-calendar
 
     # indeed
-
+    kubectl
   ];
 }
