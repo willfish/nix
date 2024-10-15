@@ -221,6 +221,9 @@ hook_profile_fragment() {
 		sh)
 			RC_FILE=$HOME/.profile
 			;;
+		fish)
+			RC_FILE=$HOME/.config/fish/extra.fish
+			;;
 		*)
 			die "failed to hook profile fragment: unsupported shell: $USER_SHELL"
 			return
