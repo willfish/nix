@@ -139,5 +139,9 @@
     lolcat
     neofetch
     gnome-mahjongg
+    gnome-calendar
+
+    # indeed
+    kubectl
   ];
 }

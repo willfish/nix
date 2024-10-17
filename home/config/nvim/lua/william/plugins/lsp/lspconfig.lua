@@ -52,7 +52,7 @@ return {
       opts.desc = "Restart LSP"
       keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts) -- mapping to restart lsp if necessary
 
-      if client.name == "tsserver" then
+      if client.name == "ts_ls" then
         -- require('lsp-setup.utils').disable_formatting(client)
         client.server_capabilities.documentFormattingProvider = false
         client.server_capabilities.documentRangeFormattingProvider = false
@@ -96,7 +96,7 @@ return {
     })
 
     -- configure typescript server with plugin
-    lspconfig["tsserver"].setup({
+    lspconfig["ts_ls"].setup({
       capabilities = capabilities,
       on_attach = on_attach,
       settings = {
@@ -150,6 +150,11 @@ return {
     })
 
     lspconfig["solargraph"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+    })
+
+    lspconfig["sorbet"].setup({
       capabilities = capabilities,
       on_attach = on_attach,
     })

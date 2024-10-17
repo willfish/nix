@@ -60,6 +60,7 @@ in
 
       # set -gx cow (cowsay -l | grep -v 'Cow files' | shuf -n 1)
       # fortune | cowsay -f $cow | lolcat
+      source ~/.config/fish/extra.fish
     '';
 
     functions = {

@@ -22,4 +22,5 @@ require("lazy").setup({ { import = "william.plugins" }, { import = "william.plug
   change_detection = {
     notify = false,
   },
+  lockfile = "~/.local/share/nvim/lazy-lock.json",
 })

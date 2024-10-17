@@ -45,7 +45,7 @@ in
       };
       Service = {
           Type = "oneshot";
-          ExecStart="${configDir}/random-wallpaper.sh";
+          ExecStart="${configDir}/bin/random-wallpaper";
           Environment = [
               "\"PATH=/run/current-system/sw/bin\""
           ];
