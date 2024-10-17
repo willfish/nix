@@ -51,8 +51,8 @@ return {
 					"mermaid",
 					"nginx",
 					"ninja",
-					"nix"
-					"passwd"
+					"nix",
+					"passwd",
 					"robots",
 					"ruby",
 					"rust",
