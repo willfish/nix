@@ -52,7 +52,7 @@ return {
       opts.desc = "Restart LSP"
       keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts) -- mapping to restart lsp if necessary
 
-      if client.name == "tsserver" then
+      if client.name == "ts_ls" then
         -- require('lsp-setup.utils').disable_formatting(client)
         client.server_capabilities.documentFormattingProvider = false
         client.server_capabilities.documentRangeFormattingProvider = false
