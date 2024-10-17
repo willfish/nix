@@ -7,11 +7,17 @@ fi
 
 if [ -d .nix/ ]; then
   dll=$(find .nix/ -type f -name 'sorbet' | grep libexec)
+  new_interpreter=$($1)
   old_interpreter=$(patchelf --print-interpreter $dll)
 
   echo "Old interpreter: $old_interpreter"
   echo "New interpreter: $1"
-  echo "Setting new interpreter..."
 
-  sudo patchelf --set-interpreter $1 $dll
+  if [ "$old_interpreter" = "$1" ]; then
+    echo "Nothing to do."
+    exit 0
+  else
+    echo "Setting new interpreter..."
+    sudo patchelf --set-interpreter $1 $dll
+  fi
 fi
