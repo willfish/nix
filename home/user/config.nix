@@ -21,7 +21,7 @@ in
       ".pryrc".source = "${configDir}/pryrc";
       ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
       ".wallpapers".source = "${configDir}/variety/Favorites";
-      ".config/nvim/lazy-lock.json".source = "${config.homeDirectory}/.local/share/nvim/lazy-lock.json";
+      ".config/nvim/lazy-lock.json".source = "~/.local/share/nvim/lazy-lock.json";
   };
 
   systemd.user.timers.wallpaper = {
