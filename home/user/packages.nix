@@ -118,7 +118,6 @@
       python-pkgs.setuptools
       python-pkgs.wheel
       python-pkgs.pip
-      python-pkgs.git-heatmap
     ]))
     gopls
     golangci-lint

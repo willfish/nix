@@ -25,6 +25,7 @@ return {
   'xiyaowong/nvim-cursorword',
   'xiyaowong/telescope-emoji.nvim',
   'xiyaowong/transparent.nvim',
+  'tenderlove/vim-to-rtf',
   { 'b4winckler/vim-angry',            dependencies = 'kana/vim-textobj-user' },
   { 'bps/vim-textobj-python',          dependencies = 'kana/vim-textobj-user' },
   { 'kana/vim-textobj-line',           dependencies = 'kana/vim-textobj-user' },
