@@ -114,10 +114,12 @@
     yarn
     (python311.withPackages (python-pkgs: [
       python-pkgs.black
+      python-pkgs.git-revise
+      python-pkgs.git-sweep
+      python-pkgs.pip
       python-pkgs.requests
       python-pkgs.setuptools
       python-pkgs.wheel
-      python-pkgs.pip
     ]))
     gopls
     golangci-lint
