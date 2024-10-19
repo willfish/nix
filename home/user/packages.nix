@@ -35,6 +35,7 @@
     protontricks
     wine
     shotwell
+    gparted
 
     # Nix tools
     nil
