@@ -35,7 +35,7 @@
     protontricks
     wine
     shotwell
-    gparted
+    partitionmanager
 
     # Nix tools
     nil
