@@ -35,7 +35,6 @@
     protontricks
     wine
     shotwell
-    partition-manager
 
     # Nix tools
     nil
