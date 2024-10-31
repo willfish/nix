@@ -35,6 +35,7 @@
     protontricks
     wine
     shotwell
+    vokoscreen-ng
 
     # Nix tools
     nil
