@@ -15,7 +15,6 @@ return {
   'kylechui/nvim-surround',
   'lepture/vim-jinja',
   'sheerun/vim-polyglot',
-  'sotte/presenting.nvim',
   'stefandtw/quickfix-reflector.vim',
   'tpope/vim-bundler',
   'tpope/vim-dispatch',
