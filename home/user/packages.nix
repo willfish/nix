@@ -146,5 +146,7 @@
 
     # indeed
     kubectl
+
+    solana-cli
   ];
 }
