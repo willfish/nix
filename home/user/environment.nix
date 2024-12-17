@@ -1,7 +1,7 @@
 {
   home.sessionVariables = {
-    BROWSER = "firefox";
-    DEFAULT_BROWSER = "firefox";
+    BROWSER = "brave";
+    DEFAULT_BROWSER = "brave";
     EDITOR = "nvim";
     GIT_PAGER = "delta";
     GTK_CSD = "0";
