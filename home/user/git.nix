@@ -8,7 +8,7 @@
       push.default = "simple";
       help.autocorrect = 1;
       github.user = "willfish";
-      web.browser = "firefox";
+      web.browser = "brave";
       init.defaultBranch = "main";
       merge.conflictstyle = "diff3";
       diff.colorMoved = "default";

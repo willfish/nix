@@ -35,6 +35,7 @@
     protontricks
     wine
     shotwell
+    vokoscreen-ng
 
     # Nix tools
     nil
@@ -100,7 +101,6 @@
     # libs
     libffi
     libpqxx
-    libstdcxx5
     libxml2
     libxslt
     libyaml
@@ -114,10 +114,12 @@
     yarn
     (python311.withPackages (python-pkgs: [
       python-pkgs.black
+      python-pkgs.git-revise
+      python-pkgs.git-sweep
+      python-pkgs.pip
       python-pkgs.requests
       python-pkgs.setuptools
       python-pkgs.wheel
-      python-pkgs.pip
     ]))
     gopls
     golangci-lint
@@ -143,5 +145,7 @@
 
     # indeed
     kubectl
+
+    solana-cli
   ];
 }
