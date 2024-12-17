@@ -101,7 +101,6 @@
     # libs
     libffi
     libpqxx
-    libstdcxx5
     libxml2
     libxslt
     libyaml
