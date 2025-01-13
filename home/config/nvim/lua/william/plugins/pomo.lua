@@ -7,7 +7,7 @@ return {
   opts = {
 				sessions = {
 					pomodoro = {
-						{ name = "Work", duration = "25m" },
+						{ name = "Work", duration = "1h" },
 						{ name = "Short Break", duration = "5m" },
 						{ name = "Work", duration = "25m" },
 						{ name = "Short Break", duration = "5m" },
