@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, pkgs }:
 let
   configDir = ../config;
 
@@ -50,5 +50,18 @@ in
               "\"PATH=/run/current-system/sw/bin\""
           ];
       };
+  };
+  systemd.user.services.connectBluetoothSpeaker = {
+    Unit = {
+      Description = "Connect my BT speaker on user login";
+      After = [ "default.target" "bluetooth.target" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.bluez}/bin/bluetoothctl connect AC:A9:B4:00:0E:21";
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
   };
 }
