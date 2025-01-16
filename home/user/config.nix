@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs-unstable, ... }:
 let
   configDir = ../config;
 
@@ -58,7 +58,7 @@ in
     };
     Service = {
       Type = "oneshot";
-      ExecStart = "${pkgs.bluez}/bin/bluetoothctl connect AC:A9:B4:00:0E:21";
+      ExecStart = "${pkgs-unstable.bluez}/bin/bluetoothctl connect AC:A9:B4:00:0E:21";
     };
     Install = {
       WantedBy = [ "default.target" ];
