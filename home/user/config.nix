@@ -54,7 +54,7 @@ in
   systemd.user.services.connectBluetoothSpeaker = {
     Unit = {
       Description = "Connect my BT speaker on user login";
-      After = [ "default.target" "bluetooth.target" ];
+      After = [ "default.target" "suspend.target" "hibernate.target" "hybrid-sleep.target" "bluetooth.service" ];
     };
     Service = {
       Type = "oneshot";
