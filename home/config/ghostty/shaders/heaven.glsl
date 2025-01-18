@@ -1,73 +1,115 @@
-float opSmoothUnion( float d1, float d2, float k )
+//---  Galaxy --- Fabrice NEYRET  august 2013
+
+const float RETICULATION = 3.;  // strenght of dust texture
+const float NB_ARMS = 5.;       // number of arms
+//const float ARM = 3.;         // contrast in/out arms
+const float COMPR = .1;         // compression in arms
+const float SPEED = .1;
+const float GALAXY_R = 1./2.;
+const float BULB_R = 1./4.;
+const vec3 GALAXY_COL = vec3(.9,.9,1.); //(1.,.8,.5);
+const vec3 BULB_COL   = vec3(1.,.8,.8);
+const vec3 SKY_COL    = .5*vec3(.1,.3,.5);
+
+#define t iTime
+
+// --- base noise
+float tex(vec2 uv)
 {
-    float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
-    return mix( d2, d1, h ) - k*h*(1.0-h);
+	float n = texture(iChannel0,uv, 0.).r;
+
+#define MODE 3  // kind of noise texture
+#if MODE==0         // unsigned
+	#define A 2.
+	return n;
+#elif MODE==1       // signed
+	#define A 3.
+	return 2.*n-1.;
+#elif MODE==2       // bulbs
+	#define A 3.
+	return abs(2.*n-1.);
+#elif MODE==3       // wires
+	#define A 1.5
+	return 1.-abs(2.*n-1.);
+#endif
 }
 
-float sdSphere( vec3 p, float s )
-{
-  return length(p)-s;
-}
 
-float map(vec3 p)
+// --- perlin turbulent noise + rotation
+float noise(vec2 uv)
 {
-	float d = 2.0;
-	for (int i = 0; i < 16; i++) {
-		float fi = float(i);
-		float time = iTime * (fract(fi * 412.531 + 0.513) - 0.5) * 2.0;
-		d = opSmoothUnion(
-            sdSphere(p + sin(time + fi * vec3(52.5126, 64.62744, 632.25)) * vec3(2.0, 2.0, 0.8), mix(0.5, 1.0, fract(fi * 412.531 + 0.5124))),
-			d,
-			0.4
-		);
+	float v=0.;
+	float a=-SPEED*t,	co=cos(a),si=sin(a);
+	mat2 M = mat2(co,-si,si,co);
+	const int L = 7;
+	float s=1.;
+	for (int i=0; i<L; i++)
+	{
+		uv = M*uv;
+		float b = tex(uv*s);
+		v += 1./s* pow(b,RETICULATION);
+		s *= 2.;
 	}
-	return d;
+
+    return v/2.;
 }
 
-vec3 calcNormal( in vec3 p )
+bool keyToggle(int ascii)
 {
-    const float h = 1e-5; // or some other value
-    const vec2 k = vec2(1,-1);
-    return normalize( k.xyy*map( p + k.xyy*h ) +
-                      k.yyx*map( p + k.yyx*h ) +
-                      k.yxy*map( p + k.yxy*h ) +
-                      k.xxx*map( p + k.xxx*h ) );
+	return (texture(iChannel2,vec2((.5+float(ascii))/256.,0.75)).x > 0.);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = fragCoord/iResolution.xy;
+	vec2 uv = fragCoord.xy/iResolution.y-vec2(.8,.5);
+	vec3 col;
 
-    // screen size is 6m x 6m
-	vec3 rayOri = vec3((uv - 0.5) * vec2(iResolution.x/iResolution.y, 1.0) * 6.0, 3.0);
-	vec3 rayDir = vec3(0.0, 0.0, -1.0);
+	// spiral stretching with distance
+	float rho = length(uv); // polar coords
+	float ang = atan(uv.y,uv.x);
+	float shear = 2.*log(rho); // logarythmic spiral
+	float c = cos(shear), s=sin(shear);
+	mat2 R = mat2(c,-s,s,c);
 
-	float depth = 0.0;
-	vec3 p;
+	// galaxy profile
+	float r; // disk
+	r = rho/GALAXY_R; float dens = exp(-r*r);
+	r = rho/BULB_R;	  float bulb = exp(-r*r);
+	float phase = NB_ARMS*(ang-shear);
+	// arms = spirals compression
+	ang = ang-COMPR*cos(phase)+SPEED*t;
+	uv = rho*vec2(cos(ang),sin(ang));
+	// stretched texture must be darken by d(new_ang)/d(ang)
+	float spires = 1.+NB_ARMS*COMPR*sin(phase);
+	// pires = mix(1.,sin(phase),ARM);
+	dens *= .7*spires;
 
-	for(int i = 0; i < 64; i++) {
-		p = rayOri + rayDir * depth;
-		float dist = map(p);
-        depth += dist;
-		if (dist < 1e-6) {
-			break;
-		}
-	}
+	// gaz texture
+	float gaz = noise(.09*1.2*R*uv);
+	float gaz_trsp = pow((1.-gaz*dens),2.);
 
-    depth = min(6.0, depth);
-	vec3 n = calcNormal(p);
-    float b = max(0.0, dot(n, vec3(0.577)));
-    vec3 col = (0.5 + 0.5 * cos((b + iTime * 3.0) + uv.xyx * 2.0 + vec3(0,2,4))) * (0.85 + b * 0.35);
-    col *= exp( -depth * 0.15 );
+	// stars
+	//float a=SPEED*t, co=cos(a),si=sin(a);
+	//mat2 M = mat2(co,-si,si,co);
+	// adapt stars size to display resolution
+	float ratio = .8*iResolution.y/iChannelResolution[0].y;
+	float stars1 = texture(iChannel1,ratio*uv+.5, 0.).r, // M*uv
+	      stars2 = texture(iChannel0,ratio*uv+.5, 0.).r,
+		  stars = pow(1.-(1.-stars1)*(1.-stars2),5.);
 
-    // maximum thickness is 2m in alpha channel
-    fragColor = vec4(col, 1.0 - (depth - 0.5) / 2.0);
+	//stars = pow(stars,5.);
+
+	// keybord controls (numbers)
+	if (keyToggle(49)) gaz_trsp = 1./1.7;
+	if (keyToggle(50)) stars = 0.;
+	if (keyToggle(51)) bulb = 0.;
+	if (keyToggle(52)) dens = .3*spires;
+
+	// mix all
+	col = mix(SKY_COL,
+			  gaz_trsp*(1.7*GALAXY_COL) + 1.2*stars,
+			  dens);
+	col = mix(col, 1.2*BULB_COL, bulb);
+
+	fragColor = vec4(col,1.);
 }
-
-/** SHADERDATA
-{
-	"title": "My Shader 0",
-	"description": "Lorem ipsum dolor",
-	"model": "person"
-}
-*/
