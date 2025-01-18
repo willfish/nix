@@ -1,0 +1,152 @@
+JetBrains Mono
+  JetBrains Mono Bold
+  JetBrains Mono Bold
+  JetBrains Mono Bold Italic
+  JetBrains Mono Bold Italic
+  JetBrains Mono ExtraBold
+  JetBrains Mono ExtraBold
+  JetBrains Mono ExtraBold Italic
+  JetBrains Mono ExtraBold Italic
+  JetBrains Mono ExtraLight
+  JetBrains Mono ExtraLight
+  JetBrains Mono ExtraLight Italic
+  JetBrains Mono ExtraLight Italic
+  JetBrains Mono Italic
+  JetBrains Mono Italic
+  JetBrains Mono Light
+  JetBrains Mono Light
+  JetBrains Mono Light Italic
+  JetBrains Mono Light Italic
+  JetBrains Mono Medium
+  JetBrains Mono Medium
+  JetBrains Mono Medium Italic
+  JetBrains Mono Medium Italic
+  JetBrains Mono Regular
+  JetBrains Mono Regular
+  JetBrains Mono SemiBold
+  JetBrains Mono SemiBold
+  JetBrains Mono SemiBold Italic
+  JetBrains Mono SemiBold Italic
+  JetBrains Mono Thin
+  JetBrains Mono Thin
+  JetBrains Mono Thin Italic
+  JetBrains Mono Thin Italic
+JetBrains Mono NL
+  JetBrains Mono NL Bold
+  JetBrains Mono NL Bold Italic
+  JetBrains Mono NL ExtraBold
+  JetBrains Mono NL ExtraBold Italic
+  JetBrains Mono NL ExtraLight
+  JetBrains Mono NL ExtraLight Italic
+  JetBrains Mono NL Italic
+  JetBrains Mono NL Light
+  JetBrains Mono NL Light Italic
+  JetBrains Mono NL Medium
+  JetBrains Mono NL Medium Italic
+  JetBrains Mono NL Regular
+  JetBrains Mono NL SemiBold
+  JetBrains Mono NL SemiBold Italic
+  JetBrains Mono NL Thin
+  JetBrains Mono NL Thin Italic
+JetBrainsMono Nerd Font
+  JetBrainsMono NF Bold
+  JetBrainsMono NF Bold Italic
+  JetBrainsMono NF ExtraBold
+  JetBrainsMono NF ExtraBold Italic
+  JetBrainsMono NF ExtraLight
+  JetBrainsMono NF ExtraLight Italic
+  JetBrainsMono NF Italic
+  JetBrainsMono NF Light
+  JetBrainsMono NF Light Italic
+  JetBrainsMono NF Medium
+  JetBrainsMono NF Medium Italic
+  JetBrainsMono NF Regular
+  JetBrainsMono NF SemiBold
+  JetBrainsMono NF SemiBold Italic
+  JetBrainsMono NF Thin
+  JetBrainsMono NF Thin Italic
+JetBrainsMono Nerd Font Mono
+  JetBrainsMono NFM Bold
+  JetBrainsMono NFM Bold Italic
+  JetBrainsMono NFM ExtraBold
+  JetBrainsMono NFM ExtraBold Italic
+  JetBrainsMono NFM ExtraLight
+  JetBrainsMono NFM ExtraLight Italic
+  JetBrainsMono NFM Italic
+  JetBrainsMono NFM Light
+  JetBrainsMono NFM Light Italic
+  JetBrainsMono NFM Medium
+  JetBrainsMono NFM Medium Italic
+  JetBrainsMono NFM Regular
+  JetBrainsMono NFM SemiBold
+  JetBrainsMono NFM SemiBold Italic
+  JetBrainsMono NFM Thin
+  JetBrainsMono NFM Thin Italic
+JetBrainsMono Nerd Font Propo
+  JetBrainsMono NFP Bold
+  JetBrainsMono NFP Bold Italic
+  JetBrainsMono NFP ExtraBold
+  JetBrainsMono NFP ExtraBold Italic
+  JetBrainsMono NFP ExtraLight
+  JetBrainsMono NFP ExtraLight Italic
+  JetBrainsMono NFP Italic
+  JetBrainsMono NFP Light
+  JetBrainsMono NFP Light Italic
+  JetBrainsMono NFP Medium
+  JetBrainsMono NFP Medium Italic
+  JetBrainsMono NFP Regular
+  JetBrainsMono NFP SemiBold
+  JetBrainsMono NFP SemiBold Italic
+  JetBrainsMono NFP Thin
+  JetBrainsMono NFP Thin Italic
+JetBrainsMonoNL Nerd Font
+  JetBrainsMonoNL NF Bold
+  JetBrainsMonoNL NF Bold Italic
+  JetBrainsMonoNL NF ExtraBold
+  JetBrainsMonoNL NF ExtraBold Italic
+  JetBrainsMonoNL NF ExtraLight
+  JetBrainsMonoNL NF ExtraLight Italic
+  JetBrainsMonoNL NF Italic
+  JetBrainsMonoNL NF Light
+  JetBrainsMonoNL NF Light Italic
+  JetBrainsMonoNL NF Medium
+  JetBrainsMonoNL NF Medium Italic
+  JetBrainsMonoNL NF Regular
+  JetBrainsMonoNL NF SemiBold
+  JetBrainsMonoNL NF SemiBold Italic
+  JetBrainsMonoNL NF Thin
+  JetBrainsMonoNL NF Thin Italic
+JetBrainsMonoNL Nerd Font Mono
+  JetBrainsMonoNL NFM Bold
+  JetBrainsMonoNL NFM Bold Italic
+  JetBrainsMonoNL NFM ExtraBold
+  JetBrainsMonoNL NFM ExtraBold Italic
+  JetBrainsMonoNL NFM ExtraLight
+  JetBrainsMonoNL NFM ExtraLight Italic
+  JetBrainsMonoNL NFM Italic
+  JetBrainsMonoNL NFM Light
+  JetBrainsMonoNL NFM Light Italic
+  JetBrainsMonoNL NFM Medium
+  JetBrainsMonoNL NFM Medium Italic
+  JetBrainsMonoNL NFM Regular
+  JetBrainsMonoNL NFM SemiBold
+  JetBrainsMonoNL NFM SemiBold Italic
+  JetBrainsMonoNL NFM Thin
+  JetBrainsMonoNL NFM Thin Italic
+JetBrainsMonoNL Nerd Font Propo
+  JetBrainsMonoNL NFP Bold
+  JetBrainsMonoNL NFP Bold Italic
+  JetBrainsMonoNL NFP ExtraBold
+  JetBrainsMonoNL NFP ExtraBold Italic
+  JetBrainsMonoNL NFP ExtraLight
+  JetBrainsMonoNL NFP ExtraLight Italic
+  JetBrainsMonoNL NFP Italic
+  JetBrainsMonoNL NFP Light
+  JetBrainsMonoNL NFP Light Italic
+  JetBrainsMonoNL NFP Medium
+  JetBrainsMonoNL NFP Medium Italic
+  JetBrainsMonoNL NFP Regular
+  JetBrainsMonoNL NFP SemiBold
+  JetBrainsMonoNL NFP SemiBold Italic
+  JetBrainsMonoNL NFP Thin
+  JetBrainsMonoNL NFP Thin Italic
