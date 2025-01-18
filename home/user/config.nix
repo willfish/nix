@@ -21,7 +21,7 @@ in
       ".pryrc".source = "${configDir}/pryrc";
       ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
       ".wallpapers".source = "${configDir}/variety/Favorites";
-      ".config/ghostty/config".source = "${configDir}/ghostty/config";
+      ".config/ghostty".source = "${configDir}/ghostty";
   };
 
   systemd.user.timers.wallpaper = {
