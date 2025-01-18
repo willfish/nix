@@ -125,6 +125,7 @@
     golangci-lint
     ruff
     hclfmt
+    ccls
 
     csvtool
     pwgen
