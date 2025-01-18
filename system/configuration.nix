@@ -107,7 +107,6 @@
         DebugKeys = true;
       };
     };
-    package = pkgs-unstable.bluezFull;
   };
 
   programs.gnupg.agent = {
