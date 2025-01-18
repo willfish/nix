@@ -67,6 +67,7 @@
     shellharden
     shfmt
     tree
+    eza
     yarn
     pcmanfm
     awscli2

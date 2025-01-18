@@ -5,8 +5,8 @@ let
     mux = "tmuxinator";
     tm = "tmux";
     a = "tmux attach";
-    ll = "ls -l";
-    la = "ls -la";
+    ll = "eza -l";
+    la = "eza -la";
     vim = "nvim";
     vi = "nvim";
     vimdiff = "nvim -d";
