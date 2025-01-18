@@ -1,57 +1,79 @@
-#define TAU 6.28318530718
-
-#define SPEED 0.33
-#define INK_COLOR vec3(0, 0, 0)
-#define BACKGROUND_COLOR vec3(1)
-#define POSITION vec2(0)
-
-float rand(vec2 n) {
-	return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
-}
-
-float noise(vec2 p){
-	vec2 ip = floor(p);
-	vec2 u = fract(p);
-	u = u*u*(3.0-2.0*u);
-
-	float res = mix(
-		mix(rand(ip),rand(ip+vec2(1.0,0.0)),u.x),
-		mix(rand(ip+vec2(0.0,1.0)),rand(ip+vec2(1.0,1.0)),u.x),u.y);
-	return res*res;
-}
-
-float fbm(vec2 p, int octaves)
-{
-    float n = 0.0;
-    float a = 1.0;
-    float norm = 0.0;
-    for(int i = 0; i < octaves; ++i)
-    {
-        n += noise(p) * a;
-        norm += a;
-        p *= 2.0;
-        a *= 0.5;
-    }
-    return n / norm;
-}
+// Created by Stephane Cuillerdier - Aiekick/2015
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+// Tuned via XShade (http://www.funparadigm.com/xshade/)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    float time = mod(iTime, 2.5 / SPEED);
-    vec2 uv = (fragCoord * 2.0 - iResolution.xy - POSITION * iResolution.xy) / iResolution.y;
+    float t = iTime+5.;
+	float z = 6.;
 
-    float angle = atan(uv.y, uv.x);
-    angle += fbm(uv * 4.0, 2) * 0.5;
-    vec2 p = vec2(cos(angle), sin(angle));
+	const int n = 100; // particle count
 
-    float t = time * SPEED;
-    t *= t;
+    vec3 startColor = vec3(0,0.64,0.2);
+	vec3 endColor = vec3(0.06,0.35,0.85);
 
-    float l = dot(uv / t, uv / t);
-    l -= (fbm(normalize(uv) * 3.0, 2) - 0.5);
-    float ink = fbm(p * 8.0, 2) + 1.5 - l;
+	float startRadius = 0.84;
+	float endRadius = 1.6;
 
-    vec3 col = mix(BACKGROUND_COLOR, INK_COLOR, clamp(ink, 0.0, 1.0));
+	float power = 0.51;
+	float duration = 4.;
 
-    fragColor = vec4(col, 1.0);
+	vec2
+		s = iResolution.xy,
+		v = z*(2.*gl_FragCoord.xy-s)/s.y;
+
+    // Mouse axis y => zoom
+	if(iMouse.z>0.) v *= iMouse.y/s.y * 20.;
+
+    // Mouse axis x => duration
+	if(iMouse.z>0.) duration = iMouse.x/s.x * 10.;
+
+	vec3 col = vec3(0.);
+
+	vec2 pm = v.yx*2.8;
+
+	float dMax = duration;
+
+
+    float evo = (sin(iTime*.01+400.)*.5+.5)*99.+1.;
+
+	float mb = 0.;
+	float mbRadius = 0.;
+	float sum = 0.;
+	for(int i=0;i<n;i++)
+	{
+		float d = fract(t*power+48934.4238*sin(float(i/int(evo))*692.7398));
+
+		float tt = 0.;
+
+        float a = 6.28*float(i)/float(n);
+
+        float x = d*cos(a)*duration;
+
+        float y = d*sin(a)*duration;
+
+		float distRatio = d/dMax;
+
+		mbRadius = mix(startRadius, endRadius, distRatio);
+
+		vec2 p = v - vec2(x,y);//*vec2(1,sin(a+3.14159/2.));
+
+		mb = mbRadius/dot(p,p);
+
+		sum += mb;
+
+		col = mix(col, mix(startColor, endColor, distRatio), mb/sum);
+	}
+
+	sum /= float(n);
+
+	col = normalize(col) * sum;
+
+	sum = clamp(sum, 0., .4);
+
+	vec3 tex = vec3(1.);
+
+	col *= smoothstep(tex, vec3(0.), vec3(sum));
+
+	fragColor.rgb = col;
 }
