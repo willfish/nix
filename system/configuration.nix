@@ -102,14 +102,9 @@
     enable = true;
     powerOnBoot = true;
     settings = {
-      # Devices = {
-      #   "AC:A9:B4:00:0E:21" = {
-      #     name = "Audioengine 2+";
-      #     trusted = true;
-      #   };
-      # };
       General = {
         Experimental = true;
+        DebugKeys = true;
       };
     };
   };
@@ -128,6 +123,7 @@
     curl
     git
     kitty
+    ghostty
 
     adwaita-icon-theme # default gnome cursors
     glib

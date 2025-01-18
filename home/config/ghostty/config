@@ -1,0 +1,19 @@
+gtk-tabs-location = hidden
+font-family = JetBrains Mono
+font-size = 12
+scrollback-limit = 10_000
+window-theme = ghostty
+clipboard-read = allow
+clipboard-paste-protection = false
+window-decoration = false
+shell-integration = fish
+window-padding-x = 0
+window-padding-y = 0
+confirm-close-surface = false
+quit-after-last-window-closed = true
+
+# Transparency
+background-opacity = 0.8
+background-blur-radius = 20
+
+custom-shader = shaders/bloom.glsl
