@@ -128,6 +128,7 @@
     curl
     git
     kitty
+    ghostty
 
     adwaita-icon-theme # default gnome cursors
     glib
