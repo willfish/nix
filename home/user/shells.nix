@@ -231,6 +231,26 @@ in
 
         patch-sorbet $INTERPRETER
       '';
+
+      notes = ''
+        set -l notes_file (find $HOME/Notes -type f -name "*.md" -printf "%f\n" | grep -v "templates" | grep -v "today.md" | grep -v "standup.md" | grep -v "README.md"  | fzf --print-query | tail -1)
+        set -l tailed_notes_file (echo $notes_file | tail -1)
+
+        echo "Notes file: $notes_file"
+        echo "Tailed notes file: $tailed_notes_file"
+
+        # Handle exiting if no notes file is selected - technically not possible
+        if test -z "$notes_file"
+            echo "Exiting with notes_file: $fully_qualified_notes_file"
+            exit 1
+        end
+
+        set -l fully_qualified_notes_file "$HOME/Notes/$notes_file"
+
+        echo "Opening $fully_qualified_notes_file"
+
+        nvim $fully_qualified_notes_file
+      '';
     };
   };
   programs.zoxide.enable = true;
