@@ -1,16 +1,29 @@
-// CC0: Neon city for Windows Terminal
-//  Based on an older shader of mine seems to have some fans that really seem to like it.
-//  I personally feel I evolved beyond the techniques of the shader but it seems to appeal
-//  to some people.
-//  This is a recreation for windows terminal
-//  Hopefully I didn't destroy what people like about it in the process :)
+// CC0: Windows Terminal Damask Rose
+//  Been tinkering creating Windows Terminal shaders
+//  Created this as a version of an earlier shader
+//  Thought it turned out decent so sharing
 
+// https://mrange.github.io/windows-terminal-shader-gallery/
+
+// Define to use a faster atan implementation
+//  Introduces slight assymmetries that don't look outright terrible at least
+//#define FASTATAN
 
 #define TIME        iTime
 #define RESOLUTION  iResolution
-
 #define PI          3.141592654
+#define PI_2        (0.5*PI)
 #define TAU         (2.0*PI)
+#define ROT(a)      mat2(cos(a), sin(a), -sin(a), cos(a))
+
+
+#if defined(FASTATAN)
+#define ATAN atan_approx
+#else
+#define ATAN atan
+#endif
+
+const float hf = 0.015;
 
 // License: WTFPL, author: sam hocevar, found: https://stackoverflow.com/a/17897228/418488
 const vec4 hsv2rgb_K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -18,216 +31,141 @@ vec3 hsv2rgb(vec3 c) {
   vec3 p = abs(fract(c.xxx + hsv2rgb_K.xyz) * 6.0 - hsv2rgb_K.www);
   return c.z * mix(hsv2rgb_K.xxx, clamp(p - hsv2rgb_K.xxx, 0.0, 1.0), c.y);
 }
-
 // License: WTFPL, author: sam hocevar, found: https://stackoverflow.com/a/17897228/418488
 //  Macro version of above to enable compile-time constants
 #define HSV2RGB(c)  (c.z * mix(hsv2rgb_K.xxx, clamp(abs(fract(c.xxx + hsv2rgb_K.xyz) * 6.0 - hsv2rgb_K.www) - hsv2rgb_K.xxx, 0.0, 1.0), c.y))
 
-const vec3 shineCol = HSV2RGB(vec3(0.55, 0.5, 0.75));
-const vec3 gridCol  = HSV2RGB(vec3(0.60, 0.5, 1.0));
-const vec3 cityCol  = HSV2RGB(vec3(0.55, 0.25, 0.4));
-const vec3 skyCol1  = HSV2RGB(vec3(283.0/360.0, 0.83, 0.16));
-const vec3 skyCol2  = HSV2RGB(vec3(297.0/360.0, 0.79, 0.43));
+// License: Unknown, author: nmz (twitter: @stormoid), found: https://www.shadertoy.com/view/NdfyRM
+vec3 sRGB(vec3 t) {
+  return mix(1.055*pow(t, vec3(1./2.4)) - 0.055, 12.92*t, step(t, vec3(0.0031308)));
+}
+
+// License: Unknown, author: Matt Taylor (https://github.com/64), found: https://64.github.io/tonemapping/
+vec3 aces_approx(vec3 v) {
+  v = max(v, 0.0);
+  v *= 0.6f;
+  float a = 2.51f;
+  float b = 0.03f;
+  float c = 2.43f;
+  float d = 0.59f;
+  float e = 0.14f;
+  return clamp((v*(a*v+b))/(v*(c*v+d)+e), 0.0f, 1.0f);
+}
 
 // License: Unknown, author: Unknown, found: don't remember
-float hash(float co) {
-  return fract(sin(co*12.9898) * 13758.5453);
+float tanh_approx(float x) {
+//  return tanh(x);
+  float x2 = x*x;
+  return clamp(x*(27.0 + x2)/(27.0+9.0*x2), -1.0, 1.0);
 }
 
-float psin(float a) {
-  return 0.5 + 0.5*sin(a);
+// License: MIT, author: Pascal Gilcher, found: https://www.shadertoy.com/view/flSXRV
+float atan_approx(float y, float x) {
+  float cosatan2 = x / (abs(x) + abs(y));
+  float t = PI_2 - cosatan2 * PI_2;
+  return y < 0.0 ? -t : t;
 }
 
-// License: MIT OR CC-BY-NC-4.0, author: mercury, found: https://mercury.sexy/hg_sdf/
-float mod1(inout float p, float size) {
-  float halfsize = size*0.5;
-  float c = floor((p + halfsize)/size);
-  p = mod(p + halfsize, size) - halfsize;
-  return c;
-}
-
-float circle(vec2 p, float r) {
-  return length(p) - r;
-}
-
-// License: MIT, author: Inigo Quilez, found: https://iquilezles.org/www/articles/distfunctions2d/distfunctions2d.htm
-float box(vec2 p, vec2 b) {
-  vec2 d = abs(p)-b;
-  return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
-}
-
-float planex(vec2 p, float w) {
-  return abs(p.y) - w;
-}
-
+// License: MIT, author: Inigo Quilez, found: https://www.iquilezles.org/www/articles/smin/smin.htm
 float pmin(float a, float b, float k) {
-  float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
-  return mix( b, a, h ) - k*h*(1.0-h);
+  float h = clamp(0.5+0.5*(b-a)/k, 0.0, 1.0);
+  return mix(b, a, h) - k*h*(1.0-h);
 }
 
-float pmax(float a, float b, float k) {
-  return -pmin(-a, -b, k);
+float pabs(float a, float k) {
+  return -pmin(a, -a, k);
 }
 
-float sun(vec2 p) {
-  const float ch = 0.0125;
-  vec2 sp = p;
-  vec2 cp = p;
-  mod1(cp.y, ch*6.0);
+float height(vec2 p) {
+//  float tm = TIME-2.*length(p);
+  float tm = TIME;
+  const float xm = 0.5*0.005123;
+  float ym = mix(0.125, 0.25, 0.5-0.5*cos(TAU*TIME/600.0));
 
-  float d0 = circle(sp, 0.5);
-  float d1 = planex(cp, ch);
-  float d2 = p.y+ch*3.0;
+  p *= 0.4;
 
-  float d = d0;
-  d = pmax(d, -max(d1, d2), ch*2.0);
+  float d = length(p);
+  float c = 1E6;
+  float x = pow(d, 0.1);
+  float y = (ATAN(p.x, p.y)+0.05*tm-2.0*d) / TAU;
 
-  return d;
-}
-
-float city(vec2 p) {
-  float fd = -(p.y+0.4);
-  float cd = 1E6;
-
-  const float count = 5.0;
-  const float width = 0.1;
-
-  for (float i = 0.0; i < count; ++i) {
-    vec2 pp = p;
-    pp.x += i*width/count;
-    float nn = mod1(pp.x, width);
-    float rr = hash(nn+sqrt(3.0)*i);
-    float dd = box(pp-vec2(0.0, -0.5), vec2(0.02, 0.35*(1.0-smoothstep(0.0, 10.0, abs(nn)))*rr+0.1));
-    cd = min(cd, dd);
+  for (float i = 0.; i < 3.; ++i) {
+    float v = length(fract(vec2(x - tm*i*xm, fract(y + i*ym)*.5)*20.)*2.-1.);
+    c = pmin(c, v, 0.125);
   }
 
-  return max(fd, cd);
+  float h =  (-hf+hf*(pabs(tanh_approx(5.5*d-80.*c*c*d*d*(.55-d))-0.25*d, 0.25)));
+  return h;
 }
 
-vec3 cityEffect(vec2 p, float dc) {
-  float aa = 2.0 / RESOLUTION.y;
-  dc = abs(dc)-aa;
-  vec3 col = vec3(0.0);
-  col = mix(col, cityCol*0.75, smoothstep(aa, -aa, dc));
-  return col;
+vec3 normal(vec2 p) {
+  vec2 e = vec2(4.0/RESOLUTION.y, 0);
+
+  vec3 n;
+  n.x = height(p + e.xy) - height(p - e.xy);
+  n.y = -2.0*e.x;
+  n.z = height(p + e.yx) - height(p - e.yx);
+
+  return normalize(n);
 }
 
-vec3 sunEffect(vec2 p, float dc) {
-  float aa = 4.0 / RESOLUTION.y;
+vec3 color(vec2 p) {
+  const float ss = 1.25;
+  const float hh = 1.95;
 
-  vec3 col = vec3(0.1);
-  col = mix(skyCol1, skyCol2, pow(clamp(0.5*(1.0+p.y+0.1*sin(4.0*p.x+TIME*0.5)), 0.0, 1.0), 4.0));
+  const vec3 lp1 = -vec3(1.0 , hh, -1.0)*vec3(ss, 1.0, ss);
+  const vec3 lp2 = -vec3(-1.0, hh, -1.0)*vec3(ss, 1.0, ss);
 
-  p.y -= 0.49;
-  float ds = sun(p);
+  const vec3 lcol1 = HSV2RGB(vec3(0.30, 0.35, 2.0));
+  const vec3 lcol2 = HSV2RGB(vec3(0.57, 0.6 , 2.0));
+  const vec3 mat   = HSV2RGB(vec3(0.55, 0.9, 0.05));
+  const float spe  = 16.0;
 
-  float dd = circle(p, 0.5);
+  float h = height(p);
+  vec3  n = normal(p);
 
-  vec3 sunCol = mix(vec3(1.0, 1.0, 0.0), vec3(1.0, 0.0, 1.0), clamp(0.5 - 1.0*p.y, 0.0, 1.0));
-  vec3 glareCol = sqrt(sunCol);
-  vec3 cityCol = sunCol*sunCol;
+  vec3 ro = vec3(0.0, 8.0, 0.0);
+  vec3 pp = vec3(p.x, 0.0, p.y);
 
-  col += glareCol*(exp(-30.0*ds))*step(0.0, ds);
+  vec3 po = vec3(p.x, 0.0, p.y);
+  vec3 rd = normalize(ro - po);
 
+  vec3 ld1 = normalize(lp1 - po);
+  vec3 ld2 = normalize(lp2 - po);
 
-  float t1 = smoothstep(0.0, 0.075, -dd);
-  float t2 = smoothstep(0.0, 0.3, -dd);
-  col = mix(col, sunCol, smoothstep(-aa, 0.0, -ds));
-  col = mix(col, glareCol, smoothstep(-aa, 0.0, -dc)*t1);
-  col += vec3(0.0, 0.25, 0.0)*(exp(-90.0*dc))*step(0.0, dc)*t2;
-  return col;
-}
+  float diff1 = max(dot(n, ld1), 0.0);
+  float diff2 = max(dot(n, ld2), 0.0);
 
-float ground(vec2 p) {
-  p.y += TIME*40.0;
-  p *= 0.075;
-  vec2 gp = p;
-  gp = fract(gp) - vec2(0.5);
-  float d0 = abs(gp.x);
-  float d1 = abs(gp.y);
-  float d2 = circle(gp, 0.05);
+  vec3  rn    = n;
+  vec3  ref   = reflect(rd, rn);
+  float ref1  = max(dot(ref, ld1), 0.0);
+  float ref2  = max(dot(ref, ld2), 0.0);
 
-  const float rw = 2.5;
-  const float sw = 0.0125;
+  float dm = tanh_approx(abs(h)*120.0);
+  float rm = dm;
+  dm *= dm;
 
-  vec2 rp = p;
-  mod1(rp.y, 12.0);
-  float d3 = abs(rp.x) - rw;
-  float d4 = abs(d3) - sw*2.0;
-  float d5 = box(rp, vec2(sw*2.0, 2.0));
-  vec2 sp = p;
-  mod1(sp.y, 4.0);
-  sp.x = abs(sp.x);
-  sp -= vec2(rw - 0.125, 0.0);
-  float d6 = box(sp, vec2(sw, 1.0));
-
-  float d = d0;
-  d = pmin(d, d1, 0.1);
-  d = max(d, -d3);
-  d = min(d, d4);
-  d = min(d, d5);
-  d = min(d, d6);
-
-  return d;
-}
-
-vec3 groundEffect(vec2 p) {
-  vec3 ro = vec3(0.0, 20.0, 0.0);
-  vec3 ww = normalize(vec3(0.0, -0.025, 1.0));
-  vec3 uu = normalize(cross(vec3(0.0,1.0,0.0), ww));
-  vec3 vv = normalize(cross(ww,uu));
-  vec3 rd = normalize(p.x*uu + p.y*vv + 2.5*ww);
-
-  float distg = (-9.0 - ro.y)/rd.y;
+  vec3 lpow1 = dm*mat*lcol1;
+  vec3 lpow2 = dm*mat*lcol2;
 
   vec3 col = vec3(0.0);
-  if (distg > 0.0) {
-    vec3 pg = ro + rd*distg;
-    float aa = length(dFdx(pg))*0.0002*RESOLUTION.x;
+  col += diff1*diff1*lpow1;
+  col += diff2*diff2*lpow2;
 
-    float dg = ground(pg.xz);
+  col += rm*pow(ref1, spe)*lcol1;
+  col += rm*pow(ref2, spe)*lcol2;
 
-    col = mix(col, gridCol, smoothstep(-aa, 0.0, -(dg+0.0175)));
-    col += shineCol*(exp(-10.0*clamp(dg, 0.0, 1.0)));
-    col = clamp(col, 0.0, 1.0);
-
-    col *= pow(1.0-smoothstep(ro.y*3.0, 220.0+ro.y*2.0, distg), 2.0);
-  }
-
-  return col;
-}
-
-// License: MIT, author: Inigo Quilez, found: https://www.iquilezles.org/www/index.htm
-vec3 postProcess(vec3 col, vec2 q)  {
-  col = clamp(col,0.0,1.0);
-  // No Gamma correction
-  // col = pow(col, 1.0/vec3(2.2));
-  col=col*0.6+0.4*col*col*(3.0-2.0*col);
-  col=mix(col, vec3(dot(col, vec3(0.33))), -0.4);
-  col*=0.5+0.5*pow(19.0*q.x*q.y*(1.0-q.x)*(1.0-q.y),0.7);
-  return col;
-}
-
-vec3 effect(vec2 p, vec2 q) {
-  vec3 col = vec3(0.0);
-
-  vec2 off = vec2(0.0, 0.15);
-
-  float dc = city(p-vec2(0.0, 0.375)+off);
-  col += cityEffect(p+off,dc );
-  col += sunEffect(p+off,dc);
-  col += groundEffect(p+off);
-
-  col = postProcess(col, q);
   return col;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-  vec2 q = fragCoord/iResolution.xy;
+  vec2 q = fragCoord/RESOLUTION.xy;
   vec2 p = -1. + 2. * q;
-  p.x *= RESOLUTION.x / RESOLUTION.y;
+  p.x *= RESOLUTION.x/RESOLUTION.y;
+  vec3 col = color(p);
 
-  vec3 col = effect(p, q);
+  col = aces_approx(col);
+  col = sRGB(col);
 
   fragColor = vec4(col, 1.0);
 }
