@@ -49,5 +49,5 @@ background-blur-radius = 20
 # custom-shader = shaders/starfield-colors.glsl
 # custom-shader = shaders/starfield.glsl
 # custom-shader = shaders/tft.glsl
-custom-shader = shaders/underwater.glsl
-# custom-shader = shaders/water.glsl
+# custom-shader = shaders/underwater.glsl
+custom-shader = shaders/water.glsl
