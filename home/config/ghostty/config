@@ -16,4 +16,4 @@ quit-after-last-window-closed = true
 background-opacity = 0.8
 background-blur-radius = 20
 
-custom-shared = shaders/bloom.glsl
+custom-shader = shaders/bloom.glsl
