@@ -1,171 +1,102 @@
-// CC0: Windows Terminal Damask Rose
-//  Been tinkering creating Windows Terminal shaders
-//  Created this as a version of an earlier shader
-//  Thought it turned out decent so sharing
+#define MAX_RAY_MARCH_STEPS 32
+#define MAX_DISTANCE 4.0
+#define SURFACE_DISTANCE 0.002
 
-// https://mrange.github.io/windows-terminal-shader-gallery/
+struct Hit
+{
+    float dist;
+    float closest_dist;
+    vec3 p;
+};
 
-// Define to use a faster atan implementation
-//  Introduces slight assymmetries that don't look outright terrible at least
-//#define FASTATAN
-
-#define TIME        iTime
-#define RESOLUTION  iResolution
-#define PI          3.141592654
-#define PI_2        (0.5*PI)
-#define TAU         (2.0*PI)
-#define ROT(a)      mat2(cos(a), sin(a), -sin(a), cos(a))
-
-
-#if defined(FASTATAN)
-#define ATAN atan_approx
-#else
-#define ATAN atan
-#endif
-
-const float hf = 0.015;
-
-// License: WTFPL, author: sam hocevar, found: https://stackoverflow.com/a/17897228/418488
-const vec4 hsv2rgb_K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-vec3 hsv2rgb(vec3 c) {
-  vec3 p = abs(fract(c.xxx + hsv2rgb_K.xyz) * 6.0 - hsv2rgb_K.www);
-  return c.z * mix(hsv2rgb_K.xxx, clamp(p - hsv2rgb_K.xxx, 0.0, 1.0), c.y);
-}
-// License: WTFPL, author: sam hocevar, found: https://stackoverflow.com/a/17897228/418488
-//  Macro version of above to enable compile-time constants
-#define HSV2RGB(c)  (c.z * mix(hsv2rgb_K.xxx, clamp(abs(fract(c.xxx + hsv2rgb_K.xyz) * 6.0 - hsv2rgb_K.www) - hsv2rgb_K.xxx, 0.0, 1.0), c.y))
-
-// License: Unknown, author: nmz (twitter: @stormoid), found: https://www.shadertoy.com/view/NdfyRM
-vec3 sRGB(vec3 t) {
-  return mix(1.055*pow(t, vec3(1./2.4)) - 0.055, 12.92*t, step(t, vec3(0.0031308)));
+float specularBlinnPhong(vec3 light_dir, vec3 ray_dir, vec3 normal)
+{
+    vec3 halfway = normalize(light_dir + ray_dir);
+    return max(0.0, dot(normal, halfway));
 }
 
-// License: Unknown, author: Matt Taylor (https://github.com/64), found: https://64.github.io/tonemapping/
-vec3 aces_approx(vec3 v) {
-  v = max(v, 0.0);
-  v *= 0.6f;
-  float a = 2.51f;
-  float b = 0.03f;
-  float c = 2.43f;
-  float d = 0.59f;
-  float e = 0.14f;
-  return clamp((v*(a*v+b))/(v*(c*v+d)+e), 0.0f, 1.0f);
+vec4 mod289(vec4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 perm(vec4 x){return mod289(((x * 34.0) + 1.0) * x);}
+
+float noise(vec3 p)
+{
+    vec3 a = floor(p);
+    vec3 d = p - a;
+    d = d * d * (3.0 - 2.0 * d);
+
+    vec4 b = a.xxyy + vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 k1 = perm(b.xyxy);
+    vec4 k2 = perm(k1.xyxy + b.zzww);
+
+    vec4 c = k2 + a.zzzz;
+    vec4 k3 = perm(c);
+    vec4 k4 = perm(c + 1.0);
+
+    vec4 o1 = fract(k3 * (1.0 / 41.0));
+    vec4 o2 = fract(k4 * (1.0 / 41.0));
+
+    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    vec2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
+
+    return o4.y * d.y + o4.x * (1.0 - d.y);
 }
 
-// License: Unknown, author: Unknown, found: don't remember
-float tanh_approx(float x) {
-//  return tanh(x);
-  float x2 = x*x;
-  return clamp(x*(27.0 + x2)/(27.0+9.0*x2), -1.0, 1.0);
+float SDF(vec3 point)
+{
+    vec3 p = vec3(point.xy, iTime * 0.3 + point.z);
+    float n = (noise(p) + noise(p * 2.0) * 0.5 + noise(p * 4.0) * 0.25) * 0.57;
+    return length(point) - 0.35 - n * 0.3;
 }
 
-// License: MIT, author: Pascal Gilcher, found: https://www.shadertoy.com/view/flSXRV
-float atan_approx(float y, float x) {
-  float cosatan2 = x / (abs(x) + abs(y));
-  float t = PI_2 - cosatan2 * PI_2;
-  return y < 0.0 ? -t : t;
+vec3 getNormal(vec3 point)
+{
+    vec2 e = vec2(0.002, 0.0);
+    return normalize(SDF(point) - vec3(SDF(point - e.xyy), SDF(point - e.yxy), SDF(point - e.yyx)));
 }
 
-// License: MIT, author: Inigo Quilez, found: https://www.iquilezles.org/www/articles/smin/smin.htm
-float pmin(float a, float b, float k) {
-  float h = clamp(0.5+0.5*(b-a)/k, 0.0, 1.0);
-  return mix(b, a, h) - k*h*(1.0-h);
+Hit raymarch(vec3 p, vec3 d)
+{
+    Hit hit;
+    hit.closest_dist = MAX_DISTANCE;
+    for (int i = 0; i < MAX_RAY_MARCH_STEPS; ++i)
+    {
+        float sdf = SDF(p);
+        p += d * sdf;
+        hit.closest_dist = min(hit.closest_dist, sdf);
+        hit.dist += sdf;
+        if (hit.dist >= MAX_DISTANCE || abs(sdf) <= SURFACE_DISTANCE)
+            break;
+    }
+
+    hit.p = p;
+    return hit;
 }
 
-float pabs(float a, float k) {
-  return -pmin(a, -a, k);
-}
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
+    fragColor = vec4(0, 0, 0, 1);
+    if (dot(uv, uv) > 1.0) return;
+    vec3 pos = vec3(0, 0, -1);
+    vec3 dir = normalize(vec3(uv, 1));
 
-float height(vec2 p) {
-//  float tm = TIME-2.*length(p);
-  float tm = TIME;
-  const float xm = 0.5*0.005123;
-  float ym = mix(0.125, 0.25, 0.5-0.5*cos(TAU*TIME/600.0));
+    Hit hit = raymarch(pos, dir);
+    fragColor = vec4(pow(max(0.0, 1.0 - hit.closest_dist), 32.0) * (max(0.0, dot(uv, vec2(0.707))) * vec3(0.3, 0.65, 1.0) + max(0.0, dot(uv, vec2(-0.707))) * vec3(0.6, 0.35, 1.0) + vec3(0.4, 0.5, 1.0)), max(0.0, hit.closest_dist));
+    if (hit.closest_dist >= SURFACE_DISTANCE)
+        return;
+    vec3 normal = getNormal(hit.p);
 
-  p *= 0.4;
+    vec3 ray_dir = normalize(pos - hit.p);
+    float facing = max(0.0, sqrt(dot(normal, vec3(0.707, 0.707, 0))) * 1.5 - dot(normal, -dir));
+    fragColor = mix(vec4(0), vec4(0.3, 0.65, 1.0, 1.0), 0.75 * facing * facing * facing);
 
-  float d = length(p);
-  float c = 1E6;
-  float x = pow(d, 0.1);
-  float y = (ATAN(p.x, p.y)+0.05*tm-2.0*d) / TAU;
+    facing = max(0.0, sqrt(dot(normal, vec3(-0.707, -0.707, 0))) * 1.5 - dot(normal, -dir));
+    fragColor = vec4(fragColor.rgb, 0) + mix(vec4(0), vec4(0.6, 0.35, 1.0, 1.0), 0.75 * facing * facing * facing);
 
-  for (float i = 0.; i < 3.; ++i) {
-    float v = length(fract(vec2(x - tm*i*xm, fract(y + i*ym)*.5)*20.)*2.-1.);
-    c = pmin(c, v, 0.125);
-  }
+    facing = max(0.0, sqrt(dot(normal, vec3(0.0, 0.0, -1.0))) * 1.5 - dot(normal, -dir));
+    fragColor = vec4(fragColor.rgb, 0) + mix(vec4(0), vec4(0.4, 0.5, 1.0, 1.0), 0.5 * facing * facing * facing);
 
-  float h =  (-hf+hf*(pabs(tanh_approx(5.5*d-80.*c*c*d*d*(.55-d))-0.25*d, 0.25)));
-  return h;
-}
-
-vec3 normal(vec2 p) {
-  vec2 e = vec2(4.0/RESOLUTION.y, 0);
-
-  vec3 n;
-  n.x = height(p + e.xy) - height(p - e.xy);
-  n.y = -2.0*e.x;
-  n.z = height(p + e.yx) - height(p - e.yx);
-
-  return normalize(n);
-}
-
-vec3 color(vec2 p) {
-  const float ss = 1.25;
-  const float hh = 1.95;
-
-  const vec3 lp1 = -vec3(1.0 , hh, -1.0)*vec3(ss, 1.0, ss);
-  const vec3 lp2 = -vec3(-1.0, hh, -1.0)*vec3(ss, 1.0, ss);
-
-  const vec3 lcol1 = HSV2RGB(vec3(0.30, 0.35, 2.0));
-  const vec3 lcol2 = HSV2RGB(vec3(0.57, 0.6 , 2.0));
-  const vec3 mat   = HSV2RGB(vec3(0.55, 0.9, 0.05));
-  const float spe  = 16.0;
-
-  float h = height(p);
-  vec3  n = normal(p);
-
-  vec3 ro = vec3(0.0, 8.0, 0.0);
-  vec3 pp = vec3(p.x, 0.0, p.y);
-
-  vec3 po = vec3(p.x, 0.0, p.y);
-  vec3 rd = normalize(ro - po);
-
-  vec3 ld1 = normalize(lp1 - po);
-  vec3 ld2 = normalize(lp2 - po);
-
-  float diff1 = max(dot(n, ld1), 0.0);
-  float diff2 = max(dot(n, ld2), 0.0);
-
-  vec3  rn    = n;
-  vec3  ref   = reflect(rd, rn);
-  float ref1  = max(dot(ref, ld1), 0.0);
-  float ref2  = max(dot(ref, ld2), 0.0);
-
-  float dm = tanh_approx(abs(h)*120.0);
-  float rm = dm;
-  dm *= dm;
-
-  vec3 lpow1 = dm*mat*lcol1;
-  vec3 lpow2 = dm*mat*lcol2;
-
-  vec3 col = vec3(0.0);
-  col += diff1*diff1*lpow1;
-  col += diff2*diff2*lpow2;
-
-  col += rm*pow(ref1, spe)*lcol1;
-  col += rm*pow(ref2, spe)*lcol2;
-
-  return col;
-}
-
-void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-  vec2 q = fragCoord/RESOLUTION.xy;
-  vec2 p = -1. + 2. * q;
-  p.x *= RESOLUTION.x/RESOLUTION.y;
-  vec3 col = color(p);
-
-  col = aces_approx(col);
-  col = sRGB(col);
-
-  fragColor = vec4(col, 1.0);
+    fragColor = vec4(fragColor.rgb, 0) + mix(vec4(0), vec4(0.4, 0.625, 1.0, 1.0), pow(specularBlinnPhong(normalize(vec3(600, 800, -500) - hit.p), ray_dir, normal), 12.0) * 1.0);
+    fragColor = vec4(fragColor.rgb, 0) + mix(vec4(0), vec4(0.6, 0.5625, 1.0, 1.0), pow(specularBlinnPhong(normalize(vec3(-600, -800, -00) - hit.p), ray_dir, normal), 16.0) * 0.75);
+    fragColor.rgb = pow(fragColor.rgb, vec3(1.25));
 }
