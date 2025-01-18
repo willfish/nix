@@ -65,4 +65,6 @@ in
       WantedBy = [ "default.target" ];
     };
   };
+
+  systemd.user.startServices = "sd-switch";
 }
