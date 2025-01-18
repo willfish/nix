@@ -1,6 +1,5 @@
 gtk-tabs-location = hidden
 font-family = "JetBrainsMono Nerd Font"
-# font-family = JetBrains Mono
 font-size = 12
 scrollback-limit = 10_000
 window-theme = ghostty
@@ -22,7 +21,7 @@ config-file = theme
 # custom-shader = shaders/animated-gradient-shader.glsl
 # custom-shader = shaders/bettercrt.glsl
 # custom-shader = shaders/bloom.glsl
-custom-shader = shaders/bloom025.glsl
+# custom-shader = shaders/bloom025.glsl
 # custom-shader = shaders/bloom050.glsl
 # custom-shader = shaders/bloom060.glsl
 # custom-shader = shaders/bloom075.glsl
