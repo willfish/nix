@@ -148,6 +148,5 @@
     kubectl
 
     solana-cli
-    etcher
   ];
 }
