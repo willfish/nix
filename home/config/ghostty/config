@@ -16,8 +16,6 @@ quit-after-last-window-closed = true
 background-opacity = 0.8
 background-blur-radius = 20
 
-config-file = theme
-
 # custom-shader = shaders/animated-gradient-shader.glsl
 # custom-shader = shaders/bettercrt.glsl
 # custom-shader = shaders/bloom.glsl
