@@ -196,9 +196,7 @@
 
     ollama = {
       enable = true;
-      packages = with pkgs-unstable; [
-        ollama
-      ];
+      package = pkgs-unstable.ollama;
     };
   };
 
