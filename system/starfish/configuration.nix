@@ -192,9 +192,10 @@
         ];
       };
 
-      ollama = {
-        enable = true;
-      };
+    };
+
+    ollama = {
+      enable = true;
     };
   };
 
