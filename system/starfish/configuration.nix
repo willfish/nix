@@ -191,6 +191,10 @@
           swappy
         ];
       };
+
+      ollama = {
+        enable = true;
+      };
     };
   };
 
@@ -248,4 +252,5 @@
       localNetworkGameTransfers.openFirewall = true;
     };
   };
+
 }
