@@ -69,6 +69,7 @@
     shellharden
     shfmt
     tree
+    yq
     eza
     yarn
     pcmanfm
