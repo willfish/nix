@@ -249,15 +249,15 @@ in
       '';
 
       home = ''
-       external_monitor="DP-3"
-       laptop_monitor="eDP-1"
+       set -g external_monitor "DP-3"
+       set -g laptop_monitor "eDP-1"
 
        xrandr --output $laptop_monitor --auto
       '';
 
       office = ''
-       external_monitor="DP-3"
-       laptop_monitor="eDP-1"
+       set -g external_monitor "DP-3"
+       set -g laptop_monitor "eDP-1"
 
        xrandr --output $laptop_monitor --off --output $external_monitor --auto
       '';
