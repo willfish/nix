@@ -148,7 +148,7 @@
   services = {
     displayManager = {
       sddm.enable = true;
-      sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
+      sddm.theme = "${import ../modules/sddm-theme.nix { inherit pkgs; }}";
     };
     openssh = {
       enable = true;
@@ -221,6 +221,21 @@
             TimeoutStopSec = 10;
         };
     };
+
+    user.services.connectBluetoothSpeaker = {
+      Unit = {
+        Description = "Connect my BT speaker on user login";
+        After = [ "default.target" "suspend.target" "hibernate.target" "hybrid-sleep.target" "bluetooth.service" ];
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${pkgs-unstable.bluez}/bin/bluetoothctl connect AC:A9:B4:00:0E:21";
+      };
+      Install = {
+        WantedBy = [ "default.target" ];
+      };
+    };
+
     extraConfig = ''
         DefaultTimeoutStopSec=10s
     '';

@@ -138,14 +138,14 @@
     bluez
     home-manager
   ];
-  environment.shells = with pkgs; [bash];
-  users.defaultUserShell = pkgs.bash;
-  # programs.fish.enable = true;
+  environment.shells = with pkgs; [bash fish];
+  users.defaultUserShell = pkgs.fish;
+  programs.fish.enable = true;
 
   services = {
     displayManager = {
       sddm.enable = true;
-      sddm.theme = "${import ./modules/sddm-theme.nix { inherit pkgs; }}";
+      sddm.theme = "${import ../modules/sddm-theme.nix { inherit pkgs; }}";
     };
     openssh = {
       enable = true;
