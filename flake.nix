@@ -20,7 +20,7 @@
   outputs = { nixpkgs, nixpkgs-unstable, ... }@inputs:
     let
       lib = nixpkgs.lib;
-      system = "x86_64-linux";
+      system = builtins.currentSystem;
 
       pkgs = import nixpkgs {inherit system; config.allowUnfree = true; config.nvidia.acceptLicense = true; };
       pkgs-unstable = import nixpkgs-unstable {inherit system; config.allowUnfree = true; config.nvidia.acceptLicense = true;  };
@@ -30,7 +30,13 @@
     nixosConfigurations = {
       andromeda = lib.nixosSystem {
         inherit pkgs;
-        modules = [./system/configuration.nix];
+        modules = [./system/andromeda/configuration.nix];
+        specialArgs = { inherit pkgs-unstable; };
+      };
+
+      starfish = lib.nixosSystem {
+        inherit pkgs;
+        modules = [./system/starfish/configuration.nix.nix];
         specialArgs = { inherit pkgs-unstable; };
       };
     };
