@@ -133,7 +133,6 @@
     openssl
     openssl.dev
     pkg-config
-    xfce.thunar
 
     bluez
     home-manager

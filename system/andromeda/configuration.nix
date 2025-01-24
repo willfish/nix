@@ -137,7 +137,6 @@
     openssl
     openssl.dev
     pkg-config
-    xfce.thunar
 
     bluez
   ];
