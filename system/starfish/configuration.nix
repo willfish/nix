@@ -1,7 +1,7 @@
 { pkgs, pkgs-unstable, ... }:
 
 {
-  system.stateVersion = "23.11";
+  system.stateVersion = "24.11";
   imports = [
     ./hardware-configuration.nix
     "${pkgs-unstable.path}/nixos/modules/services/networking/cloudflare-warp.nix"
