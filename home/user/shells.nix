@@ -46,7 +46,7 @@ in
     shellAbbrs = abbreviations;
 
     plugins = [
-      { name = "tide"; src = pkgs.fishPlugins.tide.src; }
+      { name = "tide"; src = pkgs-unstable.fishPlugins.tide.src; }
     ];
 
     interactiveShellInit = ''

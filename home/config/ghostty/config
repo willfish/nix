@@ -1,3 +1,4 @@
+shell-integration = /run/current-system/sw/bin/fish
 gtk-tabs-location = hidden
 font-family = "JetBrainsMono Nerd Font"
 font-size = 12
