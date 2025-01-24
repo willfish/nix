@@ -57,9 +57,6 @@ in
       set -gx PATH $HOME/go/bin $PATH
       set -gx PATH $HOME/.bin $PATH
       set -gx LD_LIBRARY_PATH $HOME/.nix-profile/lib
-
-      # set -gx cow (cowsay -l | grep -v 'Cow files' | shuf -n 1)
-      # fortune | cowsay -f $cow | lolcat
     '';
 
     functions = {
@@ -249,6 +246,20 @@ in
         echo "Opening $fully_qualified_notes_file"
 
         nvim $fully_qualified_notes_file
+      '';
+
+      home = ''
+       external_monitor="DP-3"
+       laptop_monitor="eDP-1"
+
+       xrandr --output $laptop_monitor --auto
+      '';
+
+      office = ''
+       external_monitor="DP-3"
+       laptop_monitor="eDP-1"
+
+       xrandr --output $laptop_monitor --off --output $external_monitor --auto
       '';
     };
   };
