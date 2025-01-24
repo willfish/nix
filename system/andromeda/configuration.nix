@@ -27,6 +27,10 @@
   # Enable networking
   networking.networkmanager.enable = true;
 
+  networking.extraHosts = ''
+    127.0.0.1 host.docker.internal # Compatibility with Mac OS configured projects that run docker in a VM
+  '';
+
   # Set your time zone.
   time.timeZone = "Europe/London";
 
