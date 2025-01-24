@@ -40,6 +40,7 @@ return {
         formatting.shellharden,
         formatting.stylua,
         formatting.xmllint,
+        formatting.nixpkgs_fmt,
       },
       -- configure format on save
       on_attach = function(current_client, bufnr)

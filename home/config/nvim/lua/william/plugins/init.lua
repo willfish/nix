@@ -32,13 +32,4 @@ return {
   { 'vimtaku/vim-textobj-keyvalue',    dependencies = 'kana/vim-textobj-user' },
   { 'whatyouhide/vim-textobj-erb',     dependencies = 'kana/vim-textobj-user' },
   { 'whatyouhide/vim-textobj-xmlattr', dependencies = 'kana/vim-textobj-user' },
-  {
-    "stevearc/conform.nvim",
-    optional = true,
-    opts = {
-      formatters_by_ft = {
-        nix = { "nixfmt" },
-      },
-    },
-  }
 }

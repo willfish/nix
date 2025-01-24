@@ -43,6 +43,7 @@
     nix-prefetch-git
     direnv
     nixfmt
+    nixpkgs-fmt
 
     # Utilities
     tldr

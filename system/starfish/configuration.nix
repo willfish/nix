@@ -11,7 +11,7 @@
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.kernelParams = ["btiso.enable=1"];
+  boot.kernelParams = [ "btiso.enable=1" ];
 
   networking.hostName = "starfish"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -43,7 +43,7 @@
 
   services.udev = {
     extraRules = ''
-    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="0ab7", TEST=="power/control", ATTR{power/control}="on"
+      ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="0ab7", TEST=="power/control", ATTR{power/control}="on"
     '';
   };
 
@@ -62,7 +62,7 @@
   hardware.pulseaudio.enable = false;
 
   security.rtkit.enable = true;
-  security.pam.services.swaylock = {};
+  security.pam.services.swaylock = { };
   security.pam.services.swaylock.fprintAuth = false;
 
   services.pipewire = {
@@ -137,7 +137,7 @@
     bluez
     home-manager
   ];
-  environment.shells = with pkgs; [bash fish];
+  environment.shells = with pkgs; [ bash fish ];
   users.defaultUserShell = pkgs.fish;
   programs.fish.enable = true;
 
@@ -206,20 +206,20 @@
 
   systemd = {
     user.services.polkit-gnome-authentication-agent-1 = {
-        description = "polkit-gnome-authentication-agent-1";
-        wantedBy = [ "graphical-session.target" ];
-        wants = [ "graphical-session.target" ];
-        after = [ "graphical-session.target" ];
-        serviceConfig = {
-            Type = "simple";
-            ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
-            Restart = "on-failure";
-            RestartSec = 1;
-            TimeoutStopSec = 10;
-        };
+      description = "polkit-gnome-authentication-agent-1";
+      wantedBy = [ "graphical-session.target" ];
+      wants = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+        Restart = "on-failure";
+        RestartSec = 1;
+        TimeoutStopSec = 10;
+      };
     };
     extraConfig = ''
-        DefaultTimeoutStopSec=10s
+      DefaultTimeoutStopSec=10s
     '';
   };
 

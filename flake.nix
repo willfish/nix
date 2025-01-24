@@ -22,34 +22,35 @@
       lib = nixpkgs.lib;
       system = builtins.currentSystem;
 
-      pkgs = import nixpkgs {inherit system; config.allowUnfree = true; config.nvidia.acceptLicense = true; };
-      pkgs-unstable = import nixpkgs-unstable {inherit system; config.allowUnfree = true; config.nvidia.acceptLicense = true;  };
+      pkgs = import nixpkgs { inherit system; config.allowUnfree = true; config.nvidia.acceptLicense = true; };
+      pkgs-unstable = import nixpkgs-unstable { inherit system; config.allowUnfree = true; config.nvidia.acceptLicense = true; };
 
-    in {
+    in
+    {
 
-    nixosConfigurations = {
-      andromeda = lib.nixosSystem {
-        inherit pkgs;
-        modules = [./system/andromeda/configuration.nix];
-        specialArgs = { inherit pkgs-unstable; };
+      nixosConfigurations = {
+        andromeda = lib.nixosSystem {
+          inherit pkgs;
+          modules = [ ./system/andromeda/configuration.nix ];
+          specialArgs = { inherit pkgs-unstable; };
+        };
+
+        starfish = lib.nixosSystem {
+          inherit pkgs;
+          modules = [ ./system/starfish/configuration.nix ];
+          specialArgs = { inherit pkgs-unstable; };
+        };
       };
 
-      starfish = lib.nixosSystem {
-        inherit pkgs;
-        modules = [./system/starfish/configuration.nix];
-        specialArgs = { inherit pkgs-unstable; };
-      };
-    };
-
-    homeConfigurations = {
-      william = inputs.home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-        modules = [./home];
-        extraSpecialArgs = {
-          inherit pkgs-unstable;
-          inherit inputs;
+      homeConfigurations = {
+        william = inputs.home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ ./home ];
+          extraSpecialArgs = {
+            inherit pkgs-unstable;
+            inherit inputs;
+          };
         };
       };
     };
-  };
 }
