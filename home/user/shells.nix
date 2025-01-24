@@ -249,15 +249,14 @@ in
       '';
 
       home = ''
-       set -g external_monitor "DP-3"
        set -g laptop_monitor "eDP-1"
 
        xrandr --output $laptop_monitor --auto
       '';
 
       office = ''
-       set -g external_monitor "DP-3"
        set -g laptop_monitor "eDP-1"
+       set -g external_monitor (xrandr | grep -v disconnected | grep connected | awk '{print $1}' | grep -v $laptop_monitor)
 
        xrandr --output $laptop_monitor --off --output $external_monitor --auto
       '';
