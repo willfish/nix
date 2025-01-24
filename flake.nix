@@ -36,7 +36,7 @@
 
       starfish = lib.nixosSystem {
         inherit pkgs;
-        modules = [./system/starfish/configuration.nix.nix];
+        modules = [./system/starfish/configuration.nix];
         specialArgs = { inherit pkgs-unstable; };
       };
     };
