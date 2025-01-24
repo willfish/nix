@@ -1,4 +1,4 @@
-{ ... }:
+{ lib, ... }:
 
 {
   imports = [./user];
@@ -10,4 +10,8 @@
   programs.home-manager.enable = true;
 
   services.network-manager-applet.enable = true;
+
+  news.display = "silent";
+  news.json = lib.mkForce { };
+  news.entries = lib.mkForce [ ];
 }
