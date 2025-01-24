@@ -189,6 +189,7 @@
           gtk3
           imagemagick
           dconf
+          swappy
         ];
       };
     };
