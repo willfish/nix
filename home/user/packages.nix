@@ -42,6 +42,7 @@
     nixd
     nix-prefetch-git
     direnv
+    nixfmt
 
     # Utilities
     tldr
