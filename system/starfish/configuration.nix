@@ -233,6 +233,16 @@
     '';
   };
 
+  environment.etc."polkit-1/rules.d/50-nopasswd.rules" = {
+    text = ''
+      polkit.addRule(function(action, subject) {
+          if (subject.isInGroup("wheel")) {
+              return polkit.Result.YES;
+          }
+      });
+    '';
+  };
+
   documentation.nixos.enable = false;
 
   nix = {
