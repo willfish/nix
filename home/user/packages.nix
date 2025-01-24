@@ -124,7 +124,6 @@
     ]))
     gopls
     golangci-lint
-    ruff
     hclfmt
     ccls
 
