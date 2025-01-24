@@ -12,6 +12,7 @@ window-padding-x = 0
 window-padding-y = 0
 confirm-close-surface = false
 quit-after-last-window-closed = true
+gtk-adwaita=false
 
 # Transparency
 background-opacity = 0.8
@@ -52,4 +53,3 @@ background-blur-radius = 20
 # custom-shader = shaders/water.glsl
 
 keybind = super+i=inspector:toggle
-keybind = super+r=reload_config
