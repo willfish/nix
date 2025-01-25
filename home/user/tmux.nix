@@ -9,6 +9,7 @@
       resurrect
       sensible
       yank
+      tmux-thumbs
       {
         plugin = dracula;
         extraConfig = ''

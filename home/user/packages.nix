@@ -5,6 +5,7 @@
     pkgs.zoxide
     pkgs.tmux
     pkgs.tmuxinator
+    xournalpp
 
     # For zoom
     pkgs.zoom-us
@@ -41,7 +42,6 @@
     nil
     nixd
     nix-prefetch-git
-    direnv
     nixpkgs-fmt
 
     # Utilities
