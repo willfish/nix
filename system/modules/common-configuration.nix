@@ -47,6 +47,24 @@
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
+    wireplumber.enable = true;
+    extraConfig = {
+      pipewire = {
+        "switch-on-connect" = {
+          "pulse.cmd" = [
+            {
+              cmd = "load-module";
+              args = "module-always-sink";
+              flags = [ ];
+            }
+            {
+              cmd = "load-module";
+              args = "module-switch-on-connect";
+            }
+          ];
+        };
+      };
+    };
   };
 
   users.users.william = {
@@ -70,9 +88,12 @@
       General = {
         Experimental = true;
         DebugKeys = true;
+        Enable = "Source,Sink,Media,Socket";
       };
     };
   };
+
+  services.blueman.enable = true;
 
   programs.gnupg.agent = {
     enable = true;
@@ -107,8 +128,6 @@
   environment.shells = with pkgs; [ bash fish ];
   users.defaultUserShell = pkgs.fish;
   programs.fish.enable = true;
-
-  services.blueman.enable = true;
 
   virtualisation.docker.enable = true;
 

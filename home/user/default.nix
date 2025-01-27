@@ -7,5 +7,6 @@
     ./packages.nix
     ./programs.nix
     ./environment.nix
+    ./zathura.nix
   ];
 }
