@@ -1,4 +1,4 @@
-{ pkgs, pkgs-unstable, ... }:
+{ pkgs-unstable, ... }:
 let
   aliases = {
     ag = "rg";
