@@ -139,7 +139,6 @@
         enable = true;
         extraPackages = with pkgs-unstable; [
           i3status
-          i3lock
           i3lock-blur
           i3blocks
           maim

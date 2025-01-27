@@ -9,7 +9,7 @@ choice=$(echo -e "$options" | rofi -dmenu -i -p "Power Menu:" -theme ~/.dotfiles
 # Execute the chosen action
 case "$choice" in
     "Lock")
-        swaylock
+        i3lock --color=282828
         ;;
     "Hibernate")
         systemctl hibernate
