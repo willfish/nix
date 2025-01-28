@@ -10,33 +10,33 @@ current_window_manager=$(loginctl show-session $XDG_SESSION_ID | grep Desktop | 
 
 # Execute the chosen action
 case "$choice" in
-    "Lock")
-        i3lock --color=282828
+"Lock")
+    i3lock --color=282828
+    ;;
+"Hibernate")
+    systemctl hibernate
+    ;;
+"Shutdown")
+    systemctl poweroff
+    ;;
+"Suspend")
+    systemctl suspend
+    ;;
+"Reboot")
+    systemctl reboot
+    ;;
+"Logout")
+    case $current_window_manager in
+    "i3")
+        i3-msg exit
         ;;
-    "Hibernate")
-        systemctl hibernate
-        ;;
-    "Shutdown")
-        systemctl poweroff
-        ;;
-    "Suspend")
-        systemctl suspend
-        ;;
-    "Reboot")
-        systemctl reboot
-        ;;
-    "Logout")
-        case $current_window_manager in
-            "i3")
-                i3-msg exit
-                ;;
-            "xmonad")
-                pkill xmonad
-                ;;
-            *)
-                loginctl terminate-session "$XDG_SESSION_ID"
-                ;;
+    "xmonad")
+        pkill xmonad
         ;;
     *)
+        loginctl terminate-session "$XDG_SESSION_ID"
         ;;
+    esac
+    ;;
+*) ;;
 esac

@@ -1,11 +1,10 @@
 { pkgs, pkgs-unstable, ... }:
 {
   home.packages = with pkgs-unstable; [
-    # Strong integration with home-manager
+    # Strong integration with home-manager so need to use pkgs
     pkgs.zoxide
     pkgs.tmux
     pkgs.tmuxinator
-    xournalpp
 
     # For zoom
     pkgs.zoom-us
@@ -17,26 +16,27 @@
     # For work
     redis
     postgresql
-    cloudflare-warp
-    warpd
 
     xdg-utils
 
     # Desktop apps
-    telegram-desktop
     pavucontrol
     libreoffice-qt
     slack
     discord
+    telegram-desktop
     spotify
-    glxinfo
-    vscode
-    gimp
-    steamcmd
-    protontricks
-    wine
-    shotwell
-    vokoscreen-ng
+    clementine # music player
+    glxinfo # for checking if nvidia drivers are working
+    gimp # image editor
+    shotwell # photo manager
+    vokoscreen-ng # screen recording
+    xournalpp # note taking and annotating pdfs
+    mozillavpn
+    galculator
+    qutebrowser
+    simple-scan # scanner GUI
+    variety # wallpaper changer
 
     # Nix tools
     nil
@@ -69,7 +69,6 @@
     shellharden
     shfmt
     tree
-    eza
     yarn
     pcmanfm
     awscli2
@@ -117,8 +116,6 @@
     yarn
     (python311.withPackages (python-pkgs: [
       python-pkgs.black
-      python-pkgs.git-revise
-      python-pkgs.git-sweep
       python-pkgs.pip
       python-pkgs.requests
       python-pkgs.setuptools
@@ -144,7 +141,6 @@
     lolcat
     neofetch
     gnome-mahjongg
-    gnome-calendar
 
     # indeed
     kubectl

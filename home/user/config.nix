@@ -23,37 +23,5 @@ in
     ".i3".source = "${configDir}/i3";
     ".pryrc".source = "${configDir}/pryrc";
     ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
-    ".wallpapers".source = "${configDir}/variety/Favorites";
   };
-
-  systemd.user.timers.wallpaper = {
-    Unit = {
-      Description = "Random wallpaper scheduler";
-    };
-
-    Timer = {
-      OnBootSec = "20s";
-      OnUnitActiveSec = "20s";
-      Unit = "wallpaper.service";
-    };
-  };
-
-
-  systemd.user.services.wallpaper = {
-    Unit = {
-      Description = "Random wallpaper";
-    };
-    Install = {
-      WantedBy = [ "default.target" ];
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "${configDir}/bin/random-wallpaper";
-      Environment = [
-        "\"PATH=/run/current-system/sw/bin\""
-      ];
-    };
-  };
-
-  systemd.user.startServices = "sd-switch";
 }

@@ -69,7 +69,16 @@
   users.users.william = {
     isNormalUser = true;
     description = "William Fish";
-    extraGroups = [ "networkmanager" "wheel" "docker" "audio" "video" "libvirt" "input" "bluetooth" ];
+    extraGroups = [
+      "audio"
+      "bluetooth"
+      "docker"
+      "input"
+      "libvirt"
+      "networkmanager"
+      "video"
+      "wheel"
+    ];
     packages = with pkgs; [
       docker
       docker-compose

@@ -1,17 +1,18 @@
 import XMonad
-import XMonad.Operations (restart)
-
-import XMonad.Hooks.ManageDocks (docks, avoidStruts, manageDocks)
-import XMonad.Hooks.EwmhDesktops (ewmh)
 import XMonad.Hooks.DynamicLog
+import XMonad.Hooks.EwmhDesktops (ewmh)
+import XMonad.Hooks.ManageDocks (docks, avoidStruts, manageDocks)
+import XMonad.Hooks.ManageHelpers (isDialog, doCenterFloat)
+import XMonad.Layout.Gaps
+import XMonad.Layout.NoBorders (smartBorders, noBorders)
+import XMonad.Layout.Spacing (spacing)
+import XMonad.Layout.ToggleLayouts (toggleLayouts, ToggleLayout(Toggle))
+import XMonad.Layout.MultiColumns (multiCol)
+import XMonad.Operations (restart)
 import XMonad.Util.EZConfig (additionalKeysP)
 import XMonad.Util.SpawnOnce
-import XMonad.Layout.Spacing (spacing)
-import XMonad.Layout.NoBorders (smartBorders)
-import XMonad.Layout.ToggleLayouts (toggleLayouts, ToggleLayout(Toggle))
-import XMonad.Layout.Gaps
+
 import qualified XMonad.StackSet as W
-import XMonad.Hooks.ManageHelpers (isDialog, doCenterFloat)
 
 main :: IO ()
 main = xmonad
@@ -36,15 +37,35 @@ myLayoutHook =
   avoidStruts $
   spacing 5 $
   smartBorders $
-  layoutHook def
+  myLayouts (
+    multiCol [1] 1 0.01 (-0.5)
+    ||| layoutHook def
+  )
+
+myLayouts = toggleLayouts (noBorders Full)
 
 myManageHook = composeAll
-  [ isDialog           --> doCenterFloat
-  , className =? "Pavucontrol" --> doCenterFloat
-  , className =? "Nitrogen"    --> doCenterFloat
-  , isDialog           --> doCenterFloat
-  , title     =? "alsamixer"    --> doCenterFloat
-  , title     =? "File Transfer*"  --> doCenterFloat
+  [ className =? "Brave-browser"          --> doShift "1"
+  , className =? "Clementine"             --> doShift "3"
+  , className =? "Slack"                  --> doShift "2"
+  , className =? "Spotify"                --> doShift "3"
+  , className =? "brave-browser"          --> doShift "1"
+  , className =? "clementine"             --> doShift "3"
+  , className =? "discord"                --> doShift "2"
+  , className =? "spotify"                --> doShift "3"
+  , className =? "zoom "                  --> doShift "4"
+  , className =? "zoom"                   --> doShift "4"
+
+  , className =? "Galculator"             --> doCenterFloat
+  , className =? "Simple-scan"            --> doCenterFloat
+  , className =? "zoom "                  --> doCenterFloat
+  , className =? "zoom"                   --> doCenterFloat
+  , className =? "Pavucontrol"            --> doCenterFloat
+  , className =? "gnome-mahjongg"         --> doCenterFloat
+
+  , title     =? "File Transfer*"         --> doCenterFloat
+  , title     =? "alsamixer"              --> doCenterFloat
+  , isDialog                              --> doCenterFloat
   , manageDocks
   ]
 
@@ -54,7 +75,7 @@ myStartupHook = do
   spawnOnce "pa-applet &"
   spawnOnce "blueman-applet &"
   spawnOnce "~/.config/polybar/launch.sh &"
-  spawnOnce "~/.bin/random-wallpaper &"
+  spawnOnce "variety --profile ~/.config/variety &"
 
 myKeybindings =
   [ -- Applications
@@ -65,7 +86,6 @@ myKeybindings =
   , ("M-t", spawn "pkill picom")
   , ("M-C-t", spawn "picom -b")
   , ("C-S-s", spawn "maim -s -u | tee ~/Pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png | swappy -f -")
-  , ("M-S-d", spawn "killall dunst; notify-send 'restart dunst'")
 
     -- Focus movement
   , ("M-a", windows W.focusMaster)
@@ -84,6 +104,7 @@ myKeybindings =
 
     -- Fullscreen focused window
   , ("M-f", sendMessage (Toggle "Full"))
+  , ("M-S-t", withFocused $ windows . W.sink)
   ]
   ++
   [ -- Workspace navigation
