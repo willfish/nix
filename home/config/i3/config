@@ -265,14 +265,11 @@ mode "resize" {
         bindsym Escape mode "default"
 }
 
-# Lock screen
-bindsym $mod+9 exec --no-startup-id blurlock
-
 # Autostart applications
 exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
 exec --no-startup-id nm-applet
 exec --no-startup-id blueman-applet
-exec --no-startup-id xautolock -time 10 -locker blurlock
+exec --no-startup-id xautolock -time 10 -locker i3lock --color=282828 -detectsleep
 
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 exec_always --no-startup-id ~/.bin/random-wallpaper
@@ -326,27 +323,6 @@ client.background #2B2C2B
 # Set inner/outer gaps
 gaps outer 5
 gaps inner 5
-# # Handle polybar top gap
-# gaps top 25
 
 # Smart gaps (gaps used if only more than one container on the workspace)
 smart_gaps off
-
-# Monitor management
-bindsym $mod+m mode "$mode_monitor"
-set $mode_monitor (l)aptop (e)xternal (b)oth
-mode "$mode_system" {
-    bindsym l exec --no-startup-id bin/monitor.sh laptop
-    bindsym e exec --no-startup-id bin/monitor.sh external
-    bindsym b exec --no-startup-id bin/monitor.sh both
-
-    bindsym Return mode "default"
-    bindsym Escape mode "default"
-}
-
-# Sets mod+m mapping to trigger xrandr commands
-# bindsym $mod+m mode "xrandr --output eDP-1 --auto --primary --rotate normal --output eDP-1 --preferred --rotate normal --below DP-2"
-# xrandr --output eDP-1 --auto --primary --rotate normal --output eDP-1 --preferred --rotate normal --below DP-2
-# xrandr --output eDP-1 --off
-# xrandr --output DP-2 --auto
-# xrandr --auto

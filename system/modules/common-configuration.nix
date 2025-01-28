@@ -1,5 +1,6 @@
 { pkgs, pkgs-unstable, ... }:
 {
+  imports = [ ./specialisations.nix ];
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelParams = [ "btiso.enable=1" ];
@@ -148,39 +149,6 @@
       ];
     };
     spice-vdagentd.enable = true;
-
-    xserver = {
-      enable = true;
-      xkb.layout = "us";
-      xkb.variant = "";
-      windowManager.i3 = {
-        enable = true;
-        extraPackages = with pkgs-unstable; [
-          i3status
-          i3lock-blur
-          i3blocks
-          maim
-          rofi
-          dmenu
-          picom
-          dunst
-          pa_applet
-          networkmanagerapplet
-          polybar
-          libayatana-indicator-gtk3
-          nitrogen
-          feh
-          xautolock
-          gexiv2
-          libnotify
-          gtk3
-          imagemagick
-          dconf
-          swappy
-        ];
-      };
-
-    };
 
     ollama = {
       enable = true;

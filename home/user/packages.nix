@@ -47,6 +47,7 @@
     # Utilities
     tldr
     jq
+    yq
     wget
     htop
     btop
@@ -68,7 +69,6 @@
     shellharden
     shfmt
     tree
-    yq
     eza
     yarn
     pcmanfm
