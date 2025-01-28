@@ -123,6 +123,8 @@
 
     bluez
     home-manager
+
+    ghc
   ];
   environment.shells = with pkgs; [ bash fish ];
   users.defaultUserShell = pkgs.fish;
@@ -153,6 +155,16 @@
       xkb.layout = "us";
       xkb.variant = "";
       enable = true;
+      windowManager.xmonad = {
+        enable = true;
+        config = builtins.readFile ../../home/config/xmonad/xmonad.hs;
+        extraPackages = haskellPackages: with haskellPackages; [
+          xmonad
+          xmonad-contrib
+          xmonad-extras
+          xmonad-utils
+        ];
+      };
       windowManager.i3 = {
         enable = true;
         extraPackages = with pkgs-unstable; [
@@ -240,64 +252,6 @@
       automatic = true;
       dates = "weekly";
       options = "--delete-older-than 7d";
-    };
-  };
-
-  specialisation = {
-    # i3 = {
-    #   configuration = {
-    #     services.xserver = {
-    #       xkb.layout = "us";
-    #       xkb.variant = "";
-    #       enable = true;
-    #       windowManager.i3 = {
-    #         enable = true;
-    #         extraPackages = with pkgs-unstable; [
-    #           dconf
-    #           dmenu
-    #           dunst
-    #           feh
-    #           gexiv2
-    #           gtk3
-    #           i3blocks
-    #           i3lock-blur
-    #           i3status
-    #           imagemagick
-    #           libayatana-indicator-gtk3
-    #           libnotify
-    #           maim
-    #           networkmanagerapplet
-    #           nitrogen
-    #           pa_applet
-    #           picom
-    #           polybar
-    #           rofi
-    #           swappy
-    #           xautolock
-    #         ];
-    #       };
-    #     };
-    #   };
-    # };
-
-    xmonad = {
-      configuration = {
-        services.xserver = {
-          enable = true;
-          xkb.layout = "us";
-          xkb.variant = "";
-          windowManager.xmonad = {
-            enable = true;
-            config = builtins.readFile ../../home/config/xmonad/config.hs;
-            extraPackages = haskellPackages: with haskellPackages; [
-              xmonad
-              xmonad-contrib
-              xmonad-extras
-              xmonad-utils
-            ];
-          };
-        };
-      };
     };
   };
 }

@@ -1,4 +1,4 @@
-{ config, pkgs-unstable, ... }:
+{ config, ... }:
 let
   configDir = ../config;
 
@@ -7,51 +7,52 @@ let
 in
 {
   home.file = {
-      ".aprc".source = "${configDir}/aprc";
-      ".bin/".source = "${configDir}/bin";
-      ".config/btop".source = "${configDir}/btop";
-      ".config/ghostty".source = "${configDir}/ghostty";
-      ".config/kitty".source = "${configDir}/kitty";
-      ".config/nvim".source = configure "nvim";
-      ".config/picom.conf".source = "${configDir}/picom.conf";
-      ".config/polybar".source = "${configDir}/polybar";
-      ".config/rofi".source = "${configDir}/rofi";
-      ".config/tmuxinator".source = "${configDir}/tmuxinator";
-      ".gemrc".source = "${configDir}/gemrc";
-      ".gitignore_global".source = "${configDir}/gitignore_global";
-      ".i3".source = "${configDir}/i3";
-      ".pryrc".source = "${configDir}/pryrc";
-      ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
-      ".wallpapers".source = "${configDir}/variety/Favorites";
+    ".aprc".source = "${configDir}/aprc";
+    ".bin/".source = "${configDir}/bin";
+    ".config/btop".source = "${configDir}/btop";
+    ".config/ghostty".source = "${configDir}/ghostty";
+    ".config/kitty".source = "${configDir}/kitty";
+    ".config/nvim".source = configure "nvim";
+    ".config/picom.conf".source = "${configDir}/picom.conf";
+    ".config/polybar".source = "${configDir}/polybar";
+    ".config/rofi".source = "${configDir}/rofi";
+    ".config/tmuxinator".source = "${configDir}/tmuxinator";
+    ".config/xmonad".source = "${configDir}/xmonad";
+    ".gemrc".source = "${configDir}/gemrc";
+    ".gitignore_global".source = "${configDir}/gitignore_global";
+    ".i3".source = "${configDir}/i3";
+    ".pryrc".source = "${configDir}/pryrc";
+    ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
+    ".wallpapers".source = "${configDir}/variety/Favorites";
   };
 
   systemd.user.timers.wallpaper = {
-      Unit = {
-          Description = "Random wallpaper scheduler";
-      };
+    Unit = {
+      Description = "Random wallpaper scheduler";
+    };
 
-      Timer = {
-          OnBootSec = "20s";
-          OnUnitActiveSec = "20s";
-          Unit = "wallpaper.service";
-      };
+    Timer = {
+      OnBootSec = "20s";
+      OnUnitActiveSec = "20s";
+      Unit = "wallpaper.service";
+    };
   };
 
 
   systemd.user.services.wallpaper = {
-      Unit = {
-          Description = "Random wallpaper";
-      };
-      Install = {
-          WantedBy = [ "default.target" ];
-      };
-      Service = {
-          Type = "oneshot";
-          ExecStart="${configDir}/bin/random-wallpaper";
-          Environment = [
-              "\"PATH=/run/current-system/sw/bin\""
-          ];
-      };
+    Unit = {
+      Description = "Random wallpaper";
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${configDir}/bin/random-wallpaper";
+      Environment = [
+        "\"PATH=/run/current-system/sw/bin\""
+      ];
+    };
   };
 
   systemd.user.startServices = "sd-switch";
