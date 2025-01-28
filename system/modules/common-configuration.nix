@@ -124,6 +124,7 @@
     bluez
     home-manager
 
+    xmonad-with-packages
     ghc
   ];
   environment.shells = with pkgs; [ bash fish ];
@@ -159,11 +160,11 @@
         enable = true;
         config = builtins.readFile ../../home/config/xmonad/xmonad.hs;
         extraPackages = haskellPackages: with haskellPackages; [
-          xmonad
           xmonad-contrib
           xmonad-extras
           xmonad-utils
         ];
+        enableConfiguredRecompile = true;
       };
       windowManager.i3 = {
         enable = true;
