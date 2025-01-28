@@ -2,6 +2,7 @@ import XMonad
 import XMonad.Operations (restart)
 
 import XMonad.Hooks.ManageDocks (docks, avoidStruts, manageDocks)
+import XMonad.Hooks.EwmhDesktops (ewmh)
 import XMonad.Hooks.DynamicLog
 import XMonad.Util.EZConfig (additionalKeysP)
 import XMonad.Util.SpawnOnce
@@ -12,7 +13,11 @@ import XMonad.Layout.Gaps
 import qualified XMonad.StackSet as W
 import XMonad.Hooks.ManageHelpers (isDialog, doCenterFloat)
 
-main = xmonad . docks $ def {
+main :: IO ()
+main = xmonad
+  . ewmh
+  . docks $ def
+  {
     terminal           = "ghostty",
     modMask            = mod4Mask, -- Use the Super key as mod
     layoutHook         = myLayoutHook,
@@ -21,7 +26,7 @@ main = xmonad . docks $ def {
     borderWidth        = 2,
     normalBorderColor  = "#1ABC9C",
     focusedBorderColor = "#CB4B16",
-    workspaces         = myWorkspaceNames -- Explicitly assign XConfig.workspaces
+    workspaces         = myWorkspaceNames
   } `additionalKeysP` myKeybindings
 
 myWorkspaceNames :: [String]
