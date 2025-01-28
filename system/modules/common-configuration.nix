@@ -1,6 +1,5 @@
 { pkgs, pkgs-unstable, ... }:
 {
-  imports = [ ./specialisations.nix ];
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelParams = [ "btiso.enable=1" ];
@@ -134,7 +133,7 @@
   services = {
     displayManager = {
       sddm.enable = true;
-      sddm.theme = "${import ../modules/sddm-theme.nix { inherit pkgs; }}";
+      sddm.theme = "${import ../modules/sddm-theme.nix { inherit pkgs-unstable; }}";
     };
     openssh = {
       enable = true;
@@ -149,6 +148,38 @@
       ];
     };
     spice-vdagentd.enable = true;
+
+    xserver = {
+      xkb.layout = "us";
+      xkb.variant = "";
+      enable = true;
+      windowManager.i3 = {
+        enable = true;
+        extraPackages = with pkgs-unstable; [
+          dconf
+          dmenu
+          dunst
+          feh
+          gexiv2
+          gtk3
+          i3blocks
+          i3lock-blur
+          i3status
+          imagemagick
+          libayatana-indicator-gtk3
+          libnotify
+          maim
+          networkmanagerapplet
+          nitrogen
+          pa_applet
+          picom
+          polybar
+          rofi
+          swappy
+          xautolock
+        ];
+      };
+    };
 
     ollama = {
       enable = true;
@@ -209,6 +240,64 @@
       automatic = true;
       dates = "weekly";
       options = "--delete-older-than 7d";
+    };
+  };
+
+  specialisation = {
+    # i3 = {
+    #   configuration = {
+    #     services.xserver = {
+    #       xkb.layout = "us";
+    #       xkb.variant = "";
+    #       enable = true;
+    #       windowManager.i3 = {
+    #         enable = true;
+    #         extraPackages = with pkgs-unstable; [
+    #           dconf
+    #           dmenu
+    #           dunst
+    #           feh
+    #           gexiv2
+    #           gtk3
+    #           i3blocks
+    #           i3lock-blur
+    #           i3status
+    #           imagemagick
+    #           libayatana-indicator-gtk3
+    #           libnotify
+    #           maim
+    #           networkmanagerapplet
+    #           nitrogen
+    #           pa_applet
+    #           picom
+    #           polybar
+    #           rofi
+    #           swappy
+    #           xautolock
+    #         ];
+    #       };
+    #     };
+    #   };
+    # };
+
+    xmonad = {
+      configuration = {
+        services.xserver = {
+          enable = true;
+          xkb.layout = "us";
+          xkb.variant = "";
+          windowManager.xmonad = {
+            enable = true;
+            config = builtins.readFile ../../home/config/xmonad/config.hs;
+            extraPackages = haskellPackages: with haskellPackages; [
+              xmonad
+              xmonad-contrib
+              xmonad-extras
+              xmonad-utils
+            ];
+          };
+        };
+      };
     };
   };
 }

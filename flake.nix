@@ -24,26 +24,39 @@
     };
   };
 
-  outputs = { nixpkgs, nixpkgs-unstable, ... }@inputs:
+  outputs =
+    { nixpkgs
+    , nixpkgs-unstable
+    , ...
+    }@inputs:
     let
       lib = nixpkgs.lib;
-      system = builtins.currentSystem;
+      system = "x86_64-linux";
 
-      pkgs = import nixpkgs { inherit system; config.allowUnfree = true; config.nvidia.acceptLicense = true; };
-      pkgs-unstable = import nixpkgs-unstable { inherit system; config.allowUnfree = true; config.nvidia.acceptLicense = true; };
-
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        config.nvidia.acceptLicense = true;
+      };
+      pkgs-unstable = import nixpkgs-unstable {
+        inherit system;
+        config.allowUnfree = true;
+        config.nvidia.acceptLicense = true;
+      };
     in
     {
 
       nixosConfigurations = {
         andromeda = lib.nixosSystem {
           inherit pkgs;
+          inherit system;
           modules = [ ./system/andromeda/configuration.nix ];
           specialArgs = { inherit pkgs-unstable; };
         };
 
         starfish = lib.nixosSystem {
           inherit pkgs;
+          inherit system;
           modules = [ ./system/starfish/configuration.nix ];
           specialArgs = { inherit pkgs-unstable; };
         };
