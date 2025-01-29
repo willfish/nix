@@ -76,6 +76,7 @@ myStartupHook = do
   spawnOnce "blueman-applet &"
   spawnOnce "~/.config/polybar/launch.sh &"
   spawnOnce "variety --profile ~/.config/variety &"
+  spawnOnce "DESKTOP_SESSION=xmonad variety &"
 
 myKeybindings =
   [ -- Applications
