@@ -23,5 +23,6 @@ in
     ".i3".source = "${configDir}/i3";
     ".pryrc".source = "${configDir}/pryrc";
     ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
+    ".wallpapers".source = "${configDir}/variety/Favorites";
   };
 }

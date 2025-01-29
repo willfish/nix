@@ -1,5 +1,10 @@
 { pkgs, pkgs-unstable, ... }:
 {
+  system.activationScripts.binBash = ''
+    mkdir -p /bin
+    ln -sf ${pkgs.bash}/bin/bash /bin/bash
+  '';
+
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelParams = [ "btiso.enable=1" ];
