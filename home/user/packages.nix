@@ -133,6 +133,7 @@
     ansible
     lsd
     pandoc
+    texlive.combined.scheme-medium
 
     # fun stuff
     cowsay
