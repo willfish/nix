@@ -57,6 +57,8 @@ in
       set -gx PATH $HOME/go/bin $PATH
       set -gx PATH $HOME/.bin $PATH
       set -gx LD_LIBRARY_PATH $HOME/.nix-profile/lib
+      set -gx AWS_DEFAULT_REGION eu-west-2
+      set -gx AWS_REGION eu-west-2
     '';
 
     functions = {
