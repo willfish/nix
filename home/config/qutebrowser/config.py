@@ -18,8 +18,6 @@ c.editor.command = [
     '-e',
     'nvim',
     '{file}',
-    '-c',
-    'normal {line}G{column0}l',
 ]
 # Aliases for commands. The keys of the given dictionary are the
 # aliases, while the values are the commands they map to.
