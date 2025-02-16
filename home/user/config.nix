@@ -24,5 +24,8 @@ in
     ".pryrc".source = "${configDir}/pryrc";
     ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
     ".wallpapers".source = "${configDir}/variety/Favorites";
+    ".config/qutebrowser/dracula".source = "${configDir}/qutebrowser/dracula";
+    ".config/qutebrowser/config.py".source = "${configDir}/qutebrowser/config.py";
+    ".config/qutebrowser/quickmarks".source = "${configDir}/qutebrowser/quickmarks";
   };
 }

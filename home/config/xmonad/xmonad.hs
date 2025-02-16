@@ -84,6 +84,7 @@ myKeybindings =
   , ("M-q", kill)
   , ("M-x", spawn "rofi -show combi -combi-modes 'run,ssh' -show-icons -display-run '' -modes combi -theme macos")
   , ("M-l", spawn "~/.dotfiles/home/config/rofi/power_menu.sh")
+  , ("M-b", spawn "qutebrowser")
   , ("M-t", spawn "pkill picom")
   , ("M-C-t", spawn "picom -b")
   , ("C-S-s", spawn "maim -s -u | tee ~/Pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png | swappy -f -")
