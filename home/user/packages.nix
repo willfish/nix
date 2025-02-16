@@ -37,6 +37,8 @@
     qutebrowser
     simple-scan # scanner GUI
     variety # wallpaper changer
+    audacity
+    bitwarden # bitwarden cli
 
     # Nix tools
     nil
