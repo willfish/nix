@@ -39,7 +39,6 @@
     variety # wallpaper changer
     audacity
     bitwarden # bitwarden cli
-    vim-full
 
     # Nix tools
     nil

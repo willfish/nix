@@ -289,7 +289,6 @@ def open_tests():
     today = datetime.datetime.now().strftime("%d-%m-%Y")
     return "https://trade-tariff.github.io/trade-tariff-testing/staging/" + today
 
-
 config.bind("tt", "open " + open_tests())
 config.bind("tf", "open https://github.com/trade-tariff/trade-tariff-frontend")
 config.bind("tb", "open https://github.com/trade-tariff/trade-tariff-backend")
@@ -297,7 +296,4 @@ config.bind("td", "open https://github.com/trade-tariff/trade-tariff-duty-calcul
 config.bind("ta", "open https://github.com/trade-tariff/trade-tariff-admin")
 config.bind("xb", "config-cycle statusbar.show always never")
 config.bind("xt", "config-cycle tabs.show always never")
-config.bind(
-    "xx",
-    "config-cycle statusbar.show always never;; config-cycle tabs.show always never",
-)
+config.bind("xx", "config-cycle statusbar.show always never;; config-cycle tabs.show always never")
