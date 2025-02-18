@@ -17,7 +17,6 @@ return {
         "black", -- python formatter
         "golangci_lint", -- golang linter
         "markdownlint", -- markdown linter
-        "shellharden", -- shell formatter
         "shfmt", -- shell formatter
         "stylua", -- lua formatter
         "xmllint", -- xml formatter
@@ -37,9 +36,9 @@ return {
         formatting.black,
         formatting.hclfmt,
         formatting.markdownlint,
-        formatting.shellharden,
         formatting.stylua,
         formatting.xmllint,
+        formatting.nixpkgs_fmt,
       },
       -- configure format on save
       on_attach = function(current_client, bufnr)
