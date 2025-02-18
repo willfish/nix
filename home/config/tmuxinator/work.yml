@@ -1,0 +1,20 @@
+# /home/william/.config/tmuxinator/backend.yml
+
+name: work
+windows:
+  - 🤖:
+      layout: even-vertical
+      panes:
+        - cd /home/william/Repositories/hmrc/trade-tariff-frontend && eval "$(direnv export fish)" && tmux select-pane -t 1 -P "bg=colour24 fg=white bold" && bundle exec rails s
+        - cd /home/william/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && tmux select-pane -t 2 -P "bg=colour130 fg=black bold" && bundle exec rails s
+        - cd /home/william/Repositories/hmrc/trade-tariff-duty-calculator && eval "$(direnv export fish)" && tmux select-pane -t 3 -P "bg=colour93 fg=white bold" && bundle exec rails s
+        - cd /home/william/Repositories/hmrc/trade-tariff-admin && eval "$(direnv export fish)" && tmux select-pane -t 4 -P "bg=colour202 fg=white bold" && bundle exec rails s
+  - 🐋:
+      root: ~/
+      panes:
+        - docker-compose up
+  - 📀:
+      layout: even-vertical
+      panes:
+        - cd /home/william/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && pg-start
+        - cd /home/william/Repositories/hmrc/trade-tariff-admin && eval "$(direnv export fish)" && pg-start

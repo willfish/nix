@@ -5,9 +5,12 @@ return {
     config = function()
       local catppuccin = require("catppuccin")
       catppuccin.setup({
-        flavour = "macchiato"
+        flavour = "macchiato",
+        dim_inactive = {
+          enabled = true,
+          percentage = 0.50,
+        },
       })
-      -- load the colorscheme here
       vim.cmd([[colorscheme catppuccin]])
     end,
   }

@@ -85,7 +85,7 @@ function toggle_quickfix()
 end
 
 function insert_jira_ticket_number()
-    local command = "git branch --show-current | sed -E 's/((OTT|FPO|BAU|GL|PTE)-[0-9]+)-(.+)/\\1: /'"
+    local command = "git branch --show-current | sed -E 's/((OTT|FPO|BAU|HMRC|GL|PTE)-[0-9]+)-(.+)/\\1: /'"
     local handle = io.popen(command)
     local result = handle:read("*a")
 

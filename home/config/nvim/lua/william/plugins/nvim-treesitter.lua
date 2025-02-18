@@ -39,6 +39,7 @@ return {
 					"goctl",
 					"gosum",
 					"graphql",
+					"haskell",
 					"html",
 					"htmldjango",
 					"javascript",

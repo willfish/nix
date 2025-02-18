@@ -48,7 +48,7 @@ bindsym $mod+x exec --no-startup-id "rofi -show combi -combi-modes 'run,ssh' -sh
 bindsym $mod+l exec --no-startup-id "~/.dotfiles/home/config/rofi/power_menu.sh"
 bindsym $mod+t exec --no-startup-id pkill picom
 bindsym $mod+Ctrl+t exec --no-startup-id picom -b
-bindsym Ctrl+Shift+s exec "maim -s -u | xclip -selection clipboard -t image/png -i"
+bindsym Ctrl+Shift+s exec "maim -s -u | tee ~/Pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png | swappy -f -"
 bindsym $mod+Shift+d --release exec "killall dunst; exec notify-send 'restart dunst'"
 
 bindsym Print exec --no-startup-id i3-scrot
@@ -187,28 +187,14 @@ assign [class="zoom"] $ws4
 
 # Open specific applications in floating mode
 for_window [title=".*"] border pixel 2
-for_window [title="alsamixer"] floating enable border pixel 2
 for_window [class="telegram-desktop"] border border pixel 2
 for_window [class="TelegramDesktop"] border border pixel 2
-for_window [class="calamares"] floating enable border normal
-for_window [class="Clipgrab"] floating enable
-for_window [class="TTBS"] floating enable
 for_window [class="zoom "] floating enable border none
 for_window [class="zoom"] floating enable border none
 for_window [class="mozillavpn"] floating enable border none
-for_window [title="File Transfer*"] floating enable border none
-for_window [class="fpakman"] floating enable
 for_window [class="Galculator"] floating enable border pixel 2
-for_window [class="GParted"] floating enable border normal
-for_window [title="i3_help"] floating enable sticky enable border normal
-for_window [class="Lightdm-settings"] floating enable
-for_window [class="Lxappearance"] floating enable sticky enable border normal
-for_window [title="MuseScore: Play Panel"] floating enable
 for_window [class="Nitrogen"] floating enable sticky enable border normal
-for_window [class="octopi"] floating enable
 for_window [class="Pavucontrol"] floating enable border none
-for_window [class="qt5ct"] floating enable sticky enable border none
-for_window [class="Qtconfig-qt4"] floating enable sticky enable border none
 for_window [class="Simple-scan"] floating enable border none
 for_window [class="vokoscreenNG"] floating enable border none
 
@@ -265,14 +251,10 @@ mode "resize" {
         bindsym Escape mode "default"
 }
 
-# Lock screen
-bindsym $mod+9 exec --no-startup-id blurlock
-
 # Autostart applications
-exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
 exec --no-startup-id nm-applet
 exec --no-startup-id blueman-applet
-exec --no-startup-id xautolock -time 10 -locker blurlock
+exec --no-startup-id xautolock -time 10 -locker i3lock --color=282828 -detectsleep
 
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 exec_always --no-startup-id ~/.bin/random-wallpaper
@@ -326,27 +308,6 @@ client.background #2B2C2B
 # Set inner/outer gaps
 gaps outer 5
 gaps inner 5
-# # Handle polybar top gap
-# gaps top 25
 
 # Smart gaps (gaps used if only more than one container on the workspace)
 smart_gaps off
-
-# Monitor management
-bindsym $mod+m mode "$mode_monitor"
-set $mode_monitor (l)aptop (e)xternal (b)oth
-mode "$mode_system" {
-    bindsym l exec --no-startup-id bin/monitor.sh laptop
-    bindsym e exec --no-startup-id bin/monitor.sh external
-    bindsym b exec --no-startup-id bin/monitor.sh both
-
-    bindsym Return mode "default"
-    bindsym Escape mode "default"
-}
-
-# Sets mod+m mapping to trigger xrandr commands
-# bindsym $mod+m mode "xrandr --output eDP-1 --auto --primary --rotate normal --output eDP-1 --preferred --rotate normal --below DP-2"
-# xrandr --output eDP-1 --auto --primary --rotate normal --output eDP-1 --preferred --rotate normal --below DP-2
-# xrandr --output eDP-1 --off
-# xrandr --output DP-2 --auto
-# xrandr --auto

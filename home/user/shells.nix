@@ -1,12 +1,12 @@
-{ pkgs, pkgs-unstable, ... }:
+{ pkgs-unstable, ... }:
 let
   aliases = {
     ag = "rg";
     mux = "tmuxinator";
     tm = "tmux";
     a = "tmux attach";
-    ll = "eza -l";
-    la = "eza -la";
+    ll = "lsd -l";
+    la = "lsd -la";
     vim = "nvim";
     vi = "nvim";
     vimdiff = "nvim -d";
@@ -46,7 +46,7 @@ in
     shellAbbrs = abbreviations;
 
     plugins = [
-      { name = "tide"; src = pkgs.fishPlugins.tide.src; }
+      { name = "tide"; src = pkgs-unstable.fishPlugins.tide.src; }
     ];
 
     interactiveShellInit = ''
@@ -57,10 +57,8 @@ in
       set -gx PATH $HOME/go/bin $PATH
       set -gx PATH $HOME/.bin $PATH
       set -gx LD_LIBRARY_PATH $HOME/.nix-profile/lib
-
-      # set -gx cow (cowsay -l | grep -v 'Cow files' | shuf -n 1)
-      # fortune | cowsay -f $cow | lolcat
-      # source ~/.config/fish/extra.fish
+      set -gx AWS_DEFAULT_REGION eu-west-2
+      set -gx AWS_REGION eu-west-2
     '';
 
     functions = {
@@ -250,6 +248,19 @@ in
         echo "Opening $fully_qualified_notes_file"
 
         nvim $fully_qualified_notes_file
+      '';
+
+      home = ''
+       set -g laptop_monitor "eDP-1"
+
+       xrandr --output $laptop_monitor --auto
+      '';
+
+      office = ''
+       set -g laptop_monitor "eDP-1"
+       set -g external_monitor (xrandr | grep -v disconnected | grep connected | awk '{print $1}' | grep -v $laptop_monitor)
+
+       xrandr --output $laptop_monitor --off --output $external_monitor --auto
       '';
     };
   };
