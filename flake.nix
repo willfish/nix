@@ -11,6 +11,7 @@
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-24.11";
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
+    pre-commit-hooks.url = "github:cachix/git-hooks.nix";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-24.11";
@@ -22,11 +23,12 @@
   outputs =
     { nixpkgs
     , nixpkgs-unstable
+    , pre-commit-hooks
     , ...
     }@inputs:
     let
-      lib = nixpkgs.lib;
       system = "x86_64-linux";
+      lib = nixpkgs.lib;
 
       pkgs = import nixpkgs {
         inherit system;
@@ -38,9 +40,19 @@
         config.allowUnfree = true;
         config.nvidia.acceptLicense = true;
       };
+      pre-commit-check = pre-commit-hooks.lib.${system}.run {
+        src = ./.;
+        hooks = {
+          end-of-file-fixer.enable = true;
+          flake-checker.enable = true;
+          lua-ls.enable = true;
+          nil.enable = true;
+          trim-trailing-whitespace.enable = true;
+          trufflehog.enable = true;
+        };
+      };
     in
     {
-
       nixosConfigurations = {
         andromeda = lib.nixosSystem {
           inherit pkgs;
@@ -66,6 +78,11 @@
             inherit inputs;
           };
         };
+      };
+
+      devShells."${system}".default = pkgs.mkShell {
+        inherit (pre-commit-check) shellHook;
+        buildInputs = pre-commit-check.enabledPackages;
       };
     };
 }
