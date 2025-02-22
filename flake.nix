@@ -45,7 +45,6 @@
         hooks = {
           end-of-file-fixer.enable = true;
           flake-checker.enable = true;
-          lua-ls.enable = true;
           nil.enable = true;
           trim-trailing-whitespace.enable = true;
           trufflehog.enable = true;
