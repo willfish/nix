@@ -20,7 +20,7 @@
         '';
       }
     ];
-    extraConfig = (builtins.readFile ../config/tmux/tmux.conf);
+    extraConfig = builtins.readFile ../config/tmux/tmux.conf;
   };
 
   programs.tmux.tmuxinator.enable = true;
