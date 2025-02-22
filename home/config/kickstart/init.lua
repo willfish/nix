@@ -669,7 +669,6 @@ require('lazy').setup({
           "ts_ls",
           "html",
           "cssls",
-          "lua_ls",
           "pyright",
           "terraformls",
           "bashls",
