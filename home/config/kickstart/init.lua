@@ -304,13 +304,13 @@ require('lazy').setup({
     "tpope/vim-fugitive",
     dependencies = { "tpope/vim-rhubarb" },
     config = function()
-      vim.keymap.set("n", "<Leader>gi", ":Git ", { desc = "Enter a GIT command" })
-      vim.keymap.set("n", "<Leader>gb", ":Git blame<CR>", { desc = "Enter a GIT blame for the current buffer" })
-      vim.keymap.set("n", "<Leader>go", ":GBrowse<CR>", { desc = "Open the current buffer in a browser" })
-      vim.keymap.set("n", "<Leader>gs", ":Git<CR>", { desc = "Switch to git status view" })
-      vim.keymap.set("n", "<Leader>gc", ":Git commit<CR>", { desc = "Create a commit with what's staged" })
-      vim.keymap.set("n", "<Leader>g]", ":Git push<CR>", { desc = "Push current commits to the remote" })
-      vim.keymap.set("n", "<Leader>g[", ":Git pull<CR>", { desc = "Pull latest commits from the remote" })
+      vim.keymap.set("n", ",i", ":Git ", { desc = "Enter a GIT command" })
+      vim.keymap.set("n", ",b", ":Git blame<CR>", { desc = "Enter a GIT blame for the current buffer" })
+      vim.keymap.set("n", ",o", ":GBrowse<CR>", { desc = "Open the current buffer in a browser" })
+      vim.keymap.set("n", ",s", ":Git<CR>", { desc = "Switch to git status view" })
+      vim.keymap.set("n", ",c", ":Git commit<CR>", { desc = "Create a commit with what's staged" })
+      vim.keymap.set("n", ",]", ":Git push<CR>", { desc = "Push current commits to the remote" })
+      vim.keymap.set("n", ",[", ":Git pull<CR>", { desc = "Pull latest commits from the remote" })
 
       vim.api.nvim_create_user_command(
         'Browse',
