@@ -82,26 +82,11 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
--- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
-
--- Keybinds to make split navigation easier.
---  Use CTRL+<hjkl> to switch between windows
---
---  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
-
 -- TIP: Enables home row switching out of INSERT mode
 vim.keymap.set("i", "jk", "<Esc>", { desc = "Escape out of INSERT mode" })
 vim.keymap.set("i", "kj", "<Esc>", { desc = "Escape out of INSERT mode" })
-vim.keymap.set("n", "<Leader>ww", ":w!<CR>", { desc = "Write the current file" })
-vim.keymap.set("n", "<Leader>wq", ":wq!<CR>", { desc = "Write and quit the current file" })
+vim.keymap.set("n", "<Leader>ww", ":w!<CR>", { desc = "[W]rite the current file" })
+vim.keymap.set("n", "<Leader>wq", ":wq!<CR>", { desc = "[W]rite and quit the current file" })
 
 function insert_jira_ticket_number()
     local command = "git branch --show-current | sed -E 's/((OTT|FPO|BAU|HMRC|GL|PTE)-[0-9]+)-(.+)/\\1: /'"
@@ -409,13 +394,6 @@ require('lazy').setup({
       },
     },
   },
-
-  -- NOTE: Plugins can specify dependencies.
-  --
-  -- The dependencies are proper plugin specifications as well - anything
-  -- you do for a plugin at the top level, you can do for a dependency.
-  --
-  -- Use the `dependencies` key to specify the dependencies of a particular plugin
 
   { -- Fuzzy Finder (files, lsp, etc)
     'nvim-telescope/telescope.nvim',
