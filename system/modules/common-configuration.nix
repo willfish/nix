@@ -1,6 +1,6 @@
 { pkgs, pkgs-unstable, ... }:
 let
-  sddm-astronaut = pkgs-unstable.unstable.sddm-astronaut.override {
+  sddm-astronaut = pkgs-unstable.sddm-astronaut.override {
     themeConfig = {
       AccentColor = "#746385";
       FormPosition = "left";
@@ -147,6 +147,8 @@ in
 
     xmonad-with-packages
     ghc
+
+    sddm-astronaut
   ];
   environment.shells = with pkgs; [ bash fish ];
   users.defaultUserShell = pkgs.fish;
@@ -161,7 +163,7 @@ in
         package = pkgs-unstable.kdePackages.sddm;
 
         theme = "sddm-astronaut-theme";
-        extraPackages = [sddm-astronaut];
+        extraPackages = [ sddm-astronaut ];
       };
     };
 
