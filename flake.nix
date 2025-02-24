@@ -81,7 +81,9 @@
 
       devShells."${system}".default = pkgs.mkShell {
         inherit (pre-commit-check) shellHook;
-        buildInputs = pre-commit-check.enabledPackages;
+        buildInputs = with pkgs-unstable; pre-commit-check.enabledPackages ++ [
+          stylua
+        ];
       };
     };
 }
