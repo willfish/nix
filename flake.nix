@@ -26,10 +26,11 @@
     , nixpkgs-unstable
     , pre-commit-hooks
     , flake-utils
+    , home-manager
     , ...
     }@inputs:
-    flake-utils.lib.eachDefaultSystem (system:
       let
+    system = "x86_64-linux";
         lib = nixpkgs.lib;
 
         pkgs = import nixpkgs {
@@ -53,39 +54,38 @@
           };
         };
       in
-      {
-        nixosConfigurations = {
-          andromeda = lib.nixosSystem {
-            inherit pkgs;
-            inherit system;
-            modules = [ ./system/andromeda/configuration.nix ];
-            specialArgs = { inherit pkgs-unstable; };
-          };
-
-          starfish = lib.nixosSystem {
-            inherit pkgs;
-            inherit system;
-            modules = [ ./system/starfish/configuration.nix ];
-            specialArgs = { inherit pkgs-unstable; };
-          };
+    {
+      nixosConfigurations = {
+        andromeda = lib.nixosSystem {
+          inherit pkgs system;
+          modules = [ ./system/andromeda/configuration.nix ];
+          specialArgs = { inherit pkgs-unstable; };
         };
 
-        homeConfigurations = {
-          william = inputs.home-manager.lib.homeManagerConfiguration {
-            inherit pkgs;
-            modules = [ ./home ];
-            extraSpecialArgs = {
-              inherit pkgs-unstable;
-              inherit inputs;
-            };
+        starfish = lib.nixosSystem {
+          inherit pkgs system;
+          modules = [ ./system/starfish/configuration.nix ];
+          specialArgs = { inherit pkgs-unstable; };
+        };
+      };
+
+      homeConfigurations = {
+        william = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ ./home ];
+          extraSpecialArgs = {
+            inherit pkgs-unstable inputs;
           };
         };
+      };
 
-        devShells.default = pkgs.mkShell {
+      devShells.${system} = {
+        default = pkgs.mkShell {
           inherit (pre-commit-check) shellHook;
           buildInputs = with pkgs-unstable; pre-commit-check.enabledPackages ++ [
             stylua
           ];
         };
-      });
+      };
+    };
 }
