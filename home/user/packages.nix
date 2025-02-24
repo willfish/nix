@@ -34,11 +34,9 @@
     xournalpp # note taking and annotating pdfs
     mozillavpn
     galculator
-    qutebrowser
     simple-scan # scanner GUI
     variety # wallpaper changer
     audacity
-    bitwarden # bitwarden cli
 
     # Nix tools
     nil
@@ -53,7 +51,6 @@
     yq
     wget
     htop
-    btop
     dust
     bat
     bats
