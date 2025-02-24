@@ -201,9 +201,7 @@ in
         extraPackages = with pkgs-unstable; [
           dconf
           dmenu
-          dunst
           feh
-          gexiv2
           gtk3
           i3blocks
           i3lock-blur
