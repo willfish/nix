@@ -1,4 +1,14 @@
 { pkgs, pkgs-unstable, ... }:
+let
+  sddm-astronaut = pkgs-unstable.unstable.sddm-astronaut.override {
+    themeConfig = {
+      AccentColor = "#746385";
+      FormPosition = "left";
+
+      ForceHideCompletePassword = true;
+    };
+  };
+in
 {
   system.activationScripts.binBash = ''
     mkdir -p /bin
@@ -148,9 +158,10 @@
     displayManager = {
       sddm = {
         enable = true;
+        package = pkgs-unstable.kdePackages.sddm;
 
         theme = "sddm-astronaut-theme";
-        extraPackages = with pkgs-unstable; [sddm-astronaut];
+        extraPackages = [sddm-astronaut];
       };
     };
 
