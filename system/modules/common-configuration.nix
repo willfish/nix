@@ -1,4 +1,14 @@
 { pkgs, pkgs-unstable, ... }:
+let
+  sddm-astronaut = pkgs-unstable.sddm-astronaut.override {
+    themeConfig = {
+      AccentColor = "#746385";
+      FormPosition = "left";
+
+      ForceHideCompletePassword = true;
+    };
+  };
+in
 {
   system.activationScripts.binBash = ''
     mkdir -p /bin
@@ -128,9 +138,6 @@
     nwg-look
 
     lm_sensors
-    libsForQt5.qt5.qtquickcontrols2
-    libsForQt5.qt5.qtgraphicaleffects
-    libsForQt5.qt5.qtsvg
     openssl
     openssl.dev
     pkg-config
@@ -140,6 +147,8 @@
 
     xmonad-with-packages
     ghc
+
+    sddm-astronaut
   ];
   environment.shells = with pkgs; [ bash fish ];
   users.defaultUserShell = pkgs.fish;
@@ -149,9 +158,15 @@
 
   services = {
     displayManager = {
-      sddm.enable = true;
-      sddm.theme = "${import ../modules/sddm-theme.nix { inherit pkgs-unstable; }}";
+      sddm = {
+        enable = true;
+        package = pkgs-unstable.kdePackages.sddm;
+
+        theme = "sddm-astronaut-theme";
+        extraPackages = [ sddm-astronaut ];
+      };
     };
+
     openssh = {
       enable = true;
       settings.PasswordAuthentication = false;
@@ -223,35 +238,6 @@
       powerline-fonts
     ];
   };
-
-  systemd = {
-    # user.services.polkit-gnome-authentication-agent-1 = {
-    #   description = "polkit-gnome-authentication-agent-1";
-    #   wantedBy = [ "graphical-session.target" ];
-    #   wants = [ "graphical-session.target" ];
-    #   after = [ "graphical-session.target" ];
-    #   serviceConfig = {
-    #     Type = "simple";
-    #     ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
-    #     Restart = "on-failure";
-    #     RestartSec = 1;
-    #     TimeoutStopSec = 10;
-    #   };
-    # };
-    # extraConfig = ''
-    #   DefaultTimeoutStopSec=10s
-    # '';
-  };
-
-  # environment.etc."polkit-1/rules.d/50-nopasswd.rules" = {
-  #   text = ''
-  #     polkit.addRule(function(action, subject) {
-  #         if (subject.isInGroup("wheel")) {
-  #             return polkit.Result.YES;
-  #         }
-  #     });
-  #   '';
-  # };
 
   documentation.nixos.enable = false;
 

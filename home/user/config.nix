@@ -1,9 +1,6 @@
-{ config, ... }:
+{ ... }:
 let
   configDir = ../config;
-
-  configure = directory:
-    config.lib.file.mkOutOfStoreSymlink "${configDir}/${directory}";
 in
 {
   home.file = {
@@ -12,7 +9,7 @@ in
     ".config/btop".source = "${configDir}/btop";
     ".config/ghostty".source = "${configDir}/ghostty";
     ".config/kitty".source = "${configDir}/kitty";
-    ".config/nvim".source = configure "nvim";
+    ".config/nvim/init.lua".source = "${configDir}/kickstart/init.lua";
     ".config/picom.conf".source = "${configDir}/picom.conf";
     ".config/polybar".source = "${configDir}/polybar";
     ".config/rofi".source = "${configDir}/rofi";
@@ -23,7 +20,6 @@ in
     ".i3".source = "${configDir}/i3";
     ".pryrc".source = "${configDir}/pryrc";
     ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
-    ".wallpapers".source = "${configDir}/variety/Favorites";
     ".config/qutebrowser/dracula".source = "${configDir}/qutebrowser/dracula";
     ".config/qutebrowser/config.py".source = "${configDir}/qutebrowser/config.py";
     ".config/qutebrowser/quickmarks".source = "${configDir}/qutebrowser/quickmarks";
