@@ -5,7 +5,7 @@ pkgs-unstable.stdenv.mkDerivation {
     src = pkgs-unstable.fetchFromGitHub {
         owner = "Keyitdev";
         repo = "sddm-astronaut-theme";
-        rev = "9048065f6d93abbfb57102a0d8ca278f15e877d3";
+        rev = "5e39e0841d4942757079779b4f0087f921288af6";
         sha256 = "sha256-ew0vPXV7VtjTL3jlyMSobovU3ZNi166XjpO5LHBaNL0=";
     };
     installPhase = ''
