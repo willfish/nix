@@ -148,7 +148,6 @@
     displayManager = {
       sddm = {
         enable = true;
-        package = pkgs-unstable.kdePackages.sddm;
 
         theme = "sddm-astronaut-theme";
         extraPackages = with pkgs-unstable; [sddm-astronaut];
