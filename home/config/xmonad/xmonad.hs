@@ -75,7 +75,6 @@ myStartupHook = do
   spawnOnce "pa-applet &"
   spawnOnce "blueman-applet &"
   spawnOnce "~/.config/polybar/launch.sh &"
-  spawnOnce "variety --profile ~/.config/variety &"
   spawnOnce "DESKTOP_SESSION=xmonad variety &"
 
 myKeybindings =
@@ -84,7 +83,7 @@ myKeybindings =
   , ("M-q", kill)
   , ("M-x", spawn "rofi -show combi -combi-modes 'run,ssh' -show-icons -display-run '' -modes combi -theme macos")
   , ("M-l", spawn "~/.dotfiles/home/config/rofi/power_menu.sh")
-  , ("M-b", spawn "qutebrowser")
+  , ("M-b", spawn "brave")
   , ("M-t", spawn "pkill picom")
   , ("M-C-t", spawn "picom -b")
   , ("C-S-s", spawn "maim -s -u | tee ~/Pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png | swappy -f -")
