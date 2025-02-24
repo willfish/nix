@@ -7,6 +7,7 @@ let
 
       ForceHideCompletePassword = true;
     };
+    embeddedTheme = "hyprland_kath";
   };
 in
 {
