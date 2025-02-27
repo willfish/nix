@@ -28,7 +28,6 @@
       };
 
       commit = {
-        gpgSign = true;
         status = true;
         verbose = true;
         template = "~/.gitmessage";

@@ -15,6 +15,7 @@ in
     ".config/tmuxinator".source = "${configDir}/tmuxinator";
     ".config/xmonad".source = "${configDir}/xmonad";
     ".gemrc".source = "${configDir}/gemrc";
+    ".gitmessage".source = "${configDir}/gitmessage";
     ".gitignore_global".source = "${configDir}/gitignore_global";
     ".pryrc".source = "${configDir}/pryrc";
     ".tmux/plugins/tmux-sessionx".source = "${configDir}/tmux/plugins/tmux-sessionx";
