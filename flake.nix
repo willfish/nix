@@ -52,6 +52,7 @@
             nil.enable = true;
             trim-trailing-whitespace.enable = true;
             trufflehog.enable = true;
+            eclint.enable = true;
           };
         };
       in
