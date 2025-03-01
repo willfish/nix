@@ -46,6 +46,7 @@
           src = ./.;
           configPath = ".pre-commit-config-nix.yaml";
           hooks = {
+            ormolu.enable = true;
             end-of-file-fixer.enable = true;
             flake-checker.enable = true;
             nil.enable = true;
