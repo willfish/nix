@@ -1,4 +1,4 @@
-{ pkgs-unstable, _inputs, ... }:
+{ pkgs-unstable, ... }:
 {
   programs = {
     brave = {

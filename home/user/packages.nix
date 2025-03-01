@@ -43,7 +43,6 @@
     nixd
     nix-prefetch-git
     nixpkgs-fmt
-    lua-language-server
 
     # Utilities
     tldr
