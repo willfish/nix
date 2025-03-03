@@ -1,10 +1,7 @@
 { pkgs-unstable, ... }:
 {
   home.packages = with pkgs-unstable; [
-    # For zoom
     zoom-us             # Video conferencing application
-    pulseaudioFull      # Sound server with full features (e.g., Bluetooth support)
-    pamixer             # Command-line mixer for PulseAudio
 
     # Services for work
     redis               # In-memory data structure store (key-value database)
@@ -64,6 +61,7 @@
     pre-commit          # Framework for managing pre-commit hooks
     gopls               # Go language server for IDEs
     ccls                # C/C++ language server
+    bash-language-server # Bash language server
 
     pwgen               # Password generator
     inetutils           # Basic networking tools (e.g., ping, telnet)
