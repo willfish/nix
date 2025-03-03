@@ -64,6 +64,8 @@
     bash-language-server # Bash language server
     typescript-language-server # Language server for typescript
     nodejs_latest       # Used just to install language servers
+    stylua
+    lua-language-server
 
 
     pwgen               # Password generator

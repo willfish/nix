@@ -181,7 +181,6 @@ require("lazy").setup({
 		opts = {
 			on_attach = function(bufnr)
 				local gitsigns = require("gitsigns")
-
 				local function map(mode, l, r, opts)
 					opts = opts or {}
 					opts.buffer = bufnr
@@ -204,30 +203,6 @@ require("lazy").setup({
 						gitsigns.nav_hunk("prev")
 					end
 				end, { desc = "Jump to previous git [c]hange" })
-
-				-- Actions
-				-- visual mode
-				map("v", "<leader>hs", function()
-					gitsigns.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
-				end, { desc = "git [s]tage hunk" })
-				map("v", "<leader>hr", function()
-					gitsigns.reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
-				end, { desc = "git [r]eset hunk" })
-				-- normal mode
-				map("n", "<leader>hs", gitsigns.stage_hunk, { desc = "git [s]tage hunk" })
-				map("n", "<leader>hr", gitsigns.reset_hunk, { desc = "git [r]eset hunk" })
-				map("n", "<leader>hS", gitsigns.stage_buffer, { desc = "git [S]tage buffer" })
-				map("n", "<leader>hu", gitsigns.stage_hunk, { desc = "git [u]ndo stage hunk" })
-				map("n", "<leader>hR", gitsigns.reset_buffer, { desc = "git [R]eset buffer" })
-				map("n", "<leader>hp", gitsigns.preview_hunk, { desc = "git [p]review hunk" })
-				map("n", "<leader>hb", gitsigns.blame_line, { desc = "git [b]lame line" })
-				map("n", "<leader>hd", gitsigns.diffthis, { desc = "git [d]iff against index" })
-				map("n", "<leader>hD", function()
-					gitsigns.diffthis("@")
-				end, { desc = "git [D]iff against last commit" })
-				-- Toggles
-				map("n", "<leader>tb", gitsigns.toggle_current_line_blame, { desc = "[T]oggle git show [b]lame line" })
-				map("n", "<leader>tD", gitsigns.preview_hunk_inline, { desc = "[T]oggle git show [D]eleted" })
 			end,
 		},
 	},
@@ -241,8 +216,6 @@ require("lazy").setup({
 				file = "dispatch",
 				suite = "dispatch_background",
 			})
-			-- vim.api.nvim_set_var("test#ruby#rspec#executable", "bundle exec rspec")
-			-- vim.api.nvim_set_var("test#python#pytest#executable", "pytest")
 
 			vim.api.nvim_set_keymap("n", "<Leader>tx", ":TestNearest<CR>", default_map_opts)
 			vim.api.nvim_set_keymap("n", "<Leader>tt", ":TestFile<CR>", default_map_opts)
@@ -758,12 +731,11 @@ require("lazy").setup({
 				}
 			end,
 			formatters_by_ft = {
+				fish = { "fish_indent" },
+				javascript = { "prettier", stop_after_first = true },
 				lua = { "stylua" },
-				-- Conform can also run multiple formatters sequentially
 				python = { "isort", "black" },
-				--
-				-- You can use 'stop_after_first' to run the first available formatter from the list
-				javascript = { "prettierd", "prettier", stop_after_first = true },
+				ruby = { "rubocop" },
 			},
 		},
 	},
@@ -887,13 +859,9 @@ require("lazy").setup({
 		end,
 	},
 
-	{ -- You can easily change to a different colorscheme.
-		-- Change the name of the colorscheme plugin below, and then
-		-- change the command in the config to whatever the name of that colorscheme is.
-		--
-		-- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
+	{
 		"folke/tokyonight.nvim",
-		priority = 1000, -- Make sure to load this before all the other start plugins.
+		priority = 1000,
 		config = function()
 			---@diagnostic disable-next-line: missing-fields
 			require("tokyonight").setup({

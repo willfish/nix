@@ -82,10 +82,7 @@
       devShells.${system} = {
         default = pkgs.mkShell {
           inherit (pre-commit-check) shellHook;
-          buildInputs = with pkgs-unstable; pre-commit-check.enabledPackages ++ [
-            stylua
-            lua-language-server
-          ];
+          buildInputs = pre-commit-check.enabledPackages;
         };
       };
     };
