@@ -163,6 +163,7 @@ in
     rofi                   # Application launcher and window switcher
     swappy                 # Screenshot editing tool (e.g., annotate, crop)
     xautolock              # Automatically locks the screen after inactivity
+    xclip                  # Command-line clipboard manager
   ];
 
   environment.shells = with pkgs; [ bash fish ];

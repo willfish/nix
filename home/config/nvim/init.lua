@@ -667,6 +667,7 @@ require("lazy").setup({
 			lspconfig["solargraph"].setup({ capabilities = capabilities })
 			lspconfig["terraformls"].setup({ capabilities = capabilities })
 			lspconfig["ts_ls"].setup({ capabilities = capabilities })
+			lspconfig["marksman"].setup({ capabilities = capabilities })
 
 			lspconfig["lua_ls"].setup({
 				capabilities = capabilities,
@@ -961,18 +962,6 @@ require("lazy").setup({
 			ensure_installed = {
 				"bash",
 				"c",
-				"diff",
-				"html",
-				"lua",
-				"luadoc",
-				"markdown",
-				"markdown_inline",
-				"query",
-				"vim",
-				"vimdoc",
-				"python",
-				"nix",
-				"bash",
 				"css",
 				"diff",
 				"dockerfile",
@@ -1002,6 +991,8 @@ require("lazy").setup({
 				"ninja",
 				"nix",
 				"passwd",
+				"python",
+				"query",
 				"robots",
 				"ruby",
 				"rust",
@@ -1012,6 +1003,7 @@ require("lazy").setup({
 				"tsx",
 				"typescript",
 				"vim",
+				"vimdoc",
 				"yaml",
 			},
 			-- Autoinstall languages that are not installed
