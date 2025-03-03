@@ -1,6 +1,7 @@
 { pkgs-unstable, ... }:
 {
   programs.tmux = {
+    package = pkgs-unstable.tmux;
     enable = true;
     clock24 = true;
     plugins = with pkgs-unstable.tmuxPlugins; [
