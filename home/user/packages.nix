@@ -46,7 +46,6 @@
     fzf                 # Fuzzy finder for command-line searches
     gh                  # GitHub CLI for repository management
     lsof                # Lists open files and their processes
-    lsfd                # Lists open file descriptors
     markdownlint-cli    # Linter for Markdown files
     pre-commit          # Framework for managing pre-commit hooks
     ripgrep             # Fast, recursive grep alternative
