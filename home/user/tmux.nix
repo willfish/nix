@@ -22,7 +22,9 @@
       }
     ];
     extraConfig = builtins.readFile ../config/tmux/tmux.conf;
+    tmuxinator = {
+      enable = true;
+      package = pkgs-unstable.tmuxinator;
+    };
   };
-
-  programs.tmux.tmuxinator.enable = true;
 }
