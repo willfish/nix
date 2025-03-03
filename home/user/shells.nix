@@ -265,4 +265,5 @@ in
   };
   programs.zoxide.enable = true;
   programs.zoxide.enableFishIntegration = true;
+  programs.zoxide.package = pkgs-unstable.zoxide;
 }
