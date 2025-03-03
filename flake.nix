@@ -11,12 +11,12 @@
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-24.11";
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
-    pre-commit-hooks.url = "github:willfish/git-hooks.nix?ref=configPath-testing";
+    pre-commit-hooks.url = "github:cachix/git-hooks.nix";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-24.11";
 
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
   };
 

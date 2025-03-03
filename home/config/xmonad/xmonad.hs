@@ -70,13 +70,13 @@ myManageHook =
     ]
 
 myStartupHook = do
+  spawnOnce "xsetroot -cursor_name left_ptr &"
   spawnOnce "picom &"
   spawnOnce "nm-applet &"
   spawnOnce "pa-applet &"
   spawnOnce "blueman-applet &"
+  spawnOnce "DESKTOP_SESSION=xmonad && variety &"
   spawnOnce "~/.config/polybar/launch.sh &"
-  spawnOnce "DESKTOP_SESSION=xmonad variety &"
-  spawnOnce "xsetroot -cursor_name left_ptr &"
 
 myKeybindings =
   [ -- Applications
