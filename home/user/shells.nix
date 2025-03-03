@@ -50,15 +50,14 @@ in
     ];
 
     interactiveShellInit = ''
-      set -gx fish_greeting ""
-      set -gx ERL_AFLAGS "-kernel shell_history enabled"
-      set -gx SAM_CLI_TELEMETRY 0
-      set -gx RUBYOPT --enable-yjit
-      set -gx PATH $HOME/go/bin $PATH
-      set -gx PATH $HOME/.bin $PATH
-      set -gx LD_LIBRARY_PATH $HOME/.nix-profile/lib
       set -gx AWS_DEFAULT_REGION eu-west-2
       set -gx AWS_REGION eu-west-2
+      set -gx ERL_AFLAGS "-kernel shell_history enabled"
+      set -gx PATH $HOME/.bin $PATH
+      set -gx PATH $HOME/go/bin $PATH
+      set -gx RUBYOPT --enable-yjit
+      set -gx SAM_CLI_TELEMETRY 0
+      set -gx fish_greeting ""
     '';
 
     functions = {
@@ -266,4 +265,5 @@ in
   };
   programs.zoxide.enable = true;
   programs.zoxide.enableFishIntegration = true;
+  programs.zoxide.package = pkgs-unstable.zoxide;
 }

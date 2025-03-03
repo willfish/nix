@@ -125,32 +125,46 @@ in
   };
 
   environment.systemPackages = with pkgs-unstable; [
-    # Minimum packages
-    vim
-    neovim
-    curl
-    git
-    kitty
-    ghostty
+    neovim                 # Modernized fork of Vim with additional features
+    curl                   # Command-line tool for transferring data with URLs
+    git                    # Distributed version control system
+    kitty                  # Fast, feature-rich, GPU-based terminal emulator
+    ghostty                # Minimalist, high-performance terminal emulator
 
-    adwaita-icon-theme # default gnome cursors
-    glib
-    gsettings-desktop-schemas
-    nwg-look
+    adwaita-icon-theme     # Default GNOME icon theme for consistent UI icons
+    glib                   # Core library for GNOME applications (e.g., GSettings)
+    gsettings-desktop-schemas  # GSettings schemas for desktop settings
+    nwg-look               # GUI tool to customize GTK themes and settings
 
-    lm_sensors
-    openssl
-    openssl.dev
-    pkg-config
+    lm_sensors             # Tools to monitor hardware sensors (e.g., temperature)
+    openssl                # Cryptographic library for SSL/TLS
+    openssl.dev            # Development files for OpenSSL (headers, libs)
+    pkg-config             # Helper tool to manage library dependencies during compilation
 
-    bluez
-    home-manager
+    bluez                  # Bluetooth protocol stack for Linux
+    home-manager           # Nix-based user environment manager
 
-    xmonad-with-packages
-    ghc
+    xmonad-with-packages   # Xmonad window manager with bundled Haskell dependencies
+    ghc                    # Glasgow Haskell Compiler for building Haskell apps
 
-    sddm-astronaut
+    sddm-astronaut         # Custom SDDM theme (login screen) defined above
+
+    libsForQt5.qt5.qtquickcontrols2  # Qt5 module for QML-based UI controls
+    libsForQt5.qt5.qtgraphicaleffects # Qt5 module for graphical effects in QML
+    libsForQt5.qt5.qtsvg             # Qt5 module for SVG rendering
+
+    feh                    # Lightweight image viewer and wallpaper setter
+    gtk3                   # GTK+ 3 library for GUI applications
+    maim                   # Screenshot utility for X11
+    networkmanagerapplet   # System tray applet for NetworkManager
+    pa_applet              # PulseAudio system tray applet
+    picom                  # Compositor for X11 (window effects like transparency)
+    polybar                # Lightweight, customizable status bar for X11
+    rofi                   # Application launcher and window switcher
+    swappy                 # Screenshot editing tool (e.g., annotate, crop)
+    xautolock              # Automatically locks the screen after inactivity
   ];
+
   environment.shells = with pkgs; [ bash fish ];
   users.defaultUserShell = pkgs.fish;
   programs.fish.enable = true;
@@ -196,35 +210,6 @@ in
         ];
         enableConfiguredRecompile = true;
       };
-      windowManager.i3 = {
-        enable = true;
-        extraPackages = with pkgs-unstable; [
-          dconf
-          dmenu
-          feh
-          gtk3
-          i3blocks
-          i3lock-blur
-          i3status
-          imagemagick
-          libayatana-indicator-gtk3
-          libnotify
-          maim
-          networkmanagerapplet
-          nitrogen
-          pa_applet
-          picom
-          polybar
-          rofi
-          swappy
-          xautolock
-        ];
-      };
-    };
-
-    ollama = {
-      enable = true;
-      package = pkgs-unstable.ollama;
     };
   };
 
