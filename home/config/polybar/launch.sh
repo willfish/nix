@@ -13,23 +13,24 @@ fetch_window_manager() {
 window_manager=$(fetch_window_manager)
 bar="mainbar-i3"
 case $(fetch_window_manager) in
-  "i3")
-    bar="mainbar-i3"
-    ;;
-  "xmonad")
-    bar="mainbar-xmonad"
-    ;;
-  *)
-    bar="main"
-    ;;
+"i3")
+  bar="mainbar-i3"
+  ;;
+"xmonad")
+  bar="mainbar-xmonad"
+  ;;
+*)
+  bar="main"
+  ;;
 esac
 
-echo "---" > /tmp/polybar.log
+echo "---" >/tmp/polybar.log
 if type "xrandr"; then
   for m in $(xrandr --query | grep " connected" | cut -d" " -f1); do
-    MONITOR=$m polybar --reload $bar & disown
+    MONITOR=$m polybar --reload $bar &
+    disown
   done
 else
-  polybar --reload $bar & disown
+  polybar --reload $bar &
+  disown
 fi
-# polybar example 2>&1 | tee -a /tmp/polybar.log & disown
