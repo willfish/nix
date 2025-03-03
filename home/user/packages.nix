@@ -1,11 +1,6 @@
 { pkgs-unstable, ... }:
 {
   home.packages = with pkgs-unstable; [
-    # Strong integration with home-manager so need to use pkgs
-    zoxide              # Fast directory jumper with smart history tracking
-    tmux                # Terminal multiplexer for session management
-    tmuxinator          # Tool to manage complex tmux sessions with YAML configs
-
     # For zoom
     zoom-us             # Video conferencing application
     pulseaudioFull      # Sound server with full features (e.g., Bluetooth support)
