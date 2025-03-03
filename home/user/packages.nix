@@ -63,6 +63,8 @@
     ccls                # C/C++ language server
     bash-language-server # Bash language server
     typescript-language-server # Language server for typescript
+    nodejs_latest       # Used just to install language servers
+
 
     pwgen               # Password generator
     inetutils           # Basic networking tools (e.g., ping, telnet)
