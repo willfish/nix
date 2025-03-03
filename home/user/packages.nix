@@ -76,17 +76,17 @@
     gnumake             # GNU Make build automation tool
     gcc                 # GNU Compiler Collection
 
-    # libs
-    libffi              # Foreign function interface library
-    libiconv            # Library for character encoding conversion
-    libpqxx             # C++ library for PostgreSQL
-    libxml2             # XML parsing library
-    libxslt             # XSLT processing library
-    libyaml             # YAML parsing library
-    openssl             # Cryptographic library for SSL/TLS
-    zlib                # Compression library
-    zlib.dev            # Development files for zlib (headers, etc.)
-    zlib.out            # Runtime output for zlib
+    # libs - disabled since projects that require libs globally should manage their own versions
+    # libffi              # Foreign function interface library
+    # libiconv            # Library for character encoding conversion
+    # libpqxx             # C++ library for PostgreSQL
+    # libxml2             # XML parsing library
+    # libxslt             # XSLT processing library
+    # libyaml             # YAML parsing library
+    # openssl             # Cryptographic library for SSL/TLS
+    # zlib                # Compression library
+    # zlib.dev            # Development files for zlib (headers, etc.)
+    # zlib.out            # Runtime output for zlib
 
     # languages and their tools
     nodejs_latest       # Latest Node.js runtime for JavaScript
