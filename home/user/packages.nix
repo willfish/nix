@@ -62,6 +62,7 @@
     gopls               # Go language server for IDEs
     ccls                # C/C++ language server
     bash-language-server # Bash language server
+    typescript-language-server # Language server for typescript
 
     pwgen               # Password generator
     inetutils           # Basic networking tools (e.g., ping, telnet)
