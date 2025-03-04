@@ -164,6 +164,7 @@ in
     swappy                 # Screenshot editing tool (e.g., annotate, crop)
     xautolock              # Automatically locks the screen after inactivity
     xclip                  # Command-line clipboard manager
+    libnotify              # Library for desktop notifications
   ];
 
   environment.shells = with pkgs; [ bash fish ];
