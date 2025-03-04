@@ -165,6 +165,7 @@ in
     xautolock              # Automatically locks the screen after inactivity
     xclip                  # Command-line clipboard manager
     libnotify              # Library for desktop notifications
+    libayatana-indicator-gtk3 # GTK3 library for Ayatana indicators
   ];
 
   environment.shells = with pkgs; [ bash fish ];
