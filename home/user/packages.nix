@@ -61,11 +61,12 @@
     pre-commit          # Framework for managing pre-commit hooks
     gopls               # Go language server for IDEs
     ccls                # C/C++ language server
-    bash-language-server # Bash language server
-    typescript-language-server # Language server for typescript
     nodejs_latest       # Used just to install language servers
-    stylua
-    lua-language-server
+    typescript-language-server # Language server for typescript
+    bash-language-server # Bash language server
+    stylua              # Lua formatter
+    lua-language-server # Lua language server
+    vscode-langservers-extracted # Extracted language servers for VSCode
 
 
     pwgen               # Password generator

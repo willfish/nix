@@ -77,7 +77,7 @@ in
             set key '~/Downloads/restore-development.pem'
         else if test $environment = staging
             echo "staging environment"
-            set host "ec2-13-42-116-249.eu-west-2.compute.amazonaws.com"
+            set host "13.42.42.139"
             set key '~/Downloads/jumpbox.pem'
         else if test $environment = production
             echo "production environment"
