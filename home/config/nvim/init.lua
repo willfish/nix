@@ -112,6 +112,7 @@ function insert_jira_ticket_url()
 	handle:close()
 
 	result = result:gsub("\n$", "")
+	result = result:gsub(": $", "")
 	result = "[" .. result .. "]" .. "(https://transformuk.atlassian.net/browse/" .. result .. ")"
 
 	vim.api.nvim_put({ result }, "c", true, true)
