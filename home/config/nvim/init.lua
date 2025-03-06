@@ -104,6 +104,19 @@ function insert_jira_ticket_number()
 	vim.api.nvim_put({ result }, "c", true, true)
 end
 
+function insert_jira_ticket_url()
+	local command = "git branch --show-current | sed -E 's/((BAU|HMRC)-[0-9]+)-(.+)/\\1: /'"
+	local handle = io.popen(command)
+	local result = handle:read("*a")
+
+	handle:close()
+
+	result = result:gsub("\n$", "")
+	result = "[" + result + "]" + "(https://transformuk.atlassian.net/browse/" .. result + ")"
+
+	vim.api.nvim_put({ result }, "c", true, true)
+end
+
 function toggle_quickfix()
 	local quickfix_open = false
 
@@ -127,6 +140,12 @@ vim.api.nvim_set_keymap(
 	"<leader>p",
 	"<cmd>lua insert_jira_ticket_number()<CR>",
 	{ desc = "Inserts the current branch ticket number into the buffer" }
+)
+vim.api.nvim_set_keymap(
+	"n",
+	"<leader>u",
+	"<cmd>lua insert_jira_ticket_url()<CR>",
+	{ desc = "Inserts markdown URL for the current jira ticket" }
 )
 
 -- [[ Basic Autocommands ]]
