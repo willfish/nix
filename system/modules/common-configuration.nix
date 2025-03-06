@@ -23,13 +23,11 @@ in
   networking.extraHosts = ''
     127.0.0.1 host.docker.internal
   '';
-  # Enable networking
+
   networking.networkmanager.enable = true;
 
-  # Set your time zone.
   time.timeZone = "Europe/London";
 
-  # Select internationalisation properties.
   i18n.defaultLocale = "en_GB.UTF-8";
   i18n.extraLocaleSettings = {
     LC_ADDRESS = "en_GB.UTF-8";
