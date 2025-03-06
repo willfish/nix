@@ -69,9 +69,9 @@
       alias = {
         add = "git add -p";
         branches = "for-each-ref --sort=-committerdate --format=\"%(color:blue)%(authordate:relative)\t%(color:red)%(authorname)\t%(color:white)%(color:bold)%(refname:short)\" refs/remotes";
+        taginfo = "for-each-ref --format='%(color:blue)%(refname:short) %(color:green)%(color:bold)%(taggerdate:short)%(committerdate:short)' --sort=committerdate refs/tags";
         cleanup = "!git fetch -p && git pull && git branch --merged | grep -v main | xargs -n 1 -r git branch -d";
         cm = "!git checkout main && git cleanup";
-        taginfo = "for-each-ref --format='%C(yellow)%10(refname:short)%Creset %C(cyan)%15(taggerdate:short)%Creset %C(green)%20(taggername)%Creset' --sort=taggerdate refs/tags";
       };
 
       filter = {
