@@ -93,6 +93,10 @@ in
 
        xrandr --output $laptop_monitor --off --output $external_monitor --auto
       '';
+
+      today = ''notes_on (date +"%Y-%m-%d") today.md'';
+      yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';
+      tomorrow = ''notes_on (date +%F -d "tomorrow") today.md'';
     };
   };
   programs.zoxide.enable = true;

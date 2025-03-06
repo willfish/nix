@@ -1,0 +1,22 @@
+#! /usr/bin/env fish
+
+if not test -e "$HOME/Notes/"
+  git clone git@github.com:willfish/notes.git "$HOME/Notes"
+end
+
+set -l on_date $argv[1]
+set -l notes_file $argv[2]
+set -l notes_directory "$HOME/Notes/$on_date"
+set -l fully_qualified_notes_file "$notes_directory/$notes_file"
+set -l template_file "$HOME/Notes/templates/$notes_file"
+
+if not test -e $fully_qualified_notes_file
+mkdir -p $notes_directory
+cp $template_file $fully_qualified_notes_file
+
+sed -i "s/TodaysDate/$on_date/" $fully_qualified_notes_file
+end
+
+pushd $notes_directory
+nvim $fully_qualified_notes_file
+popd
