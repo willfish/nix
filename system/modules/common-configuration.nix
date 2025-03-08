@@ -118,8 +118,8 @@ in
   services.blueman.enable = true;
 
   programs.gnupg.agent = {
-    enable = pkgs.lib.mkForce false;
-    enableSSHSupport = false;
+    enable = true;
+    enableSSHSupport = true;
   };
 
   environment.systemPackages = with pkgs-unstable; [
