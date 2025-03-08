@@ -118,7 +118,7 @@ in
   services.blueman.enable = true;
 
   programs.gnupg.agent = {
-    enable = true;
+    enable = false;
     enableSSHSupport = false;
   };
 
