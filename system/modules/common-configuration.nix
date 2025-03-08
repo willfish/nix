@@ -118,7 +118,7 @@ in
   services.blueman.enable = true;
 
   programs.gnupg.agent = {
-    enable = false;
+    enable = pkgs.lib.mkForce false;
     enableSSHSupport = false;
   };
 
