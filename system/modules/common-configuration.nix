@@ -20,6 +20,8 @@ in
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelParams = [ "btiso.enable=1" ];
 
+  security.polkit.enable = true;
+
   networking.extraHosts = ''
     127.0.0.1 host.docker.internal
   '';
