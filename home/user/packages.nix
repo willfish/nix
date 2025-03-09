@@ -3,6 +3,8 @@
   home.packages = with pkgs-unstable; [
     zoom-us             # Video conferencing application
 
+    dconf
+
     # Services for work
     redis               # In-memory data structure store (key-value database)
     postgresql          # Open-source relational database system
