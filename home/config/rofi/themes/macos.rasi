@@ -5,7 +5,7 @@
  *******************************************************************************/
 
 * {
-    font:   "Montserrat 12";
+    font:   "UbuntuMono Nerd Font 12";
 
     bg0:    #242424E6;
     bg1:    #7E7E7E80;
@@ -34,7 +34,7 @@ window {
 }
 
 inputbar {
-    font:       "Montserrat 20";
+    font:       "UbuntuMono Nerd Font 20";
     padding:    12px;
     spacing:    12px;
     children:   [ icon-search, entry ];

@@ -82,7 +82,7 @@ myKeybindings =
   [ -- Applications
     ("M-<Return>", spawn "ghostty"),
     ("M-q", kill),
-    ("M-x", spawn "rofi -show combi -combi-modes 'run,ssh' -show-icons -display-run '' -modes combi -theme macos"),
+    ("M-x", spawn "rofi -show combi -combi-modes 'run' -show-icons -display-run '' -modes combi -theme macos"),
     ("M-l", spawn "~/.bin/power"),
     ("M-b", spawn "~/.bin/bluetooth"),
     ("M-t", spawn "pkill picom"),
