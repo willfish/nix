@@ -4,6 +4,11 @@
     userName = "William Fish";
     userEmail = "william.michael.fish@gmail.com";
     extraConfig = {
+      user.signingkey = "BC6DED9479D436F5";
+      commit.gpgsign = true;
+      gpg.program = "gpg";
+      tag.gpgsign = true;
+
       column.ui = "auto";
       branch.sort = "-committerdate";
       tag.sort = "version:refname";
