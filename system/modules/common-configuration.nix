@@ -166,9 +166,12 @@ in
     libayatana-indicator-gtk3 # GTK3 library for Ayatana indicators
   ];
 
-  environment.shells = with pkgs; [ bash fish ];
-  users.defaultUserShell = pkgs.fish;
-  programs.fish.enable = true;
+  environment.shells = with pkgs-unstable; [ bash fish ];
+  users.defaultUserShell = pkgs-unstable.fish;
+  programs.fish = {
+    enable = true;
+    package = pkgs-unstable.fish;
+  };
 
   virtualisation.docker.enable = true;
 

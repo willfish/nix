@@ -46,13 +46,13 @@
           src = ./.;
           configPath = ".pre-commit-config-nix.yaml";
           hooks = {
-            ormolu.enable = true;
+            eclint.enable = true;
             end-of-file-fixer.enable = true;
             flake-checker.enable = true;
             nil.enable = true;
+            ormolu.enable = true;
             trim-trailing-whitespace.enable = true;
             trufflehog.enable = true;
-            eclint.enable = true;
           };
         };
       in

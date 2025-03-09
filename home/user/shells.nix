@@ -41,6 +41,7 @@ in
   };
 
   programs.fish = {
+    package = pkgs-unstable.fish;
     enable = true;
     shellAliases = aliases;
     shellAbbrs = abbreviations;
