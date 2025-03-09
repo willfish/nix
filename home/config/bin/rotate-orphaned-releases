@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# Fetch all tags to ensure local repo is up-to-date
+git fetch --tags
+
+# Get list of current tags (short names)
+current_tags=$(git tag)
+
+# Get list of release tags from GitHub
+release_tags=$(gh release list --limit 1000 | awk '{print $3}')
+
+# Loop through release tags and delete if not in current_tags
+for tag in $release_tags; do
+  if [ "$tag" = "Latest" ]; then
+    echo "Skipping tag: $tag"
+    continue
+  fi
+  if ! echo "$current_tags" | grep -Fxq "$tag"; then
+    echo "Deleting orphaned release for tag: $tag"
+    gh release delete "$tag" -y
+  fi
+done

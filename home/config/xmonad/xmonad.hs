@@ -75,7 +75,7 @@ myStartupHook = do
   spawnOnce "nm-applet &"
   spawnOnce "pa-applet &"
   spawnOnce "blueman-applet &"
-  spawnOnce "DESKTOP_SESSION=xmonad && variety &"
+  spawnOnce "variety &"
   spawnOnce "~/.config/polybar/launch.sh &"
 
 myKeybindings =

@@ -23,13 +23,11 @@ in
   networking.extraHosts = ''
     127.0.0.1 host.docker.internal
   '';
-  # Enable networking
+
   networking.networkmanager.enable = true;
 
-  # Set your time zone.
   time.timeZone = "Europe/London";
 
-  # Select internationalisation properties.
   i18n.defaultLocale = "en_GB.UTF-8";
   i18n.extraLocaleSettings = {
     LC_ADDRESS = "en_GB.UTF-8";
@@ -163,11 +161,17 @@ in
     rofi                   # Application launcher and window switcher
     swappy                 # Screenshot editing tool (e.g., annotate, crop)
     xautolock              # Automatically locks the screen after inactivity
+    xclip                  # Command-line clipboard manager
+    libnotify              # Library for desktop notifications
+    libayatana-indicator-gtk3 # GTK3 library for Ayatana indicators
   ];
 
-  environment.shells = with pkgs; [ bash fish ];
-  users.defaultUserShell = pkgs.fish;
-  programs.fish.enable = true;
+  environment.shells = with pkgs-unstable; [ bash fish ];
+  users.defaultUserShell = pkgs-unstable.fish;
+  programs.fish = {
+    enable = true;
+    package = pkgs-unstable.fish;
+  };
 
   virtualisation.docker.enable = true;
 

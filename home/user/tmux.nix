@@ -1,6 +1,7 @@
 { pkgs-unstable, ... }:
 {
   programs.tmux = {
+    package = pkgs-unstable.tmux;
     enable = true;
     clock24 = true;
     plugins = with pkgs-unstable.tmuxPlugins; [
@@ -21,7 +22,6 @@
       }
     ];
     extraConfig = builtins.readFile ../config/tmux/tmux.conf;
+    tmuxinator.enable = true;
   };
-
-  programs.tmux.tmuxinator.enable = true;
 }
