@@ -5,7 +5,7 @@
     EDITOR = "nvim";
     GIT_PAGER = "delta";
     GTK_CSD = "0";
-    GTK_THEME="Catppuccin-Macchiato-Compact-Blue-Dark";
+    GTK_ICON_THEME = "Adwaita";
     GTK_USE_PORTAL = "1";
     LESS = "-R";
     MANPAGER = "nvim +Man!";
