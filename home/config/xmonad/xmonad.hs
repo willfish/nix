@@ -20,7 +20,7 @@ main =
     . docks
     $ def
       { terminal = "ghostty",
-        modMask = mod4Mask, -- Use the Super key as mod
+        modMask = mod4Mask,
         layoutHook = myLayoutHook,
         manageHook = myManageHook <+> manageDocks,
         startupHook = myStartupHook,
@@ -32,7 +32,7 @@ main =
       `additionalKeysP` myKeybindings
 
 myWorkspaceNames :: [String]
-myWorkspaceNames = ["1", "2", "3", "4", "5", "6", "7", "8"]
+myWorkspaceNames = ["web", "chat", "music", "video", "5", "6", "7", "8"]
 
 myLayoutHook =
   avoidStruts $
@@ -47,16 +47,16 @@ myLayouts = toggleLayouts (noBorders Full)
 
 myManageHook =
   composeAll
-    [ className =? "Brave-browser" --> doShift "1",
-      className =? "Clementine" --> doShift "3",
-      className =? "Slack" --> doShift "2",
-      className =? "Spotify" --> doShift "3",
-      className =? "brave-browser" --> doShift "1",
-      className =? "clementine" --> doShift "3",
-      className =? "discord" --> doShift "2",
-      className =? "spotify" --> doShift "3",
-      className =? "zoom " --> doShift "4",
-      className =? "zoom" --> doShift "4",
+    [ className =? "Brave-browser" --> doShift "web",
+      className =? "Clementine" --> doShift "music",
+      className =? "Slack" --> doShift "chat",
+      className =? "Spotify" --> doShift "music",
+      className =? "brave-browser" --> doShift "web",
+      className =? "clementine" --> doShift "music",
+      className =? "discord" --> doShift "chat",
+      className =? "spotify" --> doShift "music",
+      className =? "zoom " --> doShift "video",
+      className =? "zoom" --> doShift "video",
       className =? "Galculator" --> doCenterFloat,
       className =? "Simple-scan" --> doCenterFloat,
       className =? "zoom " --> doCenterFloat,
@@ -82,9 +82,9 @@ myKeybindings =
   [ -- Applications
     ("M-<Return>", spawn "ghostty"),
     ("M-q", kill),
-    ("M-x", spawn "rofi -show combi -combi-modes 'run,ssh' -show-icons -display-run '' -modes combi -theme macos"),
-    ("M-l", spawn "~/.dotfiles/home/config/rofi/power_menu.sh"),
-    ("M-b", spawn "brave"),
+    ("M-x", spawn "rofi -show combi -combi-modes 'run' -show-icons -display-run '' -modes combi -theme macos"),
+    ("M-l", spawn "~/.bin/power"),
+    ("M-b", spawn "~/.bin/bluetooth"),
     ("M-t", spawn "pkill picom"),
     ("M-C-t", spawn "picom -b"),
     ("C-S-s", spawn "maim -s -u | tee ~/Pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png | swappy -f -"),
