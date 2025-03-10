@@ -755,7 +755,6 @@ require("lazy").setup({
 				javascript = { "prettier", stop_after_first = true },
 				lua = { "stylua" },
 				python = { "isort", "black" },
-				ruby = { "rubocop" },
 			},
 		},
 	},
