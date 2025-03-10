@@ -218,12 +218,13 @@ in
   };
 
   fonts = {
-    packages = with pkgs; [
-      fira-code
-      font-awesome
+    packages = with pkgs-unstable; [
+      adwaita-icon-theme
       jetbrains-mono
-      nerdfonts
-      powerline-fonts
+      nerd-fonts.jetbrains-mono
+      nerd-fonts.ubuntu
+      nerd-fonts.ubuntu-mono
+      powerline-fonts # Used by Dracula Theme in Tmux
     ];
   };
 
