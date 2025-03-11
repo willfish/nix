@@ -45,4 +45,6 @@ else
     set command "/bin/sh -c \"RAILS_LOG_LEVEL=debug $COMMAND\""
 end
 
-eval $command
+set full_command "aws ecs execute-command --cluster $cluster --task $task --container $service --region $REGION --interactive --command '$command'"
+
+eval $full_command

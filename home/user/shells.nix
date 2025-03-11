@@ -62,9 +62,7 @@ in
     '';
 
     functions = {
-      gitignore = ''
-        curl -sL https://www.gitignore.io/api/$argv
-      '';
+      gitignore = ''curl -sL https://www.gitignore.io/api/$argv'';
       frontend_log = ''log_for "https://www.trade-tariff.service.gov.uk/healthcheck" trade-tariff-frontend'';
       backend_log = ''log_for "https://www.trade-tariff.service.gov.uk/api/v2/healthcheck" trade-tariff-backend'';
       duty_log = ''log_for "https://www.trade-tariff.service.gov.uk/duty-calculator/healthcheck" trade-tariff-duty-calculator'';
