@@ -1,0 +1,5 @@
+!# /usr/bin/env fish
+
+set -g laptop_monitor "eDP-1"
+
+xrandr --output $laptop_monitor --auto
