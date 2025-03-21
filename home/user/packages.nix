@@ -49,12 +49,18 @@
     ssm-session-manager-plugin  # AWS plugin for SSM session management (e.g., ECS exec)
     dive                # Tool to explore Docker image layers
     sysz                # Systemd service searcher (fzf-based)
+    pwgen               # Password generator
 
     # Build tools
     stdenv              # Standard environment for building packages in Nix
     makeWrapper         # Nix utility to wrap executables with env vars
     gnumake             # GNU Make build automation tool
     gcc                 # GNU Compiler Collection
+
+    # Networking tools
+    inetutils           # Basic networking tools (e.g., ping, telnet)
+    dig                 # DNS lookup tool
+    lsd                 # Modern ls alternative with icons
 
     # languages and their tools
     nil                 # Nix language server for IDE integration
@@ -69,21 +75,15 @@
     stylua              # Lua formatter
     lua-language-server # Lua language server
     vscode-langservers-extracted # Extracted language servers for VSCode
-
-
-    pwgen               # Password generator
-    inetutils           # Basic networking tools (e.g., ping, telnet)
-    dig                 # DNS lookup tool
-    lsd                 # Modern ls alternative with icons
+    terraform           # For terraform_fmt, terraform_validate
+    terragrunt          # For terragrunt-hclfmt
+    tflint              # For terraform_tflint
+    terraform-docs      # For terraform_docs
 
     # fun stuff
     neofetch            # System info display with ASCII art
     inxi                # System information script
     gnome-mahjongg      # Mahjongg solitaire game
-
-    terraform        # For terraform_fmt, terraform_validate
-    terragrunt       # For terragrunt-hclfmt
-    tflint           # For terraform_tflint
-    terraform-docs   # For terraform_docs
+    helix               # Post modern text editor
   ];
 }
