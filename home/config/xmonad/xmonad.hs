@@ -76,7 +76,7 @@ myStartupHook = do
   spawnOnce "pa-applet &"
   spawnOnce "blueman-applet &"
   spawnOnce "variety &"
-  spawnOnce "~/.config/polybar/launch.sh &"
+  spawnOnce "~/.bin/bar &"
 
 myKeybindings =
   [ -- Applications
