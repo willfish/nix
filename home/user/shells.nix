@@ -1,35 +1,40 @@
 { pkgs-unstable, ... }:
 let
   aliases = {
+    a = "tmux attach";
     ag = "rg";
+    la = "lsd -la";
+    ll = "lsd -l";
     mux = "tmuxinator";
     tm = "tmux";
-    a = "tmux attach";
-    ll = "lsd -l";
-    la = "lsd -la";
-    vim = "nvim";
+    v = "nvim";
     vi = "nvim";
+    vim = "nvim";
     vimdiff = "nvim -d";
   };
   abbreviations = {
+    a = "tmux attach";
     ag = "rg";
-    cdr = "cd ~/Repositories";
+
     book = "cd ~/Repositories/books";
     cdi = "cd ~/Repositories/indeed";
-    hm = "cd ~/Repositories/hmrc";
     cdn = "cd ~/Notes";
-    mux = "tmuxinator";
-    tm = "tmux";
-    a = "tmux attach";
-    rc = "bundle exec rails console";
-    rs = "bundle exec rails server";
-    rr = "bundle exec rails routes --expanded";
-    sk = "bundle exec sidekiq";
-    t = "bundle exec rspec --format p";
-    tg = "terragrunt";
+    cdr = "cd ~/Repositories";
+    hm = "cd ~/Repositories/hmrc";
+
     pbcopy = "xclip -selection clipboard";
     pbpaste = "xclip -selection clipboard -o";
-    g = "git";
+
+    rc = "bundle exec rails console";
+    rr = "bundle exec rails routes --expanded";
+    rs = "bundle exec rails server";
+    sk = "bundle exec sidekiq";
+    t = "bundle exec rspec --format p";
+
+    tg = "terragrunt";
+
+    mux = "tmuxinator";
+    tm = "tmux";
   };
 in
 {
@@ -62,9 +67,13 @@ in
     '';
 
     functions = {
-      gitignore = ''
-        curl -sL https://www.gitignore.io/api/$argv
-      '';
+      gitignore = ''curl -sL https://www.gitignore.io/api/$argv'';
+
+      today = ''notes_on (date +"%Y-%m-%d") today.md'';
+      yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';
+      tomorrow = ''notes_on (date +%F -d "tomorrow") today.md'';
+
+      logs = ''echo frontend_log\nbackend_log\nadmin_log\nduty_log | fzf | xargs -- echo'';
       frontend_log = ''log_for "https://www.trade-tariff.service.gov.uk/healthcheck" trade-tariff-frontend'';
       backend_log = ''log_for "https://www.trade-tariff.service.gov.uk/api/v2/healthcheck" trade-tariff-backend'';
       duty_log = ''log_for "https://www.trade-tariff.service.gov.uk/duty-calculator/healthcheck" trade-tariff-duty-calculator'';
@@ -76,28 +85,6 @@ in
         admin_log
       '';
 
-      patch_sorbet = ''
-        set -l INTERPRETER ${pkgs-unstable.glibc}/lib/ld-linux-x86-64.so.2
-
-        patch-sorbet $INTERPRETER
-      '';
-
-      home = ''
-       set -g laptop_monitor "eDP-1"
-
-       xrandr --output $laptop_monitor --auto
-      '';
-
-      office = ''
-       set -g laptop_monitor "eDP-1"
-       set -g external_monitor (xrandr | grep -v disconnected | grep connected | awk '{print $1}' | grep -v $laptop_monitor)
-
-       xrandr --output $laptop_monitor --off --output $external_monitor --auto
-      '';
-
-      today = ''notes_on (date +"%Y-%m-%d") today.md'';
-      yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';
-      tomorrow = ''notes_on (date +%F -d "tomorrow") today.md'';
     };
   };
   programs.zoxide.enable = true;

@@ -42,7 +42,9 @@ echo "Selected Task: $task"
 if test -z "$COMMAND"
     set command /bin/sh
 else
-    set command "/bin/sh -c \"RAILS_LOG_LEVEL=debug $command\""
+    set command "/bin/sh -c \"RAILS_LOG_LEVEL=debug $COMMAND\""
 end
+
+set full_command "aws ecs execute-command --cluster $cluster --task $task --container $service --region $REGION --interactive --command '$command'"
 
 eval $full_command

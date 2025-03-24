@@ -187,11 +187,11 @@ require("lazy").setup({
 				suite = "dispatch_background",
 			})
 
-			vim.api.nvim_set_keymap("n", "<Leader>tx", ":TestNearest<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>tt", ":TestFile<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>tr", ":TestSuite<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>te", ":TestLast<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>tl", ":TestVisit<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>x", ":TestNearest<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>t", ":TestFile<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>r", ":TestSuite<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>e", ":TestLast<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>l", ":TestVisit<CR>", default_map_opts)
 		end,
 	},
 	{
@@ -283,6 +283,7 @@ require("lazy").setup({
 		dependencies = {
 			"nvim-lua/plenary.nvim",
 			"nvim-telescope/telescope-github.nvim",
+			"nvim-telescope/telescope-live-grep-args.nvim",
 			{ "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
 			{ "nvim-telescope/telescope-ui-select.nvim" },
 			{ "nvim-tree/nvim-web-devicons" },
@@ -303,13 +304,51 @@ require("lazy").setup({
 			})
 
 			pcall(require("telescope").load_extension, "fzf")
-			pcall(require("telescope").load_extension, "ui-select")
 			pcall(require("telescope").load_extension, "gh")
+			pcall(require("telescope").load_extension, "live_grep_args")
+			pcall(require("telescope").load_extension, "ui-select")
 
 			local builtin = require("telescope.builtin")
+			local rg_args = {
+				find_command = {
+					"rg",
+					"--files",
+					"--hidden",
+					"--follow",
+					"--glob",
+					"!.git",
+					"--glob",
+					"!.svn",
+					"--glob",
+					"!.hg",
+					"--glob",
+					"!.bzr",
+					"--glob",
+					"!.tmp",
+					"--glob",
+					"!.DS_Store",
+					"--glob",
+					"!.gitignore",
+					"--glob",
+					"!.gitmodules",
+					"--glob",
+					"!.gitattributes",
+					"--glob",
+					"!.gitkeep",
+					"--glob",
+					"!.gitconfig",
+					"--glob",
+					"!temp_dirs",
+				},
+			}
 
-			vim.keymap.set("n", "<C-f>", builtin.find_files, { desc = "Search Files" })
-			vim.keymap.set("n", "<C-g>", builtin.live_grep, { desc = "Search by Grep" })
+			vim.keymap.set("n", "<C-f>", function()
+				builtin.find_files(rg_args)
+			end, { desc = "Search Files" })
+
+			vim.keymap.set("n", "<C-g>", function()
+				require("telescope").extensions.live_grep_args.live_grep_args(rg_args)
+			end, { desc = "Search by Grep" })
 			vim.keymap.set(
 				"n",
 				"<Leader>fp",
@@ -472,17 +511,17 @@ require("lazy").setup({
 			lspconfig["eslint"].setup({ capabilities = capabilities })
 			lspconfig["gopls"].setup({ capabilities = capabilities })
 			lspconfig["html"].setup({ capabilities = capabilities })
+			lspconfig["marksman"].setup({ capabilities = capabilities })
 			lspconfig["nil_ls"].setup({ capabilities = capabilities })
+			lspconfig["ols"].setup({ capabilities = capabilities })
 			lspconfig["pyright"].setup({ capabilities = capabilities })
-			-- lspconfig["solargraph"].setup({ capabilities = capabilities })
 			lspconfig["ruby_lsp"].setup({ capabilities = capabilities })
 			lspconfig["terraformls"].setup({ capabilities = capabilities })
 			lspconfig["ts_ls"].setup({ capabilities = capabilities })
-			lspconfig["marksman"].setup({ capabilities = capabilities })
 
 			lspconfig["lua_ls"].setup({
 				capabilities = capabilities,
-				settings = { -- custom settings for lua
+				settings = {
 					Lua = {
 						diagnostics = {
 							globals = { "vim" },
@@ -543,9 +582,6 @@ require("lazy").setup({
 		opts = {
 			notify_on_error = false,
 			format_on_save = function(bufnr)
-				-- Disable "format_on_save lsp_fallback" for languages that don't
-				-- have a well standardized coding style. You can add additional
-				-- languages here or re-enable it for the disabled ones.
 				local disable_filetypes = { c = true, cpp = true }
 				local lsp_format_opt
 				if disable_filetypes[vim.bo[bufnr].filetype] then
@@ -574,9 +610,6 @@ require("lazy").setup({
 			{
 				"L3MON4D3/LuaSnip",
 				build = (function()
-					-- Build Step is needed for regex support in snippets.
-					-- This step is not supported in many windows environments.
-					-- Remove the below condition to re-enable on windows.
 					if vim.fn.has("win32") == 1 or vim.fn.executable("make") == 0 then
 						return
 					end

@@ -19,11 +19,11 @@ end
 config = Pry.config
 config.prompt = prompt
 
-# awesome_print gem: great syntax colorized printing
-# look at ~/.aprc for more settings for awesome_print
+# amazing_print gem: great syntax colorized printing
+# look at ~/.aprc for more settings for amazing_print
 begin
-  require 'awesome_print'
-  AwesomePrint.pry!
+  require 'amazing_print'
+  AmazingPrint.pry!
 rescue LoadError => err
-  puts "gem install awesome_print  # <-- highly recommended"
+  puts "gem install amazing_print  # <-- highly recommended"
 end

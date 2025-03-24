@@ -1,15 +1,4 @@
-{ pkgs, pkgs-unstable, ... }:
-let
-  sddm-astronaut = pkgs-unstable.sddm-astronaut.override {
-    themeConfig = {
-      AccentColor = "#746385";
-      FormPosition = "left";
-
-      ForceHideCompletePassword = true;
-    };
-    embeddedTheme = "hyprland_kath";
-  };
-in
+  { pkgs, pkgs-unstable, ... }:
 {
   system.activationScripts.binBash = ''
     mkdir -p /bin
@@ -61,23 +50,6 @@ in
     alsa.support32Bit = true;
     pulse.enable = true;
     wireplumber.enable = true;
-    extraConfig = {
-      pipewire = {
-        "switch-on-connect" = {
-          "pulse.cmd" = [
-            {
-              cmd = "load-module";
-              args = "module-always-sink";
-              flags = [ ];
-            }
-            {
-              cmd = "load-module";
-              args = "module-switch-on-connect";
-            }
-          ];
-        };
-      };
-    };
   };
 
   users.users.william = {
@@ -93,6 +65,7 @@ in
       "video"
       "wheel"
     ];
+
     packages = with pkgs; [
       docker
       docker-compose
@@ -126,44 +99,21 @@ in
     neovim                 # Modernized fork of Vim with additional features
     curl                   # Command-line tool for transferring data with URLs
     git                    # Distributed version control system
-    kitty                  # Fast, feature-rich, GPU-based terminal emulator
     ghostty                # Minimalist, high-performance terminal emulator
 
-    adwaita-icon-theme     # Default GNOME icon theme for consistent UI icons
-    glib                   # Core library for GNOME applications (e.g., GSettings)
-    gsettings-desktop-schemas  # GSettings schemas for desktop settings
-    nwg-look               # GUI tool to customize GTK themes and settings
-
-    lm_sensors             # Tools to monitor hardware sensors (e.g., temperature)
     openssl                # Cryptographic library for SSL/TLS
     openssl.dev            # Development files for OpenSSL (headers, libs)
     pkg-config             # Helper tool to manage library dependencies during compilation
 
-    bluez                  # Bluetooth protocol stack for Linux
     home-manager           # Nix-based user environment manager
 
-    xmonad-with-packages   # Xmonad window manager with bundled Haskell dependencies
-    ghc                    # Glasgow Haskell Compiler for building Haskell apps
+    gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
+    gnomeExtensions.pop-shell # GNOME extension for tiling window management
+    gnomeExtensions.appindicator # GNOME extension for app indicators
 
-    sddm-astronaut         # Custom SDDM theme (login screen) defined above
+    gnome-tweaks
 
-    libsForQt5.qt5.qtquickcontrols2  # Qt5 module for QML-based UI controls
-    libsForQt5.qt5.qtgraphicaleffects # Qt5 module for graphical effects in QML
-    libsForQt5.qt5.qtsvg             # Qt5 module for SVG rendering
-
-    feh                    # Lightweight image viewer and wallpaper setter
-    gtk3                   # GTK+ 3 library for GUI applications
-    maim                   # Screenshot utility for X11
-    networkmanagerapplet   # System tray applet for NetworkManager
-    pa_applet              # PulseAudio system tray applet
-    picom                  # Compositor for X11 (window effects like transparency)
-    polybar                # Lightweight, customizable status bar for X11
-    rofi                   # Application launcher and window switcher
-    swappy                 # Screenshot editing tool (e.g., annotate, crop)
-    xautolock              # Automatically locks the screen after inactivity
-    xclip                  # Command-line clipboard manager
-    libnotify              # Library for desktop notifications
-    libayatana-indicator-gtk3 # GTK3 library for Ayatana indicators
+    xclip
   ];
 
   environment.shells = with pkgs-unstable; [ bash fish ];
@@ -176,16 +126,6 @@ in
   virtualisation.docker.enable = true;
 
   services = {
-    displayManager = {
-      sddm = {
-        enable = true;
-        package = pkgs-unstable.kdePackages.sddm;
-
-        theme = "sddm-astronaut-theme";
-        extraPackages = [ sddm-astronaut ];
-      };
-    };
-
     openssh = {
       enable = true;
       settings.PasswordAuthentication = false;
@@ -204,16 +144,8 @@ in
       xkb.layout = "us";
       xkb.variant = "";
       enable = true;
-      windowManager.xmonad = {
-        enable = true;
-        config = builtins.readFile ../../home/config/xmonad/xmonad.hs;
-        extraPackages = haskellPackages: with haskellPackages; [
-          xmonad-contrib
-          xmonad-extras
-          xmonad-utils
-        ];
-        enableConfiguredRecompile = true;
-      };
+      displayManager.gdm.enable = true;
+      desktopManager.gnome.enable = true;
     };
   };
 
