@@ -187,11 +187,11 @@ require("lazy").setup({
 				suite = "dispatch_background",
 			})
 
-			vim.api.nvim_set_keymap("n", "<Leader>tx", ":TestNearest<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>tt", ":TestFile<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>tr", ":TestSuite<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>te", ":TestLast<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>tl", ":TestVisit<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>x", ":TestNearest<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>t", ":TestFile<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>r", ":TestSuite<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>e", ":TestLast<CR>", default_map_opts)
+			vim.api.nvim_set_keymap("n", "<Leader>l", ":TestVisit<CR>", default_map_opts)
 		end,
 	},
 	{
