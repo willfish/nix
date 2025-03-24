@@ -1,4 +1,4 @@
-{ lib, pkgs-unstable, ... }:
+{ lib, ... }:
 {
   imports = [ ./user ];
 
@@ -13,12 +13,4 @@
   news.display = "silent";
   news.json = lib.mkForce { };
   news.entries = lib.mkForce [ ];
-
-  gtk = {
-    enable = true;
-    iconTheme = {
-      name = "Adwaita";
-      package = pkgs-unstable.adwaita-icon-theme;
-    };
-  };
 }

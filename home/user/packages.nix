@@ -3,13 +3,9 @@
   home.packages = with pkgs-unstable; [
     zoom-us             # Video conferencing application
 
-    dconf
-
     # Services for work
     redis               # In-memory data structure store (key-value database)
     postgresql          # Open-source relational database system
-
-    xdg-utils           # Tools for desktop integration (e.g., opening files/URLs)
 
     # Desktop apps
     pavucontrol         # Graphical PulseAudio volume control
@@ -44,7 +40,6 @@
     zip                 # Tool to create ZIP archives
     strace              # System call tracer for debugging
     tree                # Displays directory tree structure
-    pcmanfm             # Lightweight file manager
     awscli2             # AWS command-line interface (version 2)
     ssm-session-manager-plugin  # AWS plugin for SSM session management (e.g., ECS exec)
     dive                # Tool to explore Docker image layers
@@ -85,5 +80,6 @@
     inxi                # System information script
     gnome-mahjongg      # Mahjongg solitaire game
     helix               # Post modern text editor
+    zed-editor          # Modern text editor
   ];
 }
