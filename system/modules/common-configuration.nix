@@ -100,9 +100,7 @@
 
     gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
     gnomeExtensions.appindicator # GNOME extension for app indicators
-
     gnomeExtensions.pop-shell # GNOME extension for tiling window management
-    pop-launcher # Pop!_OS launcher
 
     gnome-tweaks
 
