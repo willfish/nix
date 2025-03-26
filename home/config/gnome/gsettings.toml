@@ -164,6 +164,11 @@ move-to-workspace-1=['<Shift><Super>1']
 move-to-workspace-2=['<Shift><Super>2']
 move-to-workspace-3=['<Shift><Super>3']
 move-to-workspace-4=['<Shift><Super>4']
+move-to-workspace-5=['<Shift><Super>5']
+move-to-workspace-6=['<Shift><Super>6']
+move-to-workspace-7=['<Shift><Super>7']
+move-to-workspace-8=['<Shift><Super>8']
+move-to-workspace-9=['<Shift><Super>9']
 switch-to-workspace-1=['<Super>1']
 switch-to-workspace-2=['<Super>2']
 switch-to-workspace-3=['<Super>3']
@@ -247,11 +252,6 @@ night-light-temperature=uint32 3482
 custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']
 screensaver=@as []
 
-[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0]
-binding='<Super>Return'
-command='/run/current-system/sw/bin/ghostty'
-name='Launch terminal'
-
 [org/gnome/settings-daemon/plugins/power]
 sleep-inactive-ac-timeout=7200
 sleep-inactive-ac-type='suspend'
@@ -280,6 +280,10 @@ tile-move-left-global = ["<Shift><Super>a"]
 tile-move-down-global = ["<Shift><Super>s"]
 tile-move-up-global = ["<Shift><Super>w"]
 tile-move-right-global = ["<Shift><Super>d"]
+tile-resize-left = ["<Control><Shift>a", "<Shift>KP_Left", "<Shift>h"]
+tile-resize-down = ["<Control><Shift>s", "<Shift>KP_Down", "<Shift>j"]
+tile-resize-up = ["<Control><Shift>w", "<Shift>KP_Up", "<Shift>k"]
+tile-resize-right = ["<Control><Shift>d", "<Shift>KP_Right", "<Shift>l"]
 
 # Defaults from https://raw.githubusercontent.com/pop-os/shell/master_mantic/schemas/org.gnome.shell.extensions.pop-shell.gschema.xml
 # fullscreen-launcher = false
