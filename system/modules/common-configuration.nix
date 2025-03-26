@@ -99,8 +99,10 @@
     home-manager           # Nix-based user environment manager
 
     gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
-    gnomeExtensions.pop-shell # GNOME extension for tiling window management
     gnomeExtensions.appindicator # GNOME extension for app indicators
+
+    gnomeExtensions.pop-shell # GNOME extension for tiling window management
+    pop-laucher # Pop!_OS launcher
 
     gnome-tweaks
 
