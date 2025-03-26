@@ -1,48 +1,3 @@
-[org/blueman/general]
-plugin-list=['TransferService', '!NetUsage', 'AutoConnect']
-services-last-item=0
-window-properties=[3430, 1408, 5, 27]
-
-[org/blueman/network]
-nap-enable=false
-
-[org/blueman/plugins/autoconnect]
-services=[('/org/bluez/hci0/dev_AC_A9_B4_00_0E_21', '00000000-0000-0000-0000-000000000000')]
-
-[org/blueman/plugins/powermanager]
-auto-power-on=@mb true
-
-[org/blueman/plugins/recentconns]
-recent-connections=[{'adapter': '10:91:D1:5B:0B:5C', 'address': 'AC:A9:B4:00:0E:21', 'alias': 'Audioengine 2+', 'icon': 'audio-card', 'name': 'Audio and input profiles', 'uuid': '00000000-0000-0000-0000-000000000000', 'time': '1741037536.6865609', 'device': '/org/bluez/hci0/dev_AC_A9_B4_00_0E_21'}, {'adapter': '10:91:D1:5B:0B:5C', 'address': '90:62:3F:51:9E:DD', 'alias': 'AirPods Pro', 'icon': 'audio-headphones', 'name': 'Audio and input profiles', 'uuid': '00000000-0000-0000-0000-000000000000', 'time': '1721936890.5603557'}, {'adapter': '10:91:D1:5B:0B:5C', 'address': 'F2:F0:10:0B:DD:0B', 'alias': 'Adv360 Pro', 'icon': 'input-keyboard', 'name': 'Audio and input profiles', 'uuid': '00000000-0000-0000-0000-000000000000', 'time': '1731247212.7513273', 'device': '/org/bluez/hci0/dev_F2_F0_10_0B_DD_0B'}]
-
-[org/freedesktop/folks]
-primary-store='eds:0f9b64449fc538fd2ce3b38a9c3e905cdf319fba'
-
-[org/gnome/Console]
-font-scale=1.9000000000000008
-last-window-maximised=false
-last-window-size=(840, 1376)
-
-[org/gnome/Contacts]
-did-initial-setup=true
-window-fullscreen=false
-window-height=1376
-window-maximized=false
-window-width=412
-
-[org/gnome/Extensions]
-window-height=1400
-window-width=855
-
-[org/gnome/Geary]
-migrated-config=true
-window-height=1376
-window-width=1696
-
-[org/gnome/Mahjongg]
-window-height=1400
-window-width=1128
-
 [org/gnome/Weather]
 locations=[<(uint32 2, <('London', 'EGWU', true, [(0.89971722940307675, -0.007272211034407213)], [(0.89884456477707964, -0.0020362232784242244)])>)>]
 window-height=1376
@@ -53,49 +8,6 @@ window-width=840
 active-view='month'
 window-maximized=false
 window-size=(3432, 1400)
-
-[org/gnome/control-center]
-last-panel='keyboard'
-window-state=(855, 1400, false)
-
-[org/gnome/desktop/app-folders]
-folder-children=['Utilities', 'YaST', 'Pardus']
-
-[org/gnome/desktop/app-folders/folders/Pardus]
-categories=['X-Pardus-Apps']
-name='X-Pardus-Apps.directory'
-translate=true
-
-[org/gnome/desktop/app-folders/folders/Utilities]
-apps=['gnome-abrt.desktop', 'gnome-system-log.desktop', 'nm-connection-editor.desktop', 'org.gnome.baobab.desktop', 'org.gnome.Connections.desktop', 'org.gnome.DejaDup.desktop', 'org.gnome.Dictionary.desktop', 'org.gnome.DiskUtility.desktop', 'org.gnome.Evince.desktop', 'org.gnome.FileRoller.desktop', 'org.gnome.fonts.desktop', 'org.gnome.Loupe.desktop', 'org.gnome.seahorse.Application.desktop', 'org.gnome.tweaks.desktop', 'org.gnome.Usage.desktop', 'vinagre.desktop']
-categories=['X-GNOME-Utilities']
-name='X-GNOME-Utilities.directory'
-translate=true
-
-[org/gnome/desktop/app-folders/folders/YaST]
-categories=['X-SuSE-YaST']
-name='suse-yast.directory'
-translate=true
-
-[org/gnome/desktop/background]
-color-shading-type='solid'
-picture-options='zoom'
-picture-uri='file:///home/william/.config/variety/Downloaded/wallhaven_wallhaven_cc_search_q_space_categories_111_purity_100_atleast_3840x1600_sorting_relevance_order_desc0cd00f7bdc/wallhaven-gj97o7.jpg'
-picture-uri-dark='file:///home/william/.config/variety/Downloaded/wallhaven_wallhaven_cc_search_q_space_categories_111_purity_100_atleast_3840x1600_sorting_relevance_order_desc0cd00f7bdc/wallhaven-gj97o7.jpg'
-primary-color='#d3a778'
-secondary-color='#000000'
-
-[org/gnome/desktop/input-sources]
-sources=[('xkb', 'us')]
-xkb-options=['terminate:ctrl_alt_bksp']
-
-[org/gnome/desktop/interface]
-accent-color='blue'
-color-scheme='prefer-dark'
-cursor-theme='Catppuccin-Macchiato-Blue'
-enable-hot-corners=false
-gtk-theme='Catppuccin-Macchiato-Compact-Blue-dark'
-icon-theme='Adwaita'
 
 [org/gnome/desktop/notifications]
 application-children=['org-gnome-settings', 'org-gnome-console', 'gnome-power-panel', 'zoom', 'slack', 'firefox', 'org-telegram-desktop', 'gnome-network-panel', 'org-gnome-epiphany', 'org-gnome-characters', 'gnome-printers-panel', 'org-gnome-evolution-alarm-notify', 'spotify']
@@ -142,20 +54,9 @@ application-id='Zoom.desktop'
 [org/gnome/desktop/peripherals/touchpad]
 two-finger-scrolling-enabled=true
 
-[org/gnome/desktop/screensaver]
-color-shading-type='solid'
-lock-enabled=false
-picture-options='zoom'
-picture-uri='file:///home/william/.config/variety/Downloaded/wallhaven_wallhaven_cc_search_q_space_categories_111_purity_100_atleast_3840x1600_sorting_relevance_order_desc0cd00f7bdc/wallhaven-gj97o7.jpg'
-primary-color='#d3a778'
-secondary-color='#000000'
-
 [org/gnome/desktop/search-providers]
 enabled=['org.gnome.Weather.desktop']
 sort-order=['org.gnome.Settings.desktop', 'org.gnome.Contacts.desktop', 'org.gnome.Nautilus.desktop']
-
-[org/gnome/desktop/session]
-idle-delay=uint32 600
 
 [org/gnome/desktop/wm/keybindings]
 close=['<Super>q']
@@ -187,33 +88,6 @@ focus-mode='mouse'
 num-workspaces=9
 workspace-names=['web', 'chat', 'sound', 'video']
 
-[org/gnome/epiphany]
-ask-for-default=false
-
-[org/gnome/epiphany/state]
-is-maximized=false
-window-size=(1696, 1376)
-
-[org/gnome/evolution-data-server]
-migrated=true
-
-[org/gnome/evolution-data-server/calendar]
-reminders-past=['8666d90eac74f4d00580421de94663e785150d1b\nf2ffed5123a6b830229b6b1d5c677f18027ab03c\t20250326T200000Z\n1742932800\n1743019200\n1743021000\nBEGIN:VEVENT\r\nDTSTART;TZID=Europe/London:20250326T200000\r\nDTEND;TZID=Europe/London:20250326T203000\r\nRRULE:FREQ=WEEKLY\r\nDTSTAMP:20250325T131138Z\r\nUID:t6olq1q5sftclu6ds3b6j7j5ac@google.com\r\nCREATED:20250325T131138Z\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for DESCRIPTION \r\n property. Removing entire property:\r\nLAST-MODIFIED:20250325T131138Z\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for LOCATION \r\n property. Removing entire property:\r\nSEQUENCE:0\r\nSTATUS:CONFIRMED\r\nSUMMARY:Will exercise\r\nTRANSP:OPAQUE\r\nX-EVOLUTION-CALDAV-ETAG:63878591498\r\nRECURRENCE-ID:20250326T200000Z\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:This is an event reminder\r\nTRIGGER:-P1D\r\nX-EVOLUTION-ALARM-UID:f2ffed5123a6b830229b6b1d5c677f18027ab03c\r\nEND:VALARM\r\nEND:VEVENT\r\n', '8666d90eac74f4d00580421de94663e785150d1b\n6d0a6513583f4e81af585c341705a42a528da6e1\t20250326\n1742860800\n1742947200\n1743120000\nBEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20250326\r\nDTEND;VALUE=DATE:20250328\r\nDTSTAMP:20250322T115458Z\r\nUID:mfot53o51a908fgrs19abpjgtg@google.com\r\nCREATED:20250322T114823Z\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for DESCRIPTION \r\n property. Removing entire property:\r\nLAST-MODIFIED:20250322T115458Z\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for LOCATION \r\n property. Removing entire property:\r\nSEQUENCE:1\r\nSTATUS:CONFIRMED\r\nSUMMARY:6:45AM up\\, 6:15PM bath\r\nTRANSP:TRANSPARENT\r\nX-EVOLUTION-CALDAV-ETAG:63878327698\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:This is an event reminder\r\nTRIGGER:-P1D\r\nX-EVOLUTION-ALARM-UID:6d0a6513583f4e81af585c341705a42a528da6e1\r\nEND:VALARM\r\nEND:VEVENT\r\n', '8666d90eac74f4d00580421de94663e785150d1b\n9ccdc6f8e9d258afef6e8db07becedb50073b326\t20250326\n1742860800\n1742947200\n1743033600\nBEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20250326\r\nDTEND;VALUE=DATE:20250327\r\nRRULE:FREQ=WEEKLY;UNTIL=20250603\r\nEXDATE;VALUE=DATE:20241225\r\nEXDATE;VALUE=DATE:20250101\r\nEXDATE;VALUE=DATE:20250409\r\nEXDATE;VALUE=DATE:20250416\r\nEXDATE;VALUE=DATE:20250507\r\nEXDATE;VALUE=DATE:20250514\r\nDTSTAMP:20250324T115646Z\r\nUID:qrke1trtpjnbg5o6dun2d0icqe@google.com\r\nCREATED:20221121T132730Z\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for DESCRIPTION \r\n property. Removing entire property:\r\nLAST-MODIFIED:20250324T115646Z\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for LOCATION \r\n property. Removing entire property:\r\nSEQUENCE:2\r\nSTATUS:CONFIRMED\r\nSUMMARY:M&D in TW\r\nTRANSP:TRANSPARENT\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for LOCATION \r\n property. Removing entire property:\r\nX-EVOLUTION-CALDAV-ETAG:63878500606\r\nRECURRENCE-ID;VALUE=DATE:20250326\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:This is an event reminder\r\nTRIGGER:-P1D\r\nX-EVOLUTION-ALARM-UID:9ccdc6f8e9d258afef6e8db07becedb50073b326\r\nEND:VALARM\r\nEND:VEVENT\r\n', '8666d90eac74f4d00580421de94663e785150d1b\ncc601456a85f893983850c43f04ffa7a9ccec948\t20250326\n1742860800\n1742947200\n1743033600\nBEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20250326\r\nDTEND;VALUE=DATE:20250327\r\nRRULE:FREQ=WEEKLY;INTERVAL=2\r\nEXDATE;VALUE=DATE:20250101\r\nDTSTAMP:20230615T104056Z\r\nUID:o7gj3d81fkik81ell1aqve5nve@google.com\r\nCREATED:20190924T182547Z\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for DESCRIPTION \r\n property. Removing entire property:\r\nLAST-MODIFIED:20230615T104056Z\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for LOCATION \r\n property. Removing entire property:\r\nSEQUENCE:1\r\nSTATUS:CONFIRMED\r\nSUMMARY:Recycling bin day\r\nTRANSP:TRANSPARENT\r\nX-APPLE-TRAVEL-ADVISORY-BEHAVIOR:AUTOMATIC\r\nX-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for LOCATION \r\n property. Removing entire property:\r\nX-EVOLUTION-CALDAV-ETAG:63850082553\r\nRECURRENCE-ID;VALUE=DATE:20250326\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:This is an event reminder\r\nTRIGGER:-P1D\r\nX-EVOLUTION-ALARM-UID:cc601456a85f893983850c43f04ffa7a9ccec948\r\nEND:VALARM\r\nBEGIN:VALARM\r\nACTION:AUDIO\r\nTRIGGER;RELATED=START:-PT15H\r\nX-EVOLUTION-ALARM-UID:641b605533ba7e5cc710b7bb0b1653b0225df4f1\r\nATTACH:Chord\r\nACKNOWLEDGED:20230509T073213Z\r\nX-WR-ALARMUID:CA57CABD-6225-4BE1-994E-FF54F7297682\r\nUID:CA57CABD-6225-4BE1-994E-FF54F7297682\r\nX-APPLE-DEFAULT-ALARM:TRUE\r\nEND:VALARM\r\nEND:VEVENT\r\n']
-
-[org/gnome/evolution]
-default-address-book='0f9b64449fc538fd2ce3b38a9c3e905cdf319fba'
-
-[org/gnome/gnome-system-monitor]
-cpu-colors=[(uint32 0, '#e01b24'), (1, '#ff7800'), (2, '#f6d32d'), (3, '#33d17a'), (4, '#26a269'), (5, '#62a0ea'), (6, '#1c71d8'), (7, '#613583'), (8, '#9141ac'), (9, '#c061cb'), (10, '#ffbe6f'), (11, '#f9f06b'), (12, '#8ff0a4'), (13, '#2ec27e'), (14, '#1a5fb4'), (15, '#c061cb'), (16, '#eca8f3327999'), (17, '#d6407999f332'), (18, '#7999f332b2c5'), (19, '#f3328f497999'), (20, '#79998763f332'), (21, '#aadff3327999'), (22, '#f3327999ce5a'), (23, '#7999f1d5f332'), (24, '#f332d1137999'), (25, '#ad987999f332'), (26, '#7999f3328a1c'), (27, '#f33279998c90'), (28, '#7999b00cf332'), (29, '#d387f3327999'), (30, '#ef617999f332'), (31, '#7999f332cbe6'), (32, '#f332a86a7999'), (33, '#84ef7999f332'), (34, '#91bef3327999'), (35, '#f3327999b539'), (36, '#7999d8b4f332'), (37, '#f332ea347999'), (38, '#c6b87999f332'), (39, '#7999f332a33d'), (40, '#f3327fc27999'), (41, '#799996ebf332'), (42, '#ba66f3327999'), (43, '#f3327999dde2'), (44, '#7999f332e507'), (45, '#f332c18b7999'), (46, '#9e107999f332'), (47, '#7999f3327a94')]
-show-dependencies=false
-show-whose-processes='user'
-window-height=1352
-window-width=3408
-
-[org/gnome/gnome-system-monitor/proctree]
-col-26-visible=false
-col-26-width=0
-
 [org/gnome/mutter]
 dynamic-workspaces=false
 edge-tiling=false
@@ -224,37 +98,10 @@ default-folder-viewer='icon-view'
 migrated-gtk-settings=true
 search-filter-time-type='last_modified'
 
-[org/gnome/nautilus/window-state]
-initial-size=(1696, 1376)
-maximized=false
-
-[org/gnome/nm-applet/eap/22c26f6b-ad13-4379-b5dc-fbbb04a12153]
-ignore-ca-cert=false
-ignore-phase2-ca-cert=false
-
-[org/gnome/nm-applet/eap/2fe54665-8d1e-445b-b953-fb03ccb2102d]
-ignore-ca-cert=false
-ignore-phase2-ca-cert=false
-
-[org/gnome/nm-applet/eap/32ab57b2-f4aa-44a9-acb6-7abb257feab9]
-ignore-ca-cert=false
-ignore-phase2-ca-cert=false
-
-[org/gnome/portal/filechooser/slack]
-last-folder-path='/home/william/Downloads'
-
 [org/gnome/settings-daemon/plugins/color]
 night-light-enabled=true
 night-light-schedule-automatic=false
 night-light-temperature=uint32 3482
-
-[org/gnome/settings-daemon/plugins/media-keys]
-custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']
-screensaver=@as []
-
-[org/gnome/settings-daemon/plugins/power]
-sleep-inactive-ac-timeout=7200
-sleep-inactive-ac-type='suspend'
 
 [org/gnome/shell]
 disabled-extensions=['windowsNavigator@gnome-shell-extensions.gcampax.github.com', 'system-monitor@gnome-shell-extensions.gcampax.github.com', 'native-window-placement@gnome-shell-extensions.gcampax.github.com', 'light-style@gnome-shell-extensions.gcampax.github.com', 'launch-new-instance@gnome-shell-extensions.gcampax.github.com', 'apps-menu@gnome-shell-extensions.gcampax.github.com', 'places-menu@gnome-shell-extensions.gcampax.github.com', 'drive-menu@gnome-shell-extensions.gcampax.github.com', 'screenshot-window-sizer@gnome-shell-extensions.gcampax.github.com', 'workspace-indicator@gnome-shell-extensions.gcampax.github.com']
@@ -285,118 +132,16 @@ tile-resize-down = ["<Control><Shift>s", "<Shift>KP_Down", "<Shift>j"]
 tile-resize-up = ["<Control><Shift>w", "<Shift>KP_Up", "<Shift>k"]
 tile-resize-right = ["<Control><Shift>d", "<Shift>KP_Right", "<Shift>l"]
 
-# Defaults from https://raw.githubusercontent.com/pop-os/shell/master_mantic/schemas/org.gnome.shell.extensions.pop-shell.gschema.xml
-# fullscreen-launcher = false
-# show-skip-taskbar = true
-# mouse-cursor-follows-active-window = true
-# mouse-cursor-focus-location = "uint32 0"
-# column-size = "uint32 64"
-# row-size = "uint32 64"
-# smart-gaps = false
-# snap-to-grid = false
-# stacking-with-mouse = true
-# toggle-stacking = ["s"]
-# toggle-stacking-global = ["<Super>s"]
-# management-orientation = ["o"]
-# tile-enter = ["<Super>Return", "<Super>KP_Enter"]
-# tile-accept = ["Return", "KP_Enter"]
-# tile-reject = ["Escape"]
-# toggle-floating = ["<Super>g"]
-# toggle-tiling = ["<Super>y"]
-# tile-move-left = ["Left", "KP_Left", "h"]
-# tile-move-down = ["Down", "KP_Down", "j"]
-# tile-move-up = ["Up", "KP_Up", "k"]
-# tile-move-right = ["Right", "KP_Right", "l"]
-# tile-orientation = ["<Super>o"]
-# tile-resize-left = ["<Shift>Left", "<Shift>KP_Left", "<Shift>h"]
-# tile-resize-down = ["<Shift>Down", "<Shift>KP_Down", "<Shift>j"]
-# tile-resize-up = ["<Shift>Up", "<Shift>KP_Up", "<Shift>k"]
-# tile-resize-right = ["<Shift>Right", "<Shift>KP_Right", "<Shift>l"]
-# tile-swap-left = ["<Primary>Left", "<Primary>KP_Left", "<Primary>h"]
-# tile-swap-down = ["<Primary>Down", "<Primary>KP_Down", "<Primary>j"]
-# tile-swap-up = ["<Primary>Up", "<Primary>KP_Up", "<Primary>k"]
-# tile-swap-right = ["<Primary>Right", "<Primary>KP_Right", "<Primary>l"]
-# pop-workspace-down = ["<Super><Shift>Down", "<Super><Shift>KP_Down", "<Super><Shift>j"]
-# pop-workspace-up = ["<Super><Shift>Up", "<Super><Shift>KP_Up", "<Super><Shift>k"]
-# pop-monitor-down = ["<Super><Shift><Primary>Down", "<Super><Shift><Primary>KP_Down", "<Super><Shift><Primary>j"]
-# pop-monitor-up = ["<Super><Shift><Primary>Up", "<Super><Shift><Primary>KP_Up", "<Super><Shift><Primary>k"]
-# pop-monitor-left = ["<Super><Shift>Left", "<Super><Shift>KP_Left", "<Super><Shift>h"]
-# pop-monitor-right = ["<Super><Shift>Right", "<Super><Shift>KP_Right", "<Super><Shift>l"]
-# hint-color-rgba = "rgba(251, 184, 108, 1)"
-# log-level = "uint32 0"
-
-[org/gnome/shell/extensions/system-monitor]
-show-cpu=true
-show-swap=false
-
-[org/gnome/shell/extensions/workspace-indicator]
-embed-previews=false
-
 [org/gnome/shell/keybindings]
-show-screenshot-ui=['<Shift><Super>s']
+show-screenshot-ui=['<Control><Shift>s']
 switch-to-application-1=@as []
 switch-to-application-2=@as []
 switch-to-application-3=@as []
 switch-to-application-4=@as []
-toggle-application-view=['<Super>x']
 
 [org/gnome/shell/weather]
 automatic-location=true
 locations=[<(uint32 2, <('London', 'EGWU', true, [(0.89971722940307675, -0.007272211034407213)], [(0.89884456477707964, -0.0020362232784242244)])>)>]
 
-[org/gnome/shell/world-clocks]
-locations=@av []
-
-[org/gnome/shotwell/preferences/ui]
-display-basic-properties=true
-display-extended-properties=false
-display-photo-comments=false
-display-photo-ratings=true
-display-photo-tags=true
-display-photo-titles=false
-display-search-bar=false
-display-sidebar=true
-events-sort-ascending=false
-library-photos-sort-ascending=false
-library-photos-sort-by=2
-show-welcome-dialog=false
-sidebar-position=180
-
-[org/gnome/shotwell/preferences/window]
-direct-height=1404
-direct-maximize=false
-direct-width=846
-library-height=1390
-library-maximize=false
-library-width=847
-
 [org/gnome/tweaks]
 show-extensions-notice=false
-
-[org/gtk/gtk4/settings/file-chooser]
-date-format='regular'
-location-mode='path-bar'
-show-hidden=false
-show-size-column=true
-show-type-column=true
-sidebar-width=140
-sort-column='name'
-sort-directories-first=true
-sort-order='ascending'
-type-format='category'
-view-type='list'
-window-size=(859, 366)
-
-[org/gtk/settings/file-chooser]
-date-format='regular'
-location-mode='path-bar'
-show-hidden=true
-show-size-column=true
-show-type-column=true
-sidebar-width=201
-sort-column='modified'
-sort-directories-first=false
-sort-order='descending'
-type-format='category'
-window-position=(1142, 307)
-window-size=(1151, 822)
