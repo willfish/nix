@@ -79,16 +79,7 @@
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
-    settings = {
-      General = {
-        Experimental = true;
-        DebugKeys = true;
-        Enable = "Source,Sink,Media,Socket";
-      };
-    };
   };
-
-  services.blueman.enable = true;
 
   programs.gnupg.agent = {
     enable = true;
