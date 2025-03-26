@@ -102,7 +102,7 @@
     gnomeExtensions.appindicator # GNOME extension for app indicators
 
     gnomeExtensions.pop-shell # GNOME extension for tiling window management
-    pop-laucher # Pop!_OS launcher
+    pop-launcher # Pop!_OS launcher
 
     gnome-tweaks
 
