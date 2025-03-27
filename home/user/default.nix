@@ -1,12 +1,13 @@
 {
   imports = [
-    ./git.nix
     ./config.nix
-    ./tmux.nix
-    ./shells.nix
+    ./environment.nix
+    ./git.nix
+    ./gnome.nix
     ./packages.nix
     ./programs.nix
-    ./environment.nix
+    ./shells.nix
+    ./tmux.nix
     ./zathura.nix
   ];
 }
