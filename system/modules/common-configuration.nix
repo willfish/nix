@@ -105,6 +105,22 @@
 
     xclip
   ];
+  environment.gnome.excludePackages = with pkgs; [
+    geary
+    gnome-disk-utility
+    gnome-backgrounds
+    gnome-tour
+    gnome-user-docs
+    baobab
+    epiphany
+    gnome-text-editor
+    gnome-characters
+    gnome-contacts
+    gnome-font-viewer
+    totem
+    yelp
+    gnome-software
+  ];
 
   environment.shells = with pkgs-unstable; [ bash fish ];
   users.defaultUserShell = pkgs-unstable.fish;

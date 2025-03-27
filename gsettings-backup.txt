@@ -1,0 +1,367 @@
+[org.gnome.shell.extensions.pop-shell]
+activate-launcher=['<Super>x']
+active-hint=true
+active-hint-border-radius='uint32 1'
+focus-down=['<Super>s']
+focus-left=['<Super>a']
+focus-right=['<Super>d']
+focus-up=['<Super>w']
+gap-inner='uint32 1'
+gap-outer='uint32 1'
+show-title=false
+tile-by-default=true
+tile-move-down-global=['<Shift><Super>s']
+tile-move-left-global=['<Shift><Super>a']
+tile-move-right-global=['<Shift><Super>d']
+tile-move-up-global=['<Shift><Super>w']
+
+[org/blueman/general]
+plugin-list=['TransferService', '!NetUsage', 'AutoConnect']
+services-last-item=0
+window-properties=[3430, 1408, 5, 27]
+
+[org/blueman/network]
+nap-enable=false
+
+[org/blueman/plugins/autoconnect]
+services=[('/org/bluez/hci0/dev_AC_A9_B4_00_0E_21', '00000000-0000-0000-0000-000000000000')]
+
+[org/blueman/plugins/powermanager]
+auto-power-on=@mb true
+
+[org/blueman/plugins/recentconns]
+recent-connections=[{'adapter': '10:91:D1:5B:0B:5C', 'address': 'AC:A9:B4:00:0E:21', 'alias': 'Audioengine 2+', 'icon': 'audio-card', 'name': 'Audio and input profiles', 'uuid': '00000000-0000-0000-0000-000000000000', 'time': '1741037536.6865609', 'device': '/org/bluez/hci0/dev_AC_A9_B4_00_0E_21'}, {'adapter': '10:91:D1:5B:0B:5C', 'address': '90:62:3F:51:9E:DD', 'alias': 'AirPods Pro', 'icon': 'audio-headphones', 'name': 'Audio and input profiles', 'uuid': '00000000-0000-0000-0000-000000000000', 'time': '1721936890.5603557'}, {'adapter': '10:91:D1:5B:0B:5C', 'address': 'F2:F0:10:0B:DD:0B', 'alias': 'Adv360 Pro', 'icon': 'input-keyboard', 'name': 'Audio and input profiles', 'uuid': '00000000-0000-0000-0000-000000000000', 'time': '1731247212.7513273', 'device': '/org/bluez/hci0/dev_F2_F0_10_0B_DD_0B'}]
+
+[org/freedesktop/folks]
+primary-store='eds:0f9b64449fc538fd2ce3b38a9c3e905cdf319fba'
+
+[org/gnome/Console]
+font-scale=1.9000000000000008
+last-window-maximised=false
+last-window-size=(840, 1376)
+
+[org/gnome/Contacts]
+did-initial-setup=true
+window-fullscreen=false
+window-height=1376
+window-maximized=false
+window-width=412
+
+[org/gnome/Extensions]
+window-height=1400
+window-width=855
+
+[org/gnome/Geary]
+migrated-config=true
+window-height=1376
+window-width=1696
+
+[org/gnome/Mahjongg]
+window-height=1392
+window-width=850
+
+[org/gnome/Music]
+window-maximized=false
+window-size=[850, 1392]
+
+[org/gnome/Weather]
+locations=[<(uint32 2, <('London', 'EGWU', true, [(0.89971722940307675, -0.007272211034407213)], [(0.89884456477707964, -0.0020362232784242244)])>)>]
+window-height=1376
+window-maximized=false
+window-width=840
+
+[org/gnome/calendar]
+active-view='month'
+window-maximized=false
+window-size=(850, 1392)
+
+[org/gnome/control-center]
+last-panel='keyboard'
+window-state=(850, 1392, false)
+
+[org/gnome/desktop/app-folders]
+folder-children=['Utilities', 'YaST', 'Pardus']
+
+[org/gnome/desktop/app-folders/folders/Pardus]
+categories=['X-Pardus-Apps']
+name='X-Pardus-Apps.directory'
+translate=true
+
+[org/gnome/desktop/app-folders/folders/Utilities]
+apps=['gnome-abrt.desktop', 'gnome-system-log.desktop', 'nm-connection-editor.desktop', 'org.gnome.baobab.desktop', 'org.gnome.Connections.desktop', 'org.gnome.DejaDup.desktop', 'org.gnome.Dictionary.desktop', 'org.gnome.DiskUtility.desktop', 'org.gnome.Evince.desktop', 'org.gnome.FileRoller.desktop', 'org.gnome.fonts.desktop', 'org.gnome.Loupe.desktop', 'org.gnome.seahorse.Application.desktop', 'org.gnome.tweaks.desktop', 'org.gnome.Usage.desktop', 'vinagre.desktop']
+categories=['X-GNOME-Utilities']
+name='X-GNOME-Utilities.directory'
+translate=true
+
+[org/gnome/desktop/app-folders/folders/YaST]
+categories=['X-SuSE-YaST']
+name='suse-yast.directory'
+translate=true
+
+[org/gnome/desktop/background]
+color-shading-type='solid'
+picture-options='zoom'
+picture-uri='file:///home/william/.config/variety/Downloaded/wallhaven_wallhaven_cc_search_q_space_categories_111_purity_100_atleast_3840x1600_sorting_relevance_order_desc0cd00f7bdc/wallhaven-495w11.jpg'
+picture-uri-dark='file:///home/william/.config/variety/Downloaded/wallhaven_wallhaven_cc_search_q_space_categories_111_purity_100_atleast_3840x1600_sorting_relevance_order_desc0cd00f7bdc/wallhaven-495w11.jpg'
+primary-color='#d3a778'
+secondary-color='#000000'
+
+[org/gnome/desktop/input-sources]
+sources=[('xkb', 'us')]
+xkb-options=['terminate:ctrl_alt_bksp']
+
+[org/gnome/desktop/interface]
+accent-color='blue'
+color-scheme='prefer-dark'
+cursor-theme='Catppuccin-Macchiato-Blue'
+enable-hot-corners=false
+gtk-theme='Catppuccin-Macchiato-Compact-Blue-dark'
+icon-theme='Adwaita'
+
+[org/gnome/desktop/notifications]
+application-children=['org-gnome-settings', 'org-gnome-console', 'gnome-power-panel', 'zoom', 'slack', 'firefox', 'org-telegram-desktop', 'gnome-network-panel', 'org-gnome-epiphany', 'org-gnome-characters', 'gnome-printers-panel', 'org-gnome-evolution-alarm-notify', 'spotify', 'com-mitchellh-ghostty', 'org-gnome-calendar']
+
+[org/gnome/desktop/notifications/application/com-mitchellh-ghostty]
+application-id='com.mitchellh.ghostty.desktop'
+
+[org/gnome/desktop/notifications/application/firefox]
+application-id='firefox.desktop'
+
+[org/gnome/desktop/notifications/application/gnome-network-panel]
+application-id='gnome-network-panel.desktop'
+
+[org/gnome/desktop/notifications/application/gnome-power-panel]
+application-id='gnome-power-panel.desktop'
+
+[org/gnome/desktop/notifications/application/gnome-printers-panel]
+application-id='gnome-printers-panel.desktop'
+
+[org/gnome/desktop/notifications/application/org-gnome-calendar]
+application-id='org.gnome.Calendar.desktop'
+
+[org/gnome/desktop/notifications/application/org-gnome-characters]
+application-id='org.gnome.Characters.desktop'
+
+[org/gnome/desktop/notifications/application/org-gnome-console]
+application-id='org.gnome.Console.desktop'
+
+[org/gnome/desktop/notifications/application/org-gnome-epiphany]
+application-id='org.gnome.Epiphany.desktop'
+
+[org/gnome/desktop/notifications/application/org-gnome-evolution-alarm-notify]
+application-id='org.gnome.Evolution-alarm-notify.desktop'
+
+[org/gnome/desktop/notifications/application/org-gnome-settings]
+application-id='org.gnome.Settings.desktop'
+
+[org/gnome/desktop/notifications/application/org-telegram-desktop]
+application-id='org.telegram.desktop.desktop'
+
+[org/gnome/desktop/notifications/application/slack]
+application-id='slack.desktop'
+
+[org/gnome/desktop/notifications/application/spotify]
+application-id='spotify.desktop'
+
+[org/gnome/desktop/notifications/application/zoom]
+application-id='Zoom.desktop'
+
+[org/gnome/desktop/peripherals/touchpad]
+two-finger-scrolling-enabled=true
+
+[org/gnome/desktop/screensaver]
+color-shading-type='solid'
+lock-enabled=false
+picture-options='zoom'
+picture-uri='file:///home/william/.config/variety/Downloaded/wallhaven_wallhaven_cc_search_q_space_categories_111_purity_100_atleast_3840x1600_sorting_relevance_order_desc0cd00f7bdc/wallhaven-495w11.jpg'
+primary-color='#d3a778'
+secondary-color='#000000'
+
+[org/gnome/desktop/search-providers]
+enabled=['org.gnome.Weather.desktop']
+sort-order=['org.gnome.Settings.desktop', 'org.gnome.Contacts.desktop', 'org.gnome.Nautilus.desktop']
+
+[org/gnome/desktop/session]
+idle-delay=uint32 600
+
+[org/gnome/desktop/wm/keybindings]
+close=['<Super>q']
+minimize=@as []
+move-to-workspace-1=['<Shift><Super>1']
+move-to-workspace-2=['<Shift><Super>2']
+move-to-workspace-3=['<Shift><Super>3']
+move-to-workspace-4=['<Shift><Super>4']
+switch-to-workspace-1=['<Super>1']
+switch-to-workspace-2=['<Super>2']
+switch-to-workspace-3=['<Super>3']
+switch-to-workspace-4=['<Super>4']
+toggle-fullscreen=['<Super>f']
+
+[org/gnome/desktop/wm/preferences]
+auto-raise=false
+button-layout='appmenu:close'
+focus-mode='mouse'
+num-workspaces=6
+workspace-names=['web', 'chat', 'sound', 'video']
+
+[org/gnome/epiphany]
+ask-for-default=false
+
+[org/gnome/epiphany/state]
+is-maximized=false
+window-size=(1696, 1376)
+
+[org/gnome/evolution-data-server]
+migrated=true
+
+[org/gnome/evolution]
+default-address-book='0f9b64449fc538fd2ce3b38a9c3e905cdf319fba'
+
+[org/gnome/mutter]
+dynamic-workspaces=false
+edge-tiling=false
+overlay-key='Super_L'
+
+[org/gnome/nautilus/preferences]
+default-folder-viewer='icon-view'
+migrated-gtk-settings=true
+search-filter-time-type='last_modified'
+
+[org/gnome/nautilus/window-state]
+initial-size=(850, 1392)
+maximized=false
+
+[org/gnome/nm-applet/eap/22c26f6b-ad13-4379-b5dc-fbbb04a12153]
+ignore-ca-cert=false
+ignore-phase2-ca-cert=false
+
+[org/gnome/nm-applet/eap/2fe54665-8d1e-445b-b953-fb03ccb2102d]
+ignore-ca-cert=false
+ignore-phase2-ca-cert=false
+
+[org/gnome/nm-applet/eap/32ab57b2-f4aa-44a9-acb6-7abb257feab9]
+ignore-ca-cert=false
+ignore-phase2-ca-cert=false
+
+[org/gnome/portal/filechooser/slack]
+last-folder-path='/home/william/Downloads'
+
+[org/gnome/settings-daemon/plugins/color]
+night-light-enabled=true
+night-light-schedule-automatic=false
+night-light-temperature='uint32 3482'
+
+[org/gnome/settings-daemon/plugins/media-keys]
+custom-keybindings=@as []
+help=@as []
+screensaver=@as []
+
+[org/gnome/settings-daemon/plugins/power]
+sleep-inactive-ac-timeout=7200
+sleep-inactive-ac-type='suspend'
+
+[org/gnome/shell]
+disable-user-extensions=false
+disabled-extensions=['windowsNavigator@gnome-shell-extensions.gcampax.github.com', 'system-monitor@gnome-shell-extensions.gcampax.github.com', 'native-window-placement@gnome-shell-extensions.gcampax.github.com', 'light-style@gnome-shell-extensions.gcampax.github.com', 'launch-new-instance@gnome-shell-extensions.gcampax.github.com', 'apps-menu@gnome-shell-extensions.gcampax.github.com', 'places-menu@gnome-shell-extensions.gcampax.github.com', 'drive-menu@gnome-shell-extensions.gcampax.github.com', 'screenshot-window-sizer@gnome-shell-extensions.gcampax.github.com', 'workspace-indicator@gnome-shell-extensions.gcampax.github.com']
+enabled-extensions=['auto-move-windows@gnome-shell-extensions.gcampax.github.com', 'appindicatorsupport@rgcjonas.gmail.com', 'pop-shell@system76.com', 'status-icons@gnome-shell-extensions.gcampax.github.com']
+welcome-dialog-last-shown-version='45.5'
+
+[org/gnome/shell/extensions/auto-move-windows]
+application-list=['brave-browser.desktop:1', 'spotify.desktop:3', 'org.clementine_player.Clementine.desktop:3', 'slack.desktop:2', 'org.telegram.desktop.desktop:2', 'discord.desktop:2']
+
+[org/gnome/shell/extensions/pop-shell]
+activate-launcher=['<Super>x']
+active-hint=true
+active-hint-border-radius='uint32 1'
+focus-down=['<Super>s']
+focus-left=['<Super>a']
+focus-right=['<Super>d']
+focus-up=['<Super>w']
+gap-inner='uint32 1'
+gap-outer='uint32 1'
+show-title=false
+tile-by-default=true
+tile-move-down-global=['<Shift><Super>s']
+tile-move-left-global=['<Shift><Super>a']
+tile-move-right-global=['<Shift><Super>d']
+tile-move-up-global=['<Shift><Super>w']
+tile-resize-down=['<Control><Shift>s', '<Shift>KP_Down', '<Shift>j']
+tile-resize-left=['<Control><Shift>a', '<Shift>KP_Left', '<Shift>h']
+tile-resize-right=['<Control><Shift>d', '<Shift>KP_Right', '<Shift>l']
+tile-resize-up=['<Control><Shift>w', '<Shift>KP_Up', '<Shift>k']
+
+[org/gnome/shell/extensions/system-monitor]
+show-cpu=true
+show-swap=false
+
+[org/gnome/shell/extensions/workspace-indicator]
+embed-previews=false
+
+[org/gnome/shell/keybindings]
+show-screenshot-ui=['<Control><Shift>s']
+switch-to-application-1='@as []'
+switch-to-application-2='@as []'
+switch-to-application-3='@as []'
+switch-to-application-4='@as []'
+toggle-application-view=['<Super>x']
+
+[org/gnome/shell/weather]
+automatic-location=true
+locations=[<(uint32 2, <('London', 'EGWU', true, [(0.89971722940307675, -0.007272211034407213)], [(0.89884456477707964, -0.0020362232784242244)])>)>]
+
+[org/gnome/shell/world-clocks]
+locations=@av []
+
+[org/gnome/shotwell/preferences/ui]
+display-basic-properties=true
+display-extended-properties=false
+display-photo-comments=false
+display-photo-ratings=true
+display-photo-tags=true
+display-photo-titles=false
+display-search-bar=false
+display-sidebar=true
+events-sort-ascending=false
+library-photos-sort-ascending=false
+library-photos-sort-by=2
+show-welcome-dialog=false
+sidebar-position=180
+
+[org/gnome/shotwell/preferences/window]
+direct-height=1404
+direct-maximize=false
+direct-width=846
+library-height=1390
+library-maximize=false
+library-width=847
+
+[org/gnome/tweaks]
+show-extensions-notice=false
+
+[org/gtk/gtk4/settings/file-chooser]
+date-format='regular'
+location-mode='path-bar'
+show-hidden=false
+show-size-column=true
+show-type-column=true
+sidebar-width=140
+sort-column='name'
+sort-directories-first=true
+sort-order='ascending'
+type-format='category'
+view-type='list'
+window-size=(859, 366)
+
+[org/gtk/settings/file-chooser]
+date-format='regular'
+location-mode='path-bar'
+show-hidden=true
+show-size-column=true
+show-type-column=true
+sidebar-width=201
+sort-column='modified'
+sort-directories-first=false
+sort-order='descending'
+type-format='category'
+window-position=(1142, 307)
+window-size=(1151, 822)

@@ -19,7 +19,6 @@
     vokoscreen-ng       # Screen recording tool with audio support
     xournalpp           # Note-taking and PDF annotation tool
     mozillavpn          # Mozilla’s VPN client for secure browsing
-    simple-scan         # Simple GUI for scanning documents
     variety             # Wallpaper changer with customization options
     audacity            # Audio recording and editing software
 
