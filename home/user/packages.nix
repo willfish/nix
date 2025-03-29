@@ -80,5 +80,7 @@
     gnome-mahjongg      # Mahjongg solitaire game
     helix               # Post modern text editor
     zed-editor          # Modern text editor
+
+    dconf2nix          # Convert dconf settings to Nix expressions
   ];
 }

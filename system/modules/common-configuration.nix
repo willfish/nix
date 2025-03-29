@@ -102,6 +102,7 @@
     gnomeExtensions.appindicator      # GNOME extension for app indicators
     gnomeExtensions.pop-shell         # GNOME extension for tiling window management
     gnome-tweaks                      # GNOME app for customizing the desktop environment
+    pop-launcher                      # GNOME app for launching applications
 
     xclip
   ];
