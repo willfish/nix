@@ -78,9 +78,12 @@
     neofetch            # System info display with ASCII art
     inxi                # System information script
     gnome-mahjongg      # Mahjongg solitaire game
-    helix               # Post modern text editor
-    zed-editor          # Modern text editor
 
-    dconf2nix          # Convert dconf settings to Nix expressions
+    dconf2nix           # Convert dconf settings to Nix expressions
+
+    emacs               # Extensible, customizable text editor
+    helix               # Post modern text editor
+
+    act                # GitHub Actions runner for local testing
   ];
 }
