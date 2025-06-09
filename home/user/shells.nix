@@ -35,6 +35,10 @@ let
 
     mux = "tmuxinator";
     tm = "tmux";
+
+    prod = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/production";
+    stag = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/staging";
+    dev = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/development";
   };
 in
 {
