@@ -351,7 +351,7 @@ require("lazy").setup({
 			end, { desc = "Search by Grep" })
 			vim.keymap.set(
 				"n",
-				"<Leader>fp",
+				"<Leader>fp<CR>",
 				":lua require('telescope').extensions.gh.pull_request()<CR>",
 				{ desc = "[S]earch [P]ull requests" }
 			)
