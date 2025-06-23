@@ -1,5 +1,4 @@
 #! /usr/bin/env fish
-
 set COMMAND $argv[1]
 set REGION eu-west-2
 
@@ -11,34 +10,125 @@ end
 
 # List ECS clusters and select one
 set cluster (aws ecs list-clusters --region $REGION | jq -r '.clusterArns[] | split("/") | .[1]' | fzf --height 40% --prompt "Select a Cluster: ")
-
 if test -z "$cluster"
     echo "No cluster selected. Exiting."
     exit 1
 end
-
 echo "Selected Cluster: $cluster"
 
 # List services in the selected cluster and select one
 set service (aws ecs list-services --cluster "$cluster" --region $REGION | jq -r '.serviceArns[] | split("/") | .[2]' | fzf --height 40% --prompt "Select a Service: ")
-
 if test -z "$service"
     echo "No service selected. Exiting."
     exit 1
 end
-
 echo "Selected Service: $service"
+
+# Check if this is the backend-job service and if it's stopped
+if test "$service" = backend-job
+    set running_tasks (aws ecs list-tasks --cluster "$cluster" --service-name "$service" --region $REGION --desired-status RUNNING | jq -r '.taskArns | length')
+
+    if test "$running_tasks" -eq 0
+        echo "backend-job service has no running tasks. Starting a new task..."
+
+        # Get the task definition ARN for the service
+        set task_def (aws ecs describe-services --cluster "$cluster" --services "$service" --region $REGION | jq -r '.services[0].taskDefinition')
+
+        if test -z "$task_def"
+            echo "Could not find task definition for service $service"
+            exit 1
+        end
+
+        echo "Starting task with definition: $task_def"
+
+        # Get network configuration (subnets and security groups)
+        echo "Fetching network configuration..."
+        set subnets (aws ec2 describe-subnets \
+            --filters "Name=tag:Name,Values=*private*" \
+            --query 'Subnets[*].SubnetId' \
+            --output text \
+            --region $REGION | tr '\t' ',')
+
+        # Determine security group name based on cluster
+        if string match -q "*development*" "$cluster"
+            set sg_name trade-tariff-ecs-security-group-development
+        else if string match -q "*staging*" "$cluster"
+            set sg_name trade-tariff-ecs-security-group-staging
+        else if string match -q "*production*" "$cluster"
+            set sg_name trade-tariff-ecs-security-group-production
+        else
+            echo "Could not determine security group for cluster $cluster"
+            exit 1
+        end
+
+        set sg (aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=$sg_name" \
+            --query 'SecurityGroups[0].GroupId' \
+            --output text \
+            --region $REGION)
+
+        if test -z "$subnets" -o -z "$sg"
+            echo "Could not fetch network configuration. Subnets: $subnets, SG: $sg"
+            exit 1
+        end
+
+        echo "Using subnets: $subnets"
+        echo "Using security group: $sg"
+
+        # Start a new task with a long-running command to keep it alive
+        set task_arn (aws ecs run-task \
+            --cluster "$cluster" \
+            --task-definition "$task_def" \
+            --launch-type FARGATE \
+            --region $REGION \
+            --enable-execute-command \
+            --network-configuration "awsvpcConfiguration={subnets=[$subnets],securityGroups=[$sg],assignPublicIp=DISABLED}" \
+            --started-by ecs-exec-script \
+            --overrides '{"containerOverrides":[{"name":"'$service'","command":["/bin/sh","-c","sleep 3600"]}]}' \
+            | jq -r '.tasks[0].taskArn')
+
+        if test -z "$task_arn"
+            echo "Failed to start task"
+            exit 1
+        end
+
+        set task (echo $task_arn | awk -F'/' '{print $NF}')
+        echo "Started task: $task"
+        echo "Waiting for task to be ready for exec..."
+
+        # Wait for the task to be running and ready for exec
+        set max_wait 60
+        set wait_count 0
+        while test $wait_count -lt $max_wait
+            set task_status (aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region $REGION | jq -r '.tasks[0].lastStatus')
+            if test "$task_status" = RUNNING
+                echo "Task is running, waiting a bit more for exec readiness..."
+                sleep 10 # Give it a moment to be fully ready for exec
+                break
+            end
+            echo "Task status: $task_status, waiting..."
+            sleep 2
+            set wait_count (math $wait_count + 1)
+        end
+
+        if test $wait_count -eq $max_wait
+            echo "Task did not start within expected time"
+            exit 1
+        end
+    else
+        echo "backend-job service has $running_tasks running task(s). Proceeding with task selection..."
+    end
+end
 
 # List tasks in the selected service and select one
 set task (aws ecs list-tasks --cluster "$cluster" --service-name "$service" --region $REGION | jq -r '.taskArns[] | split("/") | .[2]' | fzf --height 40% --prompt "Select a Task: ")
-
 if test -z "$task"
     echo "No task selected. Exiting."
     exit 1
 end
-
 echo "Selected Task: $task"
 
+# Set up the command to execute
 if test -z "$COMMAND"
     set command /bin/sh
 else
@@ -46,5 +136,4 @@ else
 end
 
 set full_command "aws ecs execute-command --cluster $cluster --task $task --container $service --region $REGION --interactive --command '$command'"
-
 eval $full_command
