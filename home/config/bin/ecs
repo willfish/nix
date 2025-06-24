@@ -1,4 +1,5 @@
 #! /usr/bin/env fish
+
 set COMMAND $argv[1]
 set REGION eu-west-2
 
@@ -137,3 +138,8 @@ end
 
 set full_command "aws ecs execute-command --cluster $cluster --task $task --container $service --region $REGION --interactive --command '$command'"
 eval $full_command
+
+if test "$service" = backend-job
+    echo "backend-job needs to be stop when we're finished. stopping..."
+    aws ecs stop-task --task $task
+end
