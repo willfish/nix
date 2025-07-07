@@ -77,13 +77,9 @@
     # fun stuff
     neofetch            # System info display with ASCII art
     inxi                # System information script
-    gnome-mahjongg      # Mahjongg solitaire game
 
     dconf2nix           # Convert dconf settings to Nix expressions
 
-    emacs               # Extensible, customizable text editor
-    helix               # Post modern text editor
-
-    act                # GitHub Actions runner for local testing
+    code-cursor         # AI code editor
   ];
 }
