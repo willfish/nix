@@ -515,7 +515,7 @@ require("lazy").setup({
 			lspconfig["nil_ls"].setup({ capabilities = capabilities })
 			lspconfig["ols"].setup({ capabilities = capabilities })
 			lspconfig["pyright"].setup({ capabilities = capabilities })
-			-- lspconfig["ruby_lsp"].setup({ capabilities = capabilities })
+			lspconfig["ruby_lsp"].setup({ capabilities = capabilities })
 			lspconfig["terraformls"].setup({ capabilities = capabilities })
 			lspconfig["ts_ls"].setup({ capabilities = capabilities })
 
