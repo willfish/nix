@@ -81,5 +81,6 @@
     dconf2nix           # Convert dconf settings to Nix expressions
 
     code-cursor         # AI code editor
+    helix               # Fast terminal-based text editor with modern features
   ];
 }
