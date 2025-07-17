@@ -49,11 +49,6 @@ in
     '';
   };
 
-  system.activationScripts.usrLocal = ''
-    mkdir -p /usr/local/bin
-    chmod 755 /usr/local/bin
-  '';
-
   programs.fish = {
     package = pkgs-unstable.fish;
     enable = true;

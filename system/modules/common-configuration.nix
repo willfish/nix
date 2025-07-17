@@ -4,6 +4,11 @@
     mkdir -p /bin
     ln -sf ${pkgs.bash}/bin/bash /bin/bash
   '';
+  system.activationScripts.usrLocal = ''
+    mkdir -p /usr/local/bin
+    chmod 755 /usr/local/bin
+  '';
+
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
