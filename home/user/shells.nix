@@ -49,6 +49,11 @@ in
     '';
   };
 
+  system.activationScripts.usrLocal = ''
+    mkdir -p /usr/local/bin
+    chmod 755 /usr/local/bin
+  '';
+
   programs.fish = {
     package = pkgs-unstable.fish;
     enable = true;
@@ -65,7 +70,6 @@ in
       set -gx ERL_AFLAGS "-kernel shell_history enabled"
       set -gx PATH $HOME/.bin $PATH
       set -gx PATH $HOME/go/bin $PATH
-      set -gx PATH /usr/local/bin $PATH
       set -gx RUBYOPT --enable-yjit
       set -gx SAM_CLI_TELEMETRY 0
       set -gx fish_greeting ""
