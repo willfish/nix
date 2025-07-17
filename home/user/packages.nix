@@ -82,5 +82,8 @@
 
     code-cursor         # AI code editor
     helix               # Fast terminal-based text editor with modern features
+    (pkgs.callPackage (builtins.fetchGit {
+      url = "https://github.com/willfish/sniffy";
+    }) {})
   ];
 }
