@@ -1,4 +1,4 @@
-{ pkgs-unstable, ... }:
+{ pkgs-unstable, sniffy, ... }:
 {
   home.packages = with pkgs-unstable; [
     zoom-us             # Video conferencing application
@@ -82,8 +82,6 @@
 
     code-cursor         # AI code editor
     helix               # Fast terminal-based text editor with modern features
-    (pkgs.callPackage (builtins.fetchGit {
-      url = "https://github.com/willfish/sniffy";
-    }) {})
+    sniffy.packages.${pkgs.system}.default
   ];
 }
