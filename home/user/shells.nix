@@ -77,19 +77,6 @@ in
       today = ''notes_on (date +"%Y-%m-%d") today.md'';
       yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';
       tomorrow = ''notes_on (date +%F -d "tomorrow") today.md'';
-
-      logs = ''echo frontend_log\nbackend_log\nadmin_log\nduty_log | fzf | xargs -- echo'';
-      frontend_log = ''log_for "https://www.trade-tariff.service.gov.uk/healthcheck" trade-tariff-frontend'';
-      backend_log = ''log_for "https://www.trade-tariff.service.gov.uk/api/v2/healthcheck" trade-tariff-backend'';
-      duty_log = ''log_for "https://www.trade-tariff.service.gov.uk/duty-calculator/healthcheck" trade-tariff-duty-calculator'';
-      admin_log = ''log_for "https://admin.trade-tariff.service.gov.uk/healthcheck" trade-tariff-admin'';
-      all_logs = ''
-        frontend_log
-        backend_log
-        duty_log
-        admin_log
-      '';
-
     };
   };
   programs.zoxide.enable = true;
