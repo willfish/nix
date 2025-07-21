@@ -21,6 +21,7 @@
     mozillavpn          # Mozilla’s VPN client for secure browsing
     variety             # Wallpaper changer with customization options
     audacity            # Audio recording and editing software
+    dropbox             # Cloud storage and file synchronization service
 
     # Utilities
     jq                  # Command-line JSON processor
@@ -83,5 +84,6 @@
     code-cursor         # AI code editor
     helix               # Fast terminal-based text editor with modern features
     sniffy.packages.${pkgs.system}.default
+    libation            # Audio player with a focus on music libraries
   ];
 }
