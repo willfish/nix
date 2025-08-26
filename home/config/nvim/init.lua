@@ -629,7 +629,6 @@ require("lazy").setup({
 			"hrsh7th/cmp-path",
 			"hrsh7th/cmp-nvim-lsp-signature-help",
 			"github/copilot.vim",
-			"saadparwaiz1/cmp_luasnip",
 		},
 		config = function()
 			local cmp = require("cmp")
@@ -667,7 +666,6 @@ require("lazy").setup({
 					{ name = "luasnip" },
 					{ name = "path" },
 					{ name = "nvim_lsp_signature_help" },
-					{ name = "cmp_luasnip" },
 					{ name = "copilot" },
 				},
 			})

@@ -2,11 +2,6 @@
 
 name: work
 windows:
-  # - 🤖:
-  #     layout: even-vertical
-  #     panes:
-  #       - cd /home/william/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && tmux select-pane -t 1 -P "bg=colour130 fg=black bold" && bundle && bundle exec rails s
-  #       - cd /home/william/Repositories/hmrc/trade-tariff-admin && eval "$(direnv export fish)" && tmux select-pane -t 2 -P "bg=colour202 fg=white bold" && bundle && bundle exec rails s
   - 🐋:
       root: ~/
       panes:
@@ -15,5 +10,4 @@ windows:
       layout: even-vertical
       panes:
         - cd /home/william/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && pg-start
-        - cd /home/william/Repositories/hmrc/trade-tariff-admin && eval "$(direnv export fish)" && pg-start
         - cd /home/william/Repositories/hmrc/trade-tariff-dev-hub && eval "$(direnv export fish)" && pg-start

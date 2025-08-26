@@ -1,4 +1,4 @@
-  { pkgs, pkgs-unstable, ... }:
+{ pkgs, pkgs-unstable, ... }:
 {
   system.activationScripts.binBash = ''
     mkdir -p /bin
@@ -8,7 +8,6 @@
     mkdir -p /usr/local/bin
     chmod 755 /usr/local/bin
   '';
-
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -92,22 +91,22 @@
   };
 
   environment.systemPackages = with pkgs-unstable; [
-    neovim                 # Modernized fork of Vim with additional features
-    curl                   # Command-line tool for transferring data with URLs
-    git                    # Distributed version control system
-    ghostty                # Minimalist, high-performance terminal emulator
+    neovim
+    curl
+    git
+    ghostty
 
-    openssl                # Cryptographic library for SSL/TLS
-    openssl.dev            # Development files for OpenSSL (headers, libs)
-    pkg-config             # Helper tool to manage library dependencies during compilation
+    openssl # Cryptographic library for SSL/TLS
+    openssl.dev # Development files for OpenSSL (headers, libs)
+    pkg-config # Helper tool to manage library dependencies during compilation
 
-    home-manager           # Nix-based user environment manager
+    home-manager # Nix-based user environment manager
 
     gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
-    gnomeExtensions.appindicator      # GNOME extension for app indicators
-    gnomeExtensions.pop-shell         # GNOME extension for tiling window management
-    gnome-tweaks                      # GNOME app for customizing the desktop environment
-    pop-launcher                      # GNOME app for launching applications
+    gnomeExtensions.appindicator # GNOME extension for app indicators
+    gnomeExtensions.pop-shell # GNOME extension for tiling window management
+    gnome-tweaks # GNOME app for customizing the desktop environment
+    pop-launcher # GNOME app for launching applications
 
     xclip
   ];
@@ -128,7 +127,10 @@
     gnome-software
   ];
 
-  environment.shells = with pkgs-unstable; [ bash fish ];
+  environment.shells = with pkgs-unstable; [
+    bash
+    fish
+  ];
   users.defaultUserShell = pkgs-unstable.fish;
   programs.fish = {
     enable = true;
@@ -176,9 +178,15 @@
 
   nix = {
     settings = {
-      substituters = [ "https://cache.nixos.org" "https://nixpkgs-ruby.cachix.org" ];
+      substituters = [
+        "https://cache.nixos.org"
+        "https://nixpkgs-ruby.cachix.org"
+      ];
       warn-dirty = false;
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       auto-optimise-store = true;
     };
 

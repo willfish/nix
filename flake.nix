@@ -15,43 +15,49 @@
     };
     sniffy = {
       url = "github:willfish/sniffy";
-      inputs.nixpkgs.follows = "nixpkgs-unstable"; # Match home-manager
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+    smailer = {
+      url = "github:willfish/smailer";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
   };
   outputs =
-    { nixpkgs
-    , nixpkgs-unstable
-    , pre-commit-hooks
-    , home-manager
-    , sniffy
-    , ...
+    {
+      nixpkgs,
+      nixpkgs-unstable,
+      pre-commit-hooks,
+      home-manager,
+      sniffy,
+      smailer,
+      ...
     }:
-      let
-        system = "x86_64-linux";
-        lib = nixpkgs.lib;
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfree = true;
-          config.nvidia.acceptLicense = true;
+    let
+      system = "x86_64-linux";
+      lib = nixpkgs.lib;
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        config.nvidia.acceptLicense = true;
+      };
+      pkgs-unstable = import nixpkgs-unstable {
+        inherit system;
+        config.allowUnfree = true;
+        config.nvidia.acceptLicense = true;
+      };
+      pre-commit-check = pre-commit-hooks.lib.${system}.run {
+        src = ./.;
+        configPath = ".pre-commit-config-nix.yaml";
+        hooks = {
+          eclint.enable = true;
+          end-of-file-fixer.enable = true;
+          flake-checker.enable = true;
+          nil.enable = true;
+          ormolu.enable = true;
+          trim-trailing-whitespace.enable = true;
         };
-        pkgs-unstable = import nixpkgs-unstable {
-          inherit system;
-          config.allowUnfree = true;
-          config.nvidia.acceptLicense = true;
-        };
-        pre-commit-check = pre-commit-hooks.lib.${system}.run {
-          src = ./.;
-          configPath = ".pre-commit-config-nix.yaml";
-          hooks = {
-            eclint.enable = true;
-            end-of-file-fixer.enable = true;
-            flake-checker.enable = true;
-            nil.enable = true;
-            ormolu.enable = true;
-            trim-trailing-whitespace.enable = true;
-          };
-        };
-      in
+      };
+    in
     {
       nixosConfigurations = {
         andromeda = lib.nixosSystem {
@@ -72,6 +78,7 @@
           extraSpecialArgs = {
             inherit pkgs-unstable;
             inherit sniffy;
+            inherit smailer;
           };
         };
       };
