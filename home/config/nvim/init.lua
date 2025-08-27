@@ -44,7 +44,7 @@ vim.keymap.set("n", "<Leader>w", ":w!<CR>", { desc = "[W]rite the current file" 
 vim.keymap.set("n", "<Leader>q", ":wq!<CR>", { desc = "Write and [q]uit the current file" })
 
 function insert_jira_ticket_number()
-	local command = "git branch --show-current | sed -E 's/((BAU|HMRC)-[0-9]+)-(.+)/\\1: /'"
+	local command = "git branch --show-current | sed -E 's/((HMRC|PRDEX)-[0-9]+)-(.+)/\\1: /'"
 	local handle = io.popen(command)
 	local result = handle:read("*a")
 
