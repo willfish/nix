@@ -217,29 +217,45 @@ start_backend_job_task() {
     echo "$task"
 }
 
+wait_for_task_agent() {
+    local cluster="$1"
+    local task="$2"
+    local wait_count=0
+
+    while [[ $wait_count -lt $MAX_WAIT_TIME ]]; do
+        local agent_status
+        agent_status=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
+            | jq -r '.tasks[0].containers[0].managedAgents[0].lastStatus // empty')
+        if [[ "$agent_status" == "RUNNING" ]]; then
+            printf "\r%-80s\n" "Task status: AGENT $agent_status" >&2
+            return 0
+        fi
+        printf "\r%-80s" "Task status: AGENT ${agent_status:-N/A}, waiting..." >&2
+        sleep 2
+        ((wait_count++))
+    done
+
+    error_exit "ECS Exec agent did not start within expected time ($MAX_WAIT_TIME seconds)"
+}
+
 wait_for_task_ready() {
     local cluster="$1"
     local task="$2"
-
-    echo "Waiting for task to be ready for exec..." >&2
-
+    printf "Waiting for task to be ready for exec..." >&2
     local wait_count=0
     while [[ $wait_count -lt $MAX_WAIT_TIME ]]; do
         local task_status
         task_status=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
             | jq -r '.tasks[0].lastStatus')
-
         if [[ "$task_status" == "RUNNING" ]]; then
-            echo "Task is running, waiting a bit more for exec readiness..." >&2
-            sleep 20  # Give it a moment to be fully ready for exec
+            printf "\r%-80s\n" "Task status: $task_status, checking agent..." >&2
+            wait_for_task_agent "$cluster" "$task"
             return 0
         fi
-
-        echo "Task status: $task_status, waiting..." >&2
+        printf "\r%-80s" "Task status: $task_status, waiting..." >&2
         sleep 2
         ((wait_count++))
     done
-
     error_exit "Task did not start within expected time ($MAX_WAIT_TIME seconds)"
 }
 
@@ -306,11 +322,6 @@ main() {
         | jq -r '.tasks[0].enableExecuteCommand')
     [[ "$exec_enabled" == "true" ]] || error_exit "ECS Exec not enabled on task $task (check task definition IAM role)"
 
-    local agent_running
-    agent_running=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
-        | jq -r '.tasks[0].containers[0].managedAgents[0].lastStatus // empty')
-
-    [[ "$agent_running" == "RUNNING" ]] || error_exit "ECS Exec agent not running on task $task (check IAM/SSM endpoints)"
     # Execute command
     echo "Executing command in task..." >&2
     aws ecs execute-command \
