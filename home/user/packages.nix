@@ -78,7 +78,6 @@
     terraform # For terraform_fmt, terraform_validate
     terragrunt # For terragrunt-hclfmt
     tflint # For terraform_tflint
-    terraform-docs # For terraform_docs
 
     # fun stuff
     neofetch # System info display with ASCII art

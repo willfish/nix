@@ -54,6 +54,20 @@
     alsa.support32Bit = true;
     pulse.enable = true;
     wireplumber.enable = true;
+    wireplumber.extraConfig."10-bluez" = {
+      "monitor.bluez.properties" = {
+        "bluez5.enable-sbc-xq" = true;
+        "bluez5.enable-msbc" = true;
+        "bluez5.enable-hw-volume" = true;
+        "bluez5.roles" = [
+          "hsp_hs"
+          "hsp_ag"
+          "hfp_hf"
+          "hfp_ag"
+          "a2dp_sink"
+        ];
+      };
+    };
   };
 
   users.users.william = {
@@ -83,6 +97,11 @@
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
+    settings = {
+      General = {
+        Experimental = true;
+      };
+    };
   };
 
   programs.gnupg.agent = {
@@ -155,6 +174,7 @@
     spice-vdagentd.enable = true;
 
     xserver = {
+      videoDrivers = [ "nvidia" ];
       xkb.layout = "us";
       xkb.variant = "";
       enable = true;

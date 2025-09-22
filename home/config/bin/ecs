@@ -145,7 +145,7 @@ get_network_config() {
         --filters "Name=tag:Name,Values=*private*" \
         --query 'Subnets[*].SubnetId' \
         --output text \
-        --region "$REGION" | tr '\t' ',')
+        --region "$REGION" | tr '\t' '|')
 
     # Determine security group based on cluster
     case "$cluster" in
@@ -190,6 +190,7 @@ start_backend_job_task() {
     network_config=$(get_network_config "$cluster")
     local subnets="${network_config%,*}"
     local sg="${network_config#*,}"
+    subnets="$(echo "$subnets" | tr '|' ',')"
 
     # Start the task
     local task_arn
@@ -230,7 +231,7 @@ wait_for_task_ready() {
 
         if [[ "$task_status" == "RUNNING" ]]; then
             echo "Task is running, waiting a bit more for exec readiness..." >&2
-            sleep 10  # Give it a moment to be fully ready for exec
+            sleep 20  # Give it a moment to be fully ready for exec
             return 0
         fi
 
@@ -300,6 +301,16 @@ main() {
         trap "cleanup_backend_job '$cluster' '$task'" EXIT
     fi
 
+    local exec_enabled
+    exec_enabled=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
+        | jq -r '.tasks[0].enableExecuteCommand')
+    [[ "$exec_enabled" == "true" ]] || error_exit "ECS Exec not enabled on task $task (check task definition IAM role)"
+
+    local agent_running
+    agent_running=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
+        | jq -r '.tasks[0].containers[0].managedAgents[0].lastStatus // empty')
+
+    [[ "$agent_running" == "RUNNING" ]] || error_exit "ECS Exec agent not running on task $task (check IAM/SSM endpoints)"
     # Execute command
     echo "Executing command in task..." >&2
     aws ecs execute-command \

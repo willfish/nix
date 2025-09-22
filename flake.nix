@@ -6,11 +6,11 @@
     Home Manager configuration for my user account on all systems.
   '';
   inputs = {
-    nixpkgs.url = "nixpkgs/nixos-24.11";
+    # nixpkgs.url = "nixpkgs/nixos-25.05";
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     sniffy = {
@@ -24,7 +24,7 @@
   };
   outputs =
     {
-      nixpkgs,
+      # nixpkgs,
       nixpkgs-unstable,
       pre-commit-hooks,
       home-manager,
@@ -34,8 +34,8 @@
     }:
     let
       system = "x86_64-linux";
-      lib = nixpkgs.lib;
-      pkgs = import nixpkgs {
+      lib = nixpkgs-unstable.lib;
+      pkgs = import nixpkgs-unstable {
         inherit system;
         config.allowUnfree = true;
         config.nvidia.acceptLicense = true;

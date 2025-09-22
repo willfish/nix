@@ -4,11 +4,9 @@
 
   home.username = "william";
   home.homeDirectory = "/home/william";
-  home.stateVersion = "24.05";
-
+  home.stateVersion = "25.05";
+  home.enableNixpkgsReleaseCheck = false;
   programs.home-manager.enable = true;
-
-  services.network-manager-applet.enable = true;
 
   news.display = "silent";
   news.json = lib.mkForce { };
