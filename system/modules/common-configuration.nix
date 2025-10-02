@@ -44,7 +44,7 @@
   };
 
   # Enable sound with pipewire.
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
 
   security.rtkit.enable = true;
 
@@ -173,13 +173,13 @@
     };
     spice-vdagentd.enable = true;
 
+    displayManager.gdm.enable = true;
+    desktopManager.gnome.enable = true;
     xserver = {
       videoDrivers = [ "nvidia" ];
       xkb.layout = "us";
       xkb.variant = "";
       enable = true;
-      displayManager.gdm.enable = true;
-      desktopManager.gnome.enable = true;
     };
   };
 
