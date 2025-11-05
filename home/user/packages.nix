@@ -23,7 +23,6 @@
     gimp # Image editing software (GNU Image Manipulation Program)
     vokoscreen-ng # Screen recording tool with audio support
     xournalpp # Note-taking and PDF annotation tool
-    mozillavpn # Mozilla’s VPN client for secure browsing
     variety # Wallpaper changer with customization options
     audacity # Audio recording and editing software
     dropbox # Cloud storage and file synchronization service
@@ -76,6 +75,7 @@
     lua-language-server # Lua language server
     vscode-langservers-extracted # Extracted language servers for VSCode
     terraform # For terraform_fmt, terraform_validate
+    terraform-docs
     terragrunt # For terragrunt-hclfmt
     tflint # For terraform_tflint
 

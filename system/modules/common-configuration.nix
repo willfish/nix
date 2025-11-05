@@ -37,6 +37,9 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
+  services.mullvad-vpn.enable = true;
+  services.mullvad-vpn.package = pkgs-unstable.mullvad-vpn;
+
   services.avahi = {
     enable = true;
     nssmdns4 = true;
@@ -54,20 +57,6 @@
     alsa.support32Bit = true;
     pulse.enable = true;
     wireplumber.enable = true;
-    wireplumber.extraConfig."10-bluez" = {
-      "monitor.bluez.properties" = {
-        "bluez5.enable-sbc-xq" = true;
-        "bluez5.enable-msbc" = true;
-        "bluez5.enable-hw-volume" = true;
-        "bluez5.roles" = [
-          "hsp_hs"
-          "hsp_ag"
-          "hfp_hf"
-          "hfp_ag"
-          "a2dp_sink"
-        ];
-      };
-    };
   };
 
   users.users.william = {
@@ -165,12 +154,6 @@
       settings.KbdInteractiveAuthentication = false;
     };
 
-    dbus = {
-      enable = true;
-      packages = with pkgs-unstable; [
-        bluez
-      ];
-    };
     spice-vdagentd.enable = true;
 
     displayManager.gdm.enable = true;
