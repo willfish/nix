@@ -21,6 +21,10 @@
       url = "github:willfish/smailer";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware/master";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
   outputs =
     {
@@ -30,8 +34,9 @@
       home-manager,
       sniffy,
       smailer,
+      nixos-hardware,
       ...
-    }:
+    }@inputs:
     let
       system = "x86_64-linux";
       lib = nixpkgs-unstable.lib;
@@ -69,6 +74,14 @@
           inherit pkgs system;
           modules = [ ./system/starfish/configuration.nix ];
           specialArgs = { inherit pkgs-unstable; };
+        };
+        foundation = lib.nixosSystem {
+          inherit pkgs system;
+          modules = [ ./system/foundation/configuration.nix ];
+          specialArgs = {
+            inherit pkgs-unstable;
+            inherit nixos-hardware;
+          };
         };
       };
       homeConfigurations = {
