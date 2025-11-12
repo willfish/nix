@@ -2,6 +2,7 @@
   pkgs-unstable,
   sniffy,
   smailer,
+  try,
   ...
 }:
 {
@@ -91,5 +92,6 @@
     # My custom packages (usually go TUIs)
     sniffy.packages.${pkgs.system}.default
     smailer.packages.${pkgs.system}.default
+    try.packages.${pkgs.system}.default
   ];
 }

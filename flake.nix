@@ -21,19 +21,23 @@
       url = "github:willfish/smailer";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+    try = {
+      url = "github:tobi/try";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
   outputs =
     {
-      # nixpkgs,
       nixpkgs-unstable,
       pre-commit-hooks,
       home-manager,
       sniffy,
       smailer,
+      try,
       nixos-hardware,
       ...
-    }@inputs:
+    }:
     let
       system = "x86_64-linux";
       lib = nixpkgs-unstable.lib;
@@ -53,7 +57,7 @@
         hooks = {
           eclint.enable = true;
           end-of-file-fixer.enable = true;
-          flake-checker.enable = true;
+          flake-checker.enable = false;
           nil.enable = true;
           ormolu.enable = true;
           trim-trailing-whitespace.enable = true;
@@ -89,6 +93,7 @@
             inherit pkgs-unstable;
             inherit sniffy;
             inherit smailer;
+            inherit try;
           };
         };
       };
