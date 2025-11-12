@@ -1,0 +1,75 @@
+[org/gnome/Weather]
+locations=[<(uint32 2, <('London', 'EGWU', true, [(0.89971722940307675, -0.007272211034407213)], [(0.89884456477707964, -0.0020362232784242244)])>)>]
+window-height=1376
+window-maximized=false
+window-width=840
+
+[org/gnome/calendar]
+active-view='month'
+window-maximized=false
+window-size=(3432, 1400)
+
+[org/gnome/desktop/search-providers]
+enabled=['org.gnome.Weather.desktop']
+sort-order=['org.gnome.Settings.desktop', 'org.gnome.Contacts.desktop', 'org.gnome.Nautilus.desktop']
+
+[org/gnome/desktop/wm/keybindings]
+close=['<Super>q']
+minimize=@as []
+move-to-workspace-1=['<Shift><Super>1']
+move-to-workspace-2=['<Shift><Super>2']
+move-to-workspace-3=['<Shift><Super>3']
+move-to-workspace-4=['<Shift><Super>4']
+move-to-workspace-5=['<Shift><Super>5']
+move-to-workspace-6=['<Shift><Super>6']
+move-to-workspace-7=['<Shift><Super>7']
+move-to-workspace-8=['<Shift><Super>8']
+move-to-workspace-9=['<Shift><Super>9']
+switch-to-workspace-1=['<Super>1']
+switch-to-workspace-2=['<Super>2']
+switch-to-workspace-3=['<Super>3']
+switch-to-workspace-4=['<Super>4']
+switch-to-workspace-5=['<Super>5']
+switch-to-workspace-6=['<Super>6']
+switch-to-workspace-7=['<Super>7']
+switch-to-workspace-8=['<Super>8']
+switch-to-workspace-9=['<Super>9']
+toggle-fullscreen=['<Super>f']
+
+[org/gnome/shell/extensions/auto-move-windows]
+application-list=['brave-browser.desktop:1', 'spotify.desktop:3', 'org.clementine_player.Clementine.desktop:3', 'slack.desktop:2', 'org.telegram.desktop.desktop:2', 'discord.desktop:2']
+
+[org/gnome/shell/extensions/pop-shell]
+active-hint = true
+active-hint-border-radius = "uint32 1"
+gap-inner = "uint32 1"
+gap-outer = "uint32 1"
+show-title = false
+tile-by-default = true
+focus-left = ["<Super>a"]
+focus-down = ["<Super>s"]
+focus-up = ["<Super>w"]
+focus-right = ["<Super>d"]
+activate-launcher = ["<Super>x"]
+tile-move-left-global = ["<Shift><Super>a"]
+tile-move-down-global = ["<Shift><Super>s"]
+tile-move-up-global = ["<Shift><Super>w"]
+tile-move-right-global = ["<Shift><Super>d"]
+tile-resize-left = ["<Control><Shift>a", "<Shift>KP_Left", "<Shift>h"]
+tile-resize-down = ["<Control><Shift>s", "<Shift>KP_Down", "<Shift>j"]
+tile-resize-up = ["<Control><Shift>w", "<Shift>KP_Up", "<Shift>k"]
+tile-resize-right = ["<Control><Shift>d", "<Shift>KP_Right", "<Shift>l"]
+
+[org/gnome/shell/keybindings]
+show-screenshot-ui=['<Control><Shift>s']
+switch-to-application-1=@as []
+switch-to-application-2=@as []
+switch-to-application-3=@as []
+switch-to-application-4=@as []
+
+[org/gnome/shell/weather]
+automatic-location=true
+locations=[<(uint32 2, <('London', 'EGWU', true, [(0.89971722940307675, -0.007272211034407213)], [(0.89884456477707964, -0.0020362232784242244)])>)>]
+
+[org/gnome/tweaks]
+show-extensions-notice=false
