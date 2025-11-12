@@ -403,8 +403,6 @@ require("lazy").setup({
 			"hrsh7th/cmp-nvim-lsp",
 		},
 		config = function()
-			local lspconfig = require("lspconfig")
-
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("kickstart-lsp-attach", { clear = true }),
 				callback = function(event)
@@ -505,21 +503,34 @@ require("lazy").setup({
 			local capabilities = vim.lsp.protocol.make_client_capabilities()
 			capabilities = vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
 
-			lspconfig["bashls"].setup({ capabilities = capabilities })
-			lspconfig["ccls"].setup({ capabilities = capabilities })
-			lspconfig["cssls"].setup({ capabilities = capabilities })
-			lspconfig["eslint"].setup({ capabilities = capabilities })
-			lspconfig["gopls"].setup({ capabilities = capabilities })
-			lspconfig["html"].setup({ capabilities = capabilities })
-			lspconfig["marksman"].setup({ capabilities = capabilities })
-			lspconfig["nil_ls"].setup({ capabilities = capabilities })
-			lspconfig["ols"].setup({ capabilities = capabilities })
-			lspconfig["pyright"].setup({ capabilities = capabilities })
-			lspconfig["ruby_lsp"].setup({ capabilities = capabilities })
-			lspconfig["terraformls"].setup({ capabilities = capabilities })
-			lspconfig["ts_ls"].setup({ capabilities = capabilities })
+			vim.lsp.config("bashls", { capabilities = capabilities })
+			vim.lsp.enable("bashls")
+			vim.lsp.config("ccls", { capabilities = capabilities })
+			vim.lsp.enable("ccls")
+			vim.lsp.config("cssls", { capabilities = capabilities })
+			vim.lsp.enable("cssls")
+			vim.lsp.config("eslint", { capabilities = capabilities })
+			vim.lsp.enable("eslint")
+			vim.lsp.config("gopls", { capabilities = capabilities })
+			vim.lsp.enable("gopls")
+			vim.lsp.config("html", { capabilities = capabilities })
+			vim.lsp.enable("html")
+			vim.lsp.config("marksman", { capabilities = capabilities })
+			vim.lsp.enable("marksman")
+			vim.lsp.config("nil_ls", { capabilities = capabilities })
+			vim.lsp.enable("nil_ls")
+			vim.lsp.config("ols", { capabilities = capabilities })
+			vim.lsp.enable("ols")
+			vim.lsp.config("pyright", { capabilities = capabilities })
+			vim.lsp.enable("pyright")
+			vim.lsp.config("ruby_lsp", { capabilities = capabilities })
+			vim.lsp.enable("ruby_lsp")
+			vim.lsp.config("terraformls", { capabilities = capabilities })
+			vim.lsp.enable("terraformls")
+			vim.lsp.config("ts_ls", { capabilities = capabilities })
+			vim.lsp.enable("ts_ls")
 
-			lspconfig["lua_ls"].setup({
+			vim.lsp.config("lua_ls", {
 				capabilities = capabilities,
 				settings = {
 					Lua = {
@@ -535,6 +546,7 @@ require("lazy").setup({
 					},
 				},
 			})
+			vim.lsp.enable("lua_ls")
 		end,
 	},
 	{
