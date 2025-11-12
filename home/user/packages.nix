@@ -2,7 +2,6 @@
   pkgs-unstable,
   sniffy,
   smailer,
-  try,
   ...
 }:
 {
@@ -76,6 +75,7 @@
     pre-commit # Framework for managing pre-commit hooks
     python3
     stylua # Lua formatter
+    ruby
     terraform # For terraform_fmt, terraform_validate
     terraform-docs
     terragrunt # For terragrunt-hclfmt
@@ -92,6 +92,5 @@
     # My custom packages (usually go TUIs)
     sniffy.packages.${pkgs.system}.default
     smailer.packages.${pkgs.system}.default
-    try.packages.${pkgs.system}.default
   ];
 }

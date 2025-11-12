@@ -1,4 +1,4 @@
-{ pkgs-unstable, ... }:
+{ pkgs-unstable, try, ... }:
 let
   aliases = {
     a = "tmux attach";
@@ -45,8 +45,7 @@ in
   programs.bash = {
     enable = true;
     shellAliases = aliases;
-    initExtra = ''
-    '';
+    initExtra = '''';
   };
 
   programs.fish = {
@@ -56,7 +55,10 @@ in
     shellAbbrs = abbreviations;
 
     plugins = [
-      { name = "tide"; src = pkgs-unstable.fishPlugins.tide.src; }
+      {
+        name = "tide";
+        src = pkgs-unstable.fishPlugins.tide.src;
+      }
     ];
 
     interactiveShellInit = ''
@@ -69,6 +71,8 @@ in
       set -gx RUBYOPT --enable-yjit
       set -gx SAM_CLI_TELEMETRY 0
       set -gx fish_greeting ""
+
+      eval (${try.packages.${pkgs-unstable.system}.default}/bin/try init ~/src/tries | string collect)
     '';
 
     functions = {
