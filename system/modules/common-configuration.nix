@@ -1,8 +1,12 @@
-  { pkgs, pkgs-unstable, ... }:
+{ pkgs, pkgs-unstable, ... }:
 {
   system.activationScripts.binBash = ''
     mkdir -p /bin
     ln -sf ${pkgs.bash}/bin/bash /bin/bash
+  '';
+  system.activationScripts.usrLocal = ''
+    mkdir -p /usr/local/bin
+    chmod 755 /usr/local/bin
   '';
 
   boot.loader.systemd-boot.enable = true;
@@ -33,6 +37,9 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
+  services.mullvad-vpn.enable = true;
+  services.mullvad-vpn.package = pkgs-unstable.mullvad-vpn;
+
   services.avahi = {
     enable = true;
     nssmdns4 = true;
@@ -40,7 +47,7 @@
   };
 
   # Enable sound with pipewire.
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
 
   security.rtkit.enable = true;
 
@@ -82,13 +89,9 @@
     settings = {
       General = {
         Experimental = true;
-        DebugKeys = true;
-        Enable = "Source,Sink,Media,Socket";
       };
     };
   };
-
-  services.blueman.enable = true;
 
   programs.gnupg.agent = {
     enable = true;
@@ -96,27 +99,46 @@
   };
 
   environment.systemPackages = with pkgs-unstable; [
-    neovim                 # Modernized fork of Vim with additional features
-    curl                   # Command-line tool for transferring data with URLs
-    git                    # Distributed version control system
-    ghostty                # Minimalist, high-performance terminal emulator
+    neovim
+    curl
+    git
+    ghostty
 
-    openssl                # Cryptographic library for SSL/TLS
-    openssl.dev            # Development files for OpenSSL (headers, libs)
-    pkg-config             # Helper tool to manage library dependencies during compilation
+    openssl # Cryptographic library for SSL/TLS
+    openssl.dev # Development files for OpenSSL (headers, libs)
+    pkg-config # Helper tool to manage library dependencies during compilation
 
-    home-manager           # Nix-based user environment manager
+    home-manager # Nix-based user environment manager
 
     gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
-    gnomeExtensions.pop-shell # GNOME extension for tiling window management
     gnomeExtensions.appindicator # GNOME extension for app indicators
-
-    gnome-tweaks
+    gnomeExtensions.pop-shell # GNOME extension for tiling window management
+    gnome-tweaks # GNOME app for customizing the desktop environment
+    pop-launcher # GNOME app for launching applications
 
     xclip
   ];
+  environment.gnome.excludePackages = with pkgs; [
+    geary
+    gnome-disk-utility
+    gnome-backgrounds
+    gnome-tour
+    gnome-user-docs
+    baobab
+    epiphany
+    gnome-text-editor
+    gnome-characters
+    gnome-contacts
+    gnome-font-viewer
+    totem
+    yelp
+    gnome-software
+  ];
 
-  environment.shells = with pkgs-unstable; [ bash fish ];
+  environment.shells = with pkgs-unstable; [
+    bash
+    fish
+  ];
   users.defaultUserShell = pkgs-unstable.fish;
   programs.fish = {
     enable = true;
@@ -132,20 +154,14 @@
       settings.KbdInteractiveAuthentication = false;
     };
 
-    dbus = {
-      enable = true;
-      packages = with pkgs-unstable; [
-        bluez
-      ];
-    };
     spice-vdagentd.enable = true;
 
+    displayManager.gdm.enable = true;
+    desktopManager.gnome.enable = true;
     xserver = {
       xkb.layout = "us";
       xkb.variant = "";
       enable = true;
-      displayManager.gdm.enable = true;
-      desktopManager.gnome.enable = true;
     };
   };
 
@@ -164,9 +180,15 @@
 
   nix = {
     settings = {
-      substituters = [ "https://cache.nixos.org" "https://nixpkgs-ruby.cachix.org" ];
+      substituters = [
+        "https://cache.nixos.org"
+        "https://nixpkgs-ruby.cachix.org"
+      ];
       warn-dirty = false;
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       auto-optimise-store = true;
     };
 

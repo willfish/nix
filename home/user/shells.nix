@@ -1,4 +1,4 @@
-{ pkgs-unstable, ... }:
+{ pkgs-unstable, try, ... }:
 let
   aliases = {
     a = "tmux attach";
@@ -35,14 +35,17 @@ let
 
     mux = "tmuxinator";
     tm = "tmux";
+
+    prod = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/production";
+    stag = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/staging";
+    dev = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/development";
   };
 in
 {
   programs.bash = {
     enable = true;
     shellAliases = aliases;
-    initExtra = ''
-    '';
+    initExtra = '''';
   };
 
   programs.fish = {
@@ -52,7 +55,10 @@ in
     shellAbbrs = abbreviations;
 
     plugins = [
-      { name = "tide"; src = pkgs-unstable.fishPlugins.tide.src; }
+      {
+        name = "tide";
+        src = pkgs-unstable.fishPlugins.tide.src;
+      }
     ];
 
     interactiveShellInit = ''
@@ -61,9 +67,12 @@ in
       set -gx ERL_AFLAGS "-kernel shell_history enabled"
       set -gx PATH $HOME/.bin $PATH
       set -gx PATH $HOME/go/bin $PATH
+      set -gx PATH /usr/local/bin $PATH
       set -gx RUBYOPT --enable-yjit
       set -gx SAM_CLI_TELEMETRY 0
       set -gx fish_greeting ""
+
+      eval (${try.packages.${pkgs-unstable.system}.default}/bin/try init ~/src/tries | string collect)
     '';
 
     functions = {
@@ -72,19 +81,6 @@ in
       today = ''notes_on (date +"%Y-%m-%d") today.md'';
       yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';
       tomorrow = ''notes_on (date +%F -d "tomorrow") today.md'';
-
-      logs = ''echo frontend_log\nbackend_log\nadmin_log\nduty_log | fzf | xargs -- echo'';
-      frontend_log = ''log_for "https://www.trade-tariff.service.gov.uk/healthcheck" trade-tariff-frontend'';
-      backend_log = ''log_for "https://www.trade-tariff.service.gov.uk/api/v2/healthcheck" trade-tariff-backend'';
-      duty_log = ''log_for "https://www.trade-tariff.service.gov.uk/duty-calculator/healthcheck" trade-tariff-duty-calculator'';
-      admin_log = ''log_for "https://admin.trade-tariff.service.gov.uk/healthcheck" trade-tariff-admin'';
-      all_logs = ''
-        frontend_log
-        backend_log
-        duty_log
-        admin_log
-      '';
-
     };
   };
   programs.zoxide.enable = true;

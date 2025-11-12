@@ -1,50 +1,338 @@
-#! /usr/bin/env fish
+#!/usr/bin/env bash
 
-set COMMAND $argv[1]
-set REGION eu-west-2
+[[ "$TRACE" ]] && set -o xtrace
+set -o errexit
+set -o nounset
+set -o pipefail
+set -o noclobber
 
-# Check if AWS credentials are loaded
-if not aws sts get-caller-identity >/dev/null
-    echo "AWS credentials are not loaded or are invalid. Please pull credentials from https://d-9c677042e2.awsapps.com/start/"
-    exit 1
-end
+readonly SCRIPT_NAME="$(basename "$0")"
+readonly REGION="eu-west-2"
+readonly MAX_WAIT_TIME=60
 
-# List ECS clusters and select one
-set cluster (aws ecs list-clusters --region $REGION | jq -r '.clusterArns[] | split("/") | .[1]' | fzf --height 40% --prompt "Select a Cluster: ")
+print_usage() {
+    cat <<EOF
+Usage: $SCRIPT_NAME [OPTIONS] [COMMAND]
 
-if test -z "$cluster"
-    echo "No cluster selected. Exiting."
-    exit 1
-end
+This script allows you to run arbitrary commands in ECS tasks interactively.
+It handles finding clusters, services, and tasks automatically using fzf for selection.
 
-echo "Selected Cluster: $cluster"
+OPTIONS:
+    -h, --help      Show this help message and exit
+    -r, --region    AWS region (default: $REGION)
 
-# List services in the selected cluster and select one
-set service (aws ecs list-services --cluster "$cluster" --region $REGION | jq -r '.serviceArns[] | split("/") | .[2]' | fzf --height 40% --prompt "Select a Service: ")
+ARGUMENTS:
+    COMMAND         Command to run in the ECS task (optional)
+                   If not provided, opens an interactive shell
 
-if test -z "$service"
-    echo "No service selected. Exiting."
-    exit 1
-end
+EXAMPLES:
+    $SCRIPT_NAME                                               # Interactive shell
+    $SCRIPT_NAME 'bundle exec rails console'                   # Rails console
+    $SCRIPT_NAME 'bundle exec rails db:rollback db:migrate'    # Database migration
 
-echo "Selected Service: $service"
+SPECIAL BEHAVIOR:
+    - If selecting 'backend-job' service with no running tasks, automatically starts a new task
+    - backend-job tasks are automatically stopped when you exit
+    - All commands run with RAILS_LOG_LEVEL=debug for better debugging
 
-# List tasks in the selected service and select one
-set task (aws ecs list-tasks --cluster "$cluster" --service-name "$service" --region $REGION | jq -r '.taskArns[] | split("/") | .[2]' | fzf --height 40% --prompt "Select a Task: ")
+PREREQUISITES:
+    - AWS CLI configured with valid credentials
+    - jq installed for JSON parsing
+    - fzf installed for interactive selection
+EOF
+}
 
-if test -z "$task"
-    echo "No task selected. Exiting."
-    exit 1
-end
+error_exit() {
+    echo "Error: $1" >&2
+    exit "${2:-1}"
+}
 
-echo "Selected Task: $task"
+check_dependencies() {
+    local missing_deps=()
 
-if test -z "$COMMAND"
-    set command /bin/sh
-else
-    set command "/bin/sh -c \"RAILS_LOG_LEVEL=debug $COMMAND\""
-end
+    command -v aws >/dev/null || missing_deps+=("aws")
+    command -v jq >/dev/null || missing_deps+=("jq")
+    command -v fzf >/dev/null || missing_deps+=("fzf")
 
-set full_command "aws ecs execute-command --cluster $cluster --task $task --container $service --region $REGION --interactive --command '$command'"
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        error_exit "Missing required dependencies: ${missing_deps[*]}"
+    fi
+}
 
-eval $full_command
+check_aws_credentials() {
+    if ! aws sts get-caller-identity >/dev/null 2>&1; then
+        error_exit "AWS credentials are not loaded or invalid. Please pull credentials from https://d-9c677042e2.awsapps.com/start/"
+    fi
+}
+
+# Argument parsing
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                print_usage
+                exit 0
+                ;;
+            -r|--region)
+                [[ -n "${2:-}" ]] || error_exit "Region cannot be empty"
+                REGION="$2"
+                shift 2
+                ;;
+            -*)
+                error_exit "Unknown option: $1"
+                ;;
+            *)
+                # First non-option argument is the command
+                COMMAND="$1"
+                shift
+                # Reject additional arguments
+                [[ $# -eq 0 ]] || error_exit "Too many arguments. Only one command is allowed."
+                break
+                ;;
+        esac
+    done
+}
+
+# Interactive selection functions
+select_cluster() {
+    local cluster
+    cluster=$(aws ecs list-clusters --region "$REGION" \
+        | jq -r '.clusterArns[] | split("/") | .[1]' \
+        | fzf --height 40% --prompt "Select a Cluster: " --no-info)
+
+    [[ -n "$cluster" ]] || error_exit "No cluster selected"
+    echo "Selected Cluster: $cluster" >&2
+    echo "$cluster"
+}
+
+select_service() {
+    local cluster="$1"
+    local service
+
+    service=$(aws ecs list-services --cluster "$cluster" --region "$REGION" \
+        | jq -r '.serviceArns[] | split("/") | .[2]' \
+        | fzf --height 40% --prompt "Select a Service: " --no-info)
+
+    [[ -n "$service" ]] || error_exit "No service selected"
+    echo "Selected Service: $service" >&2
+    echo "$service"
+}
+
+select_task() {
+    local cluster="$1"
+    local service="$2"
+    local task
+
+    task=$(aws ecs list-tasks --cluster "$cluster" --service-name "$service" --region "$REGION" \
+        | jq -r '.taskArns[] | split("/") | .[2]' \
+        | fzf --height 40% --prompt "Select a Task: " --no-info)
+
+    [[ -n "$task" ]] || error_exit "No task selected"
+    echo "Selected Task: $task" >&2
+    echo "$task"
+}
+
+# Backend job management
+get_network_config() {
+    local cluster="$1"
+    local sg_name
+
+    echo "Fetching network configuration..." >&2
+
+    # Get subnets
+    local subnets
+    subnets=$(aws ec2 describe-subnets \
+        --filters "Name=tag:Name,Values=*private*" \
+        --query 'Subnets[*].SubnetId' \
+        --output text \
+        --region "$REGION" | tr '\t' '|')
+
+    # Determine security group based on cluster
+    case "$cluster" in
+        *development*) sg_name="trade-tariff-ecs-security-group-development" ;;
+        *staging*)     sg_name="trade-tariff-ecs-security-group-staging" ;;
+        *production*)  sg_name="trade-tariff-ecs-security-group-production" ;;
+        *) error_exit "Could not determine security group for cluster: $cluster" ;;
+    esac
+
+    # Get security group ID
+    local sg
+    sg=$(aws ec2 describe-security-groups \
+        --filters "Name=group-name,Values=$sg_name" \
+        --query 'SecurityGroups[0].GroupId' \
+        --output text \
+        --region "$REGION")
+
+    [[ -n "$subnets" && -n "$sg" ]] || error_exit "Could not fetch network configuration. Subnets: $subnets, SG: $sg"
+
+    echo "Using subnets: $subnets" >&2
+    echo "Using security group: $sg" >&2
+
+    echo "$subnets,$sg"
+}
+
+start_backend_job_task() {
+    local cluster="$1"
+    local service="$2"
+
+    echo "backend-job service has no running tasks. Starting a new task..." >&2
+
+    # Get task definition
+    local task_def
+    task_def=$(aws ecs describe-services --cluster "$cluster" --services "$service" --region "$REGION" \
+        | jq -r '.services[0].taskDefinition')
+
+    [[ -n "$task_def" ]] || error_exit "Could not find task definition for service: $service"
+    echo "Starting task with definition: $task_def" >&2
+
+    # Get network configuration
+    local network_config
+    network_config=$(get_network_config "$cluster")
+    local subnets="${network_config%,*}"
+    local sg="${network_config#*,}"
+    subnets="$(echo "$subnets" | tr '|' ',')"
+
+    # Start the task
+    local task_arn
+    task_arn=$(aws ecs run-task \
+        --cluster "$cluster" \
+        --task-definition "$task_def" \
+        --launch-type FARGATE \
+        --region "$REGION" \
+        --enable-execute-command \
+        --network-configuration "awsvpcConfiguration={subnets=[$subnets],securityGroups=[$sg],assignPublicIp=DISABLED}" \
+        --started-by ecs-exec-script \
+        --overrides '{"containerOverrides":[{"name":"'$service'"}]}' \
+        | jq -r '.tasks[0].taskArn')
+
+    [[ -n "$task_arn" ]] || error_exit "Failed to start task"
+
+    local task
+    task=$(echo "$task_arn" | awk -F'/' '{print $NF}')
+    echo "Started task: $task" >&2
+
+    # Wait for task to be ready
+    wait_for_task_ready "$cluster" "$task"
+
+    echo "$task"
+}
+
+wait_for_task_agent() {
+    local cluster="$1"
+    local task="$2"
+    local wait_count=0
+
+    while [[ $wait_count -lt $MAX_WAIT_TIME ]]; do
+        local agent_status
+        agent_status=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
+            | jq -r '.tasks[0].containers[0].managedAgents[0].lastStatus // empty')
+        if [[ "$agent_status" == "RUNNING" ]]; then
+            printf "\r%-80s\n" "Task status: AGENT $agent_status" >&2
+            return 0
+        fi
+        printf "\r%-80s" "Task status: AGENT ${agent_status:-N/A}, waiting..." >&2
+        sleep 2
+        ((wait_count++))
+    done
+
+    error_exit "ECS Exec agent did not start within expected time ($MAX_WAIT_TIME seconds)"
+}
+
+wait_for_task_ready() {
+    local cluster="$1"
+    local task="$2"
+    printf "Waiting for task to be ready for exec..." >&2
+    local wait_count=0
+    while [[ $wait_count -lt $MAX_WAIT_TIME ]]; do
+        local task_status
+        task_status=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
+            | jq -r '.tasks[0].lastStatus')
+        if [[ "$task_status" == "RUNNING" ]]; then
+            printf "\r%-80s\n" "Task status: $task_status, checking agent..." >&2
+            wait_for_task_agent "$cluster" "$task"
+            return 0
+        fi
+        printf "\r%-80s" "Task status: $task_status, waiting..." >&2
+        sleep 2
+        ((wait_count++))
+    done
+    error_exit "Task did not start within expected time ($MAX_WAIT_TIME seconds)"
+}
+
+cleanup_backend_job() {
+    local cluster="$1"
+    local task="$2"
+
+    echo "Stopping backend-job task..." >&2
+    if aws ecs stop-task --cluster "$cluster" --task "$task" --region "$REGION" >/dev/null; then
+        echo "Task stopped successfully" >&2
+    else
+        echo "Warning: Failed to stop task $task" >&2
+    fi
+}
+
+main() {
+    local COMMAND=""
+
+    # Parse arguments
+    parse_arguments "$@"
+
+    # Validate environment
+    check_dependencies
+    check_aws_credentials
+
+    # Interactive selection
+    local cluster service task
+    cluster=$(select_cluster)
+    service=$(select_service "$cluster")
+
+    # Handle backend-job special case
+    local backend_job_started=false
+    if [[ "$service" == "backend-job" ]]; then
+        local running_tasks
+        running_tasks=$(aws ecs list-tasks --cluster "$cluster" --service-name "$service" --region "$REGION" --desired-status RUNNING \
+            | jq -r '.taskArns | length')
+
+        if [[ "$running_tasks" -eq 0 ]]; then
+            task=$(start_backend_job_task "$cluster" "$service")
+            backend_job_started=true
+        else
+            echo "backend-job service has $running_tasks running task(s). Proceeding with task selection..." >&2
+            task=$(select_task "$cluster" "$service")
+        fi
+    else
+        task=$(select_task "$cluster" "$service")
+    fi
+
+    # Prepare command
+    local exec_command
+    if [[ -z "$COMMAND" ]]; then
+        exec_command="/bin/sh"
+    else
+        exec_command="/bin/sh -c \"RAILS_LOG_LEVEL=debug $COMMAND\""
+    fi
+
+    # Setup cleanup trap for backend-job
+    if [[ "$service" == "backend-job" && "$backend_job_started" == true ]]; then
+        trap "cleanup_backend_job '$cluster' '$task'" EXIT
+    fi
+
+    local exec_enabled
+    exec_enabled=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
+        | jq -r '.tasks[0].enableExecuteCommand')
+    [[ "$exec_enabled" == "true" ]] || error_exit "ECS Exec not enabled on task $task (check task definition IAM role)"
+
+    # Execute command
+    echo "Executing command in task..." >&2
+    aws ecs execute-command \
+        --cluster "$cluster" \
+        --task "$task" \
+        --container "$service" \
+        --region "$REGION" \
+        --interactive \
+        --command "$exec_command"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

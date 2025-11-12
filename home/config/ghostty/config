@@ -12,7 +12,6 @@ window-padding-x = 0
 window-padding-y = 0
 confirm-close-surface = false
 quit-after-last-window-closed = true
-gtk-adwaita=false
 
 # Transparency
 background-opacity = 0.8

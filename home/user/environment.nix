@@ -6,7 +6,7 @@
     GIT_PAGER = "delta";
     LESS = "-R";
     MANPAGER = "nvim +Man!";
-    NIXPKGS_ALLOW_UNFREE=1;
+    NIXPKGS_ALLOW_UNFREE = 1;
     PAGER = "less --raw-control-chars -F -X";
     RUBYOPT = "--enable-yjit";
     VISUAL = "nvim";
