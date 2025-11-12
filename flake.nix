@@ -3,10 +3,10 @@
     Andromeda and Starfish NixOS configurations
     Andromeda is a NixOS configuration for my Thelio Major Threadripper desktop computer.
     Starfish is a NixOS configuration for my Dell Precision 5750 laptop.
+    Foundation is a NixOS configuration for my Framework 13 AMD AI-300 Series laptop.
     Home Manager configuration for my user account on all systems.
   '';
   inputs = {
-    # nixpkgs.url = "nixpkgs/nixos-25.05";
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
     home-manager = {
@@ -21,10 +21,7 @@
       url = "github:willfish/smailer";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
-    nixos-hardware = {
-      url = "github:NixOS/nixos-hardware/master";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-    };
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
   outputs =
     {
