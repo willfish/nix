@@ -36,7 +36,7 @@
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
-
+  services.opensearch.enable = true;
   services.mullvad-vpn.enable = true;
   services.mullvad-vpn.package = pkgs-unstable.mullvad-vpn;
 
@@ -45,6 +45,8 @@
     nssmdns4 = true;
     openFirewall = true;
   };
+
+  networking.firewall.trustedInterfaces = [ "lo" ];
 
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
