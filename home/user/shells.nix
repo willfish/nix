@@ -1,4 +1,4 @@
-{ pkgs-unstable, try, ... }:
+{ pkgs-unstable, ... }:
 let
   aliases = {
     a = "tmux attach";
@@ -71,8 +71,6 @@ in
       set -gx RUBYOPT --enable-yjit
       set -gx SAM_CLI_TELEMETRY 0
       set -gx fish_greeting ""
-
-      eval (${try.packages.${pkgs-unstable.system}.default}/bin/try init ~/src/tries | string collect)
     '';
 
     functions = {
