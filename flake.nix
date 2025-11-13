@@ -21,10 +21,6 @@
       url = "github:willfish/smailer";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
-    try = {
-      url = "github:tobi/try";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-    };
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
   outputs =
@@ -34,7 +30,6 @@
       home-manager,
       sniffy,
       smailer,
-      try,
       nixos-hardware,
       ...
     }:
@@ -93,7 +88,6 @@
             inherit pkgs-unstable;
             inherit sniffy;
             inherit smailer;
-            inherit try;
           };
         };
       };

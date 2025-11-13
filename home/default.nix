@@ -1,9 +1,6 @@
-{ lib, try, ... }:
+{ lib, ... }:
 {
-  imports = [
-    ./user
-    try.homeManagerModules.default
-  ];
+  imports = [ ./user ];
 
   home.username = "william";
   home.homeDirectory = "/home/william";
@@ -14,9 +11,4 @@
   news.display = "silent";
   news.json = lib.mkForce { };
   news.entries = lib.mkForce [ ];
-
-  programs.try = {
-    enable = true;
-    path = "~/experiments";
-  };
 }
