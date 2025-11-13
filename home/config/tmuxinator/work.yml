@@ -6,6 +6,7 @@ windows:
       root: ~/
       panes:
         - docker-compose up
+        - valkey-server
   - 📀:
       layout: even-vertical
       panes:

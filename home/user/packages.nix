@@ -7,7 +7,7 @@
 {
   home.packages = with pkgs-unstable; [
     # Services for work
-    redis # In-memory data structure store (key-value database)
+    valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
 
     # Desktop apps
