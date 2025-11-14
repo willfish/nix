@@ -124,7 +124,6 @@ require("lazy").setup({
 	"fatih/vim-go",
 	"lepture/vim-jinja",
 	"stefandtw/quickfix-reflector.vim",
-	"tpope/vim-bundler",
 	"tpope/vim-dispatch",
 	"tpope/vim-rhubarb",
 	"tpope/vim-unimpaired",
