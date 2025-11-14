@@ -38,7 +38,6 @@
     fzf # Fuzzy finder for command-line searches
     gemini-cli # Command-line client for the Gemini protocol
     gh # GitHub CLI for repository management
-    htop # Interactive process viewer
     jq # Command-line JSON processor
     lazydocker # Terminal UI for Docker and Docker Compose
     lazygit # Terminal UI for Git
@@ -70,9 +69,18 @@
     mtr # Network diagnostic tool (combines ping and traceroute)
     tshark # Network protocol analyzer (terminal version of Wireshark)
 
+    # Monitoring tools
+    bandwhich # Terminal bandwidth utilization tool
+    glances # Cross-platform system monitoring tool
+    btop # Resource monitor with a TUI
+    htop # Interactive process viewer
+    iftop # Real-time network bandwidth monitoring tool
+    nload # Network traffic and bandwidth monitor
+
     # languages and their tools
     bash-language-server # Bash language server
     ccls # C/C++ language server
+    dconf2nix # Convert dconf settings to Nix expressions - useful for gnome setups
     gopls # Go language server for IDEs
     lua-language-server # Lua language server
     markdownlint-cli # Linter for Markdown files
@@ -81,8 +89,8 @@
     nodejs_latest # Used just to install language servers
     pre-commit # Framework for managing pre-commit hooks
     python3
-    stylua # Lua formatter
     ruby
+    stylua # Lua formatter
     terraform # For terraform_fmt, terraform_validate
     terraform-docs
     terragrunt # For terragrunt-hclfmt
@@ -93,8 +101,6 @@
     # fun stuff
     fastfetch # Highly customizable system information tool
     inxi # System information script
-
-    dconf2nix # Convert dconf settings to Nix expressions - useful for gnome setups
 
     # My custom packages (usually go TUIs)
     sniffy.packages.${pkgs.system}.default
