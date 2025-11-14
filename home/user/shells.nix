@@ -75,6 +75,43 @@ in
 
     functions = {
       gitignore = ''curl -sL https://www.gitignore.io/api/$argv'';
+      spy = ''
+        set -l processes (ps aux | tail -n +2)
+
+        # If no processes, exit
+        if not count $processes > /dev/null
+            echo "No processes found."
+            return 1
+        end
+
+        # Use fzf to fuzzy-select a line
+        set -l selected_line (printf '%s\n' $processes | fzf --height=40% --border --prompt="Select process: ")
+
+        # If nothing selected (Esc/Ctrl+C), exit
+        if test -z "$selected_line"
+            echo "No process selected."
+            return 1
+        end
+
+        # Extract PID (2nd column)
+        set -l pid (echo $selected_line | awk '{print $2}')
+
+        # Validate PID
+        if not string match -qr '^[0-9]+$' -- $pid
+            echo "Invalid PID: $pid"
+            return 1
+        end
+
+        # Confirm process is running
+        if not kill -0 $pid 2>/dev/null
+            echo "Process $pid is not running."
+            return 1
+        end
+
+        # Run strace with common useful syscalls
+        echo "Attaching strace to PID $pid (Ctrl+C to stop)..."
+        sudo strace -p $pid -e trace=openat,read,write,connect,accept,sendto,recvfrom,execve -q
+      '';
 
       today = ''notes_on (date +"%Y-%m-%d") today.md'';
       yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';

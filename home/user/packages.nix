@@ -32,6 +32,7 @@
     bats # Bash automated testing system
     delta # Git diff viewer with syntax highlighting
     dive # Tool to explore Docker image layers
+    duf # Disk usage utility with a user-friendly interface
     dust # Disk usage analyzer (alternative to du)
     fd # Fast, simple alternative to find
     fzf # Fuzzy finder for command-line searches
@@ -40,6 +41,8 @@
     htop # Interactive process viewer
     jq # Command-line JSON processor
     lazydocker # Terminal UI for Docker and Docker Compose
+    lazygit # Terminal UI for Git
+    lsd # Modern ls alternative with icons
     lsof # Lists open files and their processes
     p7zip # 7-Zip file archiver (supports multiple formats)
     pwgen # Password generator
@@ -50,6 +53,7 @@
     tree # Displays directory tree structure
     unzip # Tool to extract ZIP archives
     yq # Command-line YAML processor (like jq for YAML)
+    yazi # File explorer
     zip # Tool to create ZIP archives
 
     # Build tools
@@ -60,8 +64,11 @@
 
     # Networking tools
     dig # DNS lookup tool
+    dogdns # DNS client (like dig)
     inetutils # Basic networking tools (e.g., ping, telnet)
-    lsd # Modern ls alternative with icons
+    nmap # Network exploration and security auditing tool
+    mtr # Network diagnostic tool (combines ping and traceroute)
+    tshark # Network protocol analyzer (terminal version of Wireshark)
 
     # languages and their tools
     bash-language-server # Bash language server
