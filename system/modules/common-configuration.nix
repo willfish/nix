@@ -36,7 +36,7 @@
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
-  services.opensearch.enable = true;
+  services.elasticsearch.enable = true;
   services.mullvad-vpn.enable = true;
   services.mullvad-vpn.package = pkgs-unstable.mullvad-vpn;
 
