@@ -1,13 +1,15 @@
 {
-  programs.git =  {
+  programs.git = {
     enable = true;
-    userName = "William Fish";
-    userEmail = "william.michael.fish@gmail.com";
-    extraConfig = {
-      user.signingkey = "BC6DED9479D436F5";
-      commit.gpgsign = true;
-      gpg.program = "gpg";
-      tag.gpgsign = true;
+    signing = {
+      key = "BC6DED9479D436F5";
+      signByDefault = true;
+    };
+    settings = {
+      user = {
+        name = "William Fish";
+        email = "william.michael.fish@gmail.com";
+      };
 
       column.ui = "auto";
       branch.sort = "-committerdate";
