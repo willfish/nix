@@ -54,7 +54,6 @@
       };
 
       help.autocorrect = 1;
-      github.user = "willfish";
       web.browser = "brave";
       init.defaultBranch = "main";
       merge.conflictstyle = "zdiff3";
@@ -87,15 +86,6 @@
           smudge = "git-lfs smudge -- %f";
           process = "git-lfs filter-process";
           required = true;
-        };
-      };
-
-      credential = {
-        "https://github.com" = {
-          helper = "!/usr/bin/gh auth git-credential";
-        };
-        "https://gist.github.com" = {
-          helper = "!/usr/bin/gh auth git-credential";
         };
       };
     };
