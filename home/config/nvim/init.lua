@@ -285,16 +285,35 @@ require("lazy").setup({
 		end,
 	},
 	{
-		"ggandor/leap.nvim",
-		dependencies = { "tpope/vim-repeat", "ggandor/flit.nvim" },
-		config = function()
-			require("flit").setup({
-				keys = { f = "f", F = "F", t = "t", T = "T" },
-				labeled_modes = "v",
-				multiline = true,
-				opts = {},
-			})
-		end,
+		"folke/flash.nvim",
+		event = "VeryLazy",
+		keys = {
+			{
+				"s",
+				mode = { "n", "x", "o" },
+				function()
+					require("flash").jump()
+				end,
+				desc = "Flash",
+			},
+			{
+				"S",
+				mode = { "n", "x", "o" },
+				function()
+					require("flash").treesitter()
+				end,
+				desc = "Flash Treesitter",
+			},
+			{
+				"r",
+				mode = "o",
+				function()
+					require("flash").remote()
+				end,
+				desc = "Remote Flash",
+			},
+		},
+		opts = { modes = { char = { enabled = true } } },
 	},
 	{
 		"nvim-telescope/telescope.nvim",
