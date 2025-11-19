@@ -13,12 +13,9 @@
     # Desktop apps
     audacity # Audio recording and editing software
     clementine # Music player with library management
-    discord # Chat app for communities and gaming
     dropbox # Cloud storage and file synchronization service
-    gimp # Image editing software (GNU Image Manipulation Program)
     libation # Audio player with a focus on music libraries
     libreoffice-qt # Office suite with Qt interface (docs, spreadsheets, etc.)
-    obs-studio # Open Broadcaster Software for video recording and live streaming
     pavucontrol # Graphical PulseAudio volume control
     slack # Team collaboration and messaging app
     spotify # Music streaming application
