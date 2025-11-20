@@ -9,6 +9,7 @@
     # Services for work
     valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
+    qbittorrent
 
     # Desktop apps
     audacity # Audio recording and editing software
