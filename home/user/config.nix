@@ -6,7 +6,6 @@ in
   home.file = {
     ".aprc".source = "${configDir}/aprc";
     ".bin/".source = "${configDir}/bin";
-    ".config/btop".source = "${configDir}/btop";
     ".config/ghostty".source = "${configDir}/ghostty";
     ".config/nvim/init.lua".source = "${configDir}/nvim/init.lua";
     ".config/picom.conf".source = "${configDir}/picom.conf";
