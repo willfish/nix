@@ -1,16 +1,4 @@
 { pkgs-unstable, ... }:
-let
-  tmux-pomodoro-plus = pkgs-unstable.tmuxPlugins.mkTmuxPlugin {
-    pluginName = "pomodoro";
-    version = "unstable-2023-10-20";
-    src = pkgs-unstable.fetchFromGitHub {
-      owner = "olimorris";
-      repo = "tmux-pomodoro-plus";
-      rev = "main";
-      sha256 = "sha256-your-computed-hash-here=";
-    };
-  };
-in
 {
   programs.tmux = {
     package = pkgs-unstable.tmux;
@@ -18,7 +6,6 @@ in
     clock24 = true;
     plugins = with pkgs-unstable.tmuxPlugins; [
       fzf-tmux-url
-      tmux-pomodoro-plus
       jump
       resurrect
       sensible
