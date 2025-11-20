@@ -19,5 +19,4 @@ background-blur-radius = 20
 
 keybind = super+i=inspector:toggle
 
-custom-shader = ghostty-shaders/cursor_blaze.glsl
-custom-shader = ghostty-shaders/bloom.glsl
+custom-shader = ghostty-shaders/cursor_trail.glsl

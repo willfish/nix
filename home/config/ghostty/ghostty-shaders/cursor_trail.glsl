@@ -73,12 +73,15 @@ vec2 getRectangleCenter(vec4 rectangle) {
 
 // const vec4 TRAIL_COLOR        = vec4(0.85, 0.80, 1.0, 1.0);    // #D9CCFF
 // const vec4 TRAIL_COLOR_ACCENT = vec4(0.95, 0.85, 1.0, 1.0);     // #F2D9FF
-const vec4 TRAIL_COLOR        = vec4(0.70, 0.95, 0.95, 1.0);   // #B3F0F0
-const vec4 TRAIL_COLOR_ACCENT = vec4(0.85, 1.0, 1.0, 1.0);     // #D9FFFF very light cyan highlight
+const vec4 TRAIL_COLOR = vec4(0.75, 0.9, 1.0, 1.0);     // soft ice blue
+const vec4 TRAIL_COLOR_ACCENT = vec4(0.9, 0.95, 1.0, 1.0);
+// const vec4 TRAIL_COLOR        = vec4(0.70, 0.95, 0.95, 1.0);   // #B3F0F0
+// const vec4 TRAIL_COLOR_ACCENT = vec4(0.85, 1.0, 1.0, 1.0);     // #D9FFFF very light cyan highlight
 // const vec4 TRAIL_COLOR = vec4(1.0, 0.725, 0.161, 1.0); // yellow
 // const vec4 TRAIL_COLOR_ACCENT = vec4(1.0, 0., 0., 1.0); // red-orange
 const float DURATION = .5;
-const float OPACITY = .2;
+// const float OPACITY = .2;
+const float OPACITY = .02; // was 0.2 — now barely visible but still helpful
 // Don't draw trail within that distance * cursor size.
 // This prevents trails from appearing when typing.
 const float DRAW_THRESHOLD = 1.5;
