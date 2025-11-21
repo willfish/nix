@@ -101,7 +101,7 @@
     inxi # System information script
 
     # My custom packages (usually go TUIs)
-    sniffy.packages.${pkgs.system}.default
-    smailer.packages.${pkgs.system}.default
+    sniffy.packages.${pkgs.stdenv.hostPlatform.system}.default
+    smailer.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 }

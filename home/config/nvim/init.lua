@@ -668,7 +668,8 @@ require("lazy").setup({
 				end)(),
 				dependencies = {
 					{
-						"rafamadriz/friendly-snippets",
+						"willfish/friendly-snippets",
+						branch = "add-pry-to-erb-snippets",
 						config = function()
 							require("luasnip.loaders.from_vscode").lazy_load()
 						end,
