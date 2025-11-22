@@ -9,7 +9,6 @@
     # Services for work
     valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
-    qbittorrent
 
     # Desktop apps
     audacity # Audio recording and editing software
@@ -18,6 +17,7 @@
     libation # Audio player with a focus on music libraries
     libreoffice-qt # Office suite with Qt interface (docs, spreadsheets, etc.)
     pavucontrol # Graphical PulseAudio volume control
+    qbittorrent # BitTorrent client with a user-friendly interface
     slack # Team collaboration and messaging app
     spotify # Music streaming application
     telegram-desktop # Desktop client for Telegram messaging
@@ -42,6 +42,7 @@
     lsd # Modern ls alternative with icons
     lsof # Lists open files and their processes
     p7zip # 7-Zip file archiver (supports multiple formats)
+    pgcli # PostgreSQL interactive terminal
     pwgen # Password generator
     ripgrep # Fast, recursive grep alternative
     ssm-session-manager-plugin # AWS plugin for SSM session management (e.g., ECS exec)

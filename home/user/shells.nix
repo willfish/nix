@@ -5,6 +5,7 @@ let
     ag = "rg";
     la = "lsd -la";
     ll = "lsd -l";
+    psql = "pgcli";
     mux = "tmuxinator";
     tm = "tmux";
     v = "nvim";
