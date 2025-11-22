@@ -1,27 +1,88 @@
-{ pkgs-unstable, ... }:
+{ pkgs-unstable, sessionx, ... }:
+let
+  tmux-pomodoro-plus = pkgs-unstable.tmuxPlugins.mkTmuxPlugin rec {
+    pluginName = "pomodoro";
+    version = "main";
+    src = pkgs-unstable.fetchFromGitHub {
+      owner = "olimorris";
+      repo = "tmux-pomodoro-plus";
+      tag = version;
+      sha256 = "sha256-pWnfq2yAy9PkXatxto9eRPczoyrNEpA6l9683Q0gWQA=";
+    };
+  };
+in
 {
-  programs.tmux = {
+  programs.tmux = with pkgs-unstable.tmuxPlugins; {
     package = pkgs-unstable.tmux;
     enable = true;
     clock24 = true;
-    plugins = with pkgs-unstable.tmuxPlugins; [
-      fzf-tmux-url
+    plugins = [
       jump
-      resurrect
-      sensible
       yank
-      tmux-thumbs
       {
-        plugin = dracula;
+        plugin = vim-tmux-navigator;
         extraConfig = ''
-          set -g @dracula-show-battery false
-          set -g @dracula-show-powerline true
-          set -g @dracula-refresh-rate 10
-          set -g @dracula-plugins "git attached-clients"
+          set -g @navigator_no_mappings '1'
+          set -g @vim_navigator_mapping_left "M-h"
+          set -g @vim_navigator_mapping_right "M-l"
+          set -g @vim_navigator_mapping_up "M-k"
+          set -g @vim_navigator_mapping_down "M-j"
+          set -g @vim_navigator_mapping_prev ""  # removes the C-\ binding
         '';
       }
+      {
+        plugin = tmux-sessionx;
+        extraConfig = ''
+          set -g @sessionx-bind 'o'
+          set -g @sessionx-zoxide-mode 'on'
+        '';
+      }
+      {
+        plugin = tmux-thumbs;
+        extraConfig = ''
+          set -g @thumbs-command 'echo -n {} | xclip -selection clipboard && tmux display-message "Copied {}"'
+          set -g @thumbs-unique enabled
+          set -g @thumbs-key 'Space'
+        '';
+      }
+      {
+        plugin = rose-pine;
+        extraConfig = ''
+          set -g @rose_pine_variant 'moon'
+        '';
+      }
+      # {
+      #   plugin = tmux-pomodoro-plus;
+      #   extraConfig = ''
+      #     set -g @pomodoro_granularity on
+      #     set -g @pomodoro_mins 25
+      #     set -g @pomodoro_break_mins 5
+      #     set -g @pomodoro_notifications on
+      #
+      #     set -g status-right "#(${tmux-pomodoro-plus}/share/tmux-plugins/pomodoro/scripts/pomodoro.sh)"
+      #   '';
+      # }
     ];
-    extraConfig = builtins.readFile ../config/tmux/tmux.conf;
+    extraConfig = ''
+      set-option -g default-terminal 'screen-256color'
+
+      setw -g mode-keys vi
+
+      set -g base-index 1
+      set -g pane-base-index 1
+      set -g set-clipboard on
+      set-window-option -g pane-base-index 1
+      set-option -g renumber-windows on
+
+      set -g status-position top
+
+      bind-key -T copy-mode-vi v send-keys -X begin-selection
+      bind-key -T copy-mode-vi C-v send-keys -X rectangle-toggle
+      bind-key -T copy-mode-vi y send-keys -X copy-selection-and-cancel
+
+      bind '"' split-window -v -c "#{pane_current_path}"
+      bind % split-window -h -c "#{pane_current_path}"
+    '';
     tmuxinator.enable = true;
   };
 }

@@ -26,6 +26,5 @@
     nvidiaSettings = true;
     package = config.boot.kernelPackages.nvidiaPackages.beta;
   };
-
   services.xserver.videoDrivers = [ "nvidia" ];
 }

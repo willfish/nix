@@ -124,7 +124,6 @@ require("lazy").setup({
 	"fatih/vim-go",
 	"lepture/vim-jinja",
 	"stefandtw/quickfix-reflector.vim",
-	"tpope/vim-bundler",
 	"tpope/vim-dispatch",
 	"tpope/vim-rhubarb",
 	"tpope/vim-unimpaired",
@@ -144,6 +143,27 @@ require("lazy").setup({
 		event = "VeryLazy",
 		config = function()
 			require("nvim-surround").setup({})
+		end,
+	},
+	{
+		"folke/noice.nvim",
+		config = function()
+			require("noice").setup({
+				lsp = {
+					override = {
+						["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+						["vim.lsp.util.stylize_markdown"] = true,
+						["cmp.entry.get_documentation"] = true, -- requires hrsh7th/nvim-cmp
+					},
+				},
+				presets = {
+					bottom_search = true, -- use a classic bottom cmdline for search
+					command_palette = true, -- position the cmdline and popupmenu together
+					long_message_to_split = true, -- long messages will be sent to a split
+					inc_rename = false, -- enables an input dialog for inc-rename.nvim
+					lsp_doc_border = false, -- add a border to hover docs and signature help
+				},
+			})
 		end,
 	},
 	{
@@ -236,16 +256,20 @@ require("lazy").setup({
 	},
 	{
 		"christoomey/vim-tmux-navigator",
-		config = function()
-			local default_map_opts = { noremap = true, silent = true }
-
-			vim.g.tmux_navigator_no_mappings = 1
-
-			vim.api.nvim_set_keymap("n", "<M-h>", ":TmuxNavigateLeft<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<M-j>", ":TmuxNavigateDown<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<M-k>", ":TmuxNavigateUp<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<M-l>", ":TmuxNavigateRight<CR>", default_map_opts)
-		end,
+		cmd = {
+			"TmuxNavigateLeft",
+			"TmuxNavigateDown",
+			"TmuxNavigateUp",
+			"TmuxNavigateRight",
+			"TmuxNavigatePrevious",
+			"TmuxNavigatorProcessList",
+		},
+		keys = {
+			{ "<M-h>", "<cmd>TmuxNavigateLeft<cr>" },
+			{ "<M-j>", "<cmd>TmuxNavigateDown<cr>" },
+			{ "<M-k>", "<cmd>TmuxNavigateUp<cr>" },
+			{ "<M-l>", "<cmd>TmuxNavigateRight<cr>" },
+		},
 	},
 	{
 		"tpope/vim-fugitive",
@@ -265,16 +289,35 @@ require("lazy").setup({
 		end,
 	},
 	{
-		"ggandor/leap.nvim",
-		dependencies = { "tpope/vim-repeat", "ggandor/flit.nvim" },
-		config = function()
-			require("flit").setup({
-				keys = { f = "f", F = "F", t = "t", T = "T" },
-				labeled_modes = "v",
-				multiline = true,
-				opts = {},
-			})
-		end,
+		"folke/flash.nvim",
+		event = "VeryLazy",
+		keys = {
+			{
+				"s",
+				mode = { "n", "x", "o" },
+				function()
+					require("flash").jump()
+				end,
+				desc = "Flash",
+			},
+			{
+				"S",
+				mode = { "n", "x", "o" },
+				function()
+					require("flash").treesitter()
+				end,
+				desc = "Flash Treesitter",
+			},
+			{
+				"r",
+				mode = "o",
+				function()
+					require("flash").remote()
+				end,
+				desc = "Remote Flash",
+			},
+		},
+		opts = { modes = { char = { enabled = true } } },
 	},
 	{
 		"nvim-telescope/telescope.nvim",
@@ -629,7 +672,8 @@ require("lazy").setup({
 				end)(),
 				dependencies = {
 					{
-						"rafamadriz/friendly-snippets",
+						"willfish/friendly-snippets",
+						branch = "add-pry-to-erb-snippets",
 						config = function()
 							require("luasnip.loaders.from_vscode").lazy_load()
 						end,
@@ -768,4 +812,4 @@ require("lazy").setup({
 			indent = { enable = true, disable = { "ruby" } },
 		},
 	},
-}, { ui = { icons = vim.g.have_nerd_font } })
+})
