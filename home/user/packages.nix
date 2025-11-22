@@ -58,6 +58,8 @@
     gnumake # GNU Make build automation tool
     makeWrapper # Nix utility to wrap executables with env vars
     stdenv # Standard environment for building packages in Nix
+    nix-tree # Visualize Nix derivation dependency trees
+    nix-prefetch-github # Fetch GitHub repositories for Nix builds
 
     # Networking tools
     dig # DNS lookup tool

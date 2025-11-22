@@ -256,16 +256,20 @@ require("lazy").setup({
 	},
 	{
 		"christoomey/vim-tmux-navigator",
-		config = function()
-			local default_map_opts = { noremap = true, silent = true }
-
-			vim.g.tmux_navigator_no_mappings = 1
-
-			vim.api.nvim_set_keymap("n", "<M-h>", ":TmuxNavigateLeft<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<M-j>", ":TmuxNavigateDown<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<M-k>", ":TmuxNavigateUp<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<M-l>", ":TmuxNavigateRight<CR>", default_map_opts)
-		end,
+		cmd = {
+			"TmuxNavigateLeft",
+			"TmuxNavigateDown",
+			"TmuxNavigateUp",
+			"TmuxNavigateRight",
+			"TmuxNavigatePrevious",
+			"TmuxNavigatorProcessList",
+		},
+		keys = {
+			{ "<M-h>", "<cmd>TmuxNavigateLeft<cr>" },
+			{ "<M-j>", "<cmd>TmuxNavigateDown<cr>" },
+			{ "<M-k>", "<cmd>TmuxNavigateUp<cr>" },
+			{ "<M-l>", "<cmd>TmuxNavigateRight<cr>" },
+		},
 	},
 	{
 		"tpope/vim-fugitive",

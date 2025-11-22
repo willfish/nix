@@ -16,8 +16,6 @@ let
     a = "tmux attach";
     ag = "rg";
 
-    book = "cd ~/Repositories/books";
-    cdi = "cd ~/Repositories/indeed";
     cdn = "cd ~/Notes";
     cdr = "cd ~/Repositories";
     hm = "cd ~/Repositories/hmrc";
@@ -45,7 +43,6 @@ in
   programs.bash = {
     enable = true;
     shellAliases = aliases;
-    initExtra = '''';
   };
 
   programs.fish = {
@@ -54,12 +51,12 @@ in
     shellAliases = aliases;
     shellAbbrs = abbreviations;
 
-    plugins = [
-      {
-        name = "tide";
-        src = pkgs-unstable.fishPlugins.tide.src;
-      }
-    ];
+    # plugins = [
+    #   {
+    #     name = "tide";
+    #     src = pkgs-unstable.fishPlugins.tide.src;
+    #   }
+    # ];
 
     interactiveShellInit = ''
       set -gx AWS_DEFAULT_REGION eu-west-2

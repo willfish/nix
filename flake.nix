@@ -1,10 +1,11 @@
 {
   description = ''
-    Andromeda and Starfish NixOS configurations
-    Andromeda is a NixOS configuration for my Thelio Major Threadripper desktop computer.
-    Starfish is a NixOS configuration for my Dell Precision 5750 laptop.
-    Foundation is a NixOS configuration for my Framework 13 AMD AI-300 Series laptop.
-    Home Manager configuration for my user account on all systems.
+    Configurations for my NixOS systems and Home Manager setup.
+
+    - Andromeda is a NixOS configuration for my Thelio Major Threadripper desktop computer.
+    - Starfish is a NixOS configuration for my Dell Precision 5750 laptop.
+    - Foundation is a NixOS configuration for my Framework 13 AMD AI-300 Series laptop.
+    - Home Manager configuration for my user account on all systems.
   '';
   inputs = {
     nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
@@ -86,8 +87,7 @@
           modules = [ ./home ];
           extraSpecialArgs = {
             inherit pkgs-unstable;
-            inherit sniffy;
-            inherit smailer;
+            inherit sniffy smailer;
           };
         };
       };
