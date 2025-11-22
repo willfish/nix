@@ -36,6 +36,7 @@
     fzf # Fuzzy finder for command-line searches
     gemini-cli # Command-line client for the Gemini protocol
     gh # GitHub CLI for repository management
+    isd # Interactive systemd journal browser
     jq # Command-line JSON processor
     lazydocker # Terminal UI for Docker and Docker Compose
     lazygit # Terminal UI for Git
@@ -47,11 +48,10 @@
     ripgrep # Fast, recursive grep alternative
     ssm-session-manager-plugin # AWS plugin for SSM session management (e.g., ECS exec)
     strace # System call tracer for debugging
-    sysz # Systemd service searcher (fzf-based)
     tree # Displays directory tree structure
     unzip # Tool to extract ZIP archives
-    yq # Command-line YAML processor (like jq for YAML)
     yazi # File explorer
+    yq # Command-line YAML processor (like jq for YAML)
     zip # Tool to create ZIP archives
 
     # Build tools
