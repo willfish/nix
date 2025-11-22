@@ -1,13 +1,15 @@
 {
-  programs.git =  {
+  programs.git = {
     enable = true;
-    userName = "William Fish";
-    userEmail = "william.michael.fish@gmail.com";
-    extraConfig = {
-      user.signingkey = "BC6DED9479D436F5";
-      commit.gpgsign = true;
-      gpg.program = "gpg";
-      tag.gpgsign = true;
+    signing = {
+      key = "BC6DED9479D436F5";
+      signByDefault = true;
+    };
+    settings = {
+      user = {
+        name = "William Fish";
+        email = "william.michael.fish@gmail.com";
+      };
 
       column.ui = "auto";
       branch.sort = "-committerdate";
@@ -52,7 +54,6 @@
       };
 
       help.autocorrect = 1;
-      github.user = "willfish";
       web.browser = "brave";
       init.defaultBranch = "main";
       merge.conflictstyle = "zdiff3";
@@ -85,15 +86,6 @@
           smudge = "git-lfs smudge -- %f";
           process = "git-lfs filter-process";
           required = true;
-        };
-      };
-
-      credential = {
-        "https://github.com" = {
-          helper = "!/usr/bin/gh auth git-credential";
-        };
-        "https://gist.github.com" = {
-          helper = "!/usr/bin/gh auth git-credential";
         };
       };
     };

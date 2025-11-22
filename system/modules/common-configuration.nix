@@ -36,7 +36,7 @@
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
-
+  services.elasticsearch.enable = true;
   services.mullvad-vpn.enable = true;
   services.mullvad-vpn.package = pkgs-unstable.mullvad-vpn;
 
@@ -45,6 +45,8 @@
     nssmdns4 = true;
     openFirewall = true;
   };
+
+  networking.firewall.trustedInterfaces = [ "lo" ];
 
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
@@ -182,7 +184,7 @@
     settings = {
       substituters = [
         "https://cache.nixos.org"
-        "https://nixpkgs-ruby.cachix.org"
+        # "https://nixpkgs-ruby.cachix.org" - NOTE: Cachix is down
       ];
       warn-dirty = false;
       experimental-features = [
