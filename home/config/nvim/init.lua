@@ -727,12 +727,19 @@ require("lazy").setup({
 			})
 		end,
 	},
+	-- {
+	-- 	"folke/tokyonight.nvim",
+	-- 	priority = 1000,
+	-- 	config = function()
+	-- 		require("tokyonight").setup({ styles = { comments = { italic = false } } })
+	-- 		vim.cmd.colorscheme("tokyonight-night")
+	-- 	end,
+	-- },
 	{
-		"folke/tokyonight.nvim",
-		priority = 1000,
+		"rose-pine/neovim",
+		name = "rose-pine",
 		config = function()
-			require("tokyonight").setup({ styles = { comments = { italic = false } } })
-			vim.cmd.colorscheme("tokyonight-night")
+			vim.cmd.colorscheme("rose-pine")
 		end,
 	},
 	{
