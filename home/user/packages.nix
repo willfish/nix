@@ -1,9 +1,4 @@
-{
-  pkgs,
-  sniffy,
-  smailer,
-  ...
-}:
+{ pkgs, ... }:
 {
   home.packages = with pkgs; [
     # Services for work
