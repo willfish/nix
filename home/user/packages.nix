@@ -6,7 +6,6 @@
     postgresql # Open-source relational database system
 
     # Desktop apps
-    audacity # Audio recording and editing software
     clementine # Music player with library management
     dropbox # Cloud storage and file synchronization service
     libation # Audio player with a focus on music libraries
@@ -18,7 +17,6 @@
     telegram-desktop # Desktop client for Telegram messaging
     variety # Wallpaper changer with customization options
     vokoscreen-ng # Screen recording tool with audio support
-    xournalpp # Note-taking and PDF annotation tool
 
     # Utilities
     awscli2 # AWS command-line interface (version 2)
@@ -34,7 +32,6 @@
     isd # Interactive systemd journal browser
     jq # Command-line JSON processor
     lazydocker # Terminal UI for Docker and Docker Compose
-    lazygit # Terminal UI for Git
     lsd # Modern ls alternative with icons
     lsof # Lists open files and their processes
     p7zip # 7-Zip file archiver (supports multiple formats)
@@ -45,7 +42,6 @@
     strace # System call tracer for debugging
     tree # Displays directory tree structure
     unzip # Tool to extract ZIP archives
-    yazi # File explorer
     yq # Command-line YAML processor (like jq for YAML)
     zip # Tool to create ZIP archives
 
@@ -67,7 +63,6 @@
 
     # Monitoring tools
     bandwhich # Terminal bandwidth utilization tool
-    glances # Cross-platform system monitoring tool
     btop # Resource monitor with a TUI
     htop # Interactive process viewer
     iftop # Real-time network bandwidth monitoring tool

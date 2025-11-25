@@ -117,20 +117,27 @@
     xclip
   ];
   environment.gnome.excludePackages = with pkgs; [
-    geary
-    gnome-disk-utility
-    gnome-backgrounds
-    gnome-tour
-    gnome-user-docs
     baobab
     epiphany
-    gnome-text-editor
+    geary
+    gnome-backgrounds
+    gnome-calendar
     gnome-characters
+    gnome-connections
     gnome-contacts
     gnome-font-viewer
+    gnome-logs
+    gnome-maps
+    gnome-music
+    gnome-software
+    gnome-system-monitor
+    gnome-text-editor
+    gnome-tour
+    gnome-user-docs
+    gnome-weather
+    snapshot
     totem
     yelp
-    gnome-software
   ];
 
   environment.shells = with pkgs; [
