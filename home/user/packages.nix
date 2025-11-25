@@ -1,11 +1,11 @@
 {
-  pkgs-unstable,
+  pkgs,
   sniffy,
   smailer,
   ...
 }:
 {
-  home.packages = with pkgs-unstable; [
+  home.packages = with pkgs; [
     # Services for work
     valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
@@ -103,8 +103,7 @@
     fastfetch # Highly customizable system information tool
     inxi # System information script
 
-    # My custom packages (usually go TUIs)
-    sniffy.packages.${pkgs.stdenv.hostPlatform.system}.default
-    smailer.packages.${pkgs.stdenv.hostPlatform.system}.default
+    sniffy # Simple TUI for sniffing out unused secrets in AWS
+    smailer # TUI for reviewing emails in an s3 bucket
   ];
 }

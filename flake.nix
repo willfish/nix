@@ -37,15 +37,17 @@
     let
       system = "x86_64-linux";
       lib = nixpkgs-unstable.lib;
+      overlay = (
+        final: prev: {
+          inherit (sniffy.packages.${system}) sniffy;
+          inherit (smailer.packages.${system}) smailer;
+        }
+      );
       pkgs = import nixpkgs-unstable {
         inherit system;
         config.allowUnfree = true;
         config.nvidia.acceptLicense = true;
-      };
-      pkgs-unstable = import nixpkgs-unstable {
-        inherit system;
-        config.allowUnfree = true;
-        config.nvidia.acceptLicense = true;
+        overlays = [ overlay ];
       };
       pre-commit-check = pre-commit-hooks.lib.${system}.run {
         src = ./.;
@@ -63,20 +65,24 @@
     {
       nixosConfigurations = {
         andromeda = lib.nixosSystem {
-          inherit pkgs system;
+          inherit system;
           modules = [ ./system/andromeda/configuration.nix ];
-          specialArgs = { inherit pkgs-unstable; };
+          specialArgs = {
+            pkgs-unstable = pkgs;
+          };
         };
         starfish = lib.nixosSystem {
-          inherit pkgs system;
+          inherit system;
           modules = [ ./system/starfish/configuration.nix ];
-          specialArgs = { inherit pkgs-unstable; };
+          specialArgs = {
+            pkgs-unstable = pkgs;
+          };
         };
         foundation = lib.nixosSystem {
-          inherit pkgs system;
+          inherit system;
           modules = [ ./system/foundation/configuration.nix ];
           specialArgs = {
-            inherit pkgs-unstable;
+            pkgs-unstable = pkgs;
             inherit nixos-hardware;
           };
         };
@@ -85,10 +91,6 @@
         william = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           modules = [ ./home ];
-          extraSpecialArgs = {
-            inherit pkgs-unstable;
-            inherit sniffy smailer;
-          };
         };
       };
       devShells.${system} = {

@@ -1,4 +1,4 @@
-{ pkgs-unstable, config, ... }:
+{ pkgs, config, ... }:
 
 {
   system.stateVersion = "24.11";
@@ -16,7 +16,7 @@
       localNetworkGameTransfers.openFirewall = true;
     };
   };
-  boot.kernelPackages = pkgs-unstable.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
   hardware.graphics.enable = true;
   hardware.nvidia = {
     modesetting.enable = true;

@@ -1,9 +1,5 @@
-{ pkgs, pkgs-unstable, ... }:
+{ pkgs, ... }:
 {
-  system.activationScripts.binBash = ''
-    mkdir -p /bin
-    ln -sf ${pkgs.bash}/bin/bash /bin/bash
-  '';
   system.activationScripts.usrLocal = ''
     mkdir -p /usr/local/bin
     chmod 755 /usr/local/bin
@@ -38,7 +34,7 @@
   services.printing.enable = true;
   services.opensearch.enable = true;
   services.mullvad-vpn.enable = true;
-  services.mullvad-vpn.package = pkgs-unstable.mullvad-vpn;
+  services.mullvad-vpn.package = pkgs.mullvad-vpn;
 
   services.avahi = {
     enable = true;
@@ -100,7 +96,7 @@
     enableSSHSupport = true;
   };
 
-  environment.systemPackages = with pkgs-unstable; [
+  environment.systemPackages = with pkgs; [
     neovim
     curl
     git
@@ -137,14 +133,14 @@
     gnome-software
   ];
 
-  environment.shells = with pkgs-unstable; [
+  environment.shells = with pkgs; [
     bash
     fish
   ];
-  users.defaultUserShell = pkgs-unstable.fish;
+  users.defaultUserShell = pkgs.fish;
   programs.fish = {
     enable = true;
-    package = pkgs-unstable.fish;
+    package = pkgs.fish;
   };
 
   virtualisation.docker.enable = true;
@@ -168,7 +164,7 @@
   };
 
   fonts = {
-    packages = with pkgs-unstable; [
+    packages = with pkgs; [
       adwaita-icon-theme
       jetbrains-mono
       nerd-fonts.jetbrains-mono

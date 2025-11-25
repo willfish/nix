@@ -1,4 +1,4 @@
-{ pkgs-unstable, ... }:
+{ pkgs, ... }:
 let
   aliases = {
     a = "tmux attach";
@@ -47,7 +47,7 @@ in
   };
 
   programs.fish = {
-    package = pkgs-unstable.fish;
+    package = pkgs.fish;
     enable = true;
     shellAliases = aliases;
     shellAbbrs = abbreviations;
@@ -73,5 +73,5 @@ in
   };
   programs.zoxide.enable = true;
   programs.zoxide.enableFishIntegration = true;
-  programs.zoxide.package = pkgs-unstable.zoxide;
+  programs.zoxide.package = pkgs.zoxide;
 }
