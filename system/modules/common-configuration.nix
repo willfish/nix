@@ -102,16 +102,11 @@
     git
     ghostty
 
-    openssl # Cryptographic library for SSL/TLS
-    openssl.dev # Development files for OpenSSL (headers, libs)
-    pkg-config # Helper tool to manage library dependencies during compilation
-
     home-manager # Nix-based user environment manager
 
     gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
     gnomeExtensions.appindicator # GNOME extension for app indicators
     gnomeExtensions.pop-shell # GNOME extension for tiling window management
-    gnome-tweaks # GNOME app for customizing the desktop environment
     pop-launcher # GNOME app for launching applications
 
     xclip
@@ -177,7 +172,6 @@
       nerd-fonts.jetbrains-mono
       nerd-fonts.ubuntu
       nerd-fonts.ubuntu-mono
-      powerline-fonts # Used by Dracula Theme in Tmux
     ];
   };
 
@@ -187,7 +181,7 @@
     settings = {
       substituters = [
         "https://cache.nixos.org"
-        # "https://nixpkgs-ruby.cachix.org" - NOTE: Cachix is down
+        "https://nixpkgs-ruby.cachix.org"
       ];
       warn-dirty = false;
       experimental-features = [

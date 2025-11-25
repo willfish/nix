@@ -5,6 +5,10 @@
     valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
 
+    openssl # Cryptographic library for SSL/TLS
+    openssl.dev # Development files for OpenSSL (headers, libs)
+    pkg-config # Helper tool to manage library dependencies during compilation
+
     # Desktop apps
     clementine # Music player with library management
     dropbox # Cloud storage and file synchronization service
