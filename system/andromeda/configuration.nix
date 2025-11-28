@@ -6,6 +6,7 @@
     ../modules/common-configuration.nix
     ./hardware-configuration.nix
   ];
+  nixpkgs.config.allowUnfree = true;
   networking.hostName = "andromeda";
   hardware.system76.enableAll = true;
   programs = {
