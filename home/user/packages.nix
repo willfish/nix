@@ -2,6 +2,7 @@
 {
   home.packages = with pkgs; [
     # Services for work
+    zoom-us
     valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
 
@@ -33,6 +34,7 @@
     fzf # Fuzzy finder for command-line searches
     gemini-cli # Command-line client for the Gemini protocol
     gh # GitHub CLI for repository management
+    httpie # User-friendly command-line HTTP client
     isd # Interactive systemd journal browser
     jq # Command-line JSON processor
     lazydocker # Terminal UI for Docker and Docker Compose
