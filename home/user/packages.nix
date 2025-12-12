@@ -101,5 +101,7 @@
 
     sniffy # Simple TUI for sniffing out unused secrets in AWS
     smailer # TUI for reviewing emails in an s3 bucket
+
+    emacs
   ];
 }

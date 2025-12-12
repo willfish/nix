@@ -1,0 +1,10 @@
+# /home/william/.config/tmuxinator/dot.yml
+
+name: dot
+root: ~/dot
+
+windows:
+  - dot:
+      layout: main-vertical
+      panes:
+        - vim
