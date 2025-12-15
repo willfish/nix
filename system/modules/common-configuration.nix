@@ -183,7 +183,7 @@
     settings = {
       substituters = [
         "https://cache.nixos.org"
-        "https://nixpkgs-ruby.cachix.org"
+        # "https://nixpkgs-ruby.cachix.org"
       ];
       warn-dirty = false;
       experimental-features = [
