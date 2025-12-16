@@ -103,5 +103,6 @@
     smailer # TUI for reviewing emails in an s3 bucket
 
     emacs
+    cosmic-ext-tweaks
   ];
 }

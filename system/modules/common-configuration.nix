@@ -156,7 +156,9 @@
 
     spice-vdagentd.enable = true;
 
-    displayManager.gdm.enable = true;
+    displayManager.cosmic-greeter.enable = true;
+    desktopManager.cosmic.enable = true;
+    # displayManager.gdm.enable = true;
     desktopManager.gnome.enable = true;
     xserver = {
       xkb.layout = "us";
