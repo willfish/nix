@@ -60,7 +60,7 @@
 
     # Networking tools
     dig # DNS lookup tool
-    dogdns # DNS client (like dig)
+    doggo # DNS client (like dig)
     inetutils # Basic networking tools (e.g., ping, telnet)
     nmap # Network exploration and security auditing tool
     mtr # Network diagnostic tool (combines ping and traceroute)
