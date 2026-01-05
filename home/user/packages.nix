@@ -32,7 +32,6 @@
     dust # Disk usage analyzer (alternative to du)
     fd # Fast, simple alternative to find
     fzf # Fuzzy finder for command-line searches
-    gemini-cli # Command-line client for the Gemini protocol
     gh # GitHub CLI for repository management
     httpie # User-friendly command-line HTTP client
     isd # Interactive systemd journal browser
@@ -102,7 +101,10 @@
     sniffy # Simple TUI for sniffing out unused secrets in AWS
     smailer # TUI for reviewing emails in an s3 bucket
 
-    emacs
     cosmic-ext-tweaks
+
+    # AI tools
+    gemini-cli # Command-line client for the Gemini protocol
+    claude-code # Command-line interface for Anthropic's Claude AI
   ];
 }

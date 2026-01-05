@@ -31,7 +31,8 @@ EXAMPLES:
     $SCRIPT_NAME 'bundle exec rails db:rollback db:migrate'    # Database migration
 
 SPECIAL BEHAVIOR:
-    - If selecting 'backend-job' service with no running tasks, automatically starts a new task
+    - If selecting 'backend-job', looks for standalone tasks (not services)
+    - If no running 'backend-job' tasks exist, automatically starts a new one
     - backend-job tasks are automatically stopped when you exit
     - All commands run with RAILS_LOG_LEVEL=debug for better debugging
 
@@ -65,7 +66,6 @@ check_aws_credentials() {
     fi
 }
 
-# Argument parsing
 parse_arguments() {
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -109,9 +109,12 @@ select_service() {
     local cluster="$1"
     local service
 
-    service=$(aws ecs list-services --cluster "$cluster" --region "$REGION" \
-        | jq -r '.serviceArns[] | split("/") | .[2]' \
-        | fzf --height 40% --prompt "Select a Service: " --no-info)
+    # NOTE: Inject "backend-job" into the list since it's no longer an ECS Service
+    service=$({
+        aws ecs list-services --cluster "$cluster" --region "$REGION" \
+            | jq -r '.serviceArns[] | split("/") | .[2]'
+        echo "backend-job"
+    } | sort | uniq | fzf --height 40% --prompt "Select a Service (or Job): " --no-info)
 
     [[ -n "$service" ]] || error_exit "No service selected"
     echo "Selected Service: $service" >&2
@@ -123,7 +126,17 @@ select_task() {
     local service="$2"
     local task
 
-    task=$(aws ecs list-tasks --cluster "$cluster" --service-name "$service" --region "$REGION" \
+    local task_list_cmd
+
+    if [[ "$service" == "backend-job" ]]; then
+        # For backend-job, we filter by Family, not Service Name
+        task_list_cmd="aws ecs list-tasks --cluster \"$cluster\" --family \"backend-job\" --region \"$REGION\""
+    else
+        # For standard services, we filter by Service Name
+        task_list_cmd="aws ecs list-tasks --cluster \"$cluster\" --service-name \"$service\" --region \"$REGION\""
+    fi
+
+    task=$(eval "$task_list_cmd" \
         | jq -r '.taskArns[] | split("/") | .[2]' \
         | fzf --height 40% --prompt "Select a Task: " --no-info)
 
@@ -171,19 +184,31 @@ get_network_config() {
     echo "$subnets,$sg"
 }
 
+find_task_definition() {
+    local search_term="$1"
+
+    # List all active task definitions and grep for the search term
+    # We sort DESC to get the latest revisions first
+    local task_def_arn
+    task_def_arn=$(aws ecs list-task-definitions --status ACTIVE --sort DESC --region "$REGION" \
+        | jq -r '.taskDefinitionArns[]' \
+        | grep -E "$search_term" \
+        | head -n 1)
+
+    echo "$task_def_arn"
+}
+
 start_backend_job_task() {
     local cluster="$1"
     local service="$2"
 
-    echo "backend-job service has no running tasks. Starting a new task..." >&2
-
-    # Get task definition
     local task_def
-    task_def=$(aws ecs describe-services --cluster "$cluster" --services "$service" --region "$REGION" \
-        | jq -r '.services[0].taskDefinition')
+    task_def=$(find_task_definition ".*/backend-job-[0-9]{12}:[0-9]+$")
+    echo "Using Task Definition ARN: $task_def" >&2
 
-    [[ -n "$task_def" ]] || error_exit "Could not find task definition for service: $service"
-    echo "Starting task with definition: $task_def" >&2
+    if [[ -z "$task_def" ]]; then
+        error_exit "Could not find any active Task Definition containing 'backend-job'. Please check your AWS Task Definitions."
+    fi
 
     # Get network configuration
     local network_config
@@ -290,14 +315,14 @@ main() {
     local backend_job_started=false
     if [[ "$service" == "backend-job" ]]; then
         local running_tasks
-        running_tasks=$(aws ecs list-tasks --cluster "$cluster" --service-name "$service" --region "$REGION" --desired-status RUNNING \
+        running_tasks=$(aws ecs list-tasks --cluster "$cluster" --family "$service" --region "$REGION" --desired-status RUNNING \
             | jq -r '.taskArns | length')
 
         if [[ "$running_tasks" -eq 0 ]]; then
             task=$(start_backend_job_task "$cluster" "$service")
             backend_job_started=true
         else
-            echo "backend-job service has $running_tasks running task(s). Proceeding with task selection..." >&2
+            echo "backend-job has $running_tasks running task(s). Proceeding with task selection..." >&2
             task=$(select_task "$cluster" "$service")
         fi
     else
@@ -312,7 +337,6 @@ main() {
         exec_command="/bin/sh -c \"RAILS_LOG_LEVEL=debug $COMMAND\""
     fi
 
-    # Setup cleanup trap for backend-job
     if [[ "$service" == "backend-job" && "$backend_job_started" == true ]]; then
         trap "cleanup_backend_job '$cluster' '$task'" EXIT
     fi
@@ -320,6 +344,16 @@ main() {
     local exec_enabled
     exec_enabled=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
         | jq -r '.tasks[0].enableExecuteCommand')
+
+    # Check if exec is enabled. Note: Newly started tasks might report false momentarily,
+    # but the wait_for_task_agent function usually handles the delay.
+    if [[ "$exec_enabled" != "true" ]]; then
+        # Double check - sometimes API is slow to reflect on new tasks
+        sleep 2
+        exec_enabled=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --region "$REGION" \
+            | jq -r '.tasks[0].enableExecuteCommand')
+    fi
+
     [[ "$exec_enabled" == "true" ]] || error_exit "ECS Exec not enabled on task $task (check task definition IAM role)"
 
     # Execute command
