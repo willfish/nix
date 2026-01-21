@@ -8,6 +8,5 @@
     ./programs.nix
     ./shells.nix
     ./tmux.nix
-    ./zathura.nix
   ];
 }

@@ -1,11 +1,11 @@
-{ pkgs-unstable, ... }:
+{ pkgs, ... }:
 {
   programs = {
     brave = {
       enable = true;
 
       dictionaries = [
-        pkgs-unstable.hunspellDictsChromium.en_GB
+        pkgs.hunspellDictsChromium.en_GB
       ];
     };
 

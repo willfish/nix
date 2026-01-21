@@ -1,29 +1,27 @@
+{ pkgs, ... }:
 {
-  pkgs-unstable,
-  sniffy,
-  smailer,
-  ...
-}:
-{
-  home.packages = with pkgs-unstable; [
+  home.packages = with pkgs; [
     # Services for work
+    zoom-us
     valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
-    qbittorrent
+
+    openssl # Cryptographic library for SSL/TLS
+    openssl.dev # Development files for OpenSSL (headers, libs)
+    pkg-config # Helper tool to manage library dependencies during compilation
 
     # Desktop apps
-    audacity # Audio recording and editing software
     clementine # Music player with library management
     dropbox # Cloud storage and file synchronization service
     libation # Audio player with a focus on music libraries
     libreoffice-qt # Office suite with Qt interface (docs, spreadsheets, etc.)
     pavucontrol # Graphical PulseAudio volume control
+    qbittorrent # BitTorrent client with a user-friendly interface
     slack # Team collaboration and messaging app
     spotify # Music streaming application
     telegram-desktop # Desktop client for Telegram messaging
     variety # Wallpaper changer with customization options
     vokoscreen-ng # Screen recording tool with audio support
-    xournalpp # Note-taking and PDF annotation tool
 
     # Utilities
     awscli2 # AWS command-line interface (version 2)
@@ -34,23 +32,22 @@
     dust # Disk usage analyzer (alternative to du)
     fd # Fast, simple alternative to find
     fzf # Fuzzy finder for command-line searches
-    gemini-cli # Command-line client for the Gemini protocol
     gh # GitHub CLI for repository management
+    httpie # User-friendly command-line HTTP client
+    isd # Interactive systemd journal browser
     jq # Command-line JSON processor
     lazydocker # Terminal UI for Docker and Docker Compose
-    lazygit # Terminal UI for Git
     lsd # Modern ls alternative with icons
     lsof # Lists open files and their processes
     p7zip # 7-Zip file archiver (supports multiple formats)
+    pgcli # PostgreSQL interactive terminal
     pwgen # Password generator
     ripgrep # Fast, recursive grep alternative
     ssm-session-manager-plugin # AWS plugin for SSM session management (e.g., ECS exec)
     strace # System call tracer for debugging
-    sysz # Systemd service searcher (fzf-based)
     tree # Displays directory tree structure
     unzip # Tool to extract ZIP archives
     yq # Command-line YAML processor (like jq for YAML)
-    yazi # File explorer
     zip # Tool to create ZIP archives
 
     # Build tools
@@ -63,7 +60,7 @@
 
     # Networking tools
     dig # DNS lookup tool
-    dogdns # DNS client (like dig)
+    doggo # DNS client (like dig)
     inetutils # Basic networking tools (e.g., ping, telnet)
     nmap # Network exploration and security auditing tool
     mtr # Network diagnostic tool (combines ping and traceroute)
@@ -71,7 +68,6 @@
 
     # Monitoring tools
     bandwhich # Terminal bandwidth utilization tool
-    glances # Cross-platform system monitoring tool
     btop # Resource monitor with a TUI
     htop # Interactive process viewer
     iftop # Real-time network bandwidth monitoring tool
@@ -102,8 +98,13 @@
     fastfetch # Highly customizable system information tool
     inxi # System information script
 
-    # My custom packages (usually go TUIs)
-    sniffy.packages.${pkgs.stdenv.hostPlatform.system}.default
-    smailer.packages.${pkgs.stdenv.hostPlatform.system}.default
+    sniffy # Simple TUI for sniffing out unused secrets in AWS
+    smailer # TUI for reviewing emails in an s3 bucket
+
+    cosmic-ext-tweaks
+
+    # AI tools
+    gemini-cli # Command-line client for the Gemini protocol
+    claude-code # Command-line interface for Anthropic's Claude AI
   ];
 }

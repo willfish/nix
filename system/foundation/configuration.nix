@@ -1,9 +1,4 @@
-{
-  pkgs-unstable,
-  config,
-  nixos-hardware,
-  ...
-}:
+{ nixos-hardware, ... }:
 
 {
   system.stateVersion = "25.05";

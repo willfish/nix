@@ -44,7 +44,7 @@ vim.keymap.set("n", "<Leader>w", ":w!<CR>", { desc = "[W]rite the current file" 
 vim.keymap.set("n", "<Leader>q", ":wq!<CR>", { desc = "Write and [q]uit the current file" })
 
 function insert_jira_ticket_number()
-	local command = "git branch --show-current | sed -E 's/((HMRC|PRDEX|OTTIMP)-[0-9]+)-(.+)/\\1: /'"
+	local command = "git branch --show-current | sed -E 's/((HMRC|PRDEX|OTTIMP|AI)-[0-9]+)-(.+)/\\1: /'"
 	local handle = io.popen(command)
 	local result = handle:read("*a")
 
@@ -56,7 +56,7 @@ function insert_jira_ticket_number()
 end
 
 function insert_jira_ticket_url()
-	local command = "git branch --show-current | sed -E 's/((HMRC|PRDEX|OTTIMP)-[0-9]+)-(.+)/\\1: /'"
+	local command = "git branch --show-current | sed -E 's/((HMRC|PRDEX|OTTIMP|AI)-[0-9]+)-(.+)/\\1: /'"
 	local handle = io.popen(command)
 	local result = handle:read("*a")
 
@@ -293,28 +293,12 @@ require("lazy").setup({
 		event = "VeryLazy",
 		keys = {
 			{
-				"s",
+				"S",
 				mode = { "n", "x", "o" },
 				function()
 					require("flash").jump()
 				end,
 				desc = "Flash",
-			},
-			{
-				"S",
-				mode = { "n", "x", "o" },
-				function()
-					require("flash").treesitter()
-				end,
-				desc = "Flash Treesitter",
-			},
-			{
-				"r",
-				mode = "o",
-				function()
-					require("flash").remote()
-				end,
-				desc = "Remote Flash",
 			},
 		},
 		opts = { modes = { char = { enabled = true } } },
@@ -727,12 +711,19 @@ require("lazy").setup({
 			})
 		end,
 	},
+	-- {
+	-- 	"folke/tokyonight.nvim",
+	-- 	priority = 1000,
+	-- 	config = function()
+	-- 		require("tokyonight").setup({ styles = { comments = { italic = false } } })
+	-- 		vim.cmd.colorscheme("tokyonight-night")
+	-- 	end,
+	-- },
 	{
-		"folke/tokyonight.nvim",
-		priority = 1000,
+		"rose-pine/neovim",
+		name = "rose-pine",
 		config = function()
-			require("tokyonight").setup({ styles = { comments = { italic = false } } })
-			vim.cmd.colorscheme("tokyonight-night")
+			vim.cmd.colorscheme("rose-pine")
 		end,
 	},
 	{
