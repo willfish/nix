@@ -1,0 +1,20 @@
+{
+  "float": [
+    {
+      "class": "Mullvad VPN",
+      "title": ""
+    },
+    {
+      "class": "Gnome-calculator",
+      "title": ""
+    },
+    {
+      "class": "org.gnome.NautilusPreviewer",
+      "title": ""
+    }
+  ],
+  "skiptaskbarhidden": [],
+  "log_on_focus": false,
+  "move_pointer_on_switch": true,
+  "default_pointer_position": "center"
+}

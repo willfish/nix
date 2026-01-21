@@ -1,4 +1,4 @@
-{ lib, ...}:
+{ lib, ... }:
 
 with lib.hm.gvariant;
 {
@@ -25,7 +25,7 @@ with lib.hm.gvariant;
 
       "org/gnome/desktop/wm/keybindings" = {
         close = [ "<Super>q" ];
-        minimize = [];
+        minimize = [ ];
         move-to-workspace-1 = [ "<Shift><Super>1" ];
         move-to-workspace-2 = [ "<Shift><Super>2" ];
         move-to-workspace-3 = [ "<Shift><Super>3" ];
@@ -60,25 +60,25 @@ with lib.hm.gvariant;
 
       "org/gnome/shell/keybindings" = {
         show-screenshot-ui = [ "<Control><Shift>s" ];
-        open-new-window-application-1 = [];
-        open-new-window-application-2 = [];
-        open-new-window-application-3 = [];
-        open-new-window-application-4 = [];
-        open-new-window-application-5 = [];
-        open-new-window-application-6 = [];
-        open-new-window-application-7 = [];
-        open-new-window-application-8 = [];
-        open-new-window-application-9 = [];
-        switch-to-application-1 = [];
-        switch-to-application-2 = [];
-        switch-to-application-3 = [];
-        switch-to-application-4 = [];
-        switch-to-application-5 = [];
-        switch-to-application-6 = [];
-        switch-to-application-7 = [];
-        switch-to-application-8 = [];
-        switch-to-application-9 = [];
-        toggle-application-view = [];
+        open-new-window-application-1 = [ ];
+        open-new-window-application-2 = [ ];
+        open-new-window-application-3 = [ ];
+        open-new-window-application-4 = [ ];
+        open-new-window-application-5 = [ ];
+        open-new-window-application-6 = [ ];
+        open-new-window-application-7 = [ ];
+        open-new-window-application-8 = [ ];
+        open-new-window-application-9 = [ ];
+        switch-to-application-1 = [ ];
+        switch-to-application-2 = [ ];
+        switch-to-application-3 = [ ];
+        switch-to-application-4 = [ ];
+        switch-to-application-5 = [ ];
+        switch-to-application-6 = [ ];
+        switch-to-application-7 = [ ];
+        switch-to-application-8 = [ ];
+        switch-to-application-9 = [ ];
+        toggle-application-view = [ ];
       };
 
       "org/gnome/shell" = {
@@ -107,11 +107,19 @@ with lib.hm.gvariant;
       "org/gnome/clocks/state/window" = {
         maximized = false;
         panel-id = "world";
-        size = mkTuple [ 850 1392 ];
+        size = mkTuple [
+          850
+          1392
+        ];
       };
 
       "org/gnome/desktop/input-sources" = {
-        sources = [ (mkTuple [ "xkb" "us" ]) ];
+        sources = [
+          (mkTuple [
+            "xkb"
+            "us"
+          ])
+        ];
         xkb-options = [ "terminate:ctrl_alt_bksp" ];
       };
 
@@ -120,7 +128,7 @@ with lib.hm.gvariant;
       };
 
       "org/gnome/desktop/search-providers" = {
-        enabled = ["org.gnome.Weather.desktop"];
+        enabled = [ "org.gnome.Weather.desktop" ];
         sort-order = [
           "org.gnome.Settings.desktop"
           "org.gnome.Contacts.desktop"

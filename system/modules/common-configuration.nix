@@ -1,9 +1,5 @@
-{ pkgs, pkgs-unstable, ... }:
+{ pkgs, ... }:
 {
-  system.activationScripts.binBash = ''
-    mkdir -p /bin
-    ln -sf ${pkgs.bash}/bin/bash /bin/bash
-  '';
   system.activationScripts.usrLocal = ''
     mkdir -p /usr/local/bin
     chmod 755 /usr/local/bin
@@ -36,9 +32,9 @@
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
-  services.elasticsearch.enable = true;
+  services.opensearch.enable = true;
   services.mullvad-vpn.enable = true;
-  services.mullvad-vpn.package = pkgs-unstable.mullvad-vpn;
+  services.mullvad-vpn.package = pkgs.mullvad-vpn;
 
   services.avahi = {
     enable = true;
@@ -100,51 +96,53 @@
     enableSSHSupport = true;
   };
 
-  environment.systemPackages = with pkgs-unstable; [
+  environment.systemPackages = with pkgs; [
     neovim
     curl
     git
     ghostty
 
-    openssl # Cryptographic library for SSL/TLS
-    openssl.dev # Development files for OpenSSL (headers, libs)
-    pkg-config # Helper tool to manage library dependencies during compilation
-
     home-manager # Nix-based user environment manager
 
-    gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
-    gnomeExtensions.appindicator # GNOME extension for app indicators
-    gnomeExtensions.pop-shell # GNOME extension for tiling window management
-    gnome-tweaks # GNOME app for customizing the desktop environment
-    pop-launcher # GNOME app for launching applications
+    # gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
+    # gnomeExtensions.appindicator # GNOME extension for app indicators
+    # gnomeExtensions.pop-shell # GNOME extension for tiling window management
+    # pop-launcher # GNOME app for launching applications
 
     xclip
   ];
-  environment.gnome.excludePackages = with pkgs; [
-    geary
-    gnome-disk-utility
-    gnome-backgrounds
-    gnome-tour
-    gnome-user-docs
-    baobab
-    epiphany
-    gnome-text-editor
-    gnome-characters
-    gnome-contacts
-    gnome-font-viewer
-    totem
-    yelp
-    gnome-software
-  ];
+  # environment.gnome.excludePackages = with pkgs; [
+  #   baobab
+  #   epiphany
+  #   geary
+  #   gnome-backgrounds
+  #   gnome-calendar
+  #   gnome-characters
+  #   gnome-connections
+  #   gnome-contacts
+  #   gnome-font-viewer
+  #   gnome-logs
+  #   gnome-maps
+  #   gnome-music
+  #   gnome-software
+  #   gnome-system-monitor
+  #   gnome-text-editor
+  #   gnome-tour
+  #   gnome-user-docs
+  #   gnome-weather
+  #   snapshot
+  #   totem
+  #   yelp
+  # ];
 
-  environment.shells = with pkgs-unstable; [
+  environment.shells = with pkgs; [
     bash
     fish
   ];
-  users.defaultUserShell = pkgs-unstable.fish;
+  users.defaultUserShell = pkgs.fish;
   programs.fish = {
     enable = true;
-    package = pkgs-unstable.fish;
+    package = pkgs.fish;
   };
 
   virtualisation.docker.enable = true;
@@ -158,8 +156,10 @@
 
     spice-vdagentd.enable = true;
 
-    displayManager.gdm.enable = true;
-    desktopManager.gnome.enable = true;
+    displayManager.cosmic-greeter.enable = true;
+    desktopManager.cosmic.enable = true;
+    # displayManager.gdm.enable = true;
+    # desktopManager.gnome.enable = true;
     xserver = {
       xkb.layout = "us";
       xkb.variant = "";
@@ -168,13 +168,12 @@
   };
 
   fonts = {
-    packages = with pkgs-unstable; [
+    packages = with pkgs; [
       adwaita-icon-theme
       jetbrains-mono
       nerd-fonts.jetbrains-mono
       nerd-fonts.ubuntu
       nerd-fonts.ubuntu-mono
-      powerline-fonts # Used by Dracula Theme in Tmux
     ];
   };
 
@@ -184,7 +183,7 @@
     settings = {
       substituters = [
         "https://cache.nixos.org"
-        # "https://nixpkgs-ruby.cachix.org" - NOTE: Cachix is down
+        # "https://nixpkgs-ruby.cachix.org"
       ];
       warn-dirty = false;
       experimental-features = [

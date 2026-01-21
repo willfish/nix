@@ -1,19 +1,7 @@
-{ pkgs-unstable, sessionx, ... }:
-let
-  tmux-pomodoro-plus = pkgs-unstable.tmuxPlugins.mkTmuxPlugin rec {
-    pluginName = "pomodoro";
-    version = "main";
-    src = pkgs-unstable.fetchFromGitHub {
-      owner = "olimorris";
-      repo = "tmux-pomodoro-plus";
-      tag = version;
-      sha256 = "sha256-pWnfq2yAy9PkXatxto9eRPczoyrNEpA6l9683Q0gWQA=";
-    };
-  };
-in
+{ pkgs, ... }:
 {
-  programs.tmux = with pkgs-unstable.tmuxPlugins; {
-    package = pkgs-unstable.tmux;
+  programs.tmux = with pkgs.tmuxPlugins; {
+    package = pkgs.tmux;
     enable = true;
     clock24 = true;
     plugins = [
@@ -51,17 +39,6 @@ in
           set -g @rose_pine_variant 'moon'
         '';
       }
-      # {
-      #   plugin = tmux-pomodoro-plus;
-      #   extraConfig = ''
-      #     set -g @pomodoro_granularity on
-      #     set -g @pomodoro_mins 25
-      #     set -g @pomodoro_break_mins 5
-      #     set -g @pomodoro_notifications on
-      #
-      #     set -g status-right "#(${tmux-pomodoro-plus}/share/tmux-plugins/pomodoro/scripts/pomodoro.sh)"
-      #   '';
-      # }
     ];
     extraConfig = ''
       set-option -g default-terminal 'screen-256color'
