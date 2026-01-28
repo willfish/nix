@@ -57,6 +57,8 @@ in
         | (if .messages.queue.byProvider then .messages.queue.byChannel = .messages.queue.byProvider | del(.messages.queue.byProvider) else . end)
         # inject gateway auth token
         | (if $tok != "" then .gateway.auth = {"mode":"token","token":$tok} else . end)
+        # use cheaper model (Sonnet 4 instead of Opus 4.5)
+        | .agents.defaults.model.primary = "anthropic/claude-sonnet-4-20250514"
       ' "$_tmp" > "$_cfg"
       rm "$_tmp"
       chmod 600 "$_cfg"
@@ -70,4 +72,49 @@ in
     "PATH=${pkgs.coreutils}/bin"
     "CLAWDBOT_BUNDLED_PLUGINS_DIR=${clawdbot-extensions}/extensions"
   ];
+
+  # Session rotation: archive sessions over 500KB to avoid context blowup
+  systemd.user.services.clawdbot-session-rotate = {
+    Unit.Description = "Rotate large clawdbot sessions";
+    Service = {
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "clawdbot-session-rotate" ''
+        set -euo pipefail
+        SESSION_DIR="$HOME/.clawdbot/agents/main/sessions"
+        ARCHIVE_DIR="$HOME/.clawdbot/agents/main/sessions/archive"
+        MAX_SIZE=512000  # 500KB
+
+        mkdir -p "$ARCHIVE_DIR"
+
+        # Find and rotate large session files
+        for f in "$SESSION_DIR"/*.jsonl; do
+          [ -f "$f" ] || continue
+          size=$(${pkgs.coreutils}/bin/stat -c%s "$f" 2>/dev/null || echo 0)
+          if [ "$size" -gt "$MAX_SIZE" ]; then
+            name=$(basename "$f")
+            ts=$(date +%Y%m%d-%H%M%S)
+            mv "$f" "$ARCHIVE_DIR/$name.$ts.bak"
+            echo "Rotated $name ($size bytes)"
+          fi
+        done
+
+        # Clear sessions.json to reset state
+        rm -f "$SESSION_DIR/sessions.json"
+
+        # Keep only last 5 archives per session
+        for prefix in $(ls "$ARCHIVE_DIR"/*.bak 2>/dev/null | sed 's/\.[0-9-]*\.bak$//' | sort -u); do
+          ls -t "$prefix".*.bak 2>/dev/null | tail -n +6 | xargs -r rm -f
+        done
+      '';
+    };
+  };
+
+  systemd.user.timers.clawdbot-session-rotate = {
+    Unit.Description = "Daily clawdbot session rotation";
+    Timer = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
+    Install.WantedBy = [ "timers.target" ];
+  };
 }
