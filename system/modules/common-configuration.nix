@@ -5,6 +5,13 @@
     chmod 755 /usr/local/bin
   '';
 
+  # nix-clawdbot home-manager module expects /bin/ coreutils (macOS convention)
+  system.activationScripts.binCoreutils = ''
+    for cmd in mkdir ln cp mv rm cat chmod chown; do
+      ln -sfn ${pkgs.coreutils}/bin/$cmd /bin/$cmd
+    done
+  '';
+
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelParams = [ "btiso.enable=1" ];
