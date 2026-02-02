@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 {
   home.packages = with pkgs; [
     # Services for work
@@ -22,6 +22,9 @@
     telegram-desktop # Desktop client for Telegram messaging
     variety # Wallpaper changer with customization options
     vokoscreen-ng # Screen recording tool with audio support
+
+    # Email
+    himalaya # CLI email client
 
     # Utilities
     awscli2 # AWS command-line interface (version 2)
@@ -49,6 +52,9 @@
     unzip # Tool to extract ZIP archives
     yq # Command-line YAML processor (like jq for YAML)
     zip # Tool to create ZIP archives
+
+    # Document tools
+    (texlive.combine { inherit (texlive) scheme-small enumitem titlesec fancyhdr parskip booktabs tools collection-fontsrecommended hyperref xcolor; }) # LaTeX distribution for PDF generation
 
     # Build tools
     gcc # GNU Compiler Collection
@@ -82,7 +88,7 @@
     markdownlint-cli # Linter for Markdown files
     marksman # Markdown previewer with live reload
     nil # Nix language server for IDE integration
-    nodejs_latest # Used just to install language servers
+    (lib.meta.lowPrio nodejs_latest) # Used just to install language servers
     pre-commit # Framework for managing pre-commit hooks
     python3
     ruby
@@ -100,6 +106,7 @@
 
     sniffy # Simple TUI for sniffing out unused secrets in AWS
     smailer # TUI for reviewing emails in an s3 bucket
+    mux # Fast tmuxinator replacement in C
 
     cosmic-ext-tweaks
 

@@ -6,7 +6,6 @@ let
     la = "lsd -la";
     ll = "lsd -l";
     psql = "pgcli";
-    mux = "tmuxinator";
     tm = "tmux";
     v = "nvim";
     vi = "nvim";
@@ -32,7 +31,6 @@ let
 
     tg = "terragrunt";
 
-    mux = "tmuxinator";
     tm = "tmux";
 
     prod = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/production";

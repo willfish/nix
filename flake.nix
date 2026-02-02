@@ -22,7 +22,16 @@
       url = "github:willfish/smailer";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+    mux = {
+      url = "github:willfish/mux";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+    nix-clawdbot = {
+      url = "github:moltbot/nix-clawdbot";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+    nixpkgs-local.url = "path:/home/william/Repositories/nixpkgs";
   };
   outputs =
     {
@@ -31,23 +40,50 @@
       home-manager,
       sniffy,
       smailer,
+      mux,
       nixos-hardware,
+      nix-clawdbot,
+      nixpkgs-local,
       ...
     }:
     let
       system = "x86_64-linux";
       lib = nixpkgs-unstable.lib;
+      pkgs-local = import nixpkgs-local { inherit system; };
       overlay = (
         final: prev: {
           inherit (sniffy.packages.${system}) sniffy;
           inherit (smailer.packages.${system}) smailer;
+          mux = mux.packages.${system}.default;
+          variety = pkgs-local.variety;
         }
       );
       pkgs = import nixpkgs-unstable {
         inherit system;
         config.allowUnfree = true;
         config.nvidia.acceptLicense = true;
-        overlays = [ overlay ];
+        overlays = [
+          overlay
+          nix-clawdbot.overlays.default
+          # The upstream gateway install script omits docs/reference/templates,
+          # but dist/agents/workspace.js resolves templates relative to itself.
+          # Patch gateway and propagate to the batteries bundle.
+          (final: prev: {
+            clawdbot-gateway = prev.clawdbot-gateway.overrideAttrs (old: {
+              postFixup = (old.postFixup or "") + ''
+                templates=$(find $out/lib/clawdbot/node_modules/.pnpm \
+                  -path '*/node_modules/clawdbot/docs/reference/templates' -type d | head -1)
+                if [ -n "$templates" ]; then
+                  mkdir -p $out/lib/clawdbot/docs/reference
+                  cp -r "$templates" $out/lib/clawdbot/docs/reference/templates
+                fi
+              '';
+            });
+            clawdbot = prev.clawdbot.override {
+              clawdbot-gateway = final.clawdbot-gateway;
+            };
+          })
+        ];
       };
       pre-commit-check = pre-commit-hooks.lib.${system}.run {
         src = ./.;
@@ -90,7 +126,10 @@
       homeConfigurations = {
         william = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
-          modules = [ ./home ];
+          modules = [
+            nix-clawdbot.homeManagerModules.clawdbot
+            ./home
+          ];
         };
       };
       devShells.${system} = {
