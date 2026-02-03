@@ -1,6 +1,5 @@
 {
   imports = [
-    ./clawdbot.nix
     ./config.nix
     ./email.nix
     ./environment.nix
