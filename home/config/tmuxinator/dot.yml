@@ -1,7 +1,7 @@
 # /home/william/.config/tmuxinator/dot.yml
 
 name: dot
-root: ~/dot
+root: ~/.dotfiles
 
 windows:
   - dot:

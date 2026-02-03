@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Launch Brave with remote debugging enabled for Claude Code MCP browser integration
+exec brave --remote-debugging-port=9222 "$@"
