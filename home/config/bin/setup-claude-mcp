@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Configure Claude Code MCP servers (user scope)
+# Re-run this after installing Claude Code on a new machine.
+#
+# NOTE: The official Slack MCP server (https://mcp.slack.com/mcp) does not
+# support dynamic client registration, which Claude Code requires for OAuth.
+# This works in the Claude browser app (pre-registered client) but not in
+# the CLI. Waiting on upstream support:
+# https://github.com/anthropics/claude-code/issues/21107
+#
+# For now, Slack and Gmail integrations are only available via Claude's
+# browser app with first-party connectors.
+
+set -euo pipefail
+
+echo "Claude Code MCP servers"
+echo ""
+echo "No MCP servers to configure yet."
+echo "Slack/Gmail require first-party OAuth support — use Claude browser app for now."
+echo "See: https://github.com/anthropics/claude-code/issues/21107"
