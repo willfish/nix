@@ -28,6 +28,7 @@
 
     # Utilities
     awscli2 # AWS command-line interface (version 2)
+    bat # Cat clone with syntax highlighting and git integration
     bats # Bash automated testing system
     delta # Git diff viewer with syntax highlighting
     dive # Tool to explore Docker image layers
@@ -69,6 +70,8 @@
         ;
     }) # LaTeX distribution for PDF generation
 
+    nh # Nix helper for nixos-rebuild and home-manager with nice diffs
+
     # Build tools
     gcc # GNU Compiler Collection
     gnumake # GNU Make build automation tool
@@ -103,6 +106,9 @@
     nil # Nix language server for IDE integration
     (lib.meta.lowPrio nodejs_latest) # Used just to install language servers
     pre-commit # Framework for managing pre-commit hooks
+    black # Python code formatter
+    isort # Python import sorter
+    pyright # Python language server
     python3
     ruby
     stylua # Lua formatter

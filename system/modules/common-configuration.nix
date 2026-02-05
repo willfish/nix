@@ -111,37 +111,8 @@
 
     home-manager # Nix-based user environment manager
 
-    # gnomeExtensions.auto-move-windows # GNOME extension for automatic window positioning
-    # gnomeExtensions.appindicator # GNOME extension for app indicators
-    # gnomeExtensions.pop-shell # GNOME extension for tiling window management
-    # pop-launcher # GNOME app for launching applications
-
     xclip
   ];
-  # environment.gnome.excludePackages = with pkgs; [
-  #   baobab
-  #   epiphany
-  #   geary
-  #   gnome-backgrounds
-  #   gnome-calendar
-  #   gnome-characters
-  #   gnome-connections
-  #   gnome-contacts
-  #   gnome-font-viewer
-  #   gnome-logs
-  #   gnome-maps
-  #   gnome-music
-  #   gnome-software
-  #   gnome-system-monitor
-  #   gnome-text-editor
-  #   gnome-tour
-  #   gnome-user-docs
-  #   gnome-weather
-  #   snapshot
-  #   totem
-  #   yelp
-  # ];
-
   environment.shells = with pkgs; [
     bash
     fish
@@ -165,8 +136,6 @@
 
     displayManager.cosmic-greeter.enable = true;
     desktopManager.cosmic.enable = true;
-    # displayManager.gdm.enable = true;
-    # desktopManager.gnome.enable = true;
     xserver = {
       xkb.layout = "us";
       xkb.variant = "";
@@ -193,6 +162,7 @@
         # "https://nixpkgs-ruby.cachix.org"
       ];
       warn-dirty = false;
+      trusted-users = [ "root" "william" ];
       experimental-features = [
         "nix-command"
         "flakes"

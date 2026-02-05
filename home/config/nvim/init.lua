@@ -17,7 +17,6 @@ vim.opt.breakindent = true
 vim.opt.undofile = true
 vim.opt.swapfile = false
 vim.opt.inccommand = "split"
-vim.opt.splitright = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.signcolumn = "yes"
@@ -43,33 +42,20 @@ vim.keymap.set("i", "kj", "<Esc>", { desc = "Escape out of INSERT mode" })
 vim.keymap.set("n", "<Leader>w", ":w!<CR>", { desc = "[W]rite the current file" })
 vim.keymap.set("n", "<Leader>q", ":wq!<CR>", { desc = "Write and [q]uit the current file" })
 
-function insert_jira_ticket_number()
-	local command = "git branch --show-current | sed -E 's/((HMRC|PRDEX|OTTIMP|AI)-[0-9]+)-(.+)/\\1: /'"
-	local handle = io.popen(command)
-	local result = handle:read("*a")
-
-	handle:close()
-
+local function insert_jira_ticket_number()
+	local result = vim.fn.system("git branch --show-current | sed -E 's/((HMRC|PRDEX|OTTIMP|AI)-[0-9]+)-(.+)/\\1: /'")
 	result = result:gsub("\n$", "")
-
 	vim.api.nvim_put({ result }, "c", true, true)
 end
 
-function insert_jira_ticket_url()
-	local command = "git branch --show-current | sed -E 's/((HMRC|PRDEX|OTTIMP|AI)-[0-9]+)-(.+)/\\1: /'"
-	local handle = io.popen(command)
-	local result = handle:read("*a")
-
-	handle:close()
-
-	result = result:gsub("\n$", "")
-	result = result:gsub(": $", "")
-	result = "[" .. result .. "]" .. "(https://transformuk.atlassian.net/browse/" .. result .. ")"
-
+local function insert_jira_ticket_url()
+	local ticket = vim.fn.system("git branch --show-current | sed -E 's/((HMRC|PRDEX|OTTIMP|AI)-[0-9]+)-.+/\\1/'")
+	ticket = ticket:gsub("\n$", "")
+	local result = "[" .. ticket .. "](https://transformuk.atlassian.net/browse/" .. ticket .. ")"
 	vim.api.nvim_put({ result }, "c", true, true)
 end
 
-function toggle_quickfix()
+local function toggle_quickfix()
 	local quickfix_open = false
 
 	for _, win in pairs(vim.fn.getwininfo()) do
@@ -86,19 +72,9 @@ function toggle_quickfix()
 	end
 end
 
-vim.api.nvim_set_keymap("n", "<Leader>.", "<cmd>lua toggle_quickfix()<CR>", { desc = "Toggles the quickfix menu." })
-vim.api.nvim_set_keymap(
-	"n",
-	"<leader>p",
-	"<cmd>lua insert_jira_ticket_number()<CR>",
-	{ desc = "Inserts the current branch ticket number into the buffer" }
-)
-vim.api.nvim_set_keymap(
-	"n",
-	"<leader>u",
-	"<cmd>lua insert_jira_ticket_url()<CR>",
-	{ desc = "Inserts markdown URL for the current jira ticket" }
-)
+vim.keymap.set("n", "<Leader>.", toggle_quickfix, { desc = "Toggles the quickfix menu." })
+vim.keymap.set("n", "<Leader>p", insert_jira_ticket_number, { desc = "Inserts the current branch ticket number into the buffer" })
+vim.keymap.set("n", "<Leader>u", insert_jira_ticket_url, { desc = "Inserts markdown URL for the current jira ticket" })
 vim.api.nvim_create_autocmd("TextYankPost", {
 	desc = "Highlight when yanking (copying) text",
 	group = vim.api.nvim_create_augroup("kickstart-highlight-yank", { clear = true }),
@@ -107,7 +83,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	end,
 })
 
-local lazypath = "/home/william/.config/lazy"
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
 	local lazyrepo = "https://github.com/folke/lazy.nvim.git"
 	local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
@@ -121,13 +97,13 @@ require("lazy").setup({
 	"tpope/vim-sleuth", -- Detect tabstop and shiftwidth automatically
 	"andymass/vim-matchup",
 	"christoomey/vim-sort-motion",
-	"fatih/vim-go",
 	"lepture/vim-jinja",
 	"stefandtw/quickfix-reflector.vim",
 	"tpope/vim-dispatch",
 	"tpope/vim-rhubarb",
 	"tpope/vim-unimpaired",
 	"xiyaowong/nvim-cursorword",
+	"github/copilot.vim",
 	{ "b4winckler/vim-angry", dependencies = "kana/vim-textobj-user" },
 	{ "bps/vim-textobj-python", dependencies = "kana/vim-textobj-user" },
 	{ "kana/vim-textobj-line", dependencies = "kana/vim-textobj-user" },
@@ -164,7 +140,6 @@ require("lazy").setup({
 					override = {
 						["vim.lsp.util.convert_input_to_markdown_lines"] = true,
 						["vim.lsp.util.stylize_markdown"] = true,
-						["cmp.entry.get_documentation"] = true, -- requires hrsh7th/nvim-cmp
 					},
 				},
 				presets = {
@@ -210,19 +185,17 @@ require("lazy").setup({
 	{
 		"vim-test/vim-test",
 		config = function()
-			local default_map_opts = { noremap = true, silent = true }
-
-			vim.api.nvim_set_var("test#strategy", {
+			vim.g["test#strategy"] = {
 				nearest = "basic",
 				file = "dispatch",
 				suite = "dispatch_background",
-			})
+			}
 
-			vim.api.nvim_set_keymap("n", "<Leader>x", ":TestNearest<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>t", ":TestFile<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>r", ":TestSuite<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>e", ":TestLast<CR>", default_map_opts)
-			vim.api.nvim_set_keymap("n", "<Leader>l", ":TestVisit<CR>", default_map_opts)
+			vim.keymap.set("n", "<Leader>x", ":TestNearest<CR>", { silent = true, desc = "Test nearest" })
+			vim.keymap.set("n", "<Leader>t", ":TestFile<CR>", { silent = true, desc = "Test file" })
+			vim.keymap.set("n", "<Leader>r", ":TestSuite<CR>", { silent = true, desc = "Test suite" })
+			vim.keymap.set("n", "<Leader>e", ":TestLast<CR>", { silent = true, desc = "Test last" })
+			vim.keymap.set("n", "<Leader>l", ":TestVisit<CR>", { silent = true, desc = "Test visit" })
 		end,
 	},
 	{
@@ -389,9 +362,9 @@ require("lazy").setup({
 			end, { desc = "Search by Grep" })
 			vim.keymap.set(
 				"n",
-				"<Leader>fp<CR>",
+				"<Leader>fp",
 				":lua require('telescope').extensions.gh.pull_request()<CR>",
-				{ desc = "[S]earch [P]ull requests" }
+				{ desc = "[F]ind [P]ull requests" }
 			)
 			vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "[F]ind [H]elp" })
 			vim.keymap.set("n", "<leader>fk", builtin.keymaps, { desc = "[F]ind [K]eymaps" })
@@ -435,10 +408,9 @@ require("lazy").setup({
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufNewFile" },
 		dependencies = {
-			"hrsh7th/cmp-nvim-lsp",
+			"saghen/blink.cmp",
 			{ "antosha417/nvim-lsp-file-operations", config = true },
 			{ "j-hui/fidget.nvim", opts = {} },
-			"hrsh7th/cmp-nvim-lsp",
 		},
 		config = function()
 			vim.api.nvim_create_autocmd("LspAttach", {
@@ -526,20 +498,10 @@ require("lazy").setup({
 				virtual_text = {
 					source = "if_many",
 					spacing = 2,
-					format = function(diagnostic)
-						local diagnostic_message = {
-							[vim.diagnostic.severity.ERROR] = diagnostic.message,
-							[vim.diagnostic.severity.WARN] = diagnostic.message,
-							[vim.diagnostic.severity.INFO] = diagnostic.message,
-							[vim.diagnostic.severity.HINT] = diagnostic.message,
-						}
-						return diagnostic_message[diagnostic.severity]
-					end,
 				},
 			})
 
-			local capabilities = vim.lsp.protocol.make_client_capabilities()
-			capabilities = vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
+			local capabilities = require("blink.cmp").get_lsp_capabilities()
 
 			vim.lsp.config("bashls", { capabilities = capabilities })
 			vim.lsp.enable("bashls")
@@ -557,8 +519,6 @@ require("lazy").setup({
 			vim.lsp.enable("marksman")
 			vim.lsp.config("nil_ls", { capabilities = capabilities })
 			vim.lsp.enable("nil_ls")
-			vim.lsp.config("ols", { capabilities = capabilities })
-			vim.lsp.enable("ols")
 			vim.lsp.config("pyright", { capabilities = capabilities })
 			vim.lsp.enable("pyright")
 			vim.lsp.config("ruby_lsp", { capabilities = capabilities })
@@ -585,35 +545,6 @@ require("lazy").setup({
 				},
 			})
 			vim.lsp.enable("lua_ls")
-		end,
-	},
-	{
-		"williamboman/mason.nvim",
-		dependencies = {
-			"williamboman/mason-lspconfig.nvim",
-			"WhoIsSethDaniel/mason-tool-installer.nvim",
-		},
-		config = function()
-			local mason = require("mason")
-			local mason_lspconfig = require("mason-lspconfig")
-			local mason_tool_installer = require("mason-tool-installer")
-
-			mason.setup({
-				ui = {
-					icons = {
-						package_installed = "✓",
-						package_pending = "➜",
-						package_uninstalled = "✗",
-					},
-				},
-			})
-
-			mason_lspconfig.setup({
-				ensure_installed = { "html", "pyright", "terraformls" },
-				automatic_installation = true,
-			})
-
-			mason_tool_installer.setup({ ensure_installed = { "black", "isort" } })
 		end,
 	},
 	{
@@ -654,82 +585,39 @@ require("lazy").setup({
 	},
 
 	{
-		"hrsh7th/nvim-cmp",
-		event = "InsertEnter",
+		"saghen/blink.cmp",
+		version = "*",
 		dependencies = {
-			{
-				"L3MON4D3/LuaSnip",
-				build = (function()
-					if vim.fn.has("win32") == 1 or vim.fn.executable("make") == 0 then
-						return
-					end
-					return "make install_jsregexp"
-				end)(),
-				dependencies = {
-					{
-						"willfish/friendly-snippets",
-						branch = "add-pry-to-erb-snippets",
-						config = function()
-							require("luasnip.loaders.from_vscode").lazy_load()
-						end,
+			{ "willfish/friendly-snippets", branch = "add-pry-to-erb-snippets" },
+		},
+		opts = {
+			keymap = {
+				preset = "none",
+				["<C-n>"] = { "select_next", "fallback" },
+				["<C-p>"] = { "select_prev", "fallback" },
+				["<C-b>"] = { "scroll_documentation_up", "fallback" },
+				["<C-f>"] = { "scroll_documentation_down", "fallback" },
+				["<C-y>"] = { "accept", "fallback" },
+				["<C-Space>"] = { "show", "fallback" },
+				["<C-l>"] = { "snippet_forward", "fallback" },
+				["<C-h>"] = { "snippet_backward", "fallback" },
+			},
+			completion = {
+				documentation = { auto_show = true },
+			},
+			sources = {
+				default = { "lazydev", "lsp", "path", "snippets" },
+				providers = {
+					lazydev = {
+						name = "LazyDev",
+						module = "lazydev.integrations.blink",
+						score_offset = 100,
 					},
 				},
 			},
-			"saadparwaiz1/cmp_luasnip",
-			"hrsh7th/cmp-nvim-lsp",
-			"hrsh7th/cmp-path",
-			"hrsh7th/cmp-nvim-lsp-signature-help",
-			"github/copilot.vim",
+			signature = { enabled = true },
 		},
-		config = function()
-			local cmp = require("cmp")
-			local luasnip = require("luasnip")
-			luasnip.config.setup({})
-
-			cmp.setup({
-				snippet = {
-					expand = function(args)
-						luasnip.lsp_expand(args.body)
-					end,
-				},
-				completion = { completeopt = "menu,menuone,noinsert" },
-				mapping = cmp.mapping.preset.insert({
-					["<C-n>"] = cmp.mapping.select_next_item(),
-					["<C-p>"] = cmp.mapping.select_prev_item(),
-					["<C-b>"] = cmp.mapping.scroll_docs(-4),
-					["<C-f>"] = cmp.mapping.scroll_docs(4),
-					["<C-y>"] = cmp.mapping.confirm({ select = true }),
-					["<C-Space>"] = cmp.mapping.complete({}),
-					["<C-l>"] = cmp.mapping(function()
-						if luasnip.expand_or_locally_jumpable() then
-							luasnip.expand_or_jump()
-						end
-					end, { "i", "s" }),
-					["<C-h>"] = cmp.mapping(function()
-						if luasnip.locally_jumpable(-1) then
-							luasnip.jump(-1)
-						end
-					end, { "i", "s" }),
-				}),
-				sources = {
-					{ name = "lazydev", group_index = 0 },
-					{ name = "nvim_lsp" },
-					{ name = "luasnip" },
-					{ name = "path" },
-					{ name = "nvim_lsp_signature_help" },
-					{ name = "copilot" },
-				},
-			})
-		end,
 	},
-	-- {
-	-- 	"folke/tokyonight.nvim",
-	-- 	priority = 1000,
-	-- 	config = function()
-	-- 		require("tokyonight").setup({ styles = { comments = { italic = false } } })
-	-- 		vim.cmd.colorscheme("tokyonight-night")
-	-- 	end,
-	-- },
 	{
 		"rose-pine/neovim",
 		name = "rose-pine",
@@ -809,7 +697,6 @@ require("lazy").setup({
 			auto_install = true,
 			highlight = {
 				enable = true,
-				additional_vim_regex_highlighting = { "ruby" },
 			},
 			indent = { enable = true, disable = { "ruby" } },
 		},

@@ -4,7 +4,6 @@
     ./email.nix
     ./environment.nix
     ./git.nix
-    ./gnome.nix
     ./packages.nix
     ./programs.nix
     ./shells.nix

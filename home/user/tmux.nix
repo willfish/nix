@@ -41,7 +41,12 @@
       }
     ];
     extraConfig = ''
-      set-option -g default-terminal 'screen-256color'
+      set-option -g default-terminal 'tmux-256color'
+      set-option -sa terminal-overrides ',xterm-ghostty:RGB'
+
+      set -sg escape-time 10
+      set -g focus-events on
+      set -g mouse on
 
       setw -g mode-keys vi
 
