@@ -8,4 +8,5 @@
     nixos-hardware.nixosModules.framework-amd-ai-300-series
   ];
   networking.hostName = "foundation";
+  services.power-profiles-daemon.enable = true;
 }

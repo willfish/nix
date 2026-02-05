@@ -12,4 +12,9 @@
     VISUAL = "nvim";
     fish_greeting = "";
   };
+
+  home.sessionPath = [
+    "$HOME/.bin"
+    "$HOME/go/bin"
+  ];
 }
