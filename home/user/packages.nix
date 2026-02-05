@@ -54,7 +54,20 @@
     zip # Tool to create ZIP archives
 
     # Document tools
-    (texlive.combine { inherit (texlive) scheme-small enumitem titlesec fancyhdr parskip booktabs tools collection-fontsrecommended hyperref xcolor; }) # LaTeX distribution for PDF generation
+    (texlive.combine {
+      inherit (texlive)
+        scheme-small
+        enumitem
+        titlesec
+        fancyhdr
+        parskip
+        booktabs
+        tools
+        collection-fontsrecommended
+        hyperref
+        xcolor
+        ;
+    }) # LaTeX distribution for PDF generation
 
     # Build tools
     gcc # GNU Compiler Collection

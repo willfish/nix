@@ -136,7 +136,18 @@ require("lazy").setup({
 	{ "vimtaku/vim-textobj-keyvalue", dependencies = "kana/vim-textobj-user" },
 	{ "whatyouhide/vim-textobj-erb", dependencies = "kana/vim-textobj-user" },
 	{ "whatyouhide/vim-textobj-xmlattr", dependencies = "kana/vim-textobj-user" },
-	{ "sotte/presenting.nvim", cmd = { "Presenting" } },
+	{
+		"sotte/presenting.nvim",
+		cmd = { "Presenting" },
+		opts = {
+			options = { width = 80 },
+			configure_slide_buffer = function(buf)
+				vim.bo[buf].filetype = "markdown"
+				vim.wo[0].conceallevel = 2
+				vim.wo[0].concealcursor = "nvic"
+			end,
+		},
+	},
 	{
 		"kylechui/nvim-surround",
 		version = "*",
