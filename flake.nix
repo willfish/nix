@@ -51,6 +51,7 @@
           inherit (smailer.packages.${system}) smailer;
           mux = mux.packages.${system}.default;
           variety = pkgs-local.variety;
+          claude-code = prev.callPackage ./overlays/claude-code/package.nix { };
         }
       );
       pkgs = import nixpkgs-unstable {

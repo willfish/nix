@@ -166,8 +166,8 @@
     },
     "nixpkgs-local": {
       "locked": {
-        "lastModified": 1770323325,
-        "narHash": "sha256-B0y0pjafEfVw0fNYureLlbr6hdIGsMVGhTNWddTl1Rw=",
+        "lastModified": 1770328065,
+        "narHash": "sha256-l52fQFhDgopIICLt1hjQVG/+touB0EZAl1IQqWu1nyA=",
         "path": "/home/william/Repositories/nixpkgs",
         "type": "path"
       },
