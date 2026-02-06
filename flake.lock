@@ -164,18 +164,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-local": {
-      "locked": {
-        "lastModified": 1770328065,
-        "narHash": "sha256-l52fQFhDgopIICLt1hjQVG/+touB0EZAl1IQqWu1nyA=",
-        "path": "/home/william/Repositories/nixpkgs",
-        "type": "path"
-      },
-      "original": {
-        "path": "/home/william/Repositories/nixpkgs",
-        "type": "path"
-      }
-    },
     "nixpkgs-unstable": {
       "locked": {
         "lastModified": 1770197578,
@@ -216,7 +204,6 @@
         "home-manager": "home-manager",
         "mux": "mux",
         "nixos-hardware": "nixos-hardware",
-        "nixpkgs-local": "nixpkgs-local",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "pre-commit-hooks": "pre-commit-hooks",
         "smailer": "smailer",

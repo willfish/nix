@@ -27,7 +27,7 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    nixpkgs-local.url = "path:/home/william/Repositories/nixpkgs";
+    # nixpkgs-local.url = "path:/home/william/Repositories/nixpkgs";
   };
   outputs =
     {
@@ -38,19 +38,19 @@
       smailer,
       mux,
       nixos-hardware,
-      nixpkgs-local,
+      # nixpkgs-local,
       ...
     }:
     let
       system = "x86_64-linux";
       lib = nixpkgs-unstable.lib;
-      pkgs-local = import nixpkgs-local { inherit system; };
+      # pkgs-local = import nixpkgs-local { inherit system; };
       overlay = (
         final: prev: {
           inherit (sniffy.packages.${system}) sniffy;
           inherit (smailer.packages.${system}) smailer;
           mux = mux.packages.${system}.default;
-          variety = pkgs-local.variety;
+          # variety = pkgs-local.variety;
           claude-code = prev.callPackage ./overlays/claude-code/package.nix { };
         }
       );

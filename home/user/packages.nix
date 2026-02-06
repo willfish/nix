@@ -47,7 +47,7 @@
     pgcli # PostgreSQL interactive terminal
     pwgen # Password generator
     ripgrep # Fast, recursive grep alternative
-    ssm-session-manager-plugin # AWS plugin for SSM session management (e.g., ECS exec)
+    # ssm-session-manager-plugin # AWS plugin for SSM session management (e.g., ECS exec)
     strace # System call tracer for debugging
     tree # Displays directory tree structure
     unzip # Tool to extract ZIP archives
