@@ -1,4 +1,10 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
+let
+  inherit (pkgs) stdenv;
+  thumbsCommand = if stdenv.isDarwin
+    then "echo -n {} | pbcopy && tmux display-message \"Copied {}\""
+    else "echo -n {} | xclip -selection clipboard && tmux display-message \"Copied {}\"";
+in
 {
   programs.tmux = with pkgs.tmuxPlugins; {
     package = pkgs.tmux;
@@ -28,7 +34,7 @@
       {
         plugin = tmux-thumbs;
         extraConfig = ''
-          set -g @thumbs-command 'echo -n {} | xclip -selection clipboard && tmux display-message "Copied {}"'
+          set -g @thumbs-command '${thumbsCommand}'
           set -g @thumbs-unique enabled
           set -g @thumbs-key 'Space'
         '';
