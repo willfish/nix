@@ -1,7 +1,10 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
+let
+  inherit (pkgs) stdenv;
+in
 {
   programs = {
-    brave = {
+    brave = lib.mkIf stdenv.isLinux {
       enable = true;
 
       commandLineArgs = [
@@ -13,7 +16,7 @@
       ];
     };
 
-    google-chrome = {
+    google-chrome = lib.mkIf stdenv.isLinux {
       enable = true;
     };
 
@@ -22,7 +25,7 @@
       nix-direnv.enable = true;
     };
 
-    atuin = {
+    atuin = lib.mkIf stdenv.isLinux {
       enable = true;
       enableFishIntegration = true;
       enableBashIntegration = true;

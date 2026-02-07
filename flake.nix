@@ -42,25 +42,38 @@
       ...
     }:
     let
-      system = "x86_64-linux";
+      linuxSystem = "x86_64-linux";
+      darwinSystem = "aarch64-darwin";
       lib = nixpkgs-unstable.lib;
       # pkgs-local = import nixpkgs-local { inherit system; };
-      overlay = (
+      linuxOverlay = (
         final: prev: {
-          inherit (sniffy.packages.${system}) sniffy;
-          inherit (smailer.packages.${system}) smailer;
-          mux = mux.packages.${system}.default;
+          inherit (sniffy.packages.${linuxSystem}) sniffy;
+          inherit (smailer.packages.${linuxSystem}) smailer;
+          mux = mux.packages.${linuxSystem}.default;
           # variety = pkgs-local.variety;
           claude-code = prev.callPackage ./overlays/claude-code/package.nix { };
         }
       );
+      darwinOverlay = (
+        final: prev: {
+          inherit (sniffy.packages.${darwinSystem}) sniffy;
+          inherit (smailer.packages.${darwinSystem}) smailer;
+          mux = mux.packages.${darwinSystem}.default;
+        }
+      );
       pkgs = import nixpkgs-unstable {
-        inherit system;
+        system = linuxSystem;
         config.allowUnfree = true;
         config.nvidia.acceptLicense = true;
-        overlays = [ overlay ];
+        overlays = [ linuxOverlay ];
       };
-      pre-commit-check = pre-commit-hooks.lib.${system}.run {
+      darwinPkgs = import nixpkgs-unstable {
+        system = darwinSystem;
+        config.allowUnfree = true;
+        overlays = [ darwinOverlay ];
+      };
+      pre-commit-check = pre-commit-hooks.lib.${linuxSystem}.run {
         src = ./.;
         configPath = ".pre-commit-config-nix.yaml";
         hooks = {
@@ -76,21 +89,21 @@
     {
       nixosConfigurations = {
         andromeda = lib.nixosSystem {
-          inherit system;
+          system = linuxSystem;
           modules = [ ./system/andromeda/configuration.nix ];
           specialArgs = {
             pkgs-unstable = pkgs;
           };
         };
         starfish = lib.nixosSystem {
-          inherit system;
+          system = linuxSystem;
           modules = [ ./system/starfish/configuration.nix ];
           specialArgs = {
             pkgs-unstable = pkgs;
           };
         };
         foundation = lib.nixosSystem {
-          inherit system;
+          system = linuxSystem;
           modules = [ ./system/foundation/configuration.nix ];
           specialArgs = {
             pkgs-unstable = pkgs;
@@ -102,12 +115,23 @@
         william = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           modules = [ ./home ];
+          extraSpecialArgs = { isLinux = true; };
+        };
+        william-darwin = home-manager.lib.homeManagerConfiguration {
+          pkgs = darwinPkgs;
+          modules = [ ./home ];
+          extraSpecialArgs = { isLinux = false; };
         };
       };
-      devShells.${system} = {
+      devShells.${linuxSystem} = {
         default = pkgs.mkShell {
           inherit (pre-commit-check) shellHook;
           buildInputs = pre-commit-check.enabledPackages;
+        };
+      };
+      devShells.${darwinSystem} = {
+        default = darwinPkgs.mkShell {
+          buildInputs = [ ];
         };
       };
     };

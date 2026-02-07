@@ -1,8 +1,10 @@
 { pkgs, lib, ... }:
+let
+  inherit (pkgs) stdenv;
+in
 {
   home.packages = with pkgs; [
     # Services for work
-    zoom-us
     valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
 
@@ -10,18 +12,8 @@
     openssl.dev # Development files for OpenSSL (headers, libs)
     pkg-config # Helper tool to manage library dependencies during compilation
 
-    # Desktop apps
-    clementine # Music player with library management
-    dropbox # Cloud storage and file synchronization service
-    libation # Audio player with a focus on music libraries
-    libreoffice-qt # Office suite with Qt interface (docs, spreadsheets, etc.)
-    pavucontrol # Graphical PulseAudio volume control
-    qbittorrent # BitTorrent client with a user-friendly interface
-    slack # Team collaboration and messaging app
-    spotify # Music streaming application
-    telegram-desktop # Desktop client for Telegram messaging
-    variety # Wallpaper changer with customization options
-    vokoscreen-ng # Screen recording tool with audio support
+    # Editor
+    neovim # Hyperextensible Vim-based text editor
 
     # Email
     himalaya # CLI email client
@@ -38,7 +30,6 @@
     fzf # Fuzzy finder for command-line searches
     gh # GitHub CLI for repository management
     httpie # User-friendly command-line HTTP client
-    isd # Interactive systemd journal browser
     jq # Command-line JSON processor
     lazydocker # Terminal UI for Docker and Docker Compose
     lsd # Modern ls alternative with icons
@@ -48,7 +39,6 @@
     pwgen # Password generator
     ripgrep # Fast, recursive grep alternative
     # ssm-session-manager-plugin # AWS plugin for SSM session management (e.g., ECS exec)
-    strace # System call tracer for debugging
     tree # Displays directory tree structure
     unzip # Tool to extract ZIP archives
     yq # Command-line YAML processor (like jq for YAML)
@@ -86,19 +76,14 @@
     inetutils # Basic networking tools (e.g., ping, telnet)
     nmap # Network exploration and security auditing tool
     mtr # Network diagnostic tool (combines ping and traceroute)
-    tshark # Network protocol analyzer (terminal version of Wireshark)
 
     # Monitoring tools
-    bandwhich # Terminal bandwidth utilization tool
     btop # Resource monitor with a TUI
     htop # Interactive process viewer
-    iftop # Real-time network bandwidth monitoring tool
-    nload # Network traffic and bandwidth monitor
 
     # languages and their tools
     bash-language-server # Bash language server
     ccls # C/C++ language server
-    dconf2nix # Convert dconf settings to Nix expressions - useful for gnome setups
     gopls # Go language server for IDEs
     lua-language-server # Lua language server
     markdownlint-cli # Linter for Markdown files
@@ -121,16 +106,43 @@
 
     # fun stuff
     fastfetch # Highly customizable system information tool
-    inxi # System information script
 
     sniffy # Simple TUI for sniffing out unused secrets in AWS
     smailer # TUI for reviewing emails in an s3 bucket
     mux # Fast tmuxinator replacement in C
 
-    cosmic-ext-tweaks
-
     # AI tools
     gemini-cli # Command-line client for the Gemini protocol
+  ] ++ lib.optionals stdenv.isLinux [
+    # Linux-only: GUI desktop apps
+    zoom-us
+    clementine # Music player with library management
+    dropbox # Cloud storage and file synchronization service
+    libation # Audio player with a focus on music libraries
+    libreoffice-qt # Office suite with Qt interface (docs, spreadsheets, etc.)
+    pavucontrol # Graphical PulseAudio volume control
+    qbittorrent # BitTorrent client with a user-friendly interface
+    slack # Team collaboration and messaging app
+    spotify # Music streaming application
+    telegram-desktop # Desktop client for Telegram messaging
+    variety # Wallpaper changer with customization options
+    vokoscreen-ng # Screen recording tool with audio support
+
+    # Linux-only: tools
+    strace # System call tracer for debugging
+    isd # Interactive systemd journal browser
+    dconf2nix # Convert dconf settings to Nix expressions - useful for gnome setups
+    inxi # System information script
+    cosmic-ext-tweaks
+    xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
+
+    # Linux-only: networking/monitoring
+    tshark # Network protocol analyzer (terminal version of Wireshark)
+    bandwhich # Terminal bandwidth utilization tool
+    iftop # Real-time network bandwidth monitoring tool
+    nload # Network traffic and bandwidth monitor
+
+    # Linux-only: AI tools
     claude-code # Command-line interface for Anthropic's Claude AI
   ];
 }

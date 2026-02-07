@@ -1,10 +1,10 @@
 # dotfiles
 
-NixOS configurations and Home Manager setup for three machines, managed as a single Nix flake. Everything from system-level services to shell aliases lives here, declaratively defined and reproducible.
+NixOS configurations and Home Manager setup for multiple machines across Linux and macOS, managed as a single Nix flake. Everything from system-level services to shell aliases lives here, declaratively defined and reproducible.
 
 ## Architecture
 
-The flake produces three NixOS system configurations and one Home Manager user configuration. All systems share a common base, with host-specific overrides layered on top.
+The flake produces three NixOS system configurations and two Home Manager user configurations (Linux and macOS). All NixOS systems share a common base with host-specific overrides layered on top. The Home Manager configuration uses platform conditionals to work on both `x86_64-linux` and `aarch64-darwin`.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '14px', 'fontFamily': 'JetBrains Mono, monospace' }}}%%
@@ -23,19 +23,25 @@ flowchart TB
     end
 
     common["<b>common-configuration.nix</b><br/>Shared system defaults"]
-    hm["<b>Home Manager</b><br/>User: william"]
+    subgraph hm ["Home Manager"]
+        direction LR
+        hm_linux["<b>william</b><br/><i>x86_64-linux</i>"]
+        hm_darwin["<b>william-darwin</b><br/><i>aarch64-darwin</i>"]
+    end
 
     flake --> hosts
     flake --> hm
     common --> andromeda
     common --> starfish
     common --> foundation
-    hm -.->|deployed to all hosts| hosts
+    hm_linux -.->|deployed to NixOS hosts| hosts
 
     style flake fill:#f0ecf9,stroke:#c4a7e7,stroke-width:2px,color:#3c3554
     style hosts fill:#e8f4f8,stroke:#9ccfd8,stroke-width:2px,color:#2d4a54
     style common fill:#fdf0e0,stroke:#f6c177,stroke-width:2px,color:#5a4520
     style hm fill:#f0e0e8,stroke:#ea9a97,stroke-width:2px,color:#5a3040
+    style hm_linux fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
+    style hm_darwin fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
     style andromeda fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
     style starfish fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
     style foundation fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
@@ -54,7 +60,6 @@ flowchart TB
 | `sniffy` | AWS secrets scanner |
 | `smailer` | S3 email viewer |
 | `mux` | Tmux session manager |
-| `nixpkgs-local` | Local nixpkgs checkout for package overlays |
 
 ## Repository Structure
 
@@ -166,19 +171,21 @@ The user configuration is split into focused modules that are composed in `home/
 
 ### Packages
 
-Over 100 packages organised by purpose:
+Over 100 packages organised by purpose. Linux-only packages (GUI apps, clipboard tools, system tracers) are conditionally included using `lib.optionals stdenv.isLinux`.
 
-| Category | Packages |
-|----------|----------|
-| **AI** | claude-code, gemini-cli |
-| **Desktop** | Brave, Chrome, Spotify, Slack, Telegram, LibreOffice, Variety |
-| **Dev Tools** | gh, delta, lazydocker, dive, fzf, ripgrep, fd, jq, yq, httpie |
-| **Networking** | nmap, mtr, tshark, doggo, bandwhich, iftop |
-| **Languages** | Node.js, Python 3, Ruby (YJIT), Go, Terraform, Lua |
-| **LSP Servers** | nil, lua-language-server, gopls, ccls, bash-language-server, marksman, typescript-language-server |
-| **Monitoring** | btop, htop, nload, bandwhich |
-| **Databases** | PostgreSQL, Valkey, pgcli, OpenSearch |
-| **Custom** | sniffy, smailer, mux |
+| Category | Packages | Platform |
+|----------|----------|----------|
+| **AI** | gemini-cli | All |
+| **AI** | claude-code | Linux |
+| **Desktop** | Brave, Chrome, Spotify, Slack, Telegram, LibreOffice, Variety | Linux |
+| **Dev Tools** | gh, delta, lazydocker, dive, fzf, ripgrep, fd, jq, yq, httpie | All |
+| **Networking** | nmap, mtr, doggo | All |
+| **Networking** | tshark, bandwhich, iftop, nload | Linux |
+| **Languages** | Node.js, Python 3, Ruby (YJIT), Go, Terraform, Lua | All |
+| **LSP Servers** | nil, lua-language-server, gopls, ccls, bash-language-server, marksman, typescript-language-server | All |
+| **Monitoring** | btop, htop | All |
+| **Databases** | PostgreSQL, Valkey, pgcli | All |
+| **Custom** | sniffy, smailer, mux | All |
 
 ### Shell
 
@@ -197,7 +204,7 @@ Signed commits with GPG key `BC6DED9479D436F5`. Delta as the diff viewer with th
 
 Rose Pine Moon theme. Vi key bindings, vim-tmux-navigator for seamless pane switching with `Alt+hjkl`, sessionx for fuzzy session management, thumbs for URL capturing, and yank for clipboard integration. Status bar at top. Tmuxinator session definitions for work, fun, and dotfiles projects.
 
-### Desktop
+### Desktop (Linux only)
 
 GNOME with Pop Shell tiling. Six static workspaces with `Super+1-9` switching. Auto-move rules send Brave to workspace 1, Slack/Telegram/Discord to workspace 2, and Spotify/Clementine to workspace 3. Mouse focus-follows-pointer.
 
@@ -213,11 +220,10 @@ JetBrains Mono font, Catppuccin Mocha theme, slight transparency, 10K line scrol
 
 Packages that need to diverge from nixpkgs-unstable are overlaid through the flake:
 
-| Package | Source | Reason |
-|---------|--------|--------|
-| `claude-code` | `overlays/claude-code/` | Pinned to 2.1.32 ahead of upstream |
-| `variety` | Local nixpkgs checkout | Custom build |
-| `sniffy`, `smailer`, `mux` | GitHub flake inputs | Personal tools |
+| Package | Source | Reason | Platform |
+|---------|--------|--------|----------|
+| `claude-code` | `overlays/claude-code/` | Pinned to 2.1.32 ahead of upstream | Linux |
+| `sniffy`, `smailer`, `mux` | GitHub flake inputs | Personal tools | All |
 
 ## Custom Scripts
 
@@ -245,7 +251,8 @@ sudo nixos-rebuild switch --flake .#foundation  # framework laptop
 Rebuild the Home Manager configuration:
 
 ```bash
-home-manager switch --flake .#william
+home-manager switch --flake .#william          # Linux
+home-manager switch --flake .#william-darwin   # macOS
 ```
 
 Update all flake inputs:

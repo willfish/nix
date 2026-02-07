@@ -645,7 +645,7 @@ require("lazy").setup({
 	{
 		"nvim-treesitter/nvim-treesitter",
 		build = ":TSUpdate",
-		main = "nvim-treesitter.configs",
+		main = "nvim-treesitter",
 		opts = {
 			ensure_installed = {
 				"bash",
@@ -695,10 +695,6 @@ require("lazy").setup({
 				"yaml",
 			},
 			auto_install = true,
-			highlight = {
-				enable = true,
-			},
-			indent = { enable = true, disable = { "ruby" } },
 		},
 	},
 })

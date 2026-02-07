@@ -1,9 +1,9 @@
-{ lib, ... }:
+{ pkgs, lib, ... }:
 {
   imports = [ ./user ];
 
   home.username = "william";
-  home.homeDirectory = "/home/william";
+  home.homeDirectory = if pkgs.stdenv.isDarwin then "/Users/william" else "/home/william";
   home.stateVersion = "25.05";
   home.enableNixpkgsReleaseCheck = false;
   programs.home-manager.enable = true;

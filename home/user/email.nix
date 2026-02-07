@@ -1,10 +1,11 @@
+{ config, ... }:
 {
   accounts.email.accounts.gmail = {
     primary = true;
     address = "william.michael.fish@gmail.com";
     realName = "William Fish";
     userName = "william.michael.fish@gmail.com";
-    passwordCommand = "cat /home/william/.secrets/gmail-app-password";
+    passwordCommand = "cat ${config.home.homeDirectory}/.secrets/gmail-app-password";
 
     imap = {
       host = "imap.gmail.com";

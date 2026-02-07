@@ -1,3 +1,4 @@
+{ isLinux ? true, ... }:
 {
   imports = [
     ./config.nix
@@ -8,5 +9,8 @@
     ./programs.nix
     ./shells.nix
     ./tmux.nix
-  ];
+  ] ++ (if isLinux then [
+    ./gnome.nix
+    ./clawdbot.nix
+  ] else []);
 }
