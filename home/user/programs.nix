@@ -24,15 +24,5 @@ in
       enable = true;
       nix-direnv.enable = true;
     };
-
-    atuin = lib.mkIf stdenv.isLinux {
-      enable = true;
-      enableFishIntegration = true;
-      enableBashIntegration = true;
-      settings = {
-        style = "compact";
-        inline_height = 20;
-      };
-    };
   };
 }
