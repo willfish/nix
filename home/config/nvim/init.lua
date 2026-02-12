@@ -588,7 +588,7 @@ require("lazy").setup({
 		"saghen/blink.cmp",
 		version = "*",
 		dependencies = {
-			{ "willfish/friendly-snippets", branch = "add-pry-to-erb-snippets" },
+			"rafamadriz/friendly-snippets",
 		},
 		opts = {
 			keymap = {
