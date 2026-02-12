@@ -1,0 +1,17 @@
+{
+  "pry": {
+    "prefix": ["pry"],
+    "body": ["<% require 'pry'; binding.pry %>"],
+    "description": "Insert pry debugger"
+  },
+  "debugger": {
+    "prefix": ["debugger"],
+    "body": ["<% require 'debug'; debugger %>"],
+    "description": "Insert ruby debugger"
+  },
+  "byebug": {
+    "prefix": ["byebug"],
+    "body": ["<% require 'byebug'; byebug %>"],
+    "description": "Insert byebug debugger"
+  }
+}
