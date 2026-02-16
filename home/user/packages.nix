@@ -104,6 +104,9 @@ in
     typescript-language-server # Language server for typescript
     vscode-langservers-extracted # Extracted language servers for VSCode
 
+    # Audio tools
+    sox # Sound processing tool - used for Claude Code notification chimes
+
     # fun stuff
     fastfetch # Highly customizable system information tool
 
