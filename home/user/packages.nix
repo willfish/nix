@@ -1,9 +1,43 @@
 { pkgs, lib, ... }:
 let
   inherit (pkgs) stdenv;
+
+  git-cleanup = pkgs.writeShellScriptBin "git-cleanup" ''
+    default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)
+
+    git fetch -p && git pull
+
+    # Prune stale worktree references (e.g. manually deleted directories)
+    git worktree prune
+
+    # Remove worktrees whose remote tracking branch has been pruned
+    git worktree list --porcelain | awk '
+      /^worktree / { wt = substr($0, 10) }
+      /^branch refs\/heads\// { b = substr($0, 20); print wt "\t" b }
+    ' | while IFS=$'\t' read -r wt branch; do
+      if [ "$branch" != "$default" ] && ! git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null 2>&1; then
+        if git worktree remove "$wt" 2>/dev/null; then
+          echo "Removed worktree: $wt ($branch)"
+          git branch -d "$branch" 2>/dev/null || echo "  Branch $branch not fully merged, kept locally"
+        else
+          echo "Could not remove worktree $wt - may have uncommitted changes"
+        fi
+      fi
+    done
+
+    # Delete merged local branches (excluding default branch)
+    git branch --merged | sed 's/^[* +]*//' | grep -xv "$default" | xargs -n 1 -r git branch -d 2>/dev/null || true
+  '';
+
+  git-cm = pkgs.writeShellScriptBin "git-cm" ''
+    default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)
+    git checkout "$default" && git cleanup
+  '';
 in
 {
   home.packages = with pkgs; [
+    git-cleanup # Git cleanup with worktree support
+    git-cm # Checkout default branch and cleanup
     # Services for work
     valkey # Client for Valkey secure file sharing service
     postgresql # Open-source relational database system
