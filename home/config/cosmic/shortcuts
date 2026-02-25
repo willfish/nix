@@ -1,0 +1,390 @@
+{
+    (
+        modifiers: [
+            Super,
+        ],
+    ): System(Launcher),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "q",
+    ): Close,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "f",
+    ): Fullscreen,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "g",
+    ): ToggleWindowFloating,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "w",
+    ): Focus(Up),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "a",
+    ): Focus(Left),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "s",
+    ): Focus(Down),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "d",
+    ): Focus(Right),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "w",
+    ): Move(Up),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "a",
+    ): Move(Left),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "s",
+    ): Move(Down),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "d",
+    ): Move(Right),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "1",
+    ): Workspace(1),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "2",
+    ): Workspace(2),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "3",
+    ): Workspace(3),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "4",
+    ): Workspace(4),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "5",
+    ): Workspace(5),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "6",
+    ): Workspace(6),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "7",
+    ): Workspace(7),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "8",
+    ): Workspace(8),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "9",
+    ): Workspace(9),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "1",
+    ): MoveToWorkspace(1),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "2",
+    ): MoveToWorkspace(2),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "3",
+    ): MoveToWorkspace(3),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "4",
+    ): MoveToWorkspace(4),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "5",
+    ): MoveToWorkspace(5),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "6",
+    ): MoveToWorkspace(6),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "7",
+    ): MoveToWorkspace(7),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "8",
+    ): MoveToWorkspace(8),
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "9",
+    ): MoveToWorkspace(9),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "b",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "h",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "j",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "k",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "l",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "i",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "m",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "o",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "r",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "t",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "u",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "x",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "y",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "h",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "j",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "k",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "l",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "r",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "Left",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "Right",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "Up",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "Down",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "Left",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "Right",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "Up",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "Down",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "space",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "slash",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "F11",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "0",
+    ): Disable,
+    (
+        modifiers: [
+            Super,
+            Shift,
+        ],
+        key: "0",
+    ): Disable,
+}
