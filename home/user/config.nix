@@ -13,6 +13,7 @@ in
     ".gemrc".source = "${configDir}/gemrc";
     ".gitignore_global".source = "${configDir}/gitignore_global";
     ".gitmessage".source = "${configDir}/gitmessage";
+    ".claude/guides/ruby-upgrades.md".source = "${configDir}/claude/guides/ruby-upgrades.md";
     ".pryrc".source = "${configDir}/pryrc";
   };
 

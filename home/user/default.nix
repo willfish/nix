@@ -17,6 +17,7 @@
     if isLinux then
       [
         ./gnome.nix
+        ./services.nix
       ]
     else
       [ ]
