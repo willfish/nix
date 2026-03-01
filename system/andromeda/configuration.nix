@@ -17,7 +17,7 @@
       localNetworkGameTransfers.openFirewall = true;
     };
   };
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackages_6_18;
   hardware.graphics.enable = true;
   hardware.nvidia = {
     modesetting.enable = true;

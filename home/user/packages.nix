@@ -156,7 +156,7 @@ in
     clementine # Music player with library management
     dropbox # Cloud storage and file synchronization service
     libation # Audio player with a focus on music libraries
-    libreoffice-qt # Office suite with Qt interface (docs, spreadsheets, etc.)
+    libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
     pavucontrol # Graphical PulseAudio volume control
     qbittorrent # BitTorrent client with a user-friendly interface
     slack # Team collaboration and messaging app
