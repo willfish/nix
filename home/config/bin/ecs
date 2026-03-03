@@ -13,9 +13,14 @@ readonly MAX_WAIT_TIME=60
 print_usage() {
     cat <<EOF
 Usage: $SCRIPT_NAME [OPTIONS] [COMMAND]
+       $SCRIPT_NAME logs [OPTIONS]
 
 This script allows you to run arbitrary commands in ECS tasks interactively.
 It handles finding clusters, services, and tasks automatically using fzf for selection.
+
+SUBCOMMANDS:
+    logs            Tail CloudWatch logs for an ECS service or job
+    logs --help     Show logs subcommand help
 
 OPTIONS:
     -h, --help      Show this help message and exit
@@ -29,6 +34,8 @@ EXAMPLES:
     $SCRIPT_NAME                                               # Interactive shell
     $SCRIPT_NAME 'bundle exec rails console'                   # Rails console
     $SCRIPT_NAME 'bundle exec rails db:rollback db:migrate'    # Database migration
+    $SCRIPT_NAME logs                                          # Tail logs (interactive select)
+    $SCRIPT_NAME logs --since 30m --filter ERROR               # Tail error logs from last 30m
 
 SPECIAL BEHAVIOR:
     - If selecting 'backend-job', looks for standalone tasks (not services)
@@ -296,7 +303,113 @@ cleanup_backend_job() {
     fi
 }
 
+logs_print_usage() {
+    cat <<EOF
+Usage: $SCRIPT_NAME logs [OPTIONS]
+
+Tail CloudWatch logs for an ECS service or job. Interactively selects
+the cluster and service, then streams logs from the matching log group.
+
+OPTIONS:
+    -h, --help      Show this help message and exit
+    -r, --region    AWS region (default: $REGION)
+    -s, --since     How far back to start (default: 1h)
+                    Supports: s (seconds), m (minutes), h (hours),
+                    d (days), w (weeks), e.g. 30m, 2h, 1d
+    -f, --filter    CloudWatch filter pattern
+    --no-follow     Print matching logs and exit (don't tail)
+
+EXAMPLES:
+    $SCRIPT_NAME logs                                    # Interactive select, tail last hour
+    $SCRIPT_NAME logs --since 30m                        # Last 30 minutes
+    $SCRIPT_NAME logs --filter ERROR                     # Only errors
+    $SCRIPT_NAME logs --no-follow --since 1d             # Dump last day and exit
+EOF
+}
+
+logs_main() {
+    local region="$REGION"
+    local since="1h"
+    local filter=""
+    local follow=true
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                logs_print_usage
+                exit 0
+                ;;
+            -r|--region)
+                [[ -n "${2:-}" ]] || error_exit "Region cannot be empty"
+                region="$2"
+                shift 2
+                ;;
+            -s|--since)
+                [[ -n "${2:-}" ]] || error_exit "--since requires a value"
+                since="$2"
+                shift 2
+                ;;
+            -f|--filter)
+                [[ -n "${2:-}" ]] || error_exit "--filter requires a value"
+                filter="$2"
+                shift 2
+                ;;
+            --no-follow)
+                follow=false
+                shift
+                ;;
+            -*)
+                error_exit "Unknown option: $1. See '$SCRIPT_NAME logs --help'"
+                ;;
+            *)
+                error_exit "Unexpected argument: $1. See '$SCRIPT_NAME logs --help'"
+                ;;
+        esac
+    done
+
+    check_dependencies
+    check_aws_credentials
+
+    local cluster service
+    cluster=$(select_cluster)
+    service=$(select_service "$cluster")
+
+    # Derive environment from cluster name: trade-tariff-cluster-{env} -> {env}
+    local environment
+    environment="${cluster##*-}"
+
+    local log_group="platform-logs-${environment}"
+    local stream_prefix="ecs/${service}"
+
+    echo "Log group: $log_group" >&2
+    echo "Stream prefix: $stream_prefix" >&2
+
+    local cmd=(
+        aws logs tail "$log_group"
+        --log-stream-name-prefix "$stream_prefix"
+        --since "$since"
+        --format short
+        --region "$region"
+    )
+
+    if [[ "$follow" == true ]]; then
+        cmd+=(--follow)
+    fi
+
+    if [[ -n "$filter" ]]; then
+        cmd+=(--filter-pattern "$filter")
+    fi
+
+    "${cmd[@]}"
+}
+
 main() {
+    if [[ "${1:-}" == "logs" ]]; then
+        shift
+        logs_main "$@"
+        return
+    fi
+
     local COMMAND=""
 
     # Parse arguments

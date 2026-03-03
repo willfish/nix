@@ -13,7 +13,7 @@ let
     # Remove worktrees whose remote tracking branch has been pruned
     git worktree list --porcelain | awk '
       /^worktree / { wt = substr($0, 10) }
-      /^branch refs\/heads\// { b = substr($0, 20); print wt "\t" b }
+      /^branch refs\/heads\// { b = substr($0, 19); print wt "\t" b }
     ' | while IFS=$'\t' read -r wt branch; do
       if [ "$branch" != "$default" ] && ! git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null 2>&1; then
         if git worktree remove "$wt" 2>/dev/null; then
