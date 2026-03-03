@@ -147,6 +147,7 @@ in
     sniffy # Simple TUI for sniffing out unused secrets in AWS
     smailer # TUI for reviewing emails in an s3 bucket
     mux # Fast tmuxinator replacement in C
+    ecs # Interactive tool for running commands in ECS tasks
 
     # AI tools
     gemini-cli # Command-line client for the Gemini protocol
