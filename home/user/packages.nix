@@ -169,7 +169,6 @@ in
     # Linux-only: tools
     strace # System call tracer for debugging
     isd # Interactive systemd journal browser
-    dconf2nix # Convert dconf settings to Nix expressions - useful for gnome setups
     inxi # System information script
     cosmic-ext-tweaks
     xclip # Clipboard tool (macOS has native pbcopy/pbpaste)

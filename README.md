@@ -87,7 +87,6 @@ flowchart LR
             MOD_SHELLS["shells.nix<br/><i>Fish - Bash - aliases</i>"]
             MOD_GIT["git.nix<br/><i>Delta - GPG signing</i>"]
             MOD_TMUX["tmux.nix<br/><i>Plugins - rose-pine</i>"]
-            MOD_GNOME["gnome.nix<br/><i>Pop Shell - dconf</i>"]
             MOD_PROGRAMS["programs.nix<br/><i>Brave - direnv</i>"]
             MOD_ENVIRONMENT["environment.nix<br/><i>Editor - pager - vars</i>"]
             MOD_OTHER["email - config"]
@@ -100,7 +99,7 @@ flowchart LR
             CFG_COSMIC["cosmic/ settings"]
             CFG_TMUXINATOR["tmuxinator/*.yml"]
             CFG_BIN["bin/ scripts"]
-            CFG_OTHER["gitignore - gitmessage<br/>pop-shell"]
+            CFG_OTHER["gitignore - gitmessage"]
         end
     end
 
@@ -129,7 +128,6 @@ flowchart LR
     style MOD_SHELLS fill:#fef8f0,stroke:#f6c177,color:#5a4520
     style MOD_GIT fill:#fef8f0,stroke:#f6c177,color:#5a4520
     style MOD_TMUX fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style MOD_GNOME fill:#fef8f0,stroke:#f6c177,color:#5a4520
     style MOD_PROGRAMS fill:#fef8f0,stroke:#f6c177,color:#5a4520
     style MOD_ENVIRONMENT fill:#fef8f0,stroke:#f6c177,color:#5a4520
     style MOD_OTHER fill:#fef8f0,stroke:#f6c177,color:#5a4520
@@ -212,7 +210,7 @@ Rose Pine Moon theme. Vi key bindings, vim-tmux-navigator for seamless pane swit
 
 ### Desktop (Linux only)
 
-COSMIC is the primary desktop environment at the system level. GNOME dconf settings are maintained via `gnome.nix` for Pop Shell tiling, six static workspaces with `Super+1-9` switching, and auto-move rules (Brave to workspace 1, Slack/Telegram/Discord to workspace 2, Spotify to workspace 3). Mouse focus-follows-pointer.
+COSMIC desktop with autotiling, focus-follows-cursor, and active window hints. Panel on the left (XS) with workspaces and status applets. Six static workspaces with `Super+1-9` switching. All settings managed declaratively via Home Manager.
 
 ### Neovim
 
