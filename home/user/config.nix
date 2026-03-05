@@ -41,5 +41,28 @@ in
       source = "${configDir}/cosmic/cursor_follows_focus";
       force = true;
     };
+    "cosmic/com.system76.CosmicPanel.Panel/v1" = {
+      source = "${configDir}/cosmic/panel";
+      recursive = true;
+      force = true;
+    };
+    "cosmic/com.system76.CosmicPanel.Dock/v1" = {
+      source = "${configDir}/cosmic/dock";
+      recursive = true;
+      force = true;
+    };
+    "cosmic/com.system76.CosmicPanel/v1/entries" = {
+      source = "${configDir}/cosmic/panel-entries";
+      force = true;
+    };
+    "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark" = {
+      source = "${configDir}/cosmic/theme-mode";
+      force = true;
+    };
+    "cosmic/com.system76.CosmicTheme.Dark/v1" = {
+      source = "${configDir}/cosmic/theme-dark";
+      recursive = true;
+      force = true;
+    };
   };
 }
