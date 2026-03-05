@@ -1,5 +1,4 @@
 {
-  isLinux ? true,
   ...
 }:
 {
@@ -12,13 +11,5 @@
     ./programs.nix
     ./shells.nix
     ./tmux.nix
-  ]
-  ++ (
-    if isLinux then
-      [
-        ./gnome.nix
-      ]
-    else
-      [ ]
-  );
+  ];
 }

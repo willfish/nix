@@ -212,7 +212,7 @@ Rose Pine Moon theme. Vi key bindings, vim-tmux-navigator for seamless pane swit
 
 ### Desktop (Linux only)
 
-COSMIC is the primary desktop environment at the system level. GNOME dconf settings are maintained via `gnome.nix` for Pop Shell tiling, six static workspaces with `Super+1-9` switching, and auto-move rules (Brave to workspace 1, Slack/Telegram/Discord to workspace 2, Spotify/Clementine to workspace 3). Mouse focus-follows-pointer.
+COSMIC is the primary desktop environment at the system level. GNOME dconf settings are maintained via `gnome.nix` for Pop Shell tiling, six static workspaces with `Super+1-9` switching, and auto-move rules (Brave to workspace 1, Slack/Telegram/Discord to workspace 2, Spotify to workspace 3). Mouse focus-follows-pointer.
 
 ### Neovim
 
