@@ -262,7 +262,7 @@
             Super,
         ],
         key: "x",
-    ): Disable,
+    ): System(Launcher),
     (
         modifiers: [
             Super,
@@ -387,4 +387,11 @@
         ],
         key: "0",
     ): Disable,
+    (
+        modifiers: [
+            Ctrl,
+            Shift,
+        ],
+        key: "s",
+    ): Spawn("cosmic-screenshot"),
 }
