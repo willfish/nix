@@ -9,44 +9,42 @@ The flake produces three NixOS system configurations and two Home Manager user c
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '14px', 'fontFamily': 'JetBrains Mono, monospace' }}}%%
 flowchart TB
-    subgraph flake [" flake.nix "]
-        direction TB
-        inputs["Inputs"]
-        overlay["Overlays"]
-    end
+    %% Top-level shared nodes
+    FLAKE[flake.nix]
+    COMMON["<b>common-configuration.nix</b><br/>Shared system defaults"]
 
-    subgraph hosts ["NixOS Configurations"]
+    %% NixOS host configurations
+    subgraph HOSTS ["NixOS Configurations"]
         direction LR
-        andromeda["<b>andromeda</b><br/><i>Thelio Major Threadripper</i><br/>NVIDIA GPU · Steam"]
-        starfish["<b>starfish</b><br/><i>Dell Precision 5750</i><br/>Mobile workstation"]
-        foundation["<b>foundation</b><br/><i>Framework 13 AMD AI-300</i><br/>NixOS Hardware module"]
+        ANDROMEDA["<b>andromeda</b><br/><i>Thelio Major Threadripper</i><br/>NVIDIA GPU - Steam"]
+        STARFISH["<b>starfish</b><br/><i>Dell Precision 5750</i><br/>Mobile workstation"]
+        FOUNDATION["<b>foundation</b><br/><i>Framework 13 AMD AI-300</i><br/>NixOS Hardware module"]
     end
 
-    common["<b>common-configuration.nix</b><br/>Shared system defaults"]
-    subgraph hm ["Home Manager"]
+    %% Home Manager configurations
+    subgraph HM ["Home Manager"]
         direction LR
-        hm_linux["<b>william</b><br/><i>x86_64-linux</i>"]
-        hm_darwin["<b>william-darwin</b><br/><i>aarch64-darwin</i>"]
+        HM_LINUX["<b>william</b><br/><i>x86_64-linux</i>"]
+        HM_DARWIN["<b>william-darwin</b><br/><i>aarch64-darwin</i>"]
     end
 
-    flake --> hosts
-    flake --> hm
-    common --> andromeda
-    common --> starfish
-    common --> foundation
-    hm_linux -.->|deployed to NixOS hosts| hosts
+    %% Relationships
+    FLAKE --> HOSTS
+    FLAKE --> HM
+    COMMON --> ANDROMEDA
+    COMMON --> STARFISH
+    COMMON --> FOUNDATION
+    HM_LINUX -.->|deployed to NixOS hosts| HOSTS
 
-    style flake fill:#f0ecf9,stroke:#c4a7e7,stroke-width:2px,color:#3c3554
-    style hosts fill:#e8f4f8,stroke:#9ccfd8,stroke-width:2px,color:#2d4a54
-    style common fill:#fdf0e0,stroke:#f6c177,stroke-width:2px,color:#5a4520
-    style hm fill:#f0e0e8,stroke:#ea9a97,stroke-width:2px,color:#5a3040
-    style hm_linux fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
-    style hm_darwin fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
-    style andromeda fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
-    style starfish fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
-    style foundation fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
-    style inputs fill:#f0ecf9,stroke:#c4a7e7,color:#3c3554
-    style overlay fill:#f0ecf9,stroke:#c4a7e7,color:#3c3554
+    style FLAKE fill:#f0ecf9,stroke:#c4a7e7,stroke-width:2px,color:#3c3554
+    style HOSTS fill:#e8f4f8,stroke:#9ccfd8,stroke-width:2px,color:#2d4a54
+    style COMMON fill:#fdf0e0,stroke:#f6c177,stroke-width:2px,color:#5a4520
+    style HM fill:#f0e0e8,stroke:#ea9a97,stroke-width:2px,color:#5a3040
+    style HM_LINUX fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
+    style HM_DARWIN fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
+    style ANDROMEDA fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
+    style STARFISH fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
+    style FOUNDATION fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
 ```
 
 ### Flake Inputs
@@ -60,94 +58,102 @@ flowchart TB
 | `sniffy` | AWS secrets scanner |
 | `smailer` | S3 email viewer |
 | `mux` | Tmux session manager |
+| `trade-tariff-tools` | ECS task management CLI |
 
 ## Repository Structure
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '13px', 'fontFamily': 'JetBrains Mono, monospace' }}}%%
 flowchart LR
-    root["<b>~/.dotfiles</b>"]
+    %% Top-level node
+    ROOT["<b>~/.dotfiles</b>"]
 
-    subgraph system_layer [" System Layer "]
+    %% System layer
+    subgraph SYSTEM_LAYER [" System Layer "]
         direction TB
-        sys_common["common-configuration.nix<br/><i>Boot · Network · Audio<br/>Desktop · Services · Nix</i>"]
-        sys_and["andromeda/<br/><i>NVIDIA · Steam</i>"]
-        sys_star["starfish/<br/><i>Defaults</i>"]
-        sys_found["foundation/<br/><i>Framework HW</i>"]
+        SYS_COMMON["common-configuration.nix<br/><i>Boot - Network - Audio<br/>Desktop - Services - Nix</i>"]
+        SYS_ANDROMEDA["andromeda/<br/><i>NVIDIA - Steam</i>"]
+        SYS_STARFISH["starfish/<br/><i>Defaults</i>"]
+        SYS_FOUNDATION["foundation/<br/><i>Framework HW</i>"]
     end
 
-    subgraph home_layer [" Home Manager Layer "]
+    %% Home Manager layer
+    subgraph HOME_LAYER [" Home Manager Layer "]
         direction TB
 
-        subgraph modules [" Nix Modules "]
+        subgraph MODULES [" Nix Modules "]
             direction TB
-            mod_pkg["packages.nix<br/><i>100+ packages</i>"]
-            mod_shell["shells.nix<br/><i>Fish · Bash · aliases</i>"]
-            mod_git["git.nix<br/><i>Delta · GPG signing</i>"]
-            mod_tmux["tmux.nix<br/><i>Plugins · rose-pine</i>"]
-            mod_gnome["gnome.nix<br/><i>Pop Shell · dconf</i>"]
-            mod_prog["programs.nix<br/><i>Brave · direnv</i>"]
-            mod_env["environment.nix<br/><i>Editor · pager · vars</i>"]
-            mod_other["email · config · clawdbot"]
+            MOD_PACKAGES["packages.nix<br/><i>100+ packages</i>"]
+            MOD_SHELLS["shells.nix<br/><i>Fish - Bash - aliases</i>"]
+            MOD_GIT["git.nix<br/><i>Delta - GPG signing</i>"]
+            MOD_TMUX["tmux.nix<br/><i>Plugins - rose-pine</i>"]
+            MOD_GNOME["gnome.nix<br/><i>Pop Shell - dconf</i>"]
+            MOD_PROGRAMS["programs.nix<br/><i>Brave - direnv</i>"]
+            MOD_ENVIRONMENT["environment.nix<br/><i>Editor - pager - vars</i>"]
+            MOD_OTHER["email - config"]
         end
 
-        subgraph configs [" Dotfile Configs "]
+        subgraph CONFIGS [" Dotfile Configs "]
             direction TB
-            cfg_nvim["nvim/init.lua"]
-            cfg_ghostty["ghostty/config + shaders"]
-            cfg_tmuxinator["tmuxinator/*.yml"]
-            cfg_bin["bin/ scripts"]
-            cfg_other["gitignore · gitmessage<br/>pop-shell · gnome"]
+            CFG_NVIM["nvim/init.lua"]
+            CFG_GHOSTTY["ghostty/config + shaders"]
+            CFG_COSMIC["cosmic/ settings"]
+            CFG_TMUXINATOR["tmuxinator/*.yml"]
+            CFG_BIN["bin/ scripts"]
+            CFG_OTHER["gitignore - gitmessage<br/>pop-shell"]
         end
     end
 
-    subgraph overlays_layer [" Overlays "]
-        ovl_claude["claude-code 2.1.32"]
-        ovl_other["variety · sniffy<br/>smailer · mux"]
+    %% Overlays layer
+    subgraph OVERLAYS_LAYER [" Overlays "]
+        OVL_CLAUDE["claude-code"]
+        OVL_TOOLS["sniffy - smailer<br/>mux - ecs"]
     end
 
-    root --> system_layer
-    root --> home_layer
-    root --> overlays_layer
+    %% Relationships
+    ROOT --> SYSTEM_LAYER
+    ROOT --> HOME_LAYER
+    ROOT --> OVERLAYS_LAYER
 
-    style root fill:#f0ecf9,stroke:#c4a7e7,stroke-width:2px,color:#3c3554
-    style system_layer fill:#e8f4f8,stroke:#9ccfd8,stroke-width:2px,color:#2d4a54
-    style home_layer fill:#fdf0e0,stroke:#f6c177,stroke-width:2px,color:#5a4520
-    style overlays_layer fill:#f0e0e8,stroke:#ea9a97,stroke-width:2px,color:#5a3040
-    style modules fill:#fdf5e8,stroke:#f6c177,stroke-width:1px,color:#5a4520
-    style configs fill:#fdf5e8,stroke:#f6c177,stroke-width:1px,color:#5a4520
-    style sys_common fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
-    style sys_and fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
-    style sys_star fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
-    style sys_found fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
-    style mod_pkg fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style mod_shell fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style mod_git fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style mod_tmux fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style mod_gnome fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style mod_prog fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style mod_env fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style mod_other fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style cfg_nvim fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style cfg_ghostty fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style cfg_tmuxinator fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style cfg_bin fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style cfg_other fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style ovl_claude fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
-    style ovl_other fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
+    style ROOT fill:#f0ecf9,stroke:#c4a7e7,stroke-width:2px,color:#3c3554
+    style SYSTEM_LAYER fill:#e8f4f8,stroke:#9ccfd8,stroke-width:2px,color:#2d4a54
+    style HOME_LAYER fill:#fdf0e0,stroke:#f6c177,stroke-width:2px,color:#5a4520
+    style OVERLAYS_LAYER fill:#f0e0e8,stroke:#ea9a97,stroke-width:2px,color:#5a3040
+    style MODULES fill:#fdf5e8,stroke:#f6c177,stroke-width:1px,color:#5a4520
+    style CONFIGS fill:#fdf5e8,stroke:#f6c177,stroke-width:1px,color:#5a4520
+    style SYS_COMMON fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
+    style SYS_ANDROMEDA fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
+    style SYS_STARFISH fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
+    style SYS_FOUNDATION fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
+    style MOD_PACKAGES fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style MOD_SHELLS fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style MOD_GIT fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style MOD_TMUX fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style MOD_GNOME fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style MOD_PROGRAMS fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style MOD_ENVIRONMENT fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style MOD_OTHER fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style CFG_NVIM fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style CFG_GHOSTTY fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style CFG_COSMIC fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style CFG_TMUXINATOR fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style CFG_BIN fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style CFG_OTHER fill:#fef8f0,stroke:#f6c177,color:#5a4520
+    style OVL_CLAUDE fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
+    style OVL_TOOLS fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
 ```
 
 ## Hosts
 
-### andromeda — Desktop Workstation
+### andromeda - Desktop Workstation
 
 System76 Thelio Major with AMD Threadripper. Runs NVIDIA beta drivers with open source kernel modules and modesetting. Steam is enabled with firewall rules for local game transfers.
 
-### starfish — Laptop
+### starfish - Laptop
 
 Dell Precision 5750. Inherits everything from the common configuration with no host-specific overrides.
 
-### foundation — Travel Laptop
+### foundation - Travel Laptop
 
 Framework 13 AMD AI-300 Series. Uses the `nixos-hardware` module for Framework-specific hardware support (power management, firmware, etc).
 
@@ -157,11 +163,11 @@ All hosts share `common-configuration.nix` which provides:
 
 - **Boot:** systemd-boot with EFI support
 - **Network:** NetworkManager, Avahi mDNS, Mullvad VPN, OpenSSH (key-only)
-- **Desktop:** COSMIC greeter, X11, GNOME extensions (pop-shell, appindicator)
+- **Desktop:** COSMIC desktop and greeter, X11
 - **Audio:** PipeWire with PulseAudio compatibility
 - **Services:** CUPS printing, Bluetooth, OpenSearch, GnuPG agent with SSH
 - **Virtualisation:** Docker with host.docker.internal resolution
-- **Fonts:** JetBrains Mono, Nerd Fonts, Fira Code
+- **Fonts:** JetBrains Mono, Nerd Fonts (JetBrains Mono, Ubuntu, Ubuntu Mono)
 - **Nix:** Flakes enabled, weekly garbage collection, auto-optimise store
 - **Locale:** en_GB.UTF-8, Europe/London timezone
 
@@ -185,7 +191,7 @@ Over 100 packages organised by purpose. Linux-only packages (GUI apps, clipboard
 | **LSP Servers** | nil, lua-language-server, gopls, ccls, bash-language-server, marksman, typescript-language-server | All |
 | **Monitoring** | btop, htop | All |
 | **Databases** | PostgreSQL, Valkey, pgcli | All |
-| **Custom** | sniffy, smailer, mux | All |
+| **Custom** | sniffy, smailer, mux, ecs | All |
 
 ### Shell
 
@@ -206,7 +212,7 @@ Rose Pine Moon theme. Vi key bindings, vim-tmux-navigator for seamless pane swit
 
 ### Desktop (Linux only)
 
-GNOME with Pop Shell tiling. Six static workspaces with `Super+1-9` switching. Auto-move rules send Brave to workspace 1, Slack/Telegram/Discord to workspace 2, and Spotify/Clementine to workspace 3. Mouse focus-follows-pointer.
+COSMIC is the primary desktop environment at the system level. GNOME dconf settings are maintained via `gnome.nix` for Pop Shell tiling, six static workspaces with `Super+1-9` switching, and auto-move rules (Brave to workspace 1, Slack/Telegram/Discord to workspace 2, Spotify/Clementine to workspace 3). Mouse focus-follows-pointer.
 
 ### Neovim
 
@@ -222,8 +228,9 @@ Packages that need to diverge from nixpkgs-unstable are overlaid through the fla
 
 | Package | Source | Reason | Platform |
 |---------|--------|--------|----------|
-| `claude-code` | `overlays/claude-code/` | Pinned to 2.1.32 ahead of upstream | Linux |
+| `claude-code` | `overlays/claude-code/` | Pinned ahead of upstream | Linux |
 | `sniffy`, `smailer`, `mux` | GitHub flake inputs | Personal tools | All |
+| `ecs` | `trade-tariff-tools` flake input | ECS task executor | All |
 
 ## Custom Scripts
 
@@ -231,12 +238,8 @@ Located in `home/config/bin/` and added to `$PATH`:
 
 | Script | Purpose |
 |--------|---------|
-| `ecs` | Interactive ECS task executor with fzf cluster/service/task selection |
 | `notes` / `notes_on` | Fzf-based note browser and dated note creator with templates |
-| `gcall` | Quick utility script |
-| `gnome-dump` / `gnome-restore` | Backup and restore GNOME dconf settings |
-| `brave-debug` | Launch Brave with remote debugging |
-| `setup-claude-mcp` | Configure Claude Code MCP server connections |
+| `gcall` | Nix garbage collection for user and root stores |
 
 ## Usage
 
@@ -265,8 +268,8 @@ nix flake update
 
 Managed through `git-hooks.nix` and available in the dev shell (`nix develop`):
 
-- **eclint** — EditorConfig validation
-- **nil** — Nix language linting
-- **ormolu** — Haskell formatting
-- **end-of-file-fixer** — Ensure files end with a newline
-- **trim-trailing-whitespace** — Clean up trailing spaces
+- **eclint** - EditorConfig validation
+- **nil** - Nix language linting
+- **ormolu** - Haskell formatting
+- **end-of-file-fixer** - Ensure files end with a newline
+- **trim-trailing-whitespace** - Clean up trailing spaces

@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-dconf dump / > "$HOME"/.dotfiles/home/config/gnome/gsettings.toml

@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-dconf load / < "$HOME"/.dotfiles/home/config/gnome/gsettings.toml
