@@ -26,6 +26,10 @@
       url = "github:willfish/mux";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+    forte = {
+      url = "github:willfish/forte";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
     trade-tariff-tools = {
       url = "github:trade-tariff/trade-tariff-tools";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
@@ -41,6 +45,7 @@
       sniffy,
       smailer,
       mux,
+      forte,
       trade-tariff-tools,
       nixos-hardware,
       # nixpkgs-local,
@@ -56,6 +61,7 @@
           inherit (sniffy.packages.${linuxSystem}) sniffy;
           inherit (smailer.packages.${linuxSystem}) smailer;
           mux = mux.packages.${linuxSystem}.default;
+          forte = forte.packages.${linuxSystem}.default;
           inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
           # variety = pkgs-local.variety;
           claude-code = prev.callPackage ./overlays/claude-code/package.nix { };

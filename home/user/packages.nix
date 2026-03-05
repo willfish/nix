@@ -155,6 +155,7 @@ in
     # Linux-only: GUI desktop apps
     zoom-us
     clementine # Music player with library management
+    forte # Modern desktop music player with local library and streaming support
     dropbox # Cloud storage and file synchronization service
     libation # Audio player with a focus on music libraries
     libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
