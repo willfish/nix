@@ -150,6 +150,7 @@ in
     ecs # Interactive tool for running commands in ECS tasks
 
     # AI tools
+    codex # OpenAI Codex CLI coding agent
     gemini-cli # Command-line client for the Gemini protocol
   ] ++ lib.optionals stdenv.isLinux [
     # Linux-only: GUI desktop apps

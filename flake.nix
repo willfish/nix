@@ -34,6 +34,10 @@
       url = "github:trade-tariff/trade-tariff-tools";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # nixpkgs-local.url = "path:/home/william/Repositories/nixpkgs";
   };
@@ -47,6 +51,7 @@
       mux,
       forte,
       trade-tariff-tools,
+      llm-agents,
       nixos-hardware,
       # nixpkgs-local,
       ...
@@ -63,8 +68,8 @@
           mux = mux.packages.${linuxSystem}.default;
           forte = forte.packages.${linuxSystem}.default;
           inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
+          inherit (llm-agents.packages.${linuxSystem}) codex claude-code;
           # variety = pkgs-local.variety;
-          claude-code = prev.callPackage ./overlays/claude-code/package.nix { };
         }
       );
       darwinOverlay = (
