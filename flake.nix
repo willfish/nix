@@ -133,12 +133,16 @@
         william = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           modules = [ ./home ];
-          extraSpecialArgs = { isLinux = true; };
+          extraSpecialArgs = {
+            isLinux = true;
+          };
         };
         william-darwin = home-manager.lib.homeManagerConfiguration {
           pkgs = darwinPkgs;
           modules = [ ./home ];
-          extraSpecialArgs = { isLinux = false; };
+          extraSpecialArgs = {
+            isLinux = false;
+          };
         };
       };
       devShells.${linuxSystem} = {

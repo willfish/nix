@@ -64,6 +64,40 @@ in
     '';
 
     functions = {
+      __git_worktree_path_for_branch = ''
+        set -l target $argv[1]
+
+        if test -z "$target"
+          return 1
+        end
+
+        command git worktree list --porcelain | awk -v branch="refs/heads/$target" '
+          /^worktree / { worktree = substr($0, 10) }
+          /^branch / && $2 == branch { print worktree; exit }
+        '
+      '';
+      git = ''
+        if test (count $argv) -eq 2
+          set -l subcommand $argv[1]
+          set -l target $argv[2]
+
+          if contains -- $subcommand switch checkout
+            if command git rev-parse --is-inside-work-tree >/dev/null 2>/dev/null
+              if command git show-ref --verify --quiet "refs/heads/$target"
+                set -l current_root (command git rev-parse --show-toplevel 2>/dev/null)
+                set -l target_worktree (__git_worktree_path_for_branch $target)
+
+                if test -n "$target_worktree"; and test "$target_worktree" != "$current_root"
+                  cd "$target_worktree"
+                  return $status
+                end
+              end
+            end
+          end
+        end
+
+        command git $argv
+      '';
       gitignore = ''curl -sL https://www.gitignore.io/api/$argv'';
       today = ''notes_on (date +"%Y-%m-%d") today.md'';
       yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';
