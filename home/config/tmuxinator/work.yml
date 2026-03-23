@@ -6,4 +6,5 @@ windows:
       panes:
         - cd /home/william/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && pg-start
         - cd /home/william/Repositories/hmrc/trade-tariff-dev-hub && eval "$(direnv export fish)" && pg-start
+        - cd /home/william/Repositories/hmrc/trade-tariff-admin && eval "$(direnv export fish)" && pg-start
         - valkey-server
