@@ -21,6 +21,7 @@ let
     cdr = "cd ~/Repositories";
     hm = "cd ~/Repositories/hmrc";
 
+    bundle = "bundle install";
     rc = "bundle exec rails console";
     rr = "bundle exec rails routes --expanded";
     rs = "bundle exec rails server";
