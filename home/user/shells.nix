@@ -34,7 +34,8 @@ let
     prod = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/production";
     stag = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/staging";
     dev = "cd ~/Repositories/hmrc/trade-tariff-platform-aws-terraform/environments/development";
-  } // lib.optionalAttrs stdenv.isLinux {
+  }
+  // lib.optionalAttrs stdenv.isLinux {
     pbcopy = "xclip -selection clipboard";
     pbpaste = "xclip -selection clipboard -o";
   };
@@ -51,17 +52,24 @@ in
     shellAliases = aliases;
     shellAbbrs = abbreviations;
 
-    interactiveShellInit = (if stdenv.isDarwin then ''
-      # Source Nix daemon environment for fish on macOS (sets PATH, NIX_SSL_CERT_FILE, etc.)
-      if test -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.fish
-        source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.fish
-      end
-    '' else "") + ''
-      set -gx AWS_DEFAULT_REGION eu-west-2
-      set -gx AWS_REGION eu-west-2
-      set -gx ERL_AFLAGS "-kernel shell_history enabled"
-      set -gx SAM_CLI_TELEMETRY 0
-    '';
+    interactiveShellInit =
+      (
+        if stdenv.isDarwin then
+          ''
+            # Source Nix daemon environment for fish on macOS (sets PATH, NIX_SSL_CERT_FILE, etc.)
+            if test -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.fish
+              source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.fish
+            end
+          ''
+        else
+          ""
+      )
+      + ''
+        set -gx AWS_DEFAULT_REGION eu-west-2
+        set -gx AWS_REGION eu-west-2
+        set -gx ERL_AFLAGS "-kernel shell_history enabled"
+        set -gx SAM_CLI_TELEMETRY 0
+      '';
 
     functions = {
       __git_worktree_path_for_branch = ''
@@ -98,10 +106,23 @@ in
 
         command git $argv
       '';
-      gitignore = ''curl -sL https://www.gitignore.io/api/$argv'';
+      gitignore = "curl -sL https://www.gitignore.io/api/$argv";
       today = ''notes_on (date +"%Y-%m-%d") today.md'';
       yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';
       tomorrow = ''notes_on (date +%F -d "tomorrow") today.md'';
+      logs = ''echo dev_hub_log\nidentity_log\nfrontend_log\nbackend_log\nadmin_log\nduty_log\nsearch_query_log | fzf | xargs -- echo'';
+      frontend_log = ''log_for "https://www.trade-tariff.service.gov.uk/healthcheck" trade-tariff-frontend'';
+      backend_log = ''log_for "https://www.trade-tariff.service.gov.uk/api/v2/healthcheck" trade-tariff-backend'';
+      admin_log = ''log_for "https://admin.trade-tariff.service.gov.uk/healthcheck" trade-tariff-admin'';
+      dev_hub_log = ''log_for "https://hub.trade-tariff.service.gov.uk/healthcheck" trade-tariff-dev-hub'';
+      identity_log = ''log_for "https://id.trade-tariff.service.gov.uk/healthcheck" identity'';
+      all_logs = ''
+        frontend_log
+        backend_log
+        admin_log
+        dev_hub_log
+        identity_log
+      '';
     };
   };
   programs.zoxide.enable = true;

@@ -1,0 +1,38 @@
+#! /usr/bin/env fish
+
+set -l previous (pwd)
+set -l url $argv[1]
+set -l repo $argv[2]
+set -l response_file (mktemp)
+set -l status_code (curl --silent --show-error --location --output $response_file --write-out '%{http_code}' $url)
+set -l sha1
+
+if test "$status_code" = "200"
+  set sha1 (jq -r 'if type == "object" and has("git_sha1") and .git_sha1 != null then .git_sha1 else empty end' $response_file 2>/dev/null)
+end
+
+cd ~/Repositories/hmrc
+mkdir -p release-notes
+cd release-notes
+rm -rf $repo
+git clone --quiet https://github.com/trade-tariff/$repo.git
+cd $repo
+
+echo "*$repo*"
+echo
+
+if test -z "$sha1"
+  echo "_unavailable_"
+  echo
+  echo "- Could not determine git_sha1 from $url (HTTP $status_code)"
+else
+  echo "_"$sha1"_"
+  echo
+  git --no-pager log --merges HEAD...$sha1 --format="format:- %b" --grep 'Merge pull request'
+end
+
+echo
+echo
+
+rm -f $response_file
+cd $previous
