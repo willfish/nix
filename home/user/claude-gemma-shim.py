@@ -82,6 +82,10 @@ class UpstreamRequestError(Exception):
         return payload
 
 
+class ClientDisconnectedError(Exception):
+    pass
+
+
 def env_int(name: str, default: int) -> int:
     value = os.environ.get(name)
     if value is None:
@@ -661,8 +665,6 @@ def parse_anthropic_request(payload: object) -> dict:
 
     stream = body.get("stream", False)
     stream = require_bool(stream, context="stream")
-    if stream:
-        raise RequestValidationError(501, "not_implemented_error", "stream=true is not supported yet")
 
     return {
         "model": model,
@@ -684,7 +686,7 @@ def build_upstream_request(parsed_request: dict) -> dict:
         "model": parsed_request["model"],
         "messages": messages,
         "max_tokens": parsed_request["max_tokens"],
-        "stream": False,
+        "stream": parsed_request["stream"],
     }
     if parsed_request["tools"]:
         upstream_request["tools"] = parsed_request["tools"]
@@ -720,6 +722,90 @@ def forward_upstream(upstream_base_url: str, payload: dict) -> dict:
         return json.loads(decode_upstream_body(raw_body))
     except json.JSONDecodeError as exc:
         raise UpstreamRequestError("Upstream returned invalid JSON") from exc
+
+
+def open_upstream_stream(upstream_base_url: str, payload: dict):
+    upstream_url = f"{upstream_base_url}{UPSTREAM_MESSAGES_PATH}"
+    upstream_request = request.Request(
+        upstream_url,
+        data=json_bytes(payload),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        return request.urlopen(upstream_request, timeout=120)
+    except error.HTTPError as exc:
+        raw_body = exc.read()
+        raise UpstreamRequestError(
+            f"Upstream request failed with status {exc.code}",
+            upstream_status=exc.code,
+            upstream_body=decode_upstream_body(raw_body),
+        ) from exc
+    except error.URLError as exc:
+        raise UpstreamRequestError(f"Could not reach upstream: {exc.reason}") from exc
+
+
+def iter_sse_data_events(response) -> object:
+    data_lines = []
+    while True:
+        raw_line = response.readline()
+        if not raw_line:
+            if data_lines:
+                yield "\n".join(data_lines)
+            return
+
+        line = raw_line.decode("utf-8", errors="replace")
+        if line in ("\n", "\r\n"):
+            if data_lines:
+                yield "\n".join(data_lines)
+                data_lines = []
+            continue
+
+        if not line.startswith("data:"):
+            continue
+
+        data = line[5:]
+        if data.startswith(" "):
+            data = data[1:]
+        data_lines.append(data.rstrip("\r\n"))
+
+
+def require_non_negative_int(value: object, *, context: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise UpstreamRequestError(f"{context} was invalid")
+    if value < 0:
+        raise UpstreamRequestError(f"{context} was invalid")
+    return value
+
+
+def extract_stream_usage(response_dict: dict) -> tuple[int, int]:
+    usage = response_dict.get("usage")
+    if usage is not None:
+        usage_dict = require_object(usage, context="upstream stream usage")
+        input_tokens = require_non_negative_int(
+            usage_dict.get("prompt_tokens", 0),
+            context="upstream stream usage.prompt_tokens",
+        )
+        output_tokens = require_non_negative_int(
+            usage_dict.get("completion_tokens", 0),
+            context="upstream stream usage.completion_tokens",
+        )
+        return input_tokens, output_tokens
+
+    timings = response_dict.get("timings")
+    if timings is None:
+        return 0, 0
+
+    timings_dict = require_object(timings, context="upstream stream timings")
+    input_tokens = require_non_negative_int(
+        timings_dict.get("prompt_n", 0),
+        context="upstream stream timings.prompt_n",
+    )
+    output_tokens = require_non_negative_int(
+        timings_dict.get("predicted_n", 0),
+        context="upstream stream timings.predicted_n",
+    )
+    return input_tokens, output_tokens
 
 
 def map_stop_reason(finish_reason: object) -> str | None:
@@ -842,6 +928,26 @@ class ShimRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _begin_sse(self) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "close")
+        self.send_header("anthropic-version", ANTHROPIC_API_VERSION)
+        self.end_headers()
+        self.close_connection = True
+
+    def _write_sse_event(self, event_type: str, payload: dict) -> None:
+        event_bytes = (
+            f"event: {event_type}\n"
+            f"data: {json.dumps(payload, sort_keys=True, separators=(',', ':'))}\n\n"
+        ).encode("utf-8")
+        try:
+            self.wfile.write(event_bytes)
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError) as exc:
+            raise ClientDisconnectedError() from exc
+
     def _health_payload(self) -> dict:
         config = self.server.shim_config
         return {
@@ -911,9 +1017,289 @@ class ShimRequestHandler(BaseHTTPRequestHandler):
     def _handle_messages(self) -> None:
         parsed_request = parse_anthropic_request(self._json_body())
         upstream_request = build_upstream_request(parsed_request)
+        if parsed_request["stream"]:
+            self._handle_streaming_messages(parsed_request, upstream_request)
+            return
         upstream_response = forward_upstream(self.server.shim_config["upstream_base_url"], upstream_request)
         response_payload = build_anthropic_response(parsed_request, upstream_response)
         self._write_json(200, response_payload)
+
+    def _handle_streaming_messages(self, parsed_request: dict, upstream_request: dict) -> None:
+        self._begin_sse()
+
+        try:
+            with open_upstream_stream(self.server.shim_config["upstream_base_url"], upstream_request) as upstream_response:
+                stream_state = {
+                    "message_started": False,
+                    "response_id": None,
+                    "response_model": parsed_request["model"],
+                    "next_content_index": 0,
+                    "text_block_index": None,
+                    "tool_blocks": {},
+                }
+
+                for raw_event in iter_sse_data_events(upstream_response):
+                    if raw_event == "[DONE]":
+                        break
+
+                    try:
+                        chunk = json.loads(raw_event)
+                    except json.JSONDecodeError as exc:
+                        raise UpstreamRequestError("Upstream stream returned invalid JSON") from exc
+
+                    self._relay_upstream_stream_chunk(parsed_request, chunk, stream_state)
+
+                if stream_state["message_started"]:
+                    self._finish_streaming_message(stream_state, stop_reason="end_turn", output_tokens=0)
+        except ClientDisconnectedError:
+            return
+        except UpstreamRequestError as exc:
+            self._write_sse_event("error", exc.to_payload())
+
+    def _start_streaming_message(self, parsed_request: dict, response_dict: dict, stream_state: dict) -> None:
+        response_id = response_dict.get("id")
+        if not isinstance(response_id, str) or not response_id:
+            response_id = f"msg_{uuid.uuid4().hex}"
+
+        response_model = response_dict.get("model")
+        if not isinstance(response_model, str) or not response_model:
+            response_model = parsed_request["model"]
+
+        stream_state["message_started"] = True
+        stream_state["response_id"] = response_id
+        stream_state["response_model"] = response_model
+        self._write_sse_event(
+            "message_start",
+            {
+                "type": "message_start",
+                "message": {
+                    "id": response_id,
+                    "type": "message",
+                    "role": "assistant",
+                    "model": response_model,
+                    "content": [],
+                    "stop_reason": None,
+                    "stop_sequence": None,
+                    "usage": {
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                    },
+                },
+            },
+        )
+
+    def _start_text_block(self, stream_state: dict) -> int:
+        if stream_state["text_block_index"] is not None:
+            return stream_state["text_block_index"]
+
+        content_index = stream_state["next_content_index"]
+        stream_state["next_content_index"] += 1
+        stream_state["text_block_index"] = content_index
+        self._write_sse_event(
+            "content_block_start",
+            {
+                "type": "content_block_start",
+                "index": content_index,
+                "content_block": {
+                    "type": "text",
+                    "text": "",
+                },
+            },
+        )
+        return content_index
+
+    def _stop_text_block(self, stream_state: dict) -> None:
+        content_index = stream_state["text_block_index"]
+        if content_index is None:
+            return
+        self._write_sse_event(
+            "content_block_stop",
+            {
+                "type": "content_block_stop",
+                "index": content_index,
+            },
+        )
+        stream_state["text_block_index"] = None
+
+    def _tool_block_state(self, tool_delta: dict, stream_state: dict, *, context: str) -> dict:
+        upstream_tool_index = require_non_negative_int(
+            tool_delta.get("index"),
+            context=f"{context}.index",
+        )
+
+        tool_block = stream_state["tool_blocks"].get(upstream_tool_index)
+        if tool_block is not None:
+            tool_call_id = tool_delta.get("id")
+            if tool_call_id is not None and require_string(tool_call_id, context=f"{context}.id") != tool_block["id"]:
+                raise UpstreamRequestError(f"{context}.id changed within the same tool call")
+            if "type" in tool_delta:
+                tool_call_type = require_string(tool_delta.get("type"), context=f"{context}.type")
+                if tool_call_type != "function":
+                    raise UpstreamRequestError(f"{context}.type {tool_call_type!r} is unsupported")
+
+            function = tool_delta.get("function")
+            if function is not None:
+                function_dict = require_object(function, context=f"{context}.function")
+                tool_name = function_dict.get("name")
+                if tool_name is not None and require_tool_name(tool_name, context=f"{context}.function.name") != tool_block["name"]:
+                    raise UpstreamRequestError(f"{context}.function.name changed within the same tool call")
+            return tool_block
+
+        tool_call_id = require_string(tool_delta.get("id"), context=f"{context}.id")
+        tool_call_type = require_string(tool_delta.get("type"), context=f"{context}.type")
+        if tool_call_type != "function":
+            raise UpstreamRequestError(f"{context}.type {tool_call_type!r} is unsupported")
+
+        function = require_object(tool_delta.get("function"), context=f"{context}.function")
+        tool_name = require_tool_name(function.get("name"), context=f"{context}.function.name")
+
+        content_index = stream_state["next_content_index"]
+        stream_state["next_content_index"] += 1
+        tool_block = {
+            "content_index": content_index,
+            "id": tool_call_id,
+            "name": tool_name,
+        }
+        stream_state["tool_blocks"][upstream_tool_index] = tool_block
+        self._write_sse_event(
+            "content_block_start",
+            {
+                "type": "content_block_start",
+                "index": content_index,
+                "content_block": {
+                    "type": "tool_use",
+                    "id": tool_call_id,
+                    "name": tool_name,
+                    "input": {},
+                },
+            },
+        )
+        return tool_block
+
+    def _stop_tool_blocks(self, stream_state: dict) -> None:
+        for upstream_tool_index in sorted(stream_state["tool_blocks"]):
+            tool_block = stream_state["tool_blocks"][upstream_tool_index]
+            self._write_sse_event(
+                "content_block_stop",
+                {
+                    "type": "content_block_stop",
+                    "index": tool_block["content_index"],
+                },
+            )
+        stream_state["tool_blocks"].clear()
+
+    def _finish_streaming_message(self, stream_state: dict, *, stop_reason: str, output_tokens: int) -> None:
+        self._stop_text_block(stream_state)
+        self._stop_tool_blocks(stream_state)
+        self._write_sse_event(
+            "message_delta",
+            {
+                "type": "message_delta",
+                "delta": {
+                    "stop_reason": stop_reason,
+                    "stop_sequence": None,
+                },
+                "usage": {
+                    "output_tokens": output_tokens,
+                },
+            },
+        )
+        self._write_sse_event(
+            "message_stop",
+            {
+                "type": "message_stop",
+            },
+        )
+        stream_state["message_started"] = False
+
+    def _relay_upstream_stream_chunk(self, parsed_request: dict, chunk: object, stream_state: dict) -> None:
+        response_dict = require_object(chunk, context="upstream stream chunk")
+        if not stream_state["message_started"]:
+            self._start_streaming_message(parsed_request, response_dict, stream_state)
+
+        choices = response_dict.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise UpstreamRequestError("Upstream stream chunk did not include any choices")
+
+        first_choice = require_object(choices[0], context="upstream stream chunk choices[0]")
+        delta = first_choice.get("delta", {})
+        delta_dict = require_object(delta, context="upstream stream chunk choices[0].delta")
+
+        delta_content = delta_dict.get("content")
+        if delta_content is not None:
+            if stream_state["tool_blocks"]:
+                raise UpstreamRequestError("Upstream stream emitted text after tool_use deltas, which is unsupported")
+            delta_text = require_string(
+                delta_content,
+                context="upstream stream chunk choices[0].delta.content",
+            )
+            if delta_text:
+                text_block_index = self._start_text_block(stream_state)
+                self._write_sse_event(
+                    "content_block_delta",
+                    {
+                        "type": "content_block_delta",
+                        "index": text_block_index,
+                        "delta": {
+                            "type": "text_delta",
+                            "text": delta_text,
+                        },
+                    },
+                )
+
+        tool_calls = delta_dict.get("tool_calls")
+        if tool_calls is not None:
+            if not isinstance(tool_calls, list) or not tool_calls:
+                raise UpstreamRequestError("Upstream stream chunk choices[0].delta.tool_calls was invalid")
+            self._stop_text_block(stream_state)
+            for index, tool_delta in enumerate(tool_calls):
+                tool_delta_dict = require_object(
+                    tool_delta,
+                    context=f"upstream stream chunk choices[0].delta.tool_calls[{index}]",
+                )
+                tool_block = self._tool_block_state(
+                    tool_delta_dict,
+                    stream_state,
+                    context=f"upstream stream chunk choices[0].delta.tool_calls[{index}]",
+                )
+                function = tool_delta_dict.get("function")
+                if function is None:
+                    continue
+                function_dict = require_object(
+                    function,
+                    context=f"upstream stream chunk choices[0].delta.tool_calls[{index}].function",
+                )
+                partial_json = function_dict.get("arguments")
+                if partial_json is None:
+                    continue
+                partial_json = require_string(
+                    partial_json,
+                    context=f"upstream stream chunk choices[0].delta.tool_calls[{index}].function.arguments",
+                )
+                if not partial_json:
+                    continue
+                self._write_sse_event(
+                    "content_block_delta",
+                    {
+                        "type": "content_block_delta",
+                        "index": tool_block["content_index"],
+                        "delta": {
+                            "type": "input_json_delta",
+                            "partial_json": partial_json,
+                        },
+                    },
+                )
+
+        finish_reason = first_choice.get("finish_reason")
+        if finish_reason is None:
+            return
+
+        _, output_tokens = extract_stream_usage(response_dict)
+        self._finish_streaming_message(
+            stream_state,
+            stop_reason=map_stop_reason(finish_reason),
+            output_tokens=output_tokens,
+        )
 
     def do_GET(self) -> None:  # noqa: N802 - required by BaseHTTPRequestHandler
         path = urlparse(self.path).path
