@@ -76,11 +76,49 @@ let
   claude-gemma = pkgs.writeShellScriptBin "claude-gemma" ''
     set -euo pipefail
 
-    export ANTHROPIC_API_KEY="claude-gemma-stub"
-    export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"
+    claude_bin=${pkgs.claude-code}/bin/claude
+    shim_host=''${CLAUDE_GEMMA_SHIM_HOST:-127.0.0.1}
+    shim_port=''${CLAUDE_GEMMA_SHIM_PORT:-8090}
+    shim_url="http://$shim_host:$shim_port"
+    auth_token=''${CLAUDE_GEMMA_AUTH_TOKEN:-claude-gemma-local}
 
-    echo "claude-gemma is a stub for now; real launcher logic is not implemented yet." >&2
-    exit 1
+    export ANTHROPIC_AUTH_TOKEN="$auth_token"
+    export ANTHROPIC_API_KEY="$auth_token"
+    export ANTHROPIC_BASE_URL="$shim_url"
+
+    skip_healthcheck=0
+    for arg in "$@"; do
+      case "$arg" in
+        -h|--help|help)
+          skip_healthcheck=1
+          break
+          ;;
+      esac
+    done
+
+    if [ "$skip_healthcheck" -eq 0 ] && [ "''${CLAUDE_GEMMA_SKIP_HEALTHCHECK:-0}" != 1 ]; then
+      if ! ${pkgs.python3}/bin/python3 - "$shim_url/health" <<'PY'
+import json
+import sys
+from urllib.request import urlopen
+
+try:
+    with urlopen(sys.argv[1], timeout=2) as response:
+        payload = json.load(response)
+except Exception:
+    raise SystemExit(1)
+
+if payload.get("service") != "claude-gemma-shim" or payload.get("status") != "ok":
+    raise SystemExit(1)
+PY
+      then
+        echo "claude-gemma: shim is not healthy at $shim_url/health" >&2
+        echo "Start claude-gemma-shim first, or set CLAUDE_GEMMA_SKIP_HEALTHCHECK=1." >&2
+        exit 1
+      fi
+    fi
+
+    exec "$claude_bin" "$@"
   '';
 in
 {
