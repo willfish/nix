@@ -17,12 +17,21 @@ DEFAULT_PORT = 8090
 DEFAULT_UPSTREAM_HOST = "127.0.0.1"
 DEFAULT_UPSTREAM_PORT = 8080
 UPSTREAM_MESSAGES_PATH = "/v1/chat/completions"
-ALLOWED_REQUEST_FIELDS = {"max_tokens", "messages", "model", "stream", "system", "tools"}
-UNSUPPORTED_REQUEST_FIELDS = {
+ALLOWED_REQUEST_FIELDS = {
+    "context_management",
+    "max_tokens",
     "metadata",
+    "messages",
+    "model",
+    "output_config",
+    "stream",
+    "system",
+    "thinking",
+    "tools",
+}
+UNSUPPORTED_REQUEST_FIELDS = {
     "stop_sequences",
     "temperature",
-    "thinking",
     "tool_choice",
     "top_k",
     "top_p",
@@ -30,15 +39,34 @@ UNSUPPORTED_REQUEST_FIELDS = {
 SUPPORTED_MESSAGE_ROLES = {"assistant", "user"}
 TOOL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 SUPPORTED_TEXT_BLOCK_TYPE = "text"
-SUPPORTED_SCHEMA_TYPES = {"array", "boolean", "integer", "number", "object", "string"}
+SUPPORTED_SCHEMA_TYPES = {"array", "boolean", "integer", "null", "number", "object", "string"}
 SUPPORTED_SCHEMA_KEYS = {
+    "$schema",
     "additionalProperties",
+    "anyOf",
+    "const",
+    "default",
     "description",
     "enum",
+    "exclusiveMaximum",
+    "exclusiveMinimum",
+    "format",
     "items",
+    "maxItems",
+    "maxLength",
+    "maxProperties",
+    "maximum",
+    "minItems",
+    "minLength",
+    "minProperties",
+    "minimum",
+    "pattern",
+    "propertyNames",
     "properties",
     "required",
+    "title",
     "type",
+    "uniqueItems",
 }
 ANTHROPIC_API_VERSION = "2023-06-01"
 
@@ -189,13 +217,17 @@ def validate_tool_input_schema(schema: object, *, context: str, top_level: bool 
             f"{context} uses unsupported JSON Schema keyword(s): {field_list}",
         )
 
-    schema_type = require_string(schema_dict.get("type"), context=f"{context}.type")
-    if schema_type not in SUPPORTED_SCHEMA_TYPES:
-        raise RequestValidationError(
-            400,
-            "invalid_request_error",
-            f"{context}.type must be one of {sorted(SUPPORTED_SCHEMA_TYPES)!r}",
-        )
+    schema_type_value = schema_dict.get("type")
+    if schema_type_value is None:
+        schema_type = None
+    else:
+        schema_type = require_string(schema_type_value, context=f"{context}.type")
+        if schema_type not in SUPPORTED_SCHEMA_TYPES:
+            raise RequestValidationError(
+                400,
+                "invalid_request_error",
+                f"{context}.type must be one of {sorted(SUPPORTED_SCHEMA_TYPES)!r}",
+            )
 
     if top_level and schema_type != "object":
         raise RequestValidationError(
@@ -211,6 +243,24 @@ def validate_tool_input_schema(schema: object, *, context: str, top_level: bool 
     enum_values = schema_dict.get("enum")
     if enum_values is not None:
         validate_schema_enum(enum_values, context=f"{context}.enum")
+
+    any_of = schema_dict.get("anyOf")
+    if any_of is not None:
+        if not isinstance(any_of, list) or not any_of:
+            raise RequestValidationError(
+                400,
+                "invalid_request_error",
+                f"{context}.anyOf must be a non-empty list",
+            )
+        for index, branch in enumerate(any_of):
+            validate_tool_input_schema(
+                branch,
+                context=f"{context}.anyOf[{index}]",
+            )
+        return schema_dict
+
+    if schema_type is None:
+        return schema_dict
 
     if schema_type == "object":
         items = schema_dict.get("items")
@@ -234,10 +284,16 @@ def validate_tool_input_schema(schema: object, *, context: str, top_level: bool 
 
         additional_properties = schema_dict.get("additionalProperties")
         if additional_properties is not None and not isinstance(additional_properties, bool):
-            raise RequestValidationError(
-                400,
-                "invalid_request_error",
-                f"{context}.additionalProperties must be a boolean",
+            validate_tool_input_schema(
+                additional_properties,
+                context=f"{context}.additionalProperties",
+            )
+
+        property_names_schema = schema_dict.get("propertyNames")
+        if property_names_schema is not None:
+            validate_tool_input_schema(
+                property_names_schema,
+                context=f"{context}.propertyNames",
             )
 
         property_names = set()
@@ -317,6 +373,7 @@ def parse_tool_definition(tool: object, *, context: str) -> dict:
 
 def extract_text_from_block(block: object, *, context: str) -> str:
     block_dict = require_object(block, context=context)
+    reject_unknown_fields(block_dict, allowed_fields={"cache_control", "text", "type"}, context=context)
     block_type = require_string(block_dict.get("type"), context=f"{context}.type")
     if block_type != SUPPORTED_TEXT_BLOCK_TYPE:
         raise RequestValidationError(
@@ -326,6 +383,17 @@ def extract_text_from_block(block: object, *, context: str) -> str:
         )
     text = require_string(block_dict.get("text"), context=f"{context}.text")
     return text
+
+
+def parse_system_prompt(value: object) -> str:
+    if isinstance(value, str):
+        return value
+    if not isinstance(value, list):
+        raise RequestValidationError(400, "invalid_request_error", "system must be a string or list of text blocks")
+    return "".join(
+        extract_text_from_block(block, context=f"system[{index}]")
+        for index, block in enumerate(value)
+    )
 
 
 def parse_tool_use_block(block: object, *, context: str) -> tuple[dict, str]:
@@ -430,7 +498,11 @@ def parse_tool_result_block(
     expected_tool_use_ids: set[str],
 ) -> tuple[dict, str]:
     block_dict = require_object(block, context=context)
-    reject_unknown_fields(block_dict, allowed_fields={"content", "is_error", "tool_use_id", "type"}, context=context)
+    reject_unknown_fields(
+        block_dict,
+        allowed_fields={"cache_control", "content", "is_error", "tool_use_id", "type"},
+        context=context,
+    )
 
     block_type = require_string(block_dict.get("type"), context=f"{context}.type")
     if block_type != "tool_result":
@@ -594,9 +666,25 @@ def parse_anthropic_request(payload: object) -> dict:
     if not model:
         raise RequestValidationError(400, "invalid_request_error", "model must not be empty")
 
+    context_management = body.get("context_management")
+    if context_management is not None:
+        require_object(context_management, context="context_management")
+
+    output_config = body.get("output_config")
+    if output_config is not None:
+        require_object(output_config, context="output_config")
+
+    metadata = body.get("metadata")
+    if metadata is not None:
+        require_object(metadata, context="metadata")
+
+    thinking = body.get("thinking")
+    if thinking is not None:
+        require_object(thinking, context="thinking")
+
     system = body.get("system")
     if system is not None:
-        system = require_string(system, context="system")
+        system = parse_system_prompt(system)
 
     tools = body.get("tools")
     if tools is None:
