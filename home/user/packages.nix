@@ -33,6 +33,38 @@ let
     default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)
     git checkout "$default" && git cleanup
   '';
+
+  llamaCppCuda = pkgs.llama-cpp.overrideAttrs (old: rec {
+    version = "8665";
+    src = pkgs.fetchFromGitHub {
+      owner = "ggml-org";
+      repo = "llama.cpp";
+      rev = "refs/tags/b${version}";
+      hash = "sha256-2FqMOKy7ez2QGc9+bQbRD09Kyby2Zjp9m1cPy4H1zvM=";
+    };
+    postPatch = "";
+  });
+
+  llm-gemma = pkgs.writeShellScriptBin "llm-gemma" ''
+    set -euo pipefail
+
+    model=''${LLM_GEMMA_MODEL:-$HOME/Models/gemma/gemma-4-31B-it-Q4_K_M.gguf}
+
+    if [ ! -f "$model" ]; then
+      echo "Model not found: $model" >&2
+      echo "Set LLM_GEMMA_MODEL to your Gemma 4 GGUF path." >&2
+      exit 1
+    fi
+
+    exec ${llamaCppCuda}/bin/llama-server \
+      --model "$model" \
+      --ctx-size "''${LLM_GEMMA_CTX_SIZE:-16384}" \
+      --threads "''${LLM_GEMMA_THREADS:-24}" \
+      --gpu-layers "''${LLM_GEMMA_GPU_LAYERS:-999}" \
+      --host "''${LLM_GEMMA_HOST:-127.0.0.1}" \
+      --port "''${LLM_GEMMA_PORT:-8080}" \
+      "$@"
+  '';
 in
 {
   home.packages = with pkgs; [
@@ -152,6 +184,10 @@ in
     # AI tools
     codex # OpenAI Codex CLI coding agent
     gemini-cli # Command-line client for the Gemini protocol
+    python3Packages.huggingface-hub # Hugging Face CLI for model downloads
+    git-lfs # Large file support for model repos when needed
+    llamaCppCuda # CUDA-enabled local LLM runtime
+    llm-gemma # Gemma 4 llama.cpp server wrapper
   ] ++ lib.optionals stdenv.isLinux [
     # Linux-only: GUI desktop apps
     zoom-us
