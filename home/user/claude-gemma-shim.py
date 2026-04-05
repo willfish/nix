@@ -273,11 +273,9 @@ def forward_upstream(upstream_base_url: str, payload: dict) -> dict:
 
 
 def map_stop_reason(finish_reason: object) -> str | None:
-    if finish_reason == "stop":
-        return "end_turn"
     if finish_reason == "length":
         return "max_tokens"
-    return None
+    return "end_turn"
 
 
 def build_anthropic_response(parsed_request: dict, upstream_response: object) -> dict:
