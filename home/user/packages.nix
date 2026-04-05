@@ -108,7 +108,7 @@ try:
 except Exception:
     raise SystemExit(1)
 
-if payload.get("service") != "claude-gemma-shim" or payload.get("status") != "ok":
+if payload.get("service") != "claude-gemma-shim" or payload.get("ok") is not True:
     raise SystemExit(1)
 PY
       then
