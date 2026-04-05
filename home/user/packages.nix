@@ -68,6 +68,27 @@ let
       --port "''${LLM_GEMMA_PORT:-8080}" \
       "$@"
   '';
+
+  claude-gemma-shim = pkgs.writers.writePython3Bin "claude-gemma-shim" {} ''
+    import sys
+
+    print(
+        "claude-gemma-shim is a stub for now; "
+        "real shim logic is not implemented yet.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+  '';
+
+  claude-gemma = pkgs.writeShellScriptBin "claude-gemma" ''
+    set -euo pipefail
+
+    export ANTHROPIC_API_KEY="claude-gemma-stub"
+    export ANTHROPIC_BASE_URL="http://127.0.0.1:8080"
+
+    echo "claude-gemma is a stub for now; real launcher logic is not implemented yet." >&2
+    exit 1
+  '';
 in
 {
   home.packages = with pkgs; [
@@ -191,6 +212,8 @@ in
     git-lfs # Large file support for model repos when needed
     llamaCppCuda # CUDA-enabled local LLM runtime
     llm-gemma # Gemma 4 llama.cpp server wrapper
+    claude-gemma-shim # Stub shim command for Claude Code integration
+    claude-gemma # Stub launcher for Claude Code integration
   ] ++ lib.optionals stdenv.isLinux [
     # Linux-only: GUI desktop apps
     zoom-us
