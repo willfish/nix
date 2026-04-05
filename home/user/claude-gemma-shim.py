@@ -289,20 +289,25 @@ def parse_tool_definition(tool: object, *, context: str) -> dict:
     reject_unknown_fields(tool_dict, allowed_fields={"description", "input_schema", "name"}, context=context)
 
     name = require_tool_name(tool_dict.get("name"), context=f"{context}.name")
-    description = require_string(tool_dict.get("description"), context=f"{context}.description")
     input_schema = validate_tool_input_schema(
         tool_dict.get("input_schema"),
         context=f"{context}.input_schema",
         top_level=True,
     )
 
+    function_definition = {
+        "name": name,
+        "parameters": input_schema,
+    }
+    if "description" in tool_dict:
+        function_definition["description"] = require_string(
+            tool_dict.get("description"),
+            context=f"{context}.description",
+        )
+
     return {
         "type": "function",
-        "function": {
-            "name": name,
-            "description": description,
-            "parameters": input_schema,
-        },
+        "function": function_definition,
     }
 
 
@@ -421,7 +426,7 @@ def parse_tool_result_block(
     expected_tool_use_ids: set[str],
 ) -> tuple[dict, str]:
     block_dict = require_object(block, context=context)
-    reject_unknown_fields(block_dict, allowed_fields={"content", "tool_use_id", "type"}, context=context)
+    reject_unknown_fields(block_dict, allowed_fields={"content", "is_error", "tool_use_id", "type"}, context=context)
 
     block_type = require_string(block_dict.get("type"), context=f"{context}.type")
     if block_type != "tool_result":
@@ -440,14 +445,15 @@ def parse_tool_result_block(
             f"{context}.tool_use_id {tool_use_id!r} did not match the pending tool_use id(s): {expected_list}",
         )
 
-    return (
-        {
-            "role": "tool",
-            "tool_call_id": tool_use_id,
-            "content": parse_tool_result_content(block_dict.get("content"), context=f"{context}.content"),
-        },
-        tool_use_id,
-    )
+    tool_message = {
+        "role": "tool",
+        "tool_call_id": tool_use_id,
+        "content": parse_tool_result_content(block_dict.get("content"), context=f"{context}.content"),
+    }
+    if "is_error" in block_dict:
+        tool_message["is_error"] = require_bool(block_dict.get("is_error"), context=f"{context}.is_error")
+
+    return (tool_message, tool_use_id)
 
 
 def parse_user_message_content(
