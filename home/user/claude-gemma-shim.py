@@ -778,36 +778,6 @@ def require_non_negative_int(value: object, *, context: str) -> int:
     return value
 
 
-def extract_stream_usage(response_dict: dict) -> tuple[int, int]:
-    usage = response_dict.get("usage")
-    if usage is not None:
-        usage_dict = require_object(usage, context="upstream stream usage")
-        input_tokens = require_non_negative_int(
-            usage_dict.get("prompt_tokens", 0),
-            context="upstream stream usage.prompt_tokens",
-        )
-        output_tokens = require_non_negative_int(
-            usage_dict.get("completion_tokens", 0),
-            context="upstream stream usage.completion_tokens",
-        )
-        return input_tokens, output_tokens
-
-    timings = response_dict.get("timings")
-    if timings is None:
-        return 0, 0
-
-    timings_dict = require_object(timings, context="upstream stream timings")
-    input_tokens = require_non_negative_int(
-        timings_dict.get("prompt_n", 0),
-        context="upstream stream timings.prompt_n",
-    )
-    output_tokens = require_non_negative_int(
-        timings_dict.get("predicted_n", 0),
-        context="upstream stream timings.predicted_n",
-    )
-    return input_tokens, output_tokens
-
-
 def map_stop_reason(finish_reason: object) -> str | None:
     if finish_reason == "tool_calls":
         return "tool_use"
@@ -1050,7 +1020,7 @@ class ShimRequestHandler(BaseHTTPRequestHandler):
                     self._relay_upstream_stream_chunk(parsed_request, chunk, stream_state)
 
                 if stream_state["message_started"]:
-                    self._finish_streaming_message(stream_state, stop_reason="end_turn", output_tokens=0)
+                    self._finish_streaming_message(stream_state)
         except ClientDisconnectedError:
             return
         except UpstreamRequestError as exc:
@@ -1188,22 +1158,9 @@ class ShimRequestHandler(BaseHTTPRequestHandler):
             )
         stream_state["tool_blocks"].clear()
 
-    def _finish_streaming_message(self, stream_state: dict, *, stop_reason: str, output_tokens: int) -> None:
+    def _finish_streaming_message(self, stream_state: dict) -> None:
         self._stop_text_block(stream_state)
         self._stop_tool_blocks(stream_state)
-        self._write_sse_event(
-            "message_delta",
-            {
-                "type": "message_delta",
-                "delta": {
-                    "stop_reason": stop_reason,
-                    "stop_sequence": None,
-                },
-                "usage": {
-                    "output_tokens": output_tokens,
-                },
-            },
-        )
         self._write_sse_event(
             "message_stop",
             {
@@ -1294,12 +1251,7 @@ class ShimRequestHandler(BaseHTTPRequestHandler):
         if finish_reason is None:
             return
 
-        _, output_tokens = extract_stream_usage(response_dict)
-        self._finish_streaming_message(
-            stream_state,
-            stop_reason=map_stop_reason(finish_reason),
-            output_tokens=output_tokens,
-        )
+        self._finish_streaming_message(stream_state)
 
     def do_GET(self) -> None:  # noqa: N802 - required by BaseHTTPRequestHandler
         path = urlparse(self.path).path
