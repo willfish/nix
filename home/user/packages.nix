@@ -34,7 +34,10 @@ let
     git checkout "$default" && git cleanup
   '';
 
-  llamaCppCuda = pkgs.llama-cpp.overrideAttrs (old: rec {
+  llamaCppCuda = (pkgs.llama-cpp.override {
+    cudaSupport = true;
+    cudaPackages = pkgs.cudaPackages;
+  }).overrideAttrs (old: rec {
     version = "8665";
     src = pkgs.fetchFromGitHub {
       owner = "ggml-org";
