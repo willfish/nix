@@ -69,15 +69,8 @@ let
       "$@"
   '';
 
-  claude-gemma-shim = pkgs.writers.writePython3Bin "claude-gemma-shim" {} ''
-    import sys
-
-    print(
-        "claude-gemma-shim is a stub for now; "
-        "real shim logic is not implemented yet.",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+  claude-gemma-shim = pkgs.writeShellScriptBin "claude-gemma-shim" ''
+    exec ${pkgs.python3}/bin/python3 ${./claude-gemma-shim.py} "$@"
   '';
 
   claude-gemma = pkgs.writeShellScriptBin "claude-gemma" ''
