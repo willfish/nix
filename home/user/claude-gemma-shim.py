@@ -384,6 +384,9 @@ class ShimRequestHandler(BaseHTTPRequestHandler):
             )
         return self.rfile.read(content_length)
 
+    def _drain_request_body(self) -> None:
+        self._request_body_bytes()
+
     def _json_body(self) -> object:
         raw_body = self._request_body_bytes()
         if not raw_body:
@@ -423,6 +426,7 @@ class ShimRequestHandler(BaseHTTPRequestHandler):
             if path == "/v1/messages":
                 self._handle_messages()
                 return
+            self._drain_request_body()
             self._not_found()
         except RequestValidationError as exc:
             self._write_json(exc.status_code, exc.to_payload())
