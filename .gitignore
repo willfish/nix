@@ -2,3 +2,6 @@
 /.pre-commit-config.yaml
 /.pre-commit-config-nix.yaml
 /dump.rdb
+
+*.pyc
+result
