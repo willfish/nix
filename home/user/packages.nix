@@ -38,13 +38,14 @@ let
     cudaSupport = true;
     cudaPackages = pkgs.cudaPackages;
   }).overrideAttrs (old: rec {
-    version = "8665";
+    version = "8816";
     src = pkgs.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       rev = "refs/tags/b${version}";
-      hash = "sha256-2FqMOKy7ez2QGc9+bQbRD09Kyby2Zjp9m1cPy4H1zvM=";
+      hash = "sha256-SSYvnTe5BI0HTgDedIIarDcDf7APA5fyw08bLiUPZhw=";
     };
+    npmDepsHash = "sha256-RAFtsbBGBjteCt5yXhrmHL39rIDJMCFBETgzId2eRRk=";
     postPatch = "";
   });
 
@@ -53,7 +54,7 @@ let
   llm-gemma = pkgs.writeShellScriptBin "llm-gemma" ''
     set -euo pipefail
 
-    model=''${LLM_GEMMA_MODEL:-$HOME/Models/gemma/gemma-4-31B-it-Q4_K_M.gguf}
+    model=''${LLM_GEMMA_MODEL:-$HOME/Models/gemma/gemma-4-E4B-it-OBLITERATED-Q4_K_M.gguf}
 
     if [ ! -f "$model" ]; then
       echo "Model not found: $model" >&2
