@@ -134,6 +134,31 @@
           inherit pkgs;
           modules = [ ./home ];
           extraSpecialArgs = {
+            enableCuda = false;
+            isLinux = true;
+          };
+        };
+        "william@foundation" = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ ./home ];
+          extraSpecialArgs = {
+            enableCuda = false;
+            isLinux = true;
+          };
+        };
+        "william@starfish" = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ ./home ];
+          extraSpecialArgs = {
+            enableCuda = false;
+            isLinux = true;
+          };
+        };
+        "william@andromeda" = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ ./home ];
+          extraSpecialArgs = {
+            enableCuda = true;
             isLinux = true;
           };
         };
@@ -141,6 +166,7 @@
           pkgs = darwinPkgs;
           modules = [ ./home ];
           extraSpecialArgs = {
+            enableCuda = false;
             isLinux = false;
           };
         };

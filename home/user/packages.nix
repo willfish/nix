@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, enableCuda ? false, ... }:
 let
   inherit (pkgs) stdenv;
 
@@ -48,6 +48,8 @@ let
     postPatch = "";
   });
 
+  llamaCpp = if enableCuda then llamaCppCuda else pkgs.llama-cpp;
+
   llm-gemma = pkgs.writeShellScriptBin "llm-gemma" ''
     set -euo pipefail
 
@@ -59,11 +61,10 @@ let
       exit 1
     fi
 
-    exec ${llamaCppCuda}/bin/llama-server \
+    exec ${llamaCpp}/bin/llama-server \
       --model "$model" \
       --ctx-size "''${LLM_GEMMA_CTX_SIZE:-16384}" \
       --threads "''${LLM_GEMMA_THREADS:-24}" \
-      --gpu-layers "''${LLM_GEMMA_GPU_LAYERS:-999}" \
       --host "''${LLM_GEMMA_HOST:-127.0.0.1}" \
       --port "''${LLM_GEMMA_PORT:-8080}" \
       "$@"
@@ -77,6 +78,11 @@ let
     export PATH=${pkgs.lib.makeBinPath [ pkgs.claude-code ]}:$PATH
     exec ${pkgs.python3}/bin/python3 ${./claude-gemma-launcher.py} "$@"
   '';
+
+  llmPackages = [
+    llamaCpp
+    llm-gemma # Gemma 4 llama.cpp server wrapper
+  ];
 in
 {
   home.packages = with pkgs; [
@@ -198,11 +204,9 @@ in
     gemini-cli # Command-line client for the Gemini protocol
     python3Packages.huggingface-hub # Hugging Face CLI for model downloads
     git-lfs # Large file support for model repos when needed
-    llamaCppCuda # CUDA-enabled local LLM runtime
-    llm-gemma # Gemma 4 llama.cpp server wrapper
     claude-gemma-shim # Stub shim command for Claude Code integration
     claude-gemma # Stub launcher for Claude Code integration
-  ] ++ lib.optionals stdenv.isLinux [
+  ] ++ llmPackages ++ lib.optionals stdenv.isLinux [
     # Linux-only: GUI desktop apps
     zoom-us
     forte # Modern desktop music player with local library and streaming support
