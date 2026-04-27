@@ -1,0 +1,6 @@
+#! /usr/bin/env bash
+
+sudo systemctl stop NetworkManager wpa_supplicant
+sudo modprobe -r iwlmvm iwlwifi
+sudo modprobe iwlwifi
+sudo systemctl start wpa_supplicant NetworkManager

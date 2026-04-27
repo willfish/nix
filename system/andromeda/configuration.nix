@@ -22,6 +22,10 @@
   hardware.nvidia = {
     modesetting.enable = true;
     powerManagement.enable = true;
+    # NVIDIA 595 open modules default to the kernel suspend notifier path.
+    # On this RTX 5090/COSMIC setup that path is hitting GSP heartbeat
+    # timeouts after S3 resume and wedging nvidia-modeset.
+    powerManagement.kernelSuspendNotifier = false;
     # powerManagement.finegrained = true; Fine-grained power management requires offload to be enabled.
     open = true; # Essential for Blackwell
     nvidiaSettings = true;
