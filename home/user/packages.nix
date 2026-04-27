@@ -1,4 +1,9 @@
-{ pkgs, lib, enableCuda ? false, ... }:
+{
+  pkgs,
+  lib,
+  enableCuda ? false,
+  ...
+}:
 let
   inherit (pkgs) stdenv;
 
@@ -204,53 +209,6 @@ in
       mux # Fast tmuxinator replacement in C
       ecs # Interactive tool for running commands in ECS tasks
 
-<<<<<<< HEAD
-    # AI tools
-    codex # OpenAI Codex CLI coding agent
-    gemini-cli # Command-line client for the Gemini protocol
-    python3Packages.huggingface-hub # Hugging Face CLI for model downloads
-    git-lfs # Large file support for model repos when needed
-    claude-gemma-shim # Stub shim command for Claude Code integration
-    claude-gemma # Stub launcher for Claude Code integration
-  ] ++ llmPackages ++ lib.optionals stdenv.isLinux [
-    # Linux-only: GUI desktop apps
-    zoom-us
-    forte # Modern desktop music player with local library and streaming support
-    dropbox # Cloud storage and file synchronization service
-    libation # Audio player with a focus on music libraries
-    libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
-    pavucontrol # Graphical PulseAudio volume control
-    qbittorrent # BitTorrent client with a user-friendly interface
-    slack # Team collaboration and messaging app
-    spotify # Music streaming application
-    telegram-desktop # Desktop client for Telegram messaging
-    variety # Wallpaper changer with customization options
-    vokoscreen-ng # Screen recording tool with audio support
-||||||| parent of 1e9d0d3 (Adds handling for locked cosmic DE on nvidia gpu)
-    # AI tools
-    codex # OpenAI Codex CLI coding agent
-    gemini-cli # Command-line client for the Gemini protocol
-    python3Packages.huggingface-hub # Hugging Face CLI for model downloads
-    git-lfs # Large file support for model repos when needed
-    llamaCppCuda # CUDA-enabled local LLM runtime
-    llm-gemma # Gemma 4 llama.cpp server wrapper
-    claude-gemma-shim # Stub shim command for Claude Code integration
-    claude-gemma # Stub launcher for Claude Code integration
-  ] ++ lib.optionals stdenv.isLinux [
-    # Linux-only: GUI desktop apps
-    zoom-us
-    forte # Modern desktop music player with local library and streaming support
-    dropbox # Cloud storage and file synchronization service
-    libation # Audio player with a focus on music libraries
-    libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
-    pavucontrol # Graphical PulseAudio volume control
-    qbittorrent # BitTorrent client with a user-friendly interface
-    slack # Team collaboration and messaging app
-    spotify # Music streaming application
-    telegram-desktop # Desktop client for Telegram messaging
-    variety # Wallpaper changer with customization options
-    vokoscreen-ng # Screen recording tool with audio support
-=======
       # AI tools
       codex # OpenAI Codex CLI coding agent
       gemini-cli # Command-line client for the Gemini protocol
@@ -275,7 +233,31 @@ in
       telegram-desktop # Desktop client for Telegram messaging
       variety # Wallpaper changer with customization options
       vokoscreen-ng # Screen recording tool with audio support
->>>>>>> 1e9d0d3 (Adds handling for locked cosmic DE on nvidia gpu)
+
+      # AI tools
+      codex # OpenAI Codex CLI coding agent
+      gemini-cli # Command-line client for the Gemini protocol
+      python3Packages.huggingface-hub # Hugging Face CLI for model downloads
+      git-lfs # Large file support for model repos when needed
+      llamaCppCuda # CUDA-enabled local LLM runtime
+      llm-gemma # Gemma 4 llama.cpp server wrapper
+      claude-gemma-shim # Stub shim command for Claude Code integration
+      claude-gemma # Stub launcher for Claude Code integration
+    ]
+    ++ lib.optionals stdenv.isLinux [
+      # Linux-only: GUI desktop apps
+      zoom-us
+      forte # Modern desktop music player with local library and streaming support
+      dropbox # Cloud storage and file synchronization service
+      libation # Audio player with a focus on music libraries
+      libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
+      pavucontrol # Graphical PulseAudio volume control
+      qbittorrent # BitTorrent client with a user-friendly interface
+      slack # Team collaboration and messaging app
+      spotify # Music streaming application
+      telegram-desktop # Desktop client for Telegram messaging
+      variety # Wallpaper changer with customization options
+      vokoscreen-ng # Screen recording tool with audio support
 
       # Linux-only: tools
       strace # System call tracer for debugging

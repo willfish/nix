@@ -61,6 +61,24 @@
       darwinSystem = "aarch64-darwin";
       lib = nixpkgs-unstable.lib;
       # pkgs-local = import nixpkgs-local { inherit system; };
+      cliHelpersPygmentsTestsOverlay = (
+        final: prev: {
+          # cli-helpers 2.10.0 has brittle ANSI-colour expectations that fail
+          # with Pygments 2.20.0, blocking pgcli/home-manager builds.
+          # Keep checks enabled and skip only the affected style rendering tests.
+          pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+            (python-final: python-prev: {
+              cli-helpers = python-prev.cli-helpers.overridePythonAttrs (old: {
+                disabledTests = (old.disabledTests or [ ]) ++ [
+                  "test_style_output"
+                  "test_style_output_with_newlines"
+                  "test_style_output_custom_tokens"
+                ];
+              });
+            })
+          ];
+        }
+      );
       linuxOverlay = (
         final: prev: {
           inherit (sniffy.packages.${linuxSystem}) sniffy;
@@ -84,12 +102,18 @@
         system = linuxSystem;
         config.allowUnfree = true;
         config.nvidia.acceptLicense = true;
-        overlays = [ linuxOverlay ];
+        overlays = [
+          cliHelpersPygmentsTestsOverlay
+          linuxOverlay
+        ];
       };
       darwinPkgs = import nixpkgs-unstable {
         system = darwinSystem;
         config.allowUnfree = true;
-        overlays = [ darwinOverlay ];
+        overlays = [
+          cliHelpersPygmentsTestsOverlay
+          darwinOverlay
+        ];
       };
       pre-commit-check = pre-commit-hooks.lib.${linuxSystem}.run {
         src = ./.;
