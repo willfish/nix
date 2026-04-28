@@ -234,47 +234,32 @@ in
       variety # Wallpaper changer with customization options
       vokoscreen-ng # Screen recording tool with audio support
 
+      # Linux-only: networking/monitoring
+      tshark # Network protocol analyzer (terminal version of Wireshark)
+      bandwhich # Terminal bandwidth utilization tool
+      iftop # Real-time network bandwidth monitoring tool
+      nload # Network traffic and bandwidth monitor
+      sherlock # Hunt down social media accounts by username across
+
       # AI tools
       codex # OpenAI Codex CLI coding agent
-      gemini-cli # Command-line client for the Gemini protocol
       python3Packages.huggingface-hub # Hugging Face CLI for model downloads
       git-lfs # Large file support for model repos when needed
-      llamaCppCuda # CUDA-enabled local LLM runtime
-      llm-gemma # Gemma 4 llama.cpp server wrapper
-      claude-gemma-shim # Stub shim command for Claude Code integration
-      claude-gemma # Stub launcher for Claude Code integration
     ]
     ++ lib.optionals stdenv.isLinux [
-      # Linux-only: GUI desktop apps
-      zoom-us
-      forte # Modern desktop music player with local library and streaming support
-      dropbox # Cloud storage and file synchronization service
-      libation # Audio player with a focus on music libraries
-      libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
-      pavucontrol # Graphical PulseAudio volume control
-      qbittorrent # BitTorrent client with a user-friendly interface
-      slack # Team collaboration and messaging app
-      spotify # Music streaming application
-      telegram-desktop # Desktop client for Telegram messaging
-      variety # Wallpaper changer with customization options
-      vokoscreen-ng # Screen recording tool with audio support
-
       # Linux-only: tools
       strace # System call tracer for debugging
       isd # Interactive systemd journal browser
       inxi # System information script
       cosmic-ext-tweaks
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
-      sherlock # Hunt down social media accounts by username across
-
-      # Linux-only: networking/monitoring
-      tshark # Network protocol analyzer (terminal version of Wireshark)
-      bandwhich # Terminal bandwidth utilization tool
-      iftop # Real-time network bandwidth monitoring tool
-      nload # Network traffic and bandwidth monitor
 
       # Linux-only: AI tools
+      llamaCppCuda # CUDA-enabled local LLM runtime
+      llm-gemma # Gemma 4 llama.cpp server wrapper
       claude-code # Command-line interface for Anthropic's Claude AI
+      claude-gemma-shim # Stub shim command for Claude Code integration
+      claude-gemma # Stub launcher for Claude Code integration
     ];
 
 }
