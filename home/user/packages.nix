@@ -98,9 +98,11 @@ in
     [
       git-cleanup # Git cleanup with worktree support
       git-cm # Checkout default branch and cleanup
+
       # Services for work
       valkey # Client for Valkey secure file sharing service
       postgresql # Open-source relational database system
+      simplescreenrecorder # Simple screen recording tool with audio support
 
       openssl # Cryptographic library for SSL/TLS
       openssl.dev # Development files for OpenSSL (headers, libs)
