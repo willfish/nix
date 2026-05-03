@@ -195,6 +195,17 @@
           };
         };
       };
+      checks.${linuxSystem} = {
+        unit-tests = pkgs.runCommand "dotfiles-unit-tests" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+          cp -R ${./home} home
+          cp -R ${./tests} tests
+          chmod -R u+w home tests
+
+          python -m unittest discover -s tests
+
+          touch "$out"
+        '';
+      };
       devShells.${linuxSystem} = {
         default = pkgs.mkShell {
           inherit (pre-commit-check) shellHook;

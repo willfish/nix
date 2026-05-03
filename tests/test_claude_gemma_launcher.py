@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / 'home' / 'user' / 'claude-gemma-launcher.py'
+ENVIRONMENT_NIX = Path(__file__).resolve().parents[1] / 'home' / 'user' / 'environment.nix'
 if not MODULE_PATH.exists():
     raise AssertionError(f'missing launcher module: {MODULE_PATH}')
 
@@ -27,7 +28,7 @@ class LauncherConfigTests(unittest.TestCase):
             self.assertTrue(str(runtime.runtime_root).startswith(tmpdir))
             self.assertEqual(runtime.llm_env['LLM_GEMMA_HOST'], '127.0.0.1')
             self.assertEqual(runtime.llm_env['LLM_GEMMA_PORT'], str(runtime.model_port))
-            self.assertEqual(runtime.llm_env['LLM_GEMMA_CTX_SIZE'], '40960')
+            self.assertEqual(runtime.llm_env['LLM_GEMMA_CTX_SIZE'], '65536')
             self.assertEqual(runtime.shim_env['CLAUDE_GEMMA_SHIM_HOST'], '127.0.0.1')
             self.assertEqual(runtime.shim_env['CLAUDE_GEMMA_SHIM_PORT'], str(runtime.shim_port))
             self.assertEqual(runtime.shim_env['LLM_GEMMA_HOST'], '127.0.0.1')
@@ -41,6 +42,16 @@ class LauncherConfigTests(unittest.TestCase):
 
             self.assertNotEqual(first.model_port, second.model_port)
             self.assertNotEqual(first.shim_port, second.shim_port)
+
+
+class HomeEnvironmentTests(unittest.TestCase):
+    def test_home_manager_declares_nh_home_flake(self):
+        environment_nix = ENVIRONMENT_NIX.read_text()
+
+        self.assertIn(
+            'NH_HOME_FLAKE = "${config.home.homeDirectory}/.dotfiles";',
+            environment_nix,
+        )
 
 
 class LauncherReadinessTests(unittest.TestCase):
