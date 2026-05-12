@@ -88,6 +88,17 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	end,
 })
 
+vim.api.nvim_create_user_command("LspInfo", function()
+	vim.print(vim.tbl_map(function(client)
+		return {
+			id = client.id,
+			name = client.name,
+			root = client.config.root_dir,
+			cmd = client.config.cmd,
+		}
+	end, vim.lsp.get_clients({ bufnr = 0 })))
+end, { desc = "Print LSP clients attached to the current buffer" })
+
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
 	local lazyrepo = "https://github.com/folke/lazy.nvim.git"
@@ -139,6 +150,7 @@ require("lazy").setup({
 	},
 	{
 		"folke/noice.nvim",
+		dependencies = { "rcarriga/nvim-notify" },
 		config = function()
 			require("noice").setup({
 				lsp = {
@@ -295,7 +307,6 @@ require("lazy").setup({
 	{
 		"nvim-telescope/telescope.nvim",
 		event = "VimEnter",
-		branch = "0.1.x",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
 			"nvim-telescope/telescope-github.nvim",
@@ -686,6 +697,7 @@ require("lazy").setup({
 				"passwd",
 				"python",
 				"query",
+				"regex",
 				"robots",
 				"ruby",
 				"rust",
@@ -701,5 +713,9 @@ require("lazy").setup({
 			},
 			auto_install = true,
 		},
+	},
+}, {
+	rocks = {
+		enabled = false,
 	},
 })

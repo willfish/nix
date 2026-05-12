@@ -21,6 +21,7 @@ in
 
       # Editor
       neovim # Hyperextensible Vim-based text editor
+      tree-sitter # Parser generator CLI used by nvim-treesitter
 
       # Email
       himalaya # CLI email client
