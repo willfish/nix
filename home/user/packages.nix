@@ -6,103 +6,14 @@
 }:
 let
   inherit (pkgs) stdenv;
-
-  git-cleanup = pkgs.writeShellScriptBin "git-cleanup" ''
-    default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)
-
-    git fetch -p && git pull
-
-    # Prune stale worktree references (e.g. manually deleted directories)
-    git worktree prune
-
-    # Remove worktrees whose remote tracking branch has been pruned
-    git worktree list --porcelain | awk '
-      /^worktree / { wt = substr($0, 10) }
-      /^branch refs\/heads\// { b = substr($0, 19); print wt "\t" b }
-    ' | while IFS=$'\t' read -r wt branch; do
-      if [ "$branch" != "$default" ] && ! git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null 2>&1; then
-        if git worktree remove "$wt" 2>/dev/null; then
-          echo "Removed worktree: $wt ($branch)"
-          git branch -d "$branch" 2>/dev/null || echo "  Branch $branch not fully merged, kept locally"
-        else
-          echo "Could not remove worktree $wt - may have uncommitted changes"
-        fi
-      fi
-    done
-
-    # Delete merged local branches (excluding default branch)
-    git branch --merged | sed 's/^[* +]*//' | grep -xv "$default" | xargs -n 1 -r git branch -d 2>/dev/null || true
-  '';
-
-  git-cm = pkgs.writeShellScriptBin "git-cm" ''
-    default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)
-    git checkout "$default" && git cleanup
-  '';
-
-  llamaCppCuda =
-    (pkgs.llama-cpp.override {
-      cudaSupport = true;
-      cudaPackages = pkgs.cudaPackages;
-    }).overrideAttrs
-      (old: rec {
-        version = "8816";
-        src = pkgs.fetchFromGitHub {
-          owner = "ggml-org";
-          repo = "llama.cpp";
-          rev = "refs/tags/b${version}";
-          hash = "sha256-SSYvnTe5BI0HTgDedIIarDcDf7APA5fyw08bLiUPZhw=";
-        };
-        npmDepsHash = "sha256-RAFtsbBGBjteCt5yXhrmHL39rIDJMCFBETgzId2eRRk=";
-        postPatch = "";
-      });
-
-  llamaCpp = if enableCuda then llamaCppCuda else pkgs.llama-cpp;
-
-  llm-gemma = pkgs.writeShellScriptBin "llm-gemma" ''
-    set -euo pipefail
-
-    model=''${LLM_GEMMA_MODEL:-$HOME/Models/gemma/gemma-4-E4B-it-OBLITERATED-Q4_K_M.gguf}
-
-    if [ ! -f "$model" ]; then
-      echo "Model not found: $model" >&2
-      echo "Set LLM_GEMMA_MODEL to your Gemma 4 GGUF path." >&2
-      exit 1
-    fi
-
-    exec ${llamaCpp}/bin/llama-server \
-      --model "$model" \
-      --ctx-size "''${LLM_GEMMA_CTX_SIZE:-16384}" \
-      --threads "''${LLM_GEMMA_THREADS:-24}" \
-      --host "''${LLM_GEMMA_HOST:-127.0.0.1}" \
-      --port "''${LLM_GEMMA_PORT:-8080}" \
-      "$@"
-  '';
-
-  claude-gemma-shim = pkgs.writeShellScriptBin "claude-gemma-shim" ''
-    exec ${pkgs.python3}/bin/python3 ${./claude-gemma-shim.py} "$@"
-  '';
-
-  claude-gemma = pkgs.writeShellScriptBin "claude-gemma" ''
-    export PATH=${pkgs.lib.makeBinPath [ pkgs.claude-code ]}:$PATH
-    exec ${pkgs.python3}/bin/python3 ${./claude-gemma-launcher.py} "$@"
-  '';
-
-  llmPackages = [
-    llamaCpp
-    llm-gemma # Gemma 4 llama.cpp server wrapper
-  ];
 in
 {
   home.packages =
     with pkgs;
     [
-      git-cleanup # Git cleanup with worktree support
-      git-cm # Checkout default branch and cleanup
-
       # Services for work
       valkey # Client for Valkey secure file sharing service
       postgresql # Open-source relational database system
-      simplescreenrecorder # Simple screen recording tool with audio support
 
       openssl # Cryptographic library for SSL/TLS
       openssl.dev # Development files for OpenSSL (headers, libs)
@@ -156,15 +67,13 @@ in
           ;
       }) # LaTeX distribution for PDF generation
 
-      nh # Nix helper for nixos-rebuild and home-manager with nice diffs
-
       # Build tools
       gcc # GNU Compiler Collection
       gnumake # GNU Make build automation tool
       makeWrapper # Nix utility to wrap executables with env vars
-      stdenv # Standard environment for building packages in Nix
-      nix-tree # Visualize Nix derivation dependency trees
+      nh # Nix helper for nixos-rebuild and home-manager with nice diffs
       nix-prefetch-github # Fetch GitHub repositories for Nix builds
+      nix-tree # Visualize Nix derivation dependency trees
 
       # Networking tools
       dig # DNS lookup tool
@@ -195,6 +104,7 @@ in
       stylua # Lua formatter
       terraform # For terraform_fmt, terraform_validate
       terraform-docs
+      terraform-ls
       terragrunt # For terragrunt-hclfmt
       tflint # For terraform_tflint
       typescript-language-server # Language server for typescript
@@ -210,58 +120,34 @@ in
       smailer # TUI for reviewing emails in an s3 bucket
       mux # Fast tmuxinator replacement in C
       ecs # Interactive tool for running commands in ECS tasks
-
-      # AI tools
-      codex # OpenAI Codex CLI coding agent
-      gemini-cli # Command-line client for the Gemini protocol
-      python3Packages.huggingface-hub # Hugging Face CLI for model downloads
-      git-lfs # Large file support for model repos when needed
-      llamaCppCuda # CUDA-enabled local LLM runtime
-      llm-gemma # Gemma 4 llama.cpp server wrapper
-      claude-gemma-shim # Stub shim command for Claude Code integration
-      claude-gemma # Stub launcher for Claude Code integration
     ]
     ++ lib.optionals stdenv.isLinux [
-      # Linux-only: GUI desktop apps
-      zoom-us
-      forte # Modern desktop music player with local library and streaming support
+      bandwhich # Terminal bandwidth utilization tool
+      claude-code # Command-line interface for Anthropic's Claude AI
+      codex # OpenAI Codex CLI coding agent
+      cosmic-ext-tweaks
       dropbox # Cloud storage and file synchronization service
+      forte # Modern desktop music player with local library and streaming support
+      git-lfs # Large file support for model repos when needed
+      iftop # Real-time network bandwidth monitoring tool
+      inxi # System information script
+      isd # Interactive systemd journal browser
       libation # Audio player with a focus on music libraries
       libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
+      nload # Network traffic and bandwidth monitor
       pavucontrol # Graphical PulseAudio volume control
+      python3Packages.huggingface-hub # Hugging Face CLI for model downloads
       qbittorrent # BitTorrent client with a user-friendly interface
+      sherlock # Hunt down social media accounts by username across
       slack # Team collaboration and messaging app
       spotify # Music streaming application
+      strace # System call tracer for debugging
       telegram-desktop # Desktop client for Telegram messaging
+      tshark # Network protocol analyzer (terminal version of Wireshark)
       variety # Wallpaper changer with customization options
       vokoscreen-ng # Screen recording tool with audio support
-
-      # Linux-only: networking/monitoring
-      tshark # Network protocol analyzer (terminal version of Wireshark)
-      bandwhich # Terminal bandwidth utilization tool
-      iftop # Real-time network bandwidth monitoring tool
-      nload # Network traffic and bandwidth monitor
-      sherlock # Hunt down social media accounts by username across
-
-      # AI tools
-      codex # OpenAI Codex CLI coding agent
-      python3Packages.huggingface-hub # Hugging Face CLI for model downloads
-      git-lfs # Large file support for model repos when needed
-    ]
-    ++ lib.optionals stdenv.isLinux [
-      # Linux-only: tools
-      strace # System call tracer for debugging
-      isd # Interactive systemd journal browser
-      inxi # System information script
-      cosmic-ext-tweaks
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
-
-      # Linux-only: AI tools
-      llamaCppCuda # CUDA-enabled local LLM runtime
-      llm-gemma # Gemma 4 llama.cpp server wrapper
-      claude-code # Command-line interface for Anthropic's Claude AI
-      claude-gemma-shim # Stub shim command for Claude Code integration
-      claude-gemma # Stub launcher for Claude Code integration
+      zoom-us
     ];
 
 }

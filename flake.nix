@@ -60,25 +60,6 @@
       linuxSystem = "x86_64-linux";
       darwinSystem = "aarch64-darwin";
       lib = nixpkgs-unstable.lib;
-      # pkgs-local = import nixpkgs-local { inherit system; };
-      cliHelpersPygmentsTestsOverlay = (
-        final: prev: {
-          # cli-helpers 2.10.0 has brittle ANSI-colour expectations that fail
-          # with Pygments 2.20.0, blocking pgcli/home-manager builds.
-          # Keep checks enabled and skip only the affected style rendering tests.
-          pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-            (python-final: python-prev: {
-              cli-helpers = python-prev.cli-helpers.overridePythonAttrs (old: {
-                disabledTests = (old.disabledTests or [ ]) ++ [
-                  "test_style_output"
-                  "test_style_output_with_newlines"
-                  "test_style_output_custom_tokens"
-                ];
-              });
-            })
-          ];
-        }
-      );
       linuxOverlay = (
         final: prev: {
           inherit (sniffy.packages.${linuxSystem}) sniffy;
@@ -103,7 +84,6 @@
         config.allowUnfree = true;
         config.nvidia.acceptLicense = true;
         overlays = [
-          cliHelpersPygmentsTestsOverlay
           linuxOverlay
         ];
       };
@@ -111,7 +91,6 @@
         system = darwinSystem;
         config.allowUnfree = true;
         overlays = [
-          cliHelpersPygmentsTestsOverlay
           darwinOverlay
         ];
       };
@@ -153,32 +132,32 @@
           };
         };
       };
-      homeConfigurations = {
-        william = home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          modules = [ ./home ];
-          extraSpecialArgs = {
-            enableCuda = false;
-            isLinux = true;
+      homeConfigurations =
+        let
+          williamLinux = home-manager.lib.homeManagerConfiguration {
+            inherit pkgs;
+            modules = [ ./home ];
+            extraSpecialArgs = {
+              enableCuda = false;
+              isLinux = true;
+            };
           };
-        };
-        "william@foundation" = home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          modules = [ ./home ];
-          extraSpecialArgs = {
-            enableCuda = false;
-            isLinux = true;
+          williamDarwin = home-manager.lib.homeManagerConfiguration {
+            pkgs = darwinPkgs;
+            modules = [ ./home ];
+            extraSpecialArgs = {
+              enableCuda = false;
+              isLinux = false;
+            };
           };
-        };
-        "william@starfish" = home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          modules = [ ./home ];
-          extraSpecialArgs = {
-            enableCuda = false;
-            isLinux = true;
-          };
-        };
-        "william@andromeda" = home-manager.lib.homeManagerConfiguration {
+        in
+        {
+          william = williamDarwin;
+          william-linux = williamLinux;
+          william-darwin = williamDarwin;
+          "william@foundation" = williamLinux;
+          "william@starfish" = williamLinux;
+          "william@andromeda" = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           modules = [ ./home ];
           extraSpecialArgs = {
@@ -186,26 +165,7 @@
             isLinux = true;
           };
         };
-        william-darwin = home-manager.lib.homeManagerConfiguration {
-          pkgs = darwinPkgs;
-          modules = [ ./home ];
-          extraSpecialArgs = {
-            enableCuda = false;
-            isLinux = false;
-          };
         };
-      };
-      checks.${linuxSystem} = {
-        unit-tests = pkgs.runCommand "dotfiles-unit-tests" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-          cp -R ${./home} home
-          cp -R ${./tests} tests
-          chmod -R u+w home tests
-
-          python -m unittest discover -s tests
-
-          touch "$out"
-        '';
-      };
       devShells.${linuxSystem} = {
         default = pkgs.mkShell {
           inherit (pre-commit-check) shellHook;

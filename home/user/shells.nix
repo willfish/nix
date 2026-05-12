@@ -40,8 +40,56 @@ let
     pbcopy = "xclip -selection clipboard";
     pbpaste = "xclip -selection clipboard -o";
   };
+  git-cleanup = pkgs.writeShellScriptBin "git-cleanup" ''
+    set -euo pipefail
+
+    default=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@' || true)
+    default="''${default:-main}"
+
+    git fetch -p
+    git pull --ff-only
+
+    # Prune stale worktree references (e.g. manually deleted directories)
+    git worktree prune
+
+    # Remove worktrees whose remote tracking branch has been pruned
+    git worktree list --porcelain | awk '
+      /^worktree / { wt = substr($0, 10) }
+      /^branch refs\/heads\// { b = substr($0, 19); print wt "\t" b }
+    ' | while IFS="$(printf '\t')" read -r wt branch; do
+      if [ "$branch" != "$default" ] && ! git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null 2>&1; then
+        if git worktree remove "$wt" 2>/dev/null; then
+          echo "Removed worktree: $wt ($branch)"
+          git branch -d "$branch" 2>/dev/null || echo "  Branch $branch not fully merged, kept locally"
+        else
+          echo "Could not remove worktree $wt - may have uncommitted changes"
+        fi
+      fi
+    done
+
+    # Delete merged local branches (excluding default branch)
+    git branch --merged | sed 's/^[* +]*//' | while read -r branch; do
+      [ -n "$branch" ] || continue
+      [ "$branch" != "$default" ] || continue
+      git branch -d "$branch" 2>/dev/null || true
+    done
+  '';
+  git-cm = pkgs.writeShellScriptBin "git-cm" ''
+    set -euo pipefail
+
+    default=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@' || true)
+    default="''${default:-main}"
+
+    git checkout "$default"
+    git-cleanup
+  '';
 in
 {
+  home.packages = [
+    git-cleanup
+    git-cm
+  ];
+
   programs.bash = {
     enable = true;
     shellAliases = aliases;
@@ -107,6 +155,7 @@ in
 
         command git $argv
       '';
+
       gitignore = "curl -sL https://www.gitignore.io/api/$argv";
       today = ''notes_on (date +"%Y-%m-%d") today.md'';
       yesterday = ''notes_on (date -d yesterday +"%Y-%m-%d") today.md'';

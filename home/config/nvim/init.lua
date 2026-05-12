@@ -73,7 +73,12 @@ local function toggle_quickfix()
 end
 
 vim.keymap.set("n", "<Leader>.", toggle_quickfix, { desc = "Toggles the quickfix menu." })
-vim.keymap.set("n", "<Leader>p", insert_jira_ticket_number, { desc = "Inserts the current branch ticket number into the buffer" })
+vim.keymap.set(
+	"n",
+	"<Leader>p",
+	insert_jira_ticket_number,
+	{ desc = "Inserts the current branch ticket number into the buffer" }
+)
 vim.keymap.set("n", "<Leader>u", insert_jira_ticket_url, { desc = "Inserts markdown URL for the current jira ticket" })
 vim.api.nvim_create_autocmd("TextYankPost", {
 	desc = "Highlight when yanking (copying) text",
