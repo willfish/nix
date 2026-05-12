@@ -158,13 +158,13 @@
           "william@foundation" = williamLinux;
           "william@starfish" = williamLinux;
           "william@andromeda" = home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          modules = [ ./home ];
-          extraSpecialArgs = {
-            enableCuda = true;
-            isLinux = true;
+            inherit pkgs;
+            modules = [ ./home ];
+            extraSpecialArgs = {
+              enableCuda = true;
+              isLinux = true;
+            };
           };
-        };
         };
       devShells.${linuxSystem} = {
         default = pkgs.mkShell {
