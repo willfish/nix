@@ -109,9 +109,19 @@ in
             if test -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.fish
               source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.fish
             end
+
+            # Ensure ~/.local/bin is in PATH
+            if not contains "$HOME/.local/bin" $PATH
+              set -gx PATH "$HOME/.local/bin" $PATH
+            end
           ''
         else
-          ""
+          ''
+            # Ensure ~/.local/bin is in PATH
+            if not contains "$HOME/.local/bin" $PATH
+              set -gx PATH "$HOME/.local/bin" $PATH
+            end
+          ''
       )
       + ''
         set -gx AWS_DEFAULT_REGION eu-west-2
