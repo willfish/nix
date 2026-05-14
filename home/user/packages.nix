@@ -117,6 +117,7 @@ in
       # fun stuff
       fastfetch # Highly customizable system information tool
 
+      grok-cli # Grok CLI from xAI
       sniffy # Simple TUI for sniffing out unused secrets in AWS
       smailer # TUI for reviewing emails in an s3 bucket
       mux # Fast tmuxinator replacement in C

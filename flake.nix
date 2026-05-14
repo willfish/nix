@@ -35,7 +35,7 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     llm-agents = {
-      url = "github:numtide/llm-agents.nix";
+      url = "github:willfish/llm-agents.nix/add-grok-cli";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
@@ -67,7 +67,7 @@
           mux = mux.packages.${linuxSystem}.default;
           forte = forte.packages.${linuxSystem}.default;
           inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
-          inherit (llm-agents.packages.${linuxSystem}) codex claude-code;
+          inherit (llm-agents.packages.${linuxSystem}) codex claude-code grok-cli;
           # variety = pkgs-local.variety;
         }
       );
@@ -77,6 +77,7 @@
           inherit (smailer.packages.${darwinSystem}) smailer;
           mux = mux.packages.${darwinSystem}.default;
           inherit (trade-tariff-tools.packages.${darwinSystem}) ecs;
+          inherit (llm-agents.packages.${darwinSystem}) grok-cli;
         }
       );
       pkgs = import nixpkgs-unstable {
