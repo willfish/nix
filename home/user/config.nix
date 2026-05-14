@@ -14,6 +14,24 @@ in
     ".gitignore_global".source = "${configDir}/gitignore_global";
     ".gitmessage".source = "${configDir}/gitmessage";
     ".pryrc".source = "${configDir}/pryrc";
+
+    # Grok CLI global configuration (harness rules + skills from Codex review)
+    ".grok/AGENTS.md".source = "${configDir}/grok/AGENTS.md";
+    ".grok/skills/create-skill/SKILL.md".source = "${configDir}/grok/skills/create-skill/SKILL.md";
+    ".grok/skills/superpowers/SKILL.md".source = "${configDir}/grok/skills/superpowers/SKILL.md";
+    ".grok/skills/systematic-debugging/SKILL.md".source = "${configDir}/grok/skills/systematic-debugging/SKILL.md";
+    ".grok/skills/verification-before-completion/SKILL.md".source = "${configDir}/grok/skills/verification-before-completion/SKILL.md";
+    ".grok/skills/writing-plans/SKILL.md".source = "${configDir}/grok/skills/writing-plans/SKILL.md";
+
+    # High-value reference material (originally from Codex Superpowers + best practices collections)
+    # Now living as a timeless reference library under ~/.grok/skills/references/
+    ".grok/skills/references/" = {
+      source = "${configDir}/grok/skills/references";
+      recursive = true;
+    };
+
+    # Also deploy the rich AGENTS.md as Claude.md for Claude Code compatibility
+    ".claude/CLAUDE.md".source = "${configDir}/grok/AGENTS.md";
   };
 
   xdg.configFile = {
