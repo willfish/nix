@@ -93,9 +93,8 @@ See also the `create-skill` skill and Grok's `docs/user-guide/08-skills.md` for 
 ## References & Further Reading
 
 - Grok user guide: `~/.grok/docs/user-guide/` (especially 08-skills.md, 11-project-rules.md, 15-subagents.md, 18-plan-mode.md)
-- Codex skill system (source of many patterns here): `~/.codex/skills/.system/skill-creator/SKILL.md` and the Superpowers plugin skills (systematic-debugging, verification-before-completion, writing-plans, test-driven-development, etc.)
-- React/Next.js best practices (high-quality example of detailed, agent-optimized rules): available via Codex plugins under `build-web-apps` / `react-best-practices`
-- Supabase Postgres best practices: similar structure with AGENTS.md navigation + categorized references
+- Superpowers harness + skill system patterns (source of many workflows here)
+- Custom best practices for this stack live in `~/.grok/skills/references/` (Ruby, Rails, Sequel, Postgres, Stimulus, RSpec, etc.)
 
 ---
 
