@@ -3,6 +3,10 @@ vim.g.maplocalleader = ","
 
 vim.g.have_nerd_font = true
 
+-- Disable vim-matchup's treesitter integration for stability on Neovim 0.12+.
+-- The classic (non-treesitter) matching engine is still active and sufficient.
+vim.g.matchup_treesitter_enabled = false
+
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.mouse = "a"
@@ -660,62 +664,42 @@ require("lazy").setup({
 	},
 	{
 		"nvim-treesitter/nvim-treesitter",
+		branch = "main",
 		build = ":TSUpdate",
-		main = "nvim-treesitter",
-		opts = {
-			ensure_installed = {
-				"bash",
-				"c",
-				"css",
-				"diff",
-				"dockerfile",
-				"editorconfig",
-				"fish",
-				"git_config",
-				"git_rebase",
-				"gitattributes",
-				"gitcommit",
-				"gitignore",
-				"go",
-				"goctl",
-				"gosum",
-				"graphql",
-				"haskell",
-				"html",
-				"htmldjango",
-				"javascript",
-				"json",
-				"lua",
-				"luadoc",
-				"make",
-				"markdown",
-				"markdown_inline",
-				"mermaid",
-				"nginx",
-				"ninja",
-				"nix",
-				"passwd",
-				"python",
-				"query",
-				"regex",
-				"robots",
-				"ruby",
-				"rust",
-				"sql",
-				"ssh_config",
-				"tmux",
-				"toml",
-				"tsx",
-				"typescript",
-				"vim",
-				"vimdoc",
-				"yaml",
-			},
-			auto_install = true,
-		},
+		lazy = false,
+		config = function()
+			-- The modern nvim-treesitter (main branch) is minimal.
+			-- We handle per-filetype setup ourselves via this autocmd.
+
+			vim.api.nvim_create_autocmd("FileType", {
+				callback = function(args)
+					local ft = args.match
+					local lang = vim.treesitter.language.get_lang(ft) or ft
+					if not vim.treesitter.language.add(lang) then
+						return
+					end
+
+					-- Highlighting
+					vim.treesitter.start(args.buf, lang)
+
+					-- Indentation (experimental but useful)
+					vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+
+					-- Folding
+					vim.wo.foldmethod = "expr"
+					vim.wo.foldexpr    = "v:lua.vim.treesitter.foldexpr()"
+				end,
+			})
+		end,
 	},
 }, {
 	rocks = {
 		enabled = false,
 	},
 })
+
+-- Global folding settings (works together with the per-buffer expr above)
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr   = "v:lua.vim.treesitter.foldexpr()"
+vim.opt.foldlevel  = 99
+vim.opt.foldenable = true
