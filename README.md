@@ -18,8 +18,8 @@ flowchart TD
     end
 
     subgraph HM [Home Manager]
-        HM_LINUX[william (Linux)]
-        HM_DARWIN[william (macOS)]
+        HM_LINUX["william \(Linux\)"]
+        HM_DARWIN["william \(macOS\)"]
     end
 
     FLAKE --> HOSTS

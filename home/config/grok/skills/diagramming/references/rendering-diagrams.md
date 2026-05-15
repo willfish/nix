@@ -57,6 +57,40 @@ The repo includes a helper script for the README diagrams:
   ```
 - For very wide diagrams, increase `--width`.
 
+## Mermaid Syntax Gotchas That Break Rendering
+
+### Parentheses in Node Labels
+
+One of the most common causes of "Parse error" on GitHub is unescaped parentheses inside node labels.
+
+**Broken example:**
+```mermaid
+HM_LINUX[william (Linux)]
+HM_DARWIN[william (macOS)]
+```
+
+**Error you will see:**
+> Expecting 'SQE', 'DOUBLECIRCLEEND', ... got 'PS'
+
+**Fixed version:**
+```mermaid
+HM_LINUX["william \(Linux\)"]
+HM_DARWIN["william \(macOS\)"]
+```
+
+**Why this happens:**
+Mermaid uses `()` to define certain node shapes (e.g. stadium, cylinder). When they appear unescaped inside `[]` labels, the parser gets confused about where the label ends.
+
+**Rule of thumb:** If your label contains `(`, `)`, `[`, `]`, or other special characters, wrap it in double quotes and escape the parentheses with backslashes.
+
+Other characters that often need escaping or quoting:
+- `&`
+- `#`
+- `:`
+- `;`
+
+When in doubt, quote the label and escape problematic characters. This is especially important for diagrams that will be rendered on GitHub.
+
 ## D2 Rendering (for higher quality architecture diagrams)
 
 ```bash

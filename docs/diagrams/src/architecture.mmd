@@ -1,27 +1,22 @@
 flowchart TD
-    FLAKE["flake.nix"]
-    COMMON["common-configuration.nix<br/>Shared system defaults"]
+    FLAKE[flake.nix]
+    COMMON[common-configuration.nix]
 
-    subgraph HOSTS ["NixOS Hosts"]
-        ANDROMEDA["andromeda<br/>Threadripper + NVIDIA"]
-        STARFISH["starfish<br/>Dell Precision"]
-        FOUNDATION["foundation<br/>Framework 13"]
+    subgraph HOSTS [NixOS Hosts]
+        ANDROMEDA[andromeda]
+        STARFISH[starfish]
+        FOUNDATION[foundation]
     end
 
-    subgraph HM ["Home Manager"]
-        HM_LINUX["william (Linux)"]
-        HM_DARWIN["william (macOS)"]
+    subgraph HM [Home Manager]
+        HM_LINUX["william \(Linux\)"]
+        HM_DARWIN["william \(macOS\)"]
     end
 
     FLAKE --> HOSTS
     FLAKE --> HM
     COMMON --> ANDROMEDA & STARFISH & FOUNDATION
-    HM_LINUX -.->|deployed to| HOSTS
+    HM_LINUX -.-> HOSTS
 
-    classDef primary fill:#e0e7ff,stroke:#6366f1,color:#1e2937
-    classDef secondary fill:#f0fdf4,stroke:#22c55e,color:#1e2937
-    classDef accent fill:#fef3c7,stroke:#f59e0b,color:#1e2937
-
-    class FLAKE,COMMON primary
-    class HOSTS,HM secondary
-    class ANDROMEDA,STARFISH,FOUNDATION,HM_LINUX,HM_DARWIN accent
+    classDef box stroke:#6366f1,stroke-width:2px
+    class FLAKE,COMMON,HOSTS,HM,ANDROMEDA,STARFISH,FOUNDATION,HM_LINUX,HM_DARWIN box
