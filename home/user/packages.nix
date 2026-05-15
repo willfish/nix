@@ -123,6 +123,11 @@ in
       mux # Fast tmuxinator replacement in C
       ecs # Interactive tool for running commands in ECS tasks
     ]
+    ++ lib.optionals stdenv.isDarwin [
+      colima # Lightweight container runtime for macOS
+      docker # Docker client for talking to Colima or other Docker daemons
+      docker-compose # Docker Compose CLI
+    ]
     ++ lib.optionals stdenv.isLinux [
       bandwhich # Terminal bandwidth utilization tool
       claude-code # Command-line interface for Anthropic's Claude AI

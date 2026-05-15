@@ -37,6 +37,8 @@ The reason for this change — business context or technical motivation.
 
 Use a **checklist** in the What section to enumerate changes. Link to the specific **child story** — not the parent epic.
 
+**Important:** The PR description must be self-contained. Do not reference other PRs, previous work, or external context ("see the backend PR", "following the same pattern as...", "this builds on PR #xxxx", etc.). Describe why the change was made and exactly what was changed so the description stands alone.
+
 ### Diagrams for non-trivial changes
 
 For PRs that are part of a larger feature or have complex flow, add a mermaid diagram directly below the Jira link to show where this PR fits in.
