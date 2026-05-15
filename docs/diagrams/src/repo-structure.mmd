@@ -1,0 +1,44 @@
+flowchart TD
+    ROOT["~/.dotfiles"]
+
+    subgraph SYSTEM ["System Layer"]
+        COMMON["common-configuration.nix"]
+        ANDROMEDA["andromeda/"]
+        STARFISH["starfish/"]
+        FOUNDATION["foundation/"]
+    end
+
+    subgraph HOME ["Home Manager Layer"]
+        subgraph MODULES ["Nix Modules"]
+            PKGS["packages.nix"]
+            SHELLS["shells.nix"]
+            PROGRAMS["programs.nix + git + tmux"]
+            OTHER_MODS["environment + email"]
+        end
+
+        subgraph CONFIGS ["Static Configs"]
+            NVIM["nvim/"]
+            GHOSTTY["ghostty/"]
+            COSMIC["cosmic/"]
+            OTHER_CFG["tmuxinator, bin/, etc."]
+        end
+    end
+
+    subgraph OVERLAYS ["Overlays & Tools"]
+        CLAUDE["claude-code"]
+        PERSONAL["sniffy, smailer, mux, ecs"]
+    end
+
+    ROOT --> SYSTEM
+    ROOT --> HOME
+    ROOT --> OVERLAYS
+
+    classDef root fill:#f0e7ff,stroke:#7c3aed,color:#1e2937
+    classDef layer fill:#e0f2fe,stroke:#0369a1,color:#1e2937
+    classDef sub fill:#f0fdf4,stroke:#16a34a,color:#1e2937
+    classDef item fill:#fefce8,stroke:#ca8a04,color:#1e2937
+
+    class ROOT root
+    class SYSTEM,HOME,OVERLAYS layer
+    class MODULES,CONFIGS sub
+    class COMMON,ANDROMEDA,STARFISH,FOUNDATION,PKGS,SHELLS,PROGRAMS,OTHER_MODS,NVIM,GHOSTTY,COSMIC,OTHER_CFG,CLAUDE,PERSONAL item

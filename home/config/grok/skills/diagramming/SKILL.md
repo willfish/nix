@@ -17,6 +17,7 @@ Use this skill whenever diagrams are involved in your work.
 - `references/diagramming.md` — Main guide covering tool selection, GitHub Mermaid limitations, diagram quality guidelines, and workflows.
 - `references/tool-selection.md` — Decision matrix for choosing between Mermaid, D2, Excalidraw, and committed SVGs.
 - `references/mermaid-github-tips.md` — Practical tips and gotchas for using Mermaid directly on GitHub.
+- `references/rendering-diagrams.md` — How to actually render Mermaid/D2 to PNG or SVG for verification (using Nix + mermaid-cli or d2).
 
 Key principles:
 - Choose the right tool for the audience and longevity of the diagram.

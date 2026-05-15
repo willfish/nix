@@ -170,12 +170,28 @@
       devShells.${linuxSystem} = {
         default = pkgs.mkShell {
           inherit (pre-commit-check) shellHook;
-          buildInputs = pre-commit-check.enabledPackages;
+          buildInputs = pre-commit-check.enabledPackages ++ (with pkgs; [
+            d2
+            nodejs
+            (writeShellScriptBin "mmdc" ''
+              export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
+              export PUPPETEER_EXECUTABLE_PATH=${chromium}/bin/chromium
+              exec ${pkgs.mermaid-cli}/bin/mmdc "$@"
+            '')
+          ]);
         };
       };
       devShells.${darwinSystem} = {
         default = darwinPkgs.mkShell {
-          buildInputs = [ ];
+          buildInputs = with darwinPkgs; [
+            d2
+            nodejs
+          ];
+          shellHook = ''
+            # mmdc is available via npx (best experience on Apple Silicon)
+            # Run: npx @mermaid-js/mermaid-cli --help
+            echo "Diagram tools available: d2, nodejs (use npx @mermaid-js/mermaid-cli for mmdc)"
+          '';
         };
       };
     };

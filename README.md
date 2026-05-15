@@ -7,44 +7,28 @@ NixOS configurations and Home Manager setup for multiple machines across Linux a
 The flake produces three NixOS system configurations and two Home Manager user configurations (Linux and macOS). All NixOS systems share a common base with host-specific overrides layered on top. The Home Manager configuration uses platform conditionals to work on both `x86_64-linux` and `aarch64-darwin`.
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '14px', 'fontFamily': 'JetBrains Mono, monospace' }}}%%
-flowchart TB
-    %% Top-level shared nodes
+flowchart TD
     FLAKE[flake.nix]
-    COMMON["<b>common-configuration.nix</b><br/>Shared system defaults"]
+    COMMON[common-configuration.nix]
 
-    %% NixOS host configurations
-    subgraph HOSTS ["NixOS Configurations"]
-        direction LR
-        ANDROMEDA["<b>andromeda</b><br/><i>Thelio Major Threadripper</i><br/>NVIDIA GPU - Steam"]
-        STARFISH["<b>starfish</b><br/><i>Dell Precision 5750</i><br/>Mobile workstation"]
-        FOUNDATION["<b>foundation</b><br/><i>Framework 13 AMD AI-300</i><br/>NixOS Hardware module"]
+    subgraph HOSTS [NixOS Hosts]
+        ANDROMEDA[andromeda]
+        STARFISH[starfish]
+        FOUNDATION[foundation]
     end
 
-    %% Home Manager configurations
-    subgraph HM ["Home Manager"]
-        direction LR
-        HM_LINUX["<b>william</b><br/><i>x86_64-linux</i>"]
-        HM_DARWIN["<b>william-darwin</b><br/><i>aarch64-darwin</i>"]
+    subgraph HM [Home Manager]
+        HM_LINUX[william (Linux)]
+        HM_DARWIN[william (macOS)]
     end
 
-    %% Relationships
     FLAKE --> HOSTS
     FLAKE --> HM
-    COMMON --> ANDROMEDA
-    COMMON --> STARFISH
-    COMMON --> FOUNDATION
-    HM_LINUX -.->|deployed to NixOS hosts| HOSTS
+    COMMON --> ANDROMEDA & STARFISH & FOUNDATION
+    HM_LINUX -.-> HOSTS
 
-    style FLAKE fill:#f0ecf9,stroke:#c4a7e7,stroke-width:2px,color:#3c3554
-    style HOSTS fill:#e8f4f8,stroke:#9ccfd8,stroke-width:2px,color:#2d4a54
-    style COMMON fill:#fdf0e0,stroke:#f6c177,stroke-width:2px,color:#5a4520
-    style HM fill:#f0e0e8,stroke:#ea9a97,stroke-width:2px,color:#5a3040
-    style HM_LINUX fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
-    style HM_DARWIN fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
-    style ANDROMEDA fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
-    style STARFISH fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
-    style FOUNDATION fill:#f8f4fc,stroke:#c4a7e7,color:#3c3554
+    classDef box stroke:#6366f1,stroke-width:2px
+    class FLAKE,COMMON,HOSTS,HM,ANDROMEDA,STARFISH,FOUNDATION,HM_LINUX,HM_DARWIN box
 ```
 
 ### Flake Inputs
@@ -63,82 +47,38 @@ flowchart TB
 ## Repository Structure
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '13px', 'fontFamily': 'JetBrains Mono, monospace' }}}%%
-flowchart LR
-    %% Top-level node
-    ROOT["<b>~/.dotfiles</b>"]
+flowchart TD
+    ROOT["~/.dotfiles"]
 
-    %% System layer
-    subgraph SYSTEM_LAYER [" System Layer "]
-        direction TB
-        SYS_COMMON["common-configuration.nix<br/><i>Boot - Network - Audio<br/>Desktop - Services - Nix</i>"]
-        SYS_ANDROMEDA["andromeda/<br/><i>NVIDIA - Steam</i>"]
-        SYS_STARFISH["starfish/<br/><i>Defaults</i>"]
-        SYS_FOUNDATION["foundation/<br/><i>Framework HW</i>"]
+    subgraph SYSTEM [System Layer]
+        COMMON[common-configuration.nix]
+        ANDROMEDA[andromeda/]
+        STARFISH[starfish/]
+        FOUNDATION[foundation/]
     end
 
-    %% Home Manager layer
-    subgraph HOME_LAYER [" Home Manager Layer "]
-        direction TB
-
-        subgraph MODULES [" Nix Modules "]
-            direction TB
-            MOD_PACKAGES["packages.nix<br/><i>100+ packages</i>"]
-            MOD_SHELLS["shells.nix<br/><i>Fish - Bash - aliases</i>"]
-            MOD_GIT["git.nix<br/><i>Delta - GPG signing</i>"]
-            MOD_TMUX["tmux.nix<br/><i>Plugins - rose-pine</i>"]
-            MOD_PROGRAMS["programs.nix<br/><i>Brave - direnv</i>"]
-            MOD_ENVIRONMENT["environment.nix<br/><i>Editor - pager - vars</i>"]
-            MOD_OTHER["email - config"]
+    subgraph HOME [Home Manager]
+        subgraph MODULES [Nix Modules]
+            PKGS[packages.nix]
+            SHELLS[shells.nix]
+            PROGRAMS[programs.nix]
         end
-
-        subgraph CONFIGS [" Dotfile Configs "]
-            direction TB
-            CFG_NVIM["nvim/init.lua"]
-            CFG_GHOSTTY["ghostty/config + shaders"]
-            CFG_COSMIC["cosmic/ settings"]
-            CFG_TMUXINATOR["tmuxinator/*.yml"]
-            CFG_BIN["bin/ scripts"]
-            CFG_OTHER["gitignore - gitmessage"]
+        subgraph CONFIGS [Dotfiles]
+            NVIM[nvim]
+            GHOSTTY[ghostty]
+            COSMIC[cosmic]
+            OTHER[bin, tmuxinator...]
         end
     end
 
-    %% Overlays layer
-    subgraph OVERLAYS_LAYER [" Overlays "]
-        OVL_CLAUDE["claude-code"]
-        OVL_TOOLS["sniffy - smailer<br/>mux - ecs"]
+    subgraph OVERLAYS [Overlays]
+        TOOLS[sniffy, smailer, mux, claude-code...]
     end
 
-    %% Relationships
-    ROOT --> SYSTEM_LAYER
-    ROOT --> HOME_LAYER
-    ROOT --> OVERLAYS_LAYER
+    ROOT --> SYSTEM & HOME & OVERLAYS
 
-    style ROOT fill:#f0ecf9,stroke:#c4a7e7,stroke-width:2px,color:#3c3554
-    style SYSTEM_LAYER fill:#e8f4f8,stroke:#9ccfd8,stroke-width:2px,color:#2d4a54
-    style HOME_LAYER fill:#fdf0e0,stroke:#f6c177,stroke-width:2px,color:#5a4520
-    style OVERLAYS_LAYER fill:#f0e0e8,stroke:#ea9a97,stroke-width:2px,color:#5a3040
-    style MODULES fill:#fdf5e8,stroke:#f6c177,stroke-width:1px,color:#5a4520
-    style CONFIGS fill:#fdf5e8,stroke:#f6c177,stroke-width:1px,color:#5a4520
-    style SYS_COMMON fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
-    style SYS_ANDROMEDA fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
-    style SYS_STARFISH fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
-    style SYS_FOUNDATION fill:#f0f8fb,stroke:#9ccfd8,color:#2d4a54
-    style MOD_PACKAGES fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style MOD_SHELLS fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style MOD_GIT fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style MOD_TMUX fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style MOD_PROGRAMS fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style MOD_ENVIRONMENT fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style MOD_OTHER fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style CFG_NVIM fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style CFG_GHOSTTY fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style CFG_COSMIC fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style CFG_TMUXINATOR fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style CFG_BIN fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style CFG_OTHER fill:#fef8f0,stroke:#f6c177,color:#5a4520
-    style OVL_CLAUDE fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
-    style OVL_TOOLS fill:#f8e8f0,stroke:#ea9a97,color:#5a3040
+    classDef box stroke:#6366f1,stroke-width:2px
+    class ROOT,SYSTEM,HOME,OVERLAYS,MODULES,CONFIGS box
 ```
 
 ## Hosts

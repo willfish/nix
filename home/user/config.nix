@@ -156,6 +156,7 @@ in
     ".grok/skills/diagramming/references/mermaid-github-tips.md".source = "${configDir}/grok/skills/diagramming/references/mermaid-github-tips.md";
     ".grok/skills/diagramming/references/diagram-review-checklist.md".source = "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
     ".grok/skills/diagramming/references/diagramming-how-to.md".source = "${configDir}/llm/guides/diagramming-how-to.md";
+    ".grok/skills/diagramming/references/rendering-diagrams.md".source = "${configDir}/grok/skills/diagramming/references/rendering-diagrams.md";
   };
 
   home.activation = {
