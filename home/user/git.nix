@@ -1,6 +1,54 @@
+{ pkgs, ... }:
+let
+  gitWithWorktreeDirenv = pkgs.writeShellScriptBin "git" ''
+    set -euo pipefail
+
+    real_git="${pkgs.git}/bin/git"
+
+    allow_worktree_direnv() {
+      worktree_path="$1"
+
+      [ -f "$worktree_path/flake.nix" ] || return 0
+
+      printf 'use flake . --impure\n' > "$worktree_path/.envrc"
+
+      if command -v direnv >/dev/null 2>&1; then
+        (cd "$worktree_path" && direnv allow)
+      else
+        echo "direnv not found; created $worktree_path/.envrc but did not allow it" >&2
+      fi
+    }
+
+    if [ "$#" -ge 3 ] && [ "$1" = "worktree" ] && [ "$2" = "add" ]; then
+      before="$("$real_git" worktree list --porcelain | sed -n 's/^worktree //p')"
+
+      set +e
+      "$real_git" "$@"
+      git_status=$?
+      set -e
+
+      [ "$git_status" -eq 0 ] || exit "$git_status"
+
+      after="$("$real_git" worktree list --porcelain | sed -n 's/^worktree //p')"
+
+      printf '%s\n' "$after" | while IFS= read -r worktree_path; do
+        [ -n "$worktree_path" ] || continue
+
+        if ! printf '%s\n' "$before" | grep -Fxq "$worktree_path"; then
+          allow_worktree_direnv "$worktree_path"
+        fi
+      done
+
+      exit "$git_status"
+    fi
+
+    exec "$real_git" "$@"
+  '';
+in
 {
   programs.git = {
     enable = true;
+    package = gitWithWorktreeDirenv;
     signing = {
       key = "BC6DED9479D436F5";
       signByDefault = true;
