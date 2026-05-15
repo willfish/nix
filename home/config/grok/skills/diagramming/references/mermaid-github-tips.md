@@ -5,7 +5,8 @@ GitHub's Mermaid renderer is convenient but has several limitations.
 ## Common Problems
 
 - **Parentheses in labels**: Using unescaped `(` or `)` inside node labels (e.g. `Node[william (Linux)]`) causes parse errors on GitHub.  
-  **Fix**: Quote the label and escape the parentheses → `Node["william \(Linux\)"]`
+  **Recommended fix**: Use HTML entities (cleanest result on GitHub):
+`Node["william &#40;Linux&#41;"]` → renders as **william (Linux)** with no visible escape characters.
 
 - **Subgraphs**: Deep nesting (more than 1-2 levels) often produces ugly or broken layouts.
 - **HTML in nodes**: Using `<br/>`, `<b>`, or `<i>` inside node labels frequently causes rendering bugs or overflow.
