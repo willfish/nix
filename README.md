@@ -181,6 +181,22 @@ Over 100 packages organised by purpose. Linux-only packages (GUI apps, clipboard
 |----------|----------|----------|
 | **AI** | gemini-cli | All |
 | **AI** | claude-code | Linux |
+
+### AI / LLM Agent Harness
+
+A major recent addition is a **single-source-of-truth LLM agent harness** designed so that switching between different terminal AI tools feels seamless.
+
+- **Universal rules** live in `home/config/llm/AGENTS.md` and are deployed to:
+  - `~/.grok/AGENTS.md`
+  - `~/.claude/CLAUDE.md`
+  - `~/.codex/AGENTS.md`
+  - `~/.gemini/GEMINI.md`
+
+- **Job-specific content** (Jira workflows for the AI project on `transformuk.atlassian.net`, PR conventions, writing voice, RSpec patterns, trade-tariff frontend testing, epic/story style, etc.) lives in `home/config/llm/guides/` and is made available across tools.
+
+- Native skill wrappers exist for both Codex/Grok formats (and Gemini support is prepared).
+
+This means personal and work-specific conventions are consistent no matter whether you are using Grok CLI, Claude Code, Codex, or Gemini CLI. The architecture is documented in `home/config/llm/gemini/README.md` and the various `SKILL.md` files.
 | **Desktop** | Brave, Chrome, Spotify, Slack, Telegram, LibreOffice, Variety | Linux |
 | **Dev Tools** | gh, delta, lazydocker, dive, fzf, ripgrep, fd, jq, yq, httpie | All |
 | **Networking** | nmap, mtr, doggo | All |
