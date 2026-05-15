@@ -26,6 +26,13 @@ AI-{story}: Short imperative description
 ### Why?
 
 The reason for this change — business context or technical motivation.
+
+### Risk
+
+**Risk level:** 🟢
+
+**Reason for rating:** Refactor only with full test coverage and no behaviour change.
+
 ```
 
 Use a **checklist** in the What section to enumerate changes. Link to the specific **child story** — not the parent epic.
@@ -61,12 +68,9 @@ Add these when relevant:
 
 - [ ] Added documentation for new APIs
 - [ ] Added new environment variables to all environments
-
-### Deployment risks
-
-- Includes destructive/migratory actions
-- Changes an API used in production
 ```
+
+The **Risk** section (above) is now expected on every PR. Use the full decision tree in `.github/pull_request_template.md` when choosing 🟢 / 🟠 / 🔴.
 
 ## CLI tool PRs
 
@@ -83,4 +87,5 @@ When the PR adds or changes CLI behaviour, include an animated demo GIF showing 
 - Rebase on the target branch if needed
 - Ensure CI is green
 - Self-review the diff for obvious issues
+- Fill in the **Risk** section with the correct 🟢 / 🟠 / 🔴 rating using the criteria in `.github/pull_request_template.md`
 - Check that the PR title and description accurately reflect the changes
