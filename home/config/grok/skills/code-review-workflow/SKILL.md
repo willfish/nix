@@ -15,6 +15,7 @@ Use this skill for reviewing pull requests or writing review responses.
 **Read first:**
 - `references/reviews.md` — Tone guidelines (sound like a human colleague, lead with the biggest issue, use bold for key points), review priorities, and good vs bad examples.
 - `references/voice.md` — When the review comment needs to sound like Will wrote it.
+- Use the `diagramming` skill when the PR contains diagrams (see `references/diagramming.md` and `references/diagram-review-checklist.md`).
 
 Key principles:
 - Lead with the biggest issue.

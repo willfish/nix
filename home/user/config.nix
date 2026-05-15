@@ -1,4 +1,4 @@
-{ ... }:
+{ config, lib, pkgs, ... }:
 let
   configDir = ../config;
 in
@@ -27,6 +27,10 @@ in
       source = "${configDir}/llm/AGENTS.md";
       force = true;
     };
+
+    # Gemini diagramming skill (placeholder)
+    # ".gemini/skills/diagramming/SKILL.md".source = "${configDir}/llm/gemini/skills/diagramming/SKILL.md";
+    # (Add reference mappings for the diagramming guides when Gemini skills deployment is enabled)
 
     # Gemini CLI skills & guides (placeholder — activate when you start using it)
     # Once you know the exact paths Gemini + Superpowers extension expects,
@@ -59,6 +63,7 @@ in
     ".codex/skills/chain-of-verification/SKILL.md".source = "${configDir}/llm/codex-skills/chain-of-verification/SKILL.md";
     ".codex/skills/latex-pdfs/SKILL.md".source = "${configDir}/llm/codex-skills/latex-pdfs/SKILL.md";
     ".codex/skills/terminal-demos/SKILL.md".source = "${configDir}/llm/codex-skills/terminal-demos/SKILL.md";
+    ".codex/skills/diagramming/SKILL.md".source = "${configDir}/llm/codex-skills/diagramming/SKILL.md";
 
     # Map canonical job guides into each Codex skill's references/ directory (single source of truth, no duplication)
     ".codex/skills/hmrc-trade-tariff-workflow/references/jira.md".source = "${configDir}/llm/guides/jira.md";
@@ -93,6 +98,10 @@ in
 
     ".codex/skills/terminal-demos/references/terminal-demos.md".source = "${configDir}/llm/guides/terminal-demos.md";
 
+    ".codex/skills/diagramming/references/diagramming.md".source = "${configDir}/llm/guides/diagramming.md";
+    ".codex/skills/diagramming/references/diagram-review-checklist.md".source = "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
+    ".codex/skills/diagramming/references/diagramming-how-to.md".source = "${configDir}/llm/guides/diagramming-how-to.md";
+
     # Existing Grok-native process skills and reference library (unchanged)
     ".grok/skills/create-skill/SKILL.md".source = "${configDir}/grok/skills/create-skill/SKILL.md";
     ".grok/skills/superpowers/SKILL.md".source = "${configDir}/grok/skills/superpowers/SKILL.md";
@@ -113,6 +122,7 @@ in
     ".grok/skills/code-review-workflow/SKILL.md".source = "${configDir}/grok/skills/code-review-workflow/SKILL.md";
     ".grok/skills/daily-notes/SKILL.md".source = "${configDir}/grok/skills/daily-notes/SKILL.md";
     ".grok/skills/rspec-testing/SKILL.md".source = "${configDir}/grok/skills/rspec-testing/SKILL.md";
+    ".grok/skills/diagramming/SKILL.md".source = "${configDir}/grok/skills/diagramming/SKILL.md";
 
     # Map canonical job guides into the Grok skill reference directories
     ".grok/skills/hmrc-trade-tariff-workflow/references/jira.md".source = "${configDir}/llm/guides/jira.md";
@@ -140,6 +150,19 @@ in
 
     ".grok/skills/rspec-testing/references/rspec.md".source = "${configDir}/llm/guides/rspec.md";
     ".grok/skills/rspec-testing/references/testing.md".source = "${configDir}/llm/guides/testing.md";
+
+    ".grok/skills/diagramming/references/diagramming.md".source = "${configDir}/llm/guides/diagramming.md";
+    ".grok/skills/diagramming/references/tool-selection.md".source = "${configDir}/grok/skills/diagramming/references/tool-selection.md";
+    ".grok/skills/diagramming/references/mermaid-github-tips.md".source = "${configDir}/grok/skills/diagramming/references/mermaid-github-tips.md";
+    ".grok/skills/diagramming/references/diagram-review-checklist.md".source = "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
+    ".grok/skills/diagramming/references/diagramming-how-to.md".source = "${configDir}/llm/guides/diagramming-how-to.md";
+  };
+
+  home.activation = {
+    createDiagramDirectories = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      mkdir -p "$HOME/diagrams/generated"
+      mkdir -p "$HOME/diagrams/architecture"
+    '';
   };
 
   xdg.configFile = {

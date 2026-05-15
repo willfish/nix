@@ -135,6 +135,7 @@ For HMRC trade-tariff work (Jira AI project on `transformuk.atlassian.net`, PR c
 - `will-voice` / `voice.md` — Direct, economical, cause-and-effect technical writing style (built from 27k+ Slack messages and PR history)
 - `daily-notes` / `daily-notes.md` — `~/Notes/YYYY-MM-DD/today.md` population workflow
 - `rspec-testing` / `rspec.md` + `testing.md` — betterspecs.org conventions + when to write tests
+- `diagramming` / `diagramming.md` + `diagramming-how-to.md` — Tool selection (Mermaid, D2, SVG), GitHub Mermaid limitations, workflows, and best practices for technical diagrams in PRs and architecture work
 - `local-dev-environment` — Trade-tariff service ports, direnv usage, Brave remote debugging (9222)
 - `chain-of-verification` / `planning.md` — When and how to use structured planning + adversarial challenge for accuracy-critical work
 - `terminal-demos` / `terminal-demos.md` — asciinema+agg or gpu-screen-recorder+ffmpeg patterns for CLI GIFs
@@ -150,6 +151,7 @@ These guides are the canonical source for institutional knowledge on the AI Jira
 - `code-review-workflow`
 - `daily-notes`
 - `rspec-testing`
+- `diagramming`
 
 These thin skills reference the same canonical content in `llm/guides/`.
 
