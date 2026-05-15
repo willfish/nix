@@ -36,6 +36,7 @@ These rules establish a disciplined, high-reliability workflow. **User instructi
 - **Todo tracking for complexity**: For any task with 3+ steps, use the `todo_write` tool immediately to create a checklist. Update statuses as you progress. This is mandatory for non-trivial work.
 - **Plan before implement**: For architectural changes, refactors, or multi-file work, call `enter_plan_mode` first to explore and propose a plan. Exit with `exit_plan_mode` only after user approval.
 - **Verification before completion**: Never declare success without verification. Use `run_command` to test (build, switch dry-run, lint, unit tests), the `check` skill where applicable, or subagents for independent review. For Nix changes, at minimum run `nix flake check` and validate the specific module.
+- **Execute on the user's behalf**: When a task involves running commands, git operations, builds, switches, or other actions that can be performed via available tools, do so directly rather than providing copy-paste instructions for the user to run manually. Only ask the user to execute a command when it is destructive, requires explicit confirmation, needs special privileges, or falls outside the safe scope of the tools.
 - **Subagents for parallel / independent work**: Use `spawn_subagent` (or Grok's subagent tools) for exploration, review, or isolated implementation. Provide minimal context; avoid leaking intended answers.
 - **Progressive disclosure in skills & docs**: When authoring or extending skills (see `create-skill` skill and `~/.grok/skills/`):
   - Keep `SKILL.md` body concise (< ~500 lines ideal).
@@ -59,12 +60,13 @@ These rules establish a disciplined, high-reliability workflow. **User instructi
 3. Invoke relevant skill(s).
 4. Make changes using precise edits (`search_replace` preferred over broad writes).
 5. Verify (build/test/lint + `check` skill or manual run).
-6. Summarize changes and any follow-up (e.g. `home-manager switch` command for the user).
+6. Execute follow-up actions using tools when safe (e.g. run `nh home switch` or `git push` directly). Only provide manual commands when confirmation is required or the action is destructive.
 
 ### What NOT to do
-- Do not run `home-manager switch` or system rebuilds without explicit user confirmation (destructive / state-changing).
+- Do not run destructive actions (e.g. `home-manager switch`, system rebuilds, `git push --force`) without explicit user confirmation.
 - Avoid large unverified refactors.
 - Do not ignore existing patterns in the flake or modules.
+- Do not default to telling the user to run commands when the action can be performed safely via tools.
 
 ---
 

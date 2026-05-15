@@ -56,4 +56,14 @@ Go through the checklist and leave specific, actionable feedback (e.g., “The s
 - Generate Mermaid diagram (CLI): `mmdc -i input.mmd -o output.svg`
 - Excalidraw: Use the web app or desktop app and export SVG + JSON source.
 
+### Rendering this README's diagrams for review
+
+Run the helper script in the repo:
+
+```bash
+./docs/diagrams/render-readme-diagrams.sh
+```
+
+This produces PNGs in `docs/diagrams/rendered/`. Open them and run the **Diagram Review Checklist** before committing changes to the diagrams.
+
 This skill is available in Grok, Codex, and (when enabled) Gemini. The content is the same across all tools because it lives in the single-source `llm/guides/` directory.
