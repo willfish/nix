@@ -1,4 +1,4 @@
-{ nixos-hardware, ... }:
+{ pkgs, nixos-hardware, ... }:
 
 {
   system.stateVersion = "25.05";
@@ -9,4 +9,8 @@
   ];
   networking.hostName = "foundation";
   services.power-profiles-daemon.enable = true;
+
+  environment.systemPackages = with pkgs; [
+    android-tools
+  ];
 }
