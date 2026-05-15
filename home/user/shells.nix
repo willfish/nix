@@ -144,6 +144,42 @@ in
         '
       '';
       git = ''
+        if test (count $argv) -ge 3; and test "$argv[1]" = worktree; and test "$argv[2]" = add
+          set -l before_worktrees (command git worktree list --porcelain | string match -rg '^worktree (.*)$')
+          command git $argv
+          set -l git_status $status
+
+          if test $git_status -ne 0
+            return $git_status
+          end
+
+          set -l after_worktrees (command git worktree list --porcelain | string match -rg '^worktree (.*)$')
+          for worktree_path in $after_worktrees
+            if contains -- "$worktree_path" $before_worktrees
+              continue
+            end
+
+            if test -f "$worktree_path/flake.nix"
+              printf 'use flake . --impure\n' > "$worktree_path/.envrc"
+
+              if command -v direnv >/dev/null 2>/dev/null
+                pushd "$worktree_path" >/dev/null
+                command direnv allow
+                set -l direnv_status $status
+                popd >/dev/null
+
+                if test $direnv_status -ne 0
+                  return $direnv_status
+                end
+              else
+                echo "direnv not found; created $worktree_path/.envrc but did not allow it"
+              end
+            end
+          end
+
+          return 0
+        end
+
         if test (count $argv) -eq 2
           set -l subcommand $argv[1]
           set -l target $argv[2]
