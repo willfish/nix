@@ -103,7 +103,7 @@ All hosts share `common-configuration.nix` which provides:
 - **Network:** NetworkManager, Avahi mDNS, Mullvad VPN, OpenSSH (key-only)
 - **Desktop:** COSMIC desktop and greeter, X11
 - **Audio:** PipeWire with PulseAudio compatibility
-- **Services:** CUPS printing, Bluetooth, OpenSearch, GnuPG agent with SSH
+- **Services:** CUPS printing, Bluetooth, GnuPG agent with SSH
 - **Virtualisation:** Docker with host.docker.internal resolution
 - **Fonts:** JetBrains Mono, Nerd Fonts (JetBrains Mono, Ubuntu, Ubuntu Mono)
 - **Nix:** Flakes enabled, weekly garbage collection, auto-optimise store
