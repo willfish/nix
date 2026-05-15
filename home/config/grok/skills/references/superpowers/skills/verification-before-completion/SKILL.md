@@ -1,6 +1,6 @@
 ---
 name: verification-before-completion
-description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+description: Use when about to claim work is complete, fixed, or passing — especially before committing, pushing, creating PRs, or extracting refactors. Requires running verification commands with fresh output evidence before any success claim. Extremely strict on value object refactors (Struct → Data.define, etc.) and PR extraction work. Evidence before assertions, always.
 ---
 
 # Verification Before Completion
@@ -48,6 +48,23 @@ Skip any step = lying, not verifying
 | Regression test works | Red-green cycle verified | Test passes once |
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
+
+## High-Risk Refactors (Extra Strict Mode)
+
+These changes have historically caused "it worked in the original branch but broke after extraction" failures:
+
+- Switching from `Struct` / `OpenStruct` to `Data.define` (or vice versa)
+- Changing value object construction (adding required fields, removing mutability)
+- Refactors that affect how internal Result/Context objects are instantiated
+- Any change that makes previously optional/omittable arguments required
+
+**For these changes you must:**
+1. Identify every class whose construction semantics are changing.
+2. Search the **entire** `spec/` directory for every `::Result.new(`, `::Context.new(`, `::new(` call on those classes.
+3. Run the full relevant test groups from the worktree (`rspec spec/services/ spec/requests/` for the affected domains) **before** pushing or creating the PR.
+4. Treat "the original mixed commit was green" as irrelevant — extraction can expose previously hidden partial construction in tests.
+
+Never rely on "I grepped and it looked fine." Run the tests.
 
 ## Red Flags - STOP
 
@@ -114,15 +131,24 @@ From 24 failure memories:
 - Time wasted on false completion → redirect → rework
 - Violates: "Honesty is a core value. If you lie, you'll be replaced."
 
+**Real example (2026-05):**
+A `Struct` → `Data.define` refactor was extracted into its own PR. All production call sites were updated correctly, but several test stubs constructing `InteractiveSearchService::Result` (and similar) omitted the new required `result_limit` field. The original mixed commit was green, so targeted greps felt "good enough." CI failed after PR creation. The fix required a second commit on the refactor PR. This exact failure mode is now called out in the High-Risk Refactors section.
+
 ## When To Apply
 
 **ALWAYS before:**
 - ANY variation of success/completion claims
 - ANY expression of satisfaction
 - ANY positive statement about work state
-- Committing, PR creation, task completion
+- Committing, pushing, or creating a PR
+- Extracting changes into a separate branch/PR
 - Moving to next task
 - Delegating to agents
+
+**Especially strict before:**
+- Any refactor involving `Struct` → `Data.define`, `OpenStruct` removal, or value object changes
+- PR extraction work (pulling one type of change out of a larger branch)
+- Any situation where you are tempted to say "the original commit was green" or "I already grepped"
 
 **Rule applies to:**
 - Exact phrases

@@ -51,18 +51,35 @@ When the task involves architecture, design decisions, multi-file refactors, res
 - Explore, think, and propose a concrete plan with options.
 - Only exit plan mode and start executing after the user explicitly approves the plan.
 
-### 4. Verification Before Completion
+### 4. Verification Before Completion (Non-Negotiable)
 
-Never declare a task finished until you have verified the result with evidence.
+**Iron Law:** No completion claims, no PR creation, no "this is done", and no extraction of changes into a new branch without fresh verification evidence.
 
-Preferred verification methods (in rough order):
-1. Use the `check` / verification skill when available.
-2. Run actual commands, builds, tests, or the `run_command` tool.
-3. Spawn a fresh subagent with minimal context to review the output.
-4. For code changes: review the diff + run relevant tests.
-5. Use `best-of-n` for important creative or strategic outputs.
+Before claiming anything is complete or ready for review — especially before:
+- Creating or pushing a PR
+- Extracting a refactor or subset of changes into its own branch/PR
+- Moving on from a task
 
-Only after verification passes should you summarize and hand off.
+You **must**:
+
+1. Identify the actual command(s) that would prove the claim (test suite, build, etc.).
+2. Run the full relevant verification command(s) from the worktree.
+3. Read the output, check exit codes, and count failures.
+4. Only then report the result with the evidence.
+
+**Especially strict requirements apply to:**
+- Any refactor involving `Struct`/`OpenStruct` → `Data.define` (or similar value object changes)
+- Changes that affect object construction semantics
+- PR extraction work (pulling one concern out of a larger mixed branch)
+
+"Relevant tests" means the full groups that exercise the changed behaviour, not just a few files. "The original branch was green" is not sufficient evidence after extraction.
+
+Preferred tools (in order):
+1. The `verification-before-completion` or `check` skill
+2. Direct `run_command` of the real test/build command with full output shown
+3. Fresh subagent review
+
+Skip verification = dishonest, not efficient.
 
 ### 5. Subagents for Independent or Parallel Work
 
