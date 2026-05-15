@@ -72,16 +72,19 @@ HM_DARWIN[william (macOS)]
 **Error you will see:**
 > Expecting 'SQE', 'DOUBLECIRCLEEND', ... got 'PS'
 
-**Fixed version:**
+**Recommended fix (HTML entities):**
 ```mermaid
-HM_LINUX["william \(Linux\)"]
-HM_DARWIN["william \(macOS\)"]
+HM_LINUX["william &#40;Linux&#41;"]
+HM_DARWIN["william &#40;macOS&#41;"]
 ```
 
-**Why this happens:**
-Mermaid uses `()` to define certain node shapes (e.g. stadium, cylinder). When they appear unescaped inside `[]` labels, the parser gets confused about where the label ends.
+This renders cleanly as **william (Linux)** without any visible backslashes.
 
-**Rule of thumb:** If your label contains `(`, `)`, `[`, `]`, or other special characters, wrap it in double quotes and escape the parentheses with backslashes.
+**Why backslash escaping is not ideal:**
+While `\( \)` prevents the parse error, the backslashes often remain visible in the final rendered diagram on GitHub.
+
+**Better rule of thumb:**
+For special characters in labels (`( ) [ ] & # : ;`), prefer **HTML entities** over backslash escaping when the diagram will be viewed on GitHub. HTML entities give the cleanest visual result.
 
 Other characters that often need escaping or quoting:
 - `&`
