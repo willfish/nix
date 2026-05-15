@@ -23,21 +23,28 @@ in
       force = true;
     };
     ".codex/AGENTS.md".source = "${configDir}/llm/AGENTS.md";
-    ".gemini/GEMINI.md".source = "${configDir}/llm/AGENTS.md";
+    ".gemini/GEMINI.md" = {
+      source = "${configDir}/llm/AGENTS.md";
+      force = true;
+    };
 
     # Gemini CLI skills & guides (placeholder — activate when you start using it)
     # Once you know the exact paths Gemini + Superpowers extension expects,
     # we can deploy the job guides + thin skill wrappers the same way we do for Codex/Grok.
     #
-    # Example (to be adjusted after first run):
-    # ".gemini/skills/hmrc-trade-tariff-workflow/SKILL.md".source = ...;
-    # ".gemini/guides/".source = "${configDir}/llm/guides";  # or similar
-    # (see llm/gemini/README.md)
+    # Recommended pattern (use force = true on any recursive directories):
+    # ".gemini/guides/" = {
+    #   source = "${configDir}/llm/guides";
+    #   recursive = true;
+    #   force = true;
+    # };
+    # (see llm/gemini/README.md for the plan)
 
     # Job-specific guides (Claude Code "Guides" panel + shared with Codex references)
     ".claude/guides/" = {
       source = "${configDir}/llm/guides";
       recursive = true;
+      force = true;
     };
 
     # Codex custom job-specific skill wrappers (SKILL.md only — references mapped individually below)
