@@ -235,11 +235,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778535464,
-        "narHash": "sha256-kkUQYSv70wynJ/DfnGals6r98I6bK3CVNVTN1zbAd7Y=",
+        "lastModified": 1779027260,
+        "narHash": "sha256-ZbgWWFQmSyM3HQ31nAZk2hJ7OSeNr9uRFHL8jCifY9M=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "b659c7ffd40fc9e3bb60d420c79c67e769b9f4ab",
+        "rev": "bcb774cfc3268120cd61808629f9aa7dad3750a2",
         "type": "github"
       },
       "original": {
@@ -260,16 +260,15 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1778789657,
-        "narHash": "sha256-SlfoLdkd/621vLGXgtfX/hfFnBOxJ/U+pgCDRDKHkfc=",
-        "owner": "willfish",
+        "lastModified": 1779022189,
+        "narHash": "sha256-sq50LUIQ58jHTH5mG811fpC24BVOCagBqi0UuSTZN9o=",
+        "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "1ad34f89debe5eb5a7fad20bd043f48a50f9493d",
+        "rev": "7c2b15bbb92e200cb741372f050de789e7811539",
         "type": "github"
       },
       "original": {
-        "owner": "willfish",
-        "ref": "add-grok-cli",
+        "owner": "numtide",
         "repo": "llm-agents.nix",
         "type": "github"
       }
@@ -297,11 +296,11 @@
     },
     "nixos-hardware": {
       "locked": {
-        "lastModified": 1778143761,
-        "narHash": "sha256-lkesY6x2X2qxlqLM7CT2iM/0rP2JB7fruPN3h8POXmI=",
+        "lastModified": 1779034340,
+        "narHash": "sha256-zhMjgfsnNPcZtMhhWoeyaUV7JVEJ4rm5YJ0whwTfo8M=",
         "owner": "NixOS",
         "repo": "nixos-hardware",
-        "rev": "3bcaa367d4c550d687a17ac792fd5cda214ee871",
+        "rev": "88e6bd5c2db9e0b098d8ccb081f35fe33f0f3186",
         "type": "github"
       },
       "original": {
@@ -329,11 +328,11 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1777954456,
-        "narHash": "sha256-hGdgeU2Nk87RAuZyYjyDjFL6LK7dAZN5RE9+hrDTkDU=",
+        "lastModified": 1778869304,
+        "narHash": "sha256-30sZNZoA1cqF5JNO9fVX+wgiQYjB7HJqqJ4ztCDeBZE=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "549bd84d6279f9852cae6225e372cc67fb91a4c1",
+        "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
         "type": "github"
       },
       "original": {
@@ -516,11 +515,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778509488,
-        "narHash": "sha256-DxBxFt2SVmuVNeXddk0WIf0JzTYKGVTfcsgnhZuLSHs=",
+        "lastModified": 1778763819,
+        "narHash": "sha256-zqIXRKP1MRRZoSitR/FwVMv1BVlrxfyvLGoLnkv1cww=",
         "owner": "trade-tariff",
         "repo": "trade-tariff-tools",
-        "rev": "ee5cdb9023e8b38deb3d19e4d6da5123da383337",
+        "rev": "dce9c0d3c4fcf44afc719f8ed7da3b67699b5038",
         "type": "github"
       },
       "original": {

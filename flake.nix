@@ -35,7 +35,7 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     llm-agents = {
-      url = "github:willfish/llm-agents.nix/add-grok-cli";
+      url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
@@ -170,15 +170,17 @@
       devShells.${linuxSystem} = {
         default = pkgs.mkShell {
           inherit (pre-commit-check) shellHook;
-          buildInputs = pre-commit-check.enabledPackages ++ (with pkgs; [
-            d2
-            nodejs
-            (writeShellScriptBin "mmdc" ''
-              export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
-              export PUPPETEER_EXECUTABLE_PATH=${chromium}/bin/chromium
-              exec ${pkgs.mermaid-cli}/bin/mmdc "$@"
-            '')
-          ]);
+          buildInputs =
+            pre-commit-check.enabledPackages
+            ++ (with pkgs; [
+              d2
+              nodejs
+              (writeShellScriptBin "mmdc" ''
+                export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
+                export PUPPETEER_EXECUTABLE_PATH=${chromium}/bin/chromium
+                exec ${pkgs.mermaid-cli}/bin/mmdc "$@"
+              '')
+            ]);
         };
       };
       devShells.${darwinSystem} = {
