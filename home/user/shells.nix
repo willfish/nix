@@ -131,6 +131,11 @@ in
       '';
 
     functions = {
+      # Hermès Memory aliases
+      mem0-qdrant-start = ''cd ~/.dotfiles/home/config/docker-compose/mem0-qdrant && ./start.sh'';
+      mem0-qdrant-logs = ''docker logs -f qdrant'';
+      mem0-status = ''curl -s http://localhost:6333/collections | jq .'';
+
       __git_worktree_path_for_branch = ''
         set -l target $argv[1]
 
