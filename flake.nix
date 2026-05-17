@@ -67,7 +67,7 @@
           mux = mux.packages.${linuxSystem}.default;
           forte = forte.packages.${linuxSystem}.default;
           inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
-          inherit (llm-agents.packages.${linuxSystem}) codex claude-code grok-cli;
+          inherit (llm-agents.packages.${linuxSystem}) codex claude-code grok;
           # variety = pkgs-local.variety;
         }
       );
@@ -77,7 +77,7 @@
           inherit (smailer.packages.${darwinSystem}) smailer;
           mux = mux.packages.${darwinSystem}.default;
           inherit (trade-tariff-tools.packages.${darwinSystem}) ecs;
-          inherit (llm-agents.packages.${darwinSystem}) grok-cli;
+          inherit (llm-agents.packages.${darwinSystem}) grok;
         }
       );
       pkgs = import nixpkgs-unstable {
