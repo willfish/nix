@@ -3,9 +3,10 @@
 ## Title format
 
 ```
-AI-{story}: Short imperative description
+{story}: Short imperative description
 ```
 
+- Use the Jira **story** key for story work, or `BAU` when there is no Jira story
 - Prefix with the Jira **story** key, not the epic key
 - Use imperative mood: "Add", "Fix", "Remove" — not "Added", "Fixes"
 - Keep it concise but descriptive

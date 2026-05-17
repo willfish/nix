@@ -17,7 +17,7 @@ This skill routes you to the detailed guides. Read the relevant reference(s) bef
 
 - **Jira work** (API v3, ADF descriptions, transitions, auth via `~/.env`): `references/jira.md`
 - **Epics and stories** (business-first writing style, ADF panels, collapsible implementation details): `references/epics-and-stories.md`
-- **Pull requests** (title format `AI-{story}:`, description structure, diagrams, CLI demos): `references/prs.md`. Use the `diagramming` skill for diagram best practices.
+- **Pull requests** (title format `{story}:`, description structure, diagrams, CLI demos): `references/prs.md`. Use the `diagramming` skill for diagram best practices.
 - **Git & branches** (commit messages, branch naming, Slack PR roundups): `references/git.md`
 - **Code reviews** (tone, priorities, what to look for): `references/reviews.md`
 - **RSpec & testing** (conventions, when to write tests, trade-tariff patterns): `references/rspec.md` and `references/testing.md`
@@ -25,7 +25,8 @@ This skill routes you to the detailed guides. Read the relevant reference(s) bef
 
 Defaults:
 - Jira project key is `AI` on `transformuk.atlassian.net`.
-- All PR/commit titles use the `AI-{story}` prefix.
+- All PR/commit titles use the child Jira story key, or `BAU` when there is no Jira story.
+- Branch names use `{story}-short-kebab-description`; never add agent/tool prefixes such as `codex/`.
 - Prefer `direnv exec <repo> <command>` when working in trade-tariff repos.
 - Draft Slack messages for review rather than sending directly when possible.
 

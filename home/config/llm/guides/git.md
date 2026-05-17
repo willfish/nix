@@ -3,9 +3,10 @@
 ## Commit message format
 
 ```
-AI-{story}: Short imperative description
+{story}: Short imperative description
 ```
 
+- Use the Jira story key for story work, or `BAU` when there is no Jira story
 - Prefix with the Jira story key, not the epic key
 - Use imperative mood: "Add", "Fix", "Remove", "Restrict", "Wire" — not "Added", "Fixes", "Removing"
 - Keep to a single line unless there's essential context that warrants a body
@@ -14,6 +15,7 @@ AI-{story}: Short imperative description
 ## Examples
 
 ```
+BAU: Archive unused repository
 AI-141: Add AdminConfiguration model, API, seed task and new suggestion types
 AI-142: Wire AdminConfiguration into runtime services and workers
 AI-143: Add admin configuration management UI
@@ -25,7 +27,8 @@ AI-136: Fix OTT Admin sub-navigation not showing on XI root path
 
 ## Branch conventions
 
-- Branch names: `AI-{story}-short-kebab-description` (e.g. `AI-137-admin-configuration-ui`)
+- Branch names: `{story}-short-kebab-description` (e.g. `AI-137-admin-configuration-ui` or `BAU-archive-unused-repository`)
+- Do not prefix branch names with the agent or tool name. Avoid prefixes like `codex/`, `claude/`, `grok/`, or `ai/`.
 - One squashed commit per story/PR where possible
 - When squashing, use `git rebase -i` or `git reset --soft` — not `git commit --amend` on pushed commits
 - Keep dependent branches rebased on their parent branch after squashing

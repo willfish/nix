@@ -25,6 +25,7 @@ This is William's personal NixOS + Home Manager dotfiles repository.
 ## Development Workflow
 
 - Prefer small, focused changes
+- Branch names should use the relevant ticket or `BAU` prefix, never an agent/tool prefix like `codex/`
 - Test with `nix build .#homeConfigurations.<host>.activationPackage` before switching
 - Use `nh home switch` or `home-manager switch --flake .#william` for user changes
 - Full system rebuilds via `nh os switch` or `sudo nixos-rebuild switch --flake .`

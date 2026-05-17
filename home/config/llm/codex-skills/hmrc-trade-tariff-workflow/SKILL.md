@@ -18,7 +18,8 @@ Reference selection:
 
 Defaults:
 - Jira project key is `AI`.
-- Commit and PR titles use `AI-{story}: Imperative description`.
+- Commit and PR titles use `{story}: Imperative description`, where `{story}` is the child Jira story key or `BAU` when there is no Jira story.
+- Branch names use `{story}-short-kebab-description`; never add agent/tool prefixes such as `codex/`.
 - Prefer `direnv exec <repo> <command>` or run commands from the activated repo shell.
 - Use `gh` for GitHub repos, PRs, and CI rather than browser scraping.
 - Do not send Slack messages directly; draft for review when Slack tooling is available.

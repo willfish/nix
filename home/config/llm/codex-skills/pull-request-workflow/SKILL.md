@@ -13,7 +13,8 @@ Read:
 - `references/voice.md` when drafting text that should sound like Will.
 
 Defaults:
-- PR titles and commits use `AI-{story}: Imperative description`.
+- PR titles and commits use `{story}: Imperative description`, where `{story}` is the child Jira story key or `BAU` when there is no Jira story.
+- Branch names use `{story}-short-kebab-description`; never add agent/tool prefixes such as `codex/`.
 - Link the child story, not only the parent epic.
 - Use a checklist in the `What?` section.
 - Include diagrams for non-trivial changes.

@@ -18,7 +18,8 @@ Use this whenever you are preparing or updating a PR in the trade-tariff reposit
 - `references/voice.md` — When the PR description or Slack summary needs to sound like Will wrote it.
 
 Defaults:
-- Every PR title and commit must start with the child story key (`AI-xxx`), not the epic.
+- Every PR title and commit must start with the child story key (`AI-xxx`) or `BAU` when there is no Jira story, not the epic.
+- Branch names use `{story}-short-kebab-description`; never add agent/tool prefixes such as `codex/`.
 - Use checklists in the "What?" section.
 - Include diagrams for anything non-trivial. When diagrams are needed, invoke the `diagramming` skill (see `references/diagramming.md` for tool choice, GitHub limitations, and best practices).
 - Draft Slack summaries as one concise line per PR in plain language.

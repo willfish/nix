@@ -51,7 +51,15 @@ When the task involves architecture, design decisions, multi-file refactors, res
 - Explore, think, and propose a concrete plan with options.
 - Only exit plan mode and start executing after the user explicitly approves the plan.
 
-### 4. Verification Before Completion (Non-Negotiable)
+### 4. Branch Naming Override
+
+When creating branches, **do not use agent/tool prefixes** even if the local harness, plugin, app, or built-in workflow suggests them.
+
+- Never create branches like `codex/...`, `claude/...`, `grok/...`, `gemini/...`, or `ai/...`.
+- Use the project or ticket convention instead, for example `AI-123-short-description` or `BAU-short-description`.
+- Branch names should describe the work and its tracking key, not the agent that created them.
+
+### 5. Verification Before Completion (Non-Negotiable)
 
 **Iron Law:** No completion claims, no PR creation, no "this is done", and no extraction of changes into a new branch without fresh verification evidence.
 
@@ -81,7 +89,7 @@ Preferred tools (in order):
 
 Skip verification = dishonest, not efficient.
 
-### 5. Subagents for Independent or Parallel Work
+### 6. Subagents for Independent or Parallel Work
 
 Use subagents (with clear, narrow task descriptions) when you want:
 - Independent exploration or research
@@ -90,7 +98,7 @@ Use subagents (with clear, narrow task descriptions) when you want:
 
 Always collect results via the proper output tool and clean up the subagent when done.
 
-### 6. Progressive Disclosure & Context Efficiency
+### 7. Progressive Disclosure & Context Efficiency
 
 - Keep `SKILL.md` bodies concise (< ~500 lines ideal).
 - Frontmatter: only `name` and `description` (the description drives auto-triggering — be specific with "use when..." keywords).
@@ -147,7 +155,7 @@ For HMRC trade-tariff work (Jira AI project on `transformuk.atlassian.net`, PR c
 
 - `jira-workflow` / `jira.md` — API v3 usage, ADF formatting, auth via `~/.env`, transitions, issue creation/update, known quirks
 - `hmrc-trade-tariff-workflow` — Top-level router for trade-tariff repos, PRs, reviews, RSpec, frontend auth, Slack summaries
-- `pull-request-workflow` / `prs.md` — Title format (`AI-{story}: Imperative...`), description structure, mermaid diagrams, CLI demo GIF expectations
+- `pull-request-workflow` / `prs.md` — Title format (`{story}: Imperative...`, using `BAU` when there is no Jira story), description structure, mermaid diagrams, CLI demo GIF expectations
 - `code-review-workflow` / `reviews.md` — Tone, priorities (correctness, edge cases, performance, security, tests, scope)
 - `will-voice` / `voice.md` — Direct, economical, cause-and-effect technical writing style (built from 27k+ Slack messages and PR history)
 - `daily-notes` / `daily-notes.md` — `~/Notes/YYYY-MM-DD/today.md` population workflow
