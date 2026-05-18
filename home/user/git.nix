@@ -10,7 +10,9 @@ let
 
       [ -f "$worktree_path/flake.nix" ] || return 0
 
-      printf 'use flake . --impure\n' > "$worktree_path/.envrc"
+      if ! "$real_git" -C "$worktree_path" ls-files --error-unmatch .envrc >/dev/null 2>&1; then
+        printf 'use flake . --impure\n' > "$worktree_path/.envrc"
+      fi
 
       if command -v direnv >/dev/null 2>&1; then
         (cd "$worktree_path" && direnv allow)
@@ -19,8 +21,36 @@ let
       fi
     }
 
-    if [ "$#" -ge 3 ] && [ "$1" = "worktree" ] && [ "$2" = "add" ]; then
-      before="$("$real_git" worktree list --porcelain | sed -n 's/^worktree //p')"
+    args=("$@")
+    subcommand_index=0
+    while [ "$subcommand_index" -lt "$#" ]; do
+      arg="''${args[$subcommand_index]}"
+      case "$arg" in
+        -C|-c|--git-dir|--work-tree|--namespace)
+          subcommand_index=$((subcommand_index + 2))
+          ;;
+        --git-dir=*|--work-tree=*|--namespace=*|--exec-path=*|-c*)
+          subcommand_index=$((subcommand_index + 1))
+          ;;
+        --)
+          subcommand_index=$((subcommand_index + 1))
+          break
+          ;;
+        -*)
+          subcommand_index=$((subcommand_index + 1))
+          ;;
+        *)
+          break
+          ;;
+      esac
+    done
+
+    global_args=("''${args[@]:0:$subcommand_index}")
+
+    if [ "$#" -gt "$((subcommand_index + 1))" ] \
+      && [ "''${args[$subcommand_index]}" = "worktree" ] \
+      && [ "''${args[$((subcommand_index + 1))]}" = "add" ]; then
+      before="$("$real_git" "''${global_args[@]}" worktree list --porcelain | sed -n 's/^worktree //p')"
 
       set +e
       "$real_git" "$@"
@@ -29,7 +59,7 @@ let
 
       [ "$git_status" -eq 0 ] || exit "$git_status"
 
-      after="$("$real_git" worktree list --porcelain | sed -n 's/^worktree //p')"
+      after="$("$real_git" "''${global_args[@]}" worktree list --porcelain | sed -n 's/^worktree //p')"
 
       printf '%s\n' "$after" | while IFS= read -r worktree_path; do
         [ -n "$worktree_path" ] || continue
