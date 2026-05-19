@@ -12,6 +12,7 @@ let
     vi = "nvim";
     vim = "nvim";
     vimdiff = "nvim -d";
+    yolo = "agy --dangerously-skip-permissions";
   };
   abbreviations = {
     a = "tmux attach";

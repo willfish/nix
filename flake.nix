@@ -67,8 +67,12 @@
           mux = mux.packages.${linuxSystem}.default;
           forte = forte.packages.${linuxSystem}.default;
           inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
-          inherit (llm-agents.packages.${linuxSystem}) codex claude-code grok;
-          # variety = pkgs-local.variety;
+          inherit (llm-agents.packages.${linuxSystem})
+            antigravity
+            codex
+            claude-code
+            grok
+            ;
         }
       );
       darwinOverlay = (
@@ -77,7 +81,10 @@
           inherit (smailer.packages.${darwinSystem}) smailer;
           mux = mux.packages.${darwinSystem}.default;
           inherit (trade-tariff-tools.packages.${darwinSystem}) ecs;
-          inherit (llm-agents.packages.${darwinSystem}) grok;
+          inherit (llm-agents.packages.${darwinSystem})
+            antigravity
+            grok
+            ;
         }
       );
       pkgs = import nixpkgs-unstable {
