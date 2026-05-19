@@ -163,7 +163,7 @@ in
     vimdiffAlias = true;
     withNodeJs = true;
     withPython3 = true;
-    withRuby = true;
+    withRuby = false;
     initLua = builtins.readFile ../config/nvim/init.lua;
 
     plugins = startPlugins ++ optionalPlugins;
