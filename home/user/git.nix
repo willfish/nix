@@ -21,6 +21,138 @@ let
       fi
     }
 
+    worktree_remove_target() {
+      remove_index="$1"
+      target=""
+      target_index=$((remove_index + 2))
+      arg_count="''${#args[@]}"
+
+      while [ "$target_index" -lt "$arg_count" ]; do
+        arg="''${args[$target_index]}"
+
+        case "$arg" in
+          --)
+            target_index=$((target_index + 1))
+            if [ "$target_index" -lt "$arg_count" ]; then
+              target="''${args[$target_index]}"
+            fi
+            break
+            ;;
+          -*)
+            target_index=$((target_index + 1))
+            ;;
+          *)
+            target="$arg"
+            break
+            ;;
+        esac
+      done
+
+      printf '%s\n' "$target"
+    }
+
+    command_working_dir() {
+      dir="$PWD"
+      global_index=0
+
+      while [ "$global_index" -lt "$subcommand_index" ]; do
+        arg="''${args[$global_index]}"
+
+        case "$arg" in
+          -C)
+            global_index=$((global_index + 1))
+            if [ "$global_index" -lt "$subcommand_index" ]; then
+              next_dir="''${args[$global_index]}"
+              case "$next_dir" in
+                /*)
+                  dir="$next_dir"
+                  ;;
+                *)
+                  dir="$dir/$next_dir"
+                  ;;
+              esac
+            fi
+            ;;
+        esac
+
+        global_index=$((global_index + 1))
+      done
+
+      (cd "$dir" && pwd -P)
+    }
+
+    worktree_path_for_remove_target() {
+      target="$1"
+
+      [ -n "$target" ] || return 0
+
+      case "$target" in
+        /*)
+          printf '%s\n' "$target"
+          ;;
+        *)
+          printf '%s/%s\n' "$(command_working_dir)" "$target"
+          ;;
+      esac
+    }
+
+    worktree_id_for_path() {
+      worktree_path="$1"
+      worktree_root="$(
+        "$real_git" -c core.fsmonitor=false -C "$worktree_path" \
+          rev-parse --show-toplevel 2>/dev/null || true
+      )"
+
+      [ -n "$worktree_root" ] || return 1
+
+      if command -v md5sum >/dev/null 2>&1; then
+        printf '%s\n' "$worktree_root" | md5sum | cut -c1-8
+      elif command -v md5 >/dev/null 2>&1; then
+        printf '%s\n' "$worktree_root" | md5 | cut -c1-8
+      else
+        return 1
+      fi
+    }
+
+    worktree_has_cleanup_state() {
+      worktree_id="$1"
+
+      [ -e "$HOME/.local/share/postgres/worktrees/$worktree_id/.worktree-initialized" ] && return 0
+      [ -e "$HOME/.local/share/yarn/worktrees/$worktree_id/.worktree-initialized" ] && return 0
+      [ -e "$HOME/.local/share/gem/worktrees/$worktree_id/.worktree-initialized" ] && return 0
+
+      return 1
+    }
+
+    cleanup_worktree_before_remove() {
+      worktree_path="$1"
+
+      [ -n "$worktree_path" ] || return 0
+      [ -d "$worktree_path" ] || return 0
+      [ -f "$worktree_path/flake.nix" ] || return 0
+
+      if ! command -v direnv >/dev/null 2>&1; then
+        echo "direnv not found; skipping worktree-clean for $worktree_path" >&2
+        return 0
+      fi
+
+      worktree_id="$(worktree_id_for_path "$worktree_path" || true)"
+      if [ -z "$worktree_id" ]; then
+        echo "Could not determine worktree id; skipping worktree-clean for $worktree_path" >&2
+        return 0
+      fi
+
+      # Only enter direnv when this worktree has already been initialised. Without
+      # this guard, cleanup could accidentally trigger first-time setup.
+      worktree_has_cleanup_state "$worktree_id" || return 0
+
+      echo "Running worktree-clean before removing $worktree_path" >&2
+      if ! (cd "$worktree_path" && direnv exec . worktree-clean); then
+        echo "worktree-clean failed for $worktree_path; not removing worktree" >&2
+        return 1
+      fi
+    }
+
     args=("$@")
     subcommand_index=0
     while [ "$subcommand_index" -lt "$#" ]; do
@@ -46,6 +178,14 @@ let
     done
 
     global_args=("''${args[@]:0:$subcommand_index}")
+
+    if [ "$#" -gt "$((subcommand_index + 1))" ] \
+      && [ "''${args[$subcommand_index]}" = "worktree" ] \
+      && [ "''${args[$((subcommand_index + 1))]}" = "remove" ]; then
+      remove_target="$(worktree_remove_target "$subcommand_index")"
+      cleanup_worktree_before_remove "$(worktree_path_for_remove_target "$remove_target")"
+      exec "$real_git" "$@"
+    fi
 
     if [ "$#" -gt "$((subcommand_index + 1))" ] \
       && [ "''${args[$subcommand_index]}" = "worktree" ] \
