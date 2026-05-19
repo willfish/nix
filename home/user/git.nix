@@ -114,14 +114,59 @@ let
       fi
     }
 
-    worktree_has_cleanup_state() {
+    worktree_id_for_path_string() {
+      worktree_path="$1"
+
+      if command -v md5sum >/dev/null 2>&1; then
+        printf '%s\n' "$worktree_path" | md5sum | cut -c1-8
+      elif command -v md5 >/dev/null 2>&1; then
+        printf '%s\n' "$worktree_path" | md5 | cut -c1-8
+      else
+        return 1
+      fi
+    }
+
+    cleanup_state_exists_for_worktree_id() {
       worktree_id="$1"
 
       [ -e "$HOME/.local/share/postgres/worktrees/$worktree_id/.worktree-initialized" ] && return 0
+      [ -e "$HOME/.local/share/postgres/worktrees/$worktree_id" ] && return 0
+      [ -e "/tmp/pg-$worktree_id" ] && return 0
+      [ -e "/tmp/pg-$worktree_id.pid" ] && return 0
       [ -e "$HOME/.local/share/yarn/worktrees/$worktree_id/.worktree-initialized" ] && return 0
       [ -e "$HOME/.local/share/gem/worktrees/$worktree_id/.worktree-initialized" ] && return 0
+      [ -e "$HOME/.local/share/gem/worktrees/$worktree_id" ] && return 0
+      [ -e "$HOME/.cache/bundle/worktrees/$worktree_id" ] && return 0
 
       return 1
+    }
+
+    cleanup_worktree_state_by_id() {
+      worktree_id="$1"
+
+      cleanup_state_exists_for_worktree_id "$worktree_id" || return 0
+
+      pgdata="$HOME/.local/share/postgres/worktrees/$worktree_id"
+      pghost="/tmp/pg-$worktree_id"
+      pidfile="/tmp/pg-$worktree_id.pid"
+
+      echo "Cleaning stale worktree state $worktree_id" >&2
+
+      if [ -d "$pgdata" ] && { [ -f "$pgdata/postmaster.pid" ] || [ -f "$pidfile" ]; }; then
+        ${pkgs.postgresql}/bin/pg_ctl stop -D "$pgdata" -s -m fast || true
+      fi
+
+      rm -f "$pidfile"
+      rm -rf "$pghost" \
+        "$pgdata" \
+        "$HOME/.local/share/gem/worktrees/$worktree_id" \
+        "$HOME/.cache/bundle/worktrees/$worktree_id"
+    }
+
+    worktree_has_cleanup_state() {
+      worktree_id="$1"
+
+      cleanup_state_exists_for_worktree_id "$worktree_id"
     }
 
     cleanup_worktree_before_remove() {
@@ -151,6 +196,36 @@ let
         echo "worktree-clean failed for $worktree_path; not removing worktree" >&2
         return 1
       fi
+    }
+
+    worktree_prune_is_dry_run() {
+      prune_index="$1"
+      target_index=$((prune_index + 2))
+      arg_count="''${#args[@]}"
+
+      while [ "$target_index" -lt "$arg_count" ]; do
+        case "''${args[$target_index]}" in
+          -n|--dry-run)
+            return 0
+            ;;
+        esac
+
+        target_index=$((target_index + 1))
+      done
+
+      return 1
+    }
+
+    cleanup_missing_worktrees_before_prune() {
+      "$real_git" "''${global_args[@]}" worktree list --porcelain | sed -n 's/^worktree //p' | while IFS= read -r worktree_path; do
+        [ -n "$worktree_path" ] || continue
+        [ -d "$worktree_path" ] && continue
+
+        worktree_id="$(worktree_id_for_path_string "$worktree_path" || true)"
+        [ -n "$worktree_id" ] || continue
+
+        cleanup_worktree_state_by_id "$worktree_id"
+      done
     }
 
     args=("$@")
@@ -184,6 +259,16 @@ let
       && [ "''${args[$((subcommand_index + 1))]}" = "remove" ]; then
       remove_target="$(worktree_remove_target "$subcommand_index")"
       cleanup_worktree_before_remove "$(worktree_path_for_remove_target "$remove_target")"
+      exec "$real_git" "$@"
+    fi
+
+    if [ "$#" -gt "$((subcommand_index + 1))" ] \
+      && [ "''${args[$subcommand_index]}" = "worktree" ] \
+      && [ "''${args[$((subcommand_index + 1))]}" = "prune" ]; then
+      if ! worktree_prune_is_dry_run "$subcommand_index"; then
+        cleanup_missing_worktrees_before_prune
+      fi
+
       exec "$real_git" "$@"
     fi
 
