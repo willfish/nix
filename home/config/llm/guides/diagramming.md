@@ -41,6 +41,43 @@ flowchart TD
 - Avoid heavy use of `<b>`, `<i>`, and `<br/>` inside nodes.
 - Test diagrams in both light and dark mode before putting them in a PR.
 
+## Preferred Inline Mermaid Style
+
+For PR descriptions and small GitHub-native diagrams, prefer a simple style that keeps GitHub's default Mermaid rendering but adds a light consistent outline:
+
+```mermaid
+flowchart TD
+    INPUT[Input]
+
+    subgraph STAGE_ONE [First stage]
+        CHECK[Validate input]
+        PREPARE[Prepare context]
+    end
+
+    subgraph STAGE_TWO [Second stage]
+        PROCESS[Process safely]
+        OUTPUT[Return result]
+    end
+
+    INPUT --> CHECK
+    CHECK --> PREPARE
+    PREPARE --> PROCESS
+    PROCESS --> OUTPUT
+
+    classDef box stroke:#6366f1,stroke-width:2px
+    class INPUT,STAGE_ONE,CHECK,PREPARE,STAGE_TWO,PROCESS,OUTPUT box
+```
+
+Use this pattern when it helps the diagram feel intentional without making it fragile:
+
+- Use `flowchart TD`.
+- Group related steps with shallow `subgraph` blocks.
+- Keep node labels short and readable.
+- Use uppercase node IDs and clear prose labels.
+- Add one shared `classDef box stroke:#6366f1,stroke-width:2px`.
+- Apply the class to visible nodes and subgraphs.
+- Avoid `%%{init}` theme blocks for PR diagrams; GitHub partially ignores them and they can break dark mode.
+
 ## When to Commit an SVG Instead of Using Inline Mermaid
 
 Commit an SVG (and preferably the source) when:
