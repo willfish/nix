@@ -83,29 +83,15 @@ in
       btop # Resource monitor with a TUI
       htop # Interactive process viewer
 
-      # languages and their tools
-      bash-language-server # Bash language server
-      ccls # C/C++ language server
-      gopls # Go language server for IDEs
-      lua-language-server # Lua language server
+      # Language runtimes and project tools
       markdownlint-cli # Linter for Markdown files
-      marksman # Markdown previewer with live reload
-      nil # Nix language server for IDE integration
-      (lib.meta.lowPrio nodejs_latest) # Used just to install language servers
       pre-commit # Framework for managing pre-commit hooks
-      black # Python code formatter
-      isort # Python import sorter
-      pyright # Python language server
       python3
       ruby
-      stylua # Lua formatter
       terraform # For terraform_fmt, terraform_validate
       terraform-docs
-      terraform-ls
       terragrunt # For terragrunt-hclfmt
       tflint # For terraform_tflint
-      typescript-language-server # Language server for typescript
-      vscode-langservers-extracted # Extracted language servers for VSCode
 
       # Audio tools
       sox # Sound processing tool - used for Claude Code notification chimes
