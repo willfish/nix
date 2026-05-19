@@ -7,7 +7,6 @@ in
     ".aprc".source = "${configDir}/aprc";
     ".bin/".source = "${configDir}/bin";
     ".config/ghostty".source = "${configDir}/ghostty";
-    ".config/nvim/init.lua".source = "${configDir}/nvim/init.lua";
     ".config/nvim/snippets".source = "${configDir}/nvim/snippets";
     ".config/tmuxinator".source = "${configDir}/tmuxinator";
     ".gemrc".source = "${configDir}/gemrc";

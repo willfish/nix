@@ -19,10 +19,6 @@ in
       openssl.dev # Development files for OpenSSL (headers, libs)
       pkg-config # Helper tool to manage library dependencies during compilation
 
-      # Editor
-      neovim # Hyperextensible Vim-based text editor
-      tree-sitter # Parser generator CLI used by nvim-treesitter
-
       # Email
       himalaya # CLI email client
 
