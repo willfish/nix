@@ -29,6 +29,43 @@ flowchart TD
 
 **Better for complex flows** — Split into multiple smaller diagrams instead of one giant one.
 
+**Preferred PR style:**
+
+Use GitHub's default Mermaid theme and add one light shared outline class. This gives diagrams a cleaner, deliberate look without relying on fragile custom theme blocks.
+
+```mermaid
+flowchart TD
+    INPUT[Input]
+
+    subgraph STAGE_ONE [First stage]
+        CHECK[Validate input]
+        PREPARE[Prepare context]
+    end
+
+    subgraph STAGE_TWO [Second stage]
+        PROCESS[Process safely]
+        OUTPUT[Return result]
+    end
+
+    INPUT --> CHECK
+    CHECK --> PREPARE
+    PREPARE --> PROCESS
+    PROCESS --> OUTPUT
+
+    classDef box stroke:#6366f1,stroke-width:2px
+    class INPUT,STAGE_ONE,CHECK,PREPARE,STAGE_TWO,PROCESS,OUTPUT box
+```
+
+Use this pattern for small PR diagrams:
+
+- Use `flowchart TD`.
+- Group related steps with shallow `subgraph` blocks.
+- Keep node labels short and readable.
+- Use uppercase node IDs and clear prose labels.
+- Add one shared `classDef box stroke:#6366f1,stroke-width:2px`.
+- Apply the class to visible nodes and subgraphs.
+- Avoid `%%{init}` theme blocks in PR diagrams; GitHub only partially supports them and they can hurt dark mode.
+
 ## When to Abandon Inline Mermaid
 
 If your diagram:
