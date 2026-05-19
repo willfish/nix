@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MEM0_DIR="$HOME/.mem0"
 HERMES_DIR="$HOME/.hermes"
-MEMORIES_DIR="$HERMES_DIR/memories"
+MEMORY_DIR="$HERMES_DIR/memory"
 
 echo "🦉 Mem0 Self-Hosted Migration"
 echo "============================="
@@ -41,7 +41,7 @@ if [ -f "$HERMES_DIR/MEMORY.md" ]; then
 import re
 
 memory_file = "$HERMES_DIR/MEMORY.md"
-output_file = "$HERMES_DIR/memories/migrated-facts.jsonl"
+output_file = "$HERMES_DIR/memory/migrated-facts.jsonl"
 
 try:
     with open(memory_file) as f:
@@ -83,19 +83,19 @@ EOF
 fi
 
 # Extract from daily memory files
-if [ -d "$MEMORIES_DIR" ]; then
+if [ -d "$MEMORY_DIR" ]; then
     echo "  → Processing daily memory files..."
     python3 << 'EOF'
 import os
 import re
 from pathlib import Path
 
-memories_dir = Path("$MEMORIES_DIR")
-output_file = "$HERMES_DIR/memories/processed-facts.jsonl"
+memories_dir = Path("$MEMORY_DIR")
+output_file = "$HERMES_DIR/memory/processed-facts.jsonl"
 
 facts = []
 
-for md_file in sorted(memories_dir.glob("*.md"))[-7:]):  # Last 7 days
+for md_file in sorted(memories_dir.glob("*.md"))[-7:]:  # Last 7 days
     content = md_file.read_text()
     
     # Extract non-trivial content
