@@ -9,7 +9,8 @@ Use this for Ruby/Rails test work.
 
 Read:
 - `references/testing.md` for test strategy and when to write tests.
-- `references/rspec.md` for detailed RSpec syntax and style.
+- `references/rspec.md` for the Better Specs-derived rule checklist and
+  detailed RSpec syntax and style.
 
 Defaults:
 - RSpec everywhere; no minitest or cucumber.
@@ -17,4 +18,7 @@ Defaults:
 - Prefer test-first for non-trivial logic and bug fixes.
 - Use `.method` for class methods and `#method` for instance methods.
 - Contexts start with `when`, `with`, or `without`.
+- Cover valid, edge, and invalid cases.
+- Test observable behavior; avoid controller internals.
+- Stub external HTTP rather than calling live services.
 - Use factories, not fixtures.

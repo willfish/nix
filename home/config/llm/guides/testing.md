@@ -51,9 +51,13 @@ See `rspec.md` for syntax. Key points:
 - `.method` for class methods, `#method` for instance methods
 - Contexts: "when", "with", "without"
 - Descriptions under 40 chars
-- One assertion per example where practical
+- One behavior per example where practical
+- Cover valid, edge, and invalid cases
 - Use `let` and `let!` — avoid `before` blocks for setup that `let` handles
 - Use factories (FactoryBot), not fixtures
+- Test observable behavior; avoid controller internals
+- Stub external HTTP with WebMock or VCR
+- Create only the records the example needs
 
 ## Test-first for non-trivial logic
 

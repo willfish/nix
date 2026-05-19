@@ -32,17 +32,13 @@ in
     # ".gemini/skills/diagramming/SKILL.md".source = "${configDir}/llm/gemini/skills/diagramming/SKILL.md";
     # (Add reference mappings for the diagramming guides when Gemini skills deployment is enabled)
 
-    # Gemini CLI skills & guides (placeholder — activate when you start using it)
-    # Once you know the exact paths Gemini + Superpowers extension expects,
-    # we can deploy the job guides + thin skill wrappers the same way we do for Codex/Grok.
-    #
-    # Recommended pattern (use force = true on any recursive directories):
-    # ".gemini/guides/" = {
-    #   source = "${configDir}/llm/guides";
-    #   recursive = true;
-    #   force = true;
-    # };
-    # (see llm/gemini/README.md for the plan)
+    # Gemini CLI shared guides. Skill discovery is still pending confirmation,
+    # but the same reference material is available under ~/.gemini/guides/.
+    ".gemini/guides/" = {
+      source = "${configDir}/llm/guides";
+      recursive = true;
+      force = true;
+    };
 
     # Job-specific guides (Claude Code "Guides" panel + shared with Codex references)
     ".claude/guides/" = {
