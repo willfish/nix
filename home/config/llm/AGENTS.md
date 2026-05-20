@@ -20,6 +20,12 @@ The same universal rules file is used for all of them. Job-specific guides and w
 
 These rules establish a disciplined, high-reliability workflow across all projects and tools. **User instructions always take highest priority.**
 
+### Rails / Zeitwerk Autoloading
+
+For Rails apps using Zeitwerk, do not add explicit `require` statements for application constants in normal app code (`app/models`, `app/services`, controllers, etc.) when the constant is available through Rails autoloading. Prefer referencing the constant directly and let Zeitwerk load it.
+
+Initializers are different: they run during boot while loading configuration, so an explicit `require` can still be appropriate there, especially when the initializer needs a class/module before Rails has otherwise referenced it. Check existing initializer patterns before removing or adding requires.
+
 ### 1. Skills First (The Non-Negotiable Rule)
 
 Before any significant action, clarification, or exploration on a non-trivial task:
