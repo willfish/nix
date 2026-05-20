@@ -112,7 +112,6 @@ let
     "nvim-telescope/telescope-live-grep-args.nvim" = vimPlugins.telescope-live-grep-args-nvim;
     "nvim-telescope/telescope-fzf-native.nvim" = vimPlugins.telescope-fzf-native-nvim;
     "nvim-telescope/telescope-ui-select.nvim" = vimPlugins.telescope-ui-select-nvim;
-    "folke/lazydev.nvim" = vimPlugins.lazydev-nvim;
     "neovim/nvim-lspconfig" = vimPlugins.nvim-lspconfig;
     "saghen/blink.cmp" = vimPlugins.blink-cmp;
     "antosha417/nvim-lsp-file-operations" = vimPlugins.nvim-lsp-file-operations;
@@ -143,7 +142,6 @@ let
     "nvim-telescope/telescope-live-grep-args.nvim"
     "nvim-telescope/telescope-fzf-native.nvim"
     "nvim-telescope/telescope-ui-select.nvim"
-    "folke/lazydev.nvim"
   ];
 
   startPluginNames = lib.subtractLists optionalPluginNames (builtins.attrNames pluginMap);

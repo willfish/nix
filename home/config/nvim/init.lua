@@ -399,18 +399,6 @@ vim.keymap.set("n", "<leader>fn", function()
 	require("telescope.builtin").find_files({ cwd = "~/.dotfiles" })
 end, { desc = "[F]ind [N]ix files" })
 
-vim.api.nvim_create_autocmd("FileType", {
-	pattern = "lua",
-	once = true,
-	callback = function()
-		require_after_packadd("lazydev", { "lazydev.nvim" }).setup({
-			library = {
-				{ path = "${3rd}/luv/library", words = { "vim%.uv" } },
-			},
-		})
-	end,
-})
-
 require("blink.cmp").setup({
 	keymap = {
 		preset = "none",
@@ -427,14 +415,7 @@ require("blink.cmp").setup({
 		documentation = { auto_show = true },
 	},
 	sources = {
-		default = { "lazydev", "lsp", "path", "snippets" },
-		providers = {
-			lazydev = {
-				name = "LazyDev",
-				module = "lazydev.integrations.blink",
-				score_offset = 100,
-			},
-		},
+		default = { "lsp", "path", "snippets" },
 	},
 	signature = { enabled = true },
 })
