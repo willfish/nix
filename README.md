@@ -234,10 +234,22 @@ nix flake update
 
 ## Pre-commit Hooks
 
-Managed through `git-hooks.nix` and available in the dev shell (`nix develop`):
+Managed inline in `flake.nix` through `git-hooks.nix` and available in the dev shell (`nix develop`):
 
+- **actionlint** - GitHub Actions workflow linting
+- **check-added-large-files** - Prevent unexpectedly large files from being committed
+- **check-case-conflicts** - Detect filename case conflicts
+- **check-json** - JSON syntax validation
+- **check-merge-conflicts** - Detect unresolved merge conflict markers
+- **check-yaml** - YAML syntax validation
+- **deadnix** - Detect unused Nix code
+- **detect-private-keys** - Prevent private keys from being committed
 - **eclint** - EditorConfig validation
-- **nil** - Nix language linting
-- **ormolu** - Haskell formatting
 - **end-of-file-fixer** - Ensure files end with a newline
+- **fish-syntax** - Fish script syntax validation for custom scripts
+- **nil** - Nix language linting
+- **nixfmt** - Nix formatting
+- **shellcheck** - Shell script linting
+- **shfmt** - Shell script formatting
+- **stylua** - Lua formatting
 - **trim-trailing-whitespace** - Clean up trailing spaces
