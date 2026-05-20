@@ -1,4 +1,7 @@
-{ config, lib, pkgs, ... }:
+{
+  pkgs,
+  ...
+}:
 # Docker Compose service for Qdrant (Mem0 vector DB backend)
 {
   home.activationScripts.mem0-qdrant = {

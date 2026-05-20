@@ -4,7 +4,7 @@ GitHub's Mermaid renderer is convenient but has several limitations.
 
 ## Common Problems
 
-- **Parentheses in labels**: Using unescaped `(` or `)` inside node labels (e.g. `Node[william (Linux)]`) causes parse errors on GitHub.  
+- **Parentheses in labels**: Using unescaped `(` or `)` inside node labels (e.g. `Node[william (Linux)]`) causes parse errors on GitHub.
   **Recommended fix**: Use HTML entities (cleanest result on GitHub):
 `Node["william &#40;Linux&#41;"]` → renders as **william (Linux)** with no visible escape characters.
 

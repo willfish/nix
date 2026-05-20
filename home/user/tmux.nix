@@ -1,9 +1,11 @@
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 let
   inherit (pkgs) stdenv;
-  thumbsCommand = if stdenv.isDarwin
-    then "echo -n {} | pbcopy && tmux display-message \"Copied {}\""
-    else "echo -n {} | xclip -selection clipboard && tmux display-message \"Copied {}\"";
+  thumbsCommand =
+    if stdenv.isDarwin then
+      "echo -n {} | pbcopy && tmux display-message \"Copied {}\""
+    else
+      "echo -n {} | xclip -selection clipboard && tmux display-message \"Copied {}\"";
 in
 {
   programs.tmux = with pkgs.tmuxPlugins; {
