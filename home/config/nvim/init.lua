@@ -390,10 +390,15 @@ vim.keymap.set("n", "<leader>/", function()
 		previewer = false,
 	}))
 end, { desc = "[/] Fuzzily search in current buffer" })
-vim.keymap.set("n", "<leader>f/", telescope_builtin("live_grep", {
-	grep_open_files = true,
-	prompt_title = "Live Grep in Open Files",
-}), { desc = "[F]ind [/] in Open Files" })
+vim.keymap.set(
+	"n",
+	"<leader>f/",
+	telescope_builtin("live_grep", {
+		grep_open_files = true,
+		prompt_title = "Live Grep in Open Files",
+	}),
+	{ desc = "[F]ind [/] in Open Files" }
+)
 vim.keymap.set("n", "<leader>fn", function()
 	setup_telescope()
 	require("telescope.builtin").find_files({ cwd = "~/.dotfiles" })

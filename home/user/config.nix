@@ -1,4 +1,7 @@
-{ config, lib, pkgs, ... }:
+{
+  lib,
+  ...
+}:
 let
   configDir = ../config;
   sourceFile = source: {
@@ -91,7 +94,8 @@ let
     };
     diagramming = {
       "diagramming.md" = "${configDir}/llm/guides/diagramming.md";
-      "diagram-review-checklist.md" = "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
+      "diagram-review-checklist.md" =
+        "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
       "diagramming-how-to.md" = "${configDir}/llm/guides/diagramming-how-to.md";
     };
     hmrc-trade-tariff-workflow = {
@@ -134,35 +138,31 @@ let
 
   mkProcessSkillFiles =
     root:
-    lib.genAttrs
-      (map (skill: "${root}/${skill}/SKILL.md") processSkillNames)
-      (target: sourceFile "${configDir}/grok/skills/${builtins.elemAt (lib.splitString "/" target) 2}/SKILL.md");
+    lib.genAttrs (map (skill: "${root}/${skill}/SKILL.md") processSkillNames) (
+      target:
+      sourceFile "${configDir}/grok/skills/${builtins.elemAt (lib.splitString "/" target) 2}/SKILL.md"
+    );
 
-  mkReferenceLibraryFiles =
-    root: {
-      "${root}/references" = sourceDir "${configDir}/grok/skills/references";
-    };
+  mkReferenceLibraryFiles = root: {
+    "${root}/references" = sourceDir "${configDir}/grok/skills/references";
+  };
 
   mkSharedSkillFiles =
     root:
     lib.listToAttrs (
-      lib.concatMap
-        (
-          skill:
-          [
-            {
-              name = "${root}/${skill}/SKILL.md";
-              value = sourceFile "${configDir}/llm/skills/${skill}/SKILL.md";
-            }
-          ]
-          ++ lib.mapAttrsToList
-            (referenceName: referenceSource: {
-              name = "${root}/${skill}/references/${referenceName}";
-              value = sourceFile referenceSource;
-            })
-            sharedSkillReferences.${skill}
-        )
-        sharedSkillNames
+      lib.concatMap (
+        skill:
+        [
+          {
+            name = "${root}/${skill}/SKILL.md";
+            value = sourceFile "${configDir}/llm/skills/${skill}/SKILL.md";
+          }
+        ]
+        ++ lib.mapAttrsToList (referenceName: referenceSource: {
+          name = "${root}/${skill}/references/${referenceName}";
+          value = sourceFile referenceSource;
+        }) sharedSkillReferences.${skill}
+      ) sharedSkillNames
     );
 in
 {
@@ -184,7 +184,7 @@ in
   // lib.foldl' (acc: root: acc // mkReferenceLibraryFiles root) { } processSkillRoots;
 
   home.activation = {
-    createDiagramDirectories = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    createDiagramDirectories = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       mkdir -p "$HOME/diagrams/generated"
       mkdir -p "$HOME/diagrams/architecture"
     '';

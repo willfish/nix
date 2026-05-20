@@ -61,7 +61,7 @@
       darwinSystem = "aarch64-darwin";
       lib = nixpkgs-unstable.lib;
       linuxOverlay = (
-        final: prev: {
+        _final: _prev: {
           inherit (sniffy.packages.${linuxSystem}) sniffy;
           inherit (smailer.packages.${linuxSystem}) smailer;
           mux = mux.packages.${linuxSystem}.default;
@@ -76,7 +76,7 @@
         }
       );
       darwinOverlay = (
-        final: prev: {
+        _final: _prev: {
           inherit (sniffy.packages.${darwinSystem}) sniffy;
           inherit (smailer.packages.${darwinSystem}) smailer;
           mux = mux.packages.${darwinSystem}.default;
@@ -102,18 +102,42 @@
           darwinOverlay
         ];
       };
-      pre-commit-check = pre-commit-hooks.lib.${linuxSystem}.run {
-        src = ./.;
-        configPath = ".pre-commit-config-nix.yaml";
-        hooks = {
-          eclint.enable = true;
-          end-of-file-fixer.enable = true;
-          flake-checker.enable = false;
-          nil.enable = true;
-          ormolu.enable = true;
-          trim-trailing-whitespace.enable = true;
+      mkPreCommitCheck =
+        system: pkgsFor:
+        pre-commit-hooks.lib.${system}.run {
+          src = ./.;
+          configPath = ".pre-commit-config-nix.yaml";
+          hooks = {
+            actionlint.enable = true;
+            check-added-large-files.enable = true;
+            check-case-conflicts.enable = true;
+            check-json.enable = true;
+            check-merge-conflicts.enable = true;
+            check-yaml.enable = true;
+            deadnix.enable = true;
+            detect-private-keys.enable = true;
+            eclint.enable = true;
+            end-of-file-fixer.enable = true;
+            flake-checker.enable = false;
+            nil.enable = true;
+            nixfmt.enable = true;
+            shellcheck.enable = true;
+            shellcheck.excludes = [ "^\\.envrc$" ];
+            shfmt.enable = true;
+            stylua.enable = true;
+            trim-trailing-whitespace.enable = true;
+
+            fish-syntax = {
+              enable = true;
+              name = "fish-syntax";
+              description = "Check Fish scripts parse correctly";
+              entry = "${pkgsFor.fish}/bin/fish --no-config --no-execute";
+              files = "^home/config/bin/(log_for|notes|notes_on)$";
+            };
+          };
         };
-      };
+      pre-commit-check = mkPreCommitCheck linuxSystem pkgs;
+      darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
     in
     {
       nixosConfigurations = {
@@ -192,11 +216,14 @@
       };
       devShells.${darwinSystem} = {
         default = darwinPkgs.mkShell {
-          buildInputs = with darwinPkgs; [
-            d2
-            nodejs
-          ];
+          buildInputs =
+            darwin-pre-commit-check.enabledPackages
+            ++ (with darwinPkgs; [
+              d2
+              nodejs
+            ]);
           shellHook = ''
+            ${darwin-pre-commit-check.shellHook}
             # mmdc is available via npx (best experience on Apple Silicon)
             # Run: npx @mermaid-js/mermaid-cli --help
             echo "Diagram tools available: d2, nodejs (use npx @mermaid-js/mermaid-cli for mmdc)"
