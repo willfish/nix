@@ -19,7 +19,7 @@ This skill enforces high-discipline agent behavior. It is the foundation for rel
 ### 1. Skills Before Action (The Non-Negotiable Rule)
 Before giving any response, taking any action, or asking clarifying questions on a non-trivial task:
 
-- Check whether any skill in `~/.grok/skills/`, project `.grok/skills/`, or `~/.grok/skills-codex/` applies.
+- Check whether any skill in `~/.grok/skills/`, project `.grok/skills/`, or the equivalent skills directory for the active tool applies.
 - If there is even a 1% chance a skill is relevant → invoke it (read its SKILL.md and follow it).
 - Announce clearly: "Using [skill-name] for this..."
 

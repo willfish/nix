@@ -38,7 +38,7 @@ This repository has a well-developed multi-TUI LLM harness:
 - Universal rules from `home/config/llm/AGENTS.md` deployed to Grok, Claude Code, Codex, Gemini, `.agents`, and Antigravity fallback paths
 - Shared job-specific skills from `home/config/llm/skills/`
 - Shared guides from `home/config/llm/guides/`
-- Process skills and the broader reference library from `home/config/grok/skills/`
+- Process skills and the broader reference library from `home/config/llm/process-skills/` and `home/config/llm/references/`
 - The root `AGENTS.md` contains repo-specific guidance
 
 When working in this directory, always follow the universal harness rules plus this repo-local file.
@@ -70,7 +70,7 @@ When working inside this repository, the following conventions apply in addition
 
 - `flake.nix` — Main flake with inputs, outputs, and host configurations
 - `home/user/` — Home Manager configuration (packages.nix, programs.nix, shells.nix, config.nix, etc.)
-- `home/config/` — Static files symlinked into `~` and `~/.config` (nvim, fish, cosmic, grok/llm harness, etc.)
+- `home/config/` — Static files symlinked into `~` and `~/.config` (nvim, fish, cosmic, llm harness, etc.)
 - `system/` — Per-host NixOS configuration (andromeda/, starfish/, foundation/)
 
 ### Development Workflow (this repo)
@@ -112,7 +112,7 @@ This repository maintains a well-developed, multi-TUI harness:
 - **Universal harness**: `home/config/llm/AGENTS.md` (deployed everywhere)
 - **Job-specific guides**: `home/config/llm/guides/` (Jira, PRs, voice, epics/stories, RSpec, trade-tariff frontend, etc.)
 - **Shared job-specific skills**: `home/config/llm/skills/` (hmrc-trade-tariff-workflow, jira-workflow, will-voice, etc.)
-- **Process skills and reference library**: `home/config/grok/skills/` (superpowers, systematic-debugging, verification-before-completion, writing-plans, create-skill, references)
+- **Process skills and reference library**: `home/config/llm/process-skills/` + `home/config/llm/references/` (superpowers, systematic-debugging, verification-before-completion, writing-plans, create-skill, references)
 - **Repo-local guidance**: This file (the one you are reading)
 
 When working in this directory, always follow the rules in the universal `~/.grok/AGENTS.md` (or `~/.claude/CLAUDE.md`) **plus** this file.

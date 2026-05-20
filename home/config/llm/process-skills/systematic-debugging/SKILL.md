@@ -59,7 +59,7 @@ You **must** complete each phase before moving to the next.
    - Fix the *source*, not the symptom you first noticed.
 
 5. **Use supporting techniques when needed**
-   - See the raw reference material in `~/.grok/skills-codex/superpowers/skills/systematic-debugging/` for advanced techniques (`root-cause-tracing.md`, `defense-in-depth.md`, `condition-based-waiting.md`).
+   - See the raw reference material in `~/.grok/skills/references/superpowers/skills/systematic-debugging/` for advanced techniques (`root-cause-tracing.md`, `defense-in-depth.md`, `condition-based-waiting.md`).
 
 **Success criteria for Phase 1:** You can explain, in one clear sentence, the root cause and why the symptoms appear.
 

@@ -117,12 +117,12 @@ The user configuration is split into focused modules that are composed in `home/
 
 ### Packages
 
-Over 100 packages organised by purpose. Linux-only packages (GUI apps, clipboard tools, system tracers) are conditionally included using `lib.optionals stdenv.isLinux`.
+Over 100 packages organised by purpose. Platform-specific GUI apps, clipboard tools, and system tracers are conditionally included using `lib.optionals stdenv.isDarwin` / `lib.optionals stdenv.isLinux`.
 
 | Category | Packages | Platform |
 |----------|----------|----------|
-| **AI** | antigravity, gemini-cli, grok | All |
-| **AI** | claude-code, codex | Linux |
+| **AI** | antigravity, claude-code, codex, gemini-cli, grok | All |
+| **Desktop** | AeroSpace, Brave, Ghostty, Slack, Spotify, Telegram | Darwin |
 | **Desktop** | Brave, Chrome, Spotify, Slack, Telegram, LibreOffice, Variety | Linux |
 | **Dev Tools** | gh, delta, lazydocker, dive, fzf, ripgrep, fd, jq, yq, httpie | All |
 | **Networking** | nmap, mtr, doggo | All |
@@ -149,7 +149,7 @@ The LLM harness is deliberately single-source: universal rules, job guides, and 
 
 - **Shared job-specific skills** live in `home/config/llm/skills/` and are deployed to `~/.codex/skills/`, `~/.grok/skills/`, `~/.claude/skills/`, `~/.gemini/skills/`, `~/.agents/skills/`, and Antigravity fallback skill roots.
 
-- **Process skills and reference library** live in `home/config/grok/skills/` and are deployed to tools that do not already provide equivalent native skills.
+- **Process skills and reference library** live in `home/config/llm/process-skills/` and `home/config/llm/references/` and are deployed to tools that do not already provide equivalent native skills.
 
 This keeps Grok CLI, Claude Code, Codex, Gemini CLI, and Antigravity aligned without maintaining separate skill copies.
 

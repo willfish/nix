@@ -1,0 +1,163 @@
+# AeroSpace tiling window manager configuration
+# Translated from willfish/nix COSMIC DE / Pop Shell config
+#
+# Modifier: cmd (⌘) to match Super key on Linux
+# Note: This overrides some macOS defaults (Cmd+A, Cmd+S, etc.)
+# Use ctrl for standard macOS text editing shortcuts in apps instead.
+
+# Start AeroSpace at login
+start-at-login = true
+
+# Normalizations
+enable-normalization-flatten-containers = true
+enable-normalization-opposite-orientation-for-nested-containers = true
+
+# Mouse follows focus (replicates focus-follows-mouse behavior)
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+on-focus-changed = ['move-mouse window-lazy-center']
+
+# Layout
+default-root-container-layout = 'tiles'
+default-root-container-orientation = 'auto'
+
+# Gaps (inner=1, outer=1 from Pop Shell)
+[gaps]
+inner.horizontal = 1
+inner.vertical = 1
+outer.left = 1
+outer.right = 1
+outer.top = 1
+outer.bottom = 1
+
+# -------------------------------------------------------------------
+# Key bindings
+# -------------------------------------------------------------------
+[mode.main.binding]
+
+# Focus navigation: cmd + WASD (Super+WASD in Pop Shell / COSMIC)
+cmd-a = 'focus left'
+cmd-s = 'focus down'
+cmd-w = 'focus up'
+cmd-d = 'focus right'
+
+# Move windows: cmd+shift + WASD (Shift+Super+WASD)
+cmd-shift-a = 'move left'
+cmd-shift-s = 'move down'
+cmd-shift-w = 'move up'
+cmd-shift-d = 'move right'
+
+# Resize windows: ctrl+shift + WASD (Ctrl+Shift+WASD in Pop Shell)
+ctrl-shift-a = 'resize width -50'
+ctrl-shift-d = 'resize width +50'
+ctrl-shift-w = 'resize height +50'
+ctrl-shift-s = 'resize height -50'
+
+# Switch workspaces: cmd + number (Super+number)
+cmd-1 = 'workspace 1'
+cmd-2 = 'workspace 2'
+cmd-3 = 'workspace 3'
+cmd-4 = 'workspace 4'
+cmd-5 = 'workspace 5'
+cmd-6 = 'workspace 6'
+cmd-7 = 'workspace 7'
+cmd-8 = 'workspace 8'
+cmd-9 = 'workspace 9'
+
+# Move window to workspace: cmd+shift + number (Shift+Super+number)
+cmd-shift-1 = 'move-node-to-workspace 1'
+cmd-shift-2 = 'move-node-to-workspace 2'
+cmd-shift-3 = 'move-node-to-workspace 3'
+cmd-shift-4 = 'move-node-to-workspace 4'
+cmd-shift-5 = 'move-node-to-workspace 5'
+cmd-shift-6 = 'move-node-to-workspace 6'
+cmd-shift-7 = 'move-node-to-workspace 7'
+cmd-shift-8 = 'move-node-to-workspace 8'
+cmd-shift-9 = 'move-node-to-workspace 9'
+
+# Fullscreen toggle (Super+F)
+cmd-f = 'fullscreen'
+
+# Launcher (Super+X — mirrors Pop Shell activate-launcher)
+# Triggers Spotlight via AppleScript. Cmd+Space already opens Spotlight natively.
+cmd-x = '''exec-and-forget osascript -e 'tell application "System Events" to keystroke " " using command down' '''
+
+# Close window (Super+Q)
+cmd-q = 'close'
+
+# Layout toggles
+cmd-t = 'layout tiles horizontal vertical'
+cmd-e = 'layout accordion horizontal vertical'
+
+# Float toggle
+cmd-shift-f = 'layout floating tiling'
+
+# Balance sizes (like Pop Shell equalize)
+cmd-b = 'balance-sizes'
+
+# Join with adjacent window
+cmd-shift-h = 'join-with left'
+cmd-shift-j = 'join-with down'
+cmd-shift-k = 'join-with up'
+cmd-shift-l = 'join-with right'
+
+# Enter resize mode for fine-grained control
+cmd-r = 'mode resize'
+
+# -------------------------------------------------------------------
+# Resize mode
+# -------------------------------------------------------------------
+[mode.resize.binding]
+a = 'resize width -50'
+d = 'resize width +50'
+w = 'resize height +50'
+s = 'resize height -50'
+enter = 'mode main'
+esc = 'mode main'
+
+# -------------------------------------------------------------------
+# Auto-move rules (replicates GNOME auto-move-windows extension)
+# -------------------------------------------------------------------
+
+# Brave -> workspace 1
+[[on-window-detected]]
+if.app-id = 'com.brave.Browser'
+run = 'move-node-to-workspace 1'
+
+# Slack -> workspace 2
+[[on-window-detected]]
+if.app-id = 'com.tinyspeck.slackmacgap'
+run = 'move-node-to-workspace 2'
+
+# Telegram -> workspace 2
+[[on-window-detected]]
+if.app-id = 'ru.keepcoder.Telegram'
+run = 'move-node-to-workspace 2'
+
+# Discord -> workspace 2
+[[on-window-detected]]
+if.app-id = 'com.hnc.Discord'
+run = 'move-node-to-workspace 2'
+
+# Spotify -> workspace 3
+[[on-window-detected]]
+if.app-id = 'com.spotify.client'
+run = 'move-node-to-workspace 3'
+
+# -------------------------------------------------------------------
+# Float rules (replicates Pop Shell float list)
+# -------------------------------------------------------------------
+
+# Calculator always floats
+[[on-window-detected]]
+if.app-id = 'com.apple.calculator'
+run = 'layout floating'
+
+# System Preferences/Settings always floats
+[[on-window-detected]]
+if.app-id = 'com.apple.systempreferences'
+run = 'layout floating'
+
+# Finder always floats
+[[on-window-detected]]
+if.app-id = 'com.apple.finder'
+run = 'layout floating'

@@ -1,8 +1,10 @@
 {
   lib,
+  pkgs,
   ...
 }:
 let
+  inherit (pkgs) stdenv;
   configDir = ../config;
   sourceFile = source: {
     inherit source;
@@ -95,8 +97,11 @@ let
     diagramming = {
       "diagramming.md" = "${configDir}/llm/guides/diagramming.md";
       "diagram-review-checklist.md" =
-        "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
+        "${configDir}/llm/skills/diagramming/references/diagram-review-checklist.md";
       "diagramming-how-to.md" = "${configDir}/llm/guides/diagramming-how-to.md";
+      "mermaid-github-tips.md" = "${configDir}/llm/skills/diagramming/references/mermaid-github-tips.md";
+      "rendering-diagrams.md" = "${configDir}/llm/skills/diagramming/references/rendering-diagrams.md";
+      "tool-selection.md" = "${configDir}/llm/skills/diagramming/references/tool-selection.md";
     };
     hmrc-trade-tariff-workflow = {
       "jira.md" = "${configDir}/llm/guides/jira.md";
@@ -140,11 +145,11 @@ let
     root:
     lib.genAttrs (map (skill: "${root}/${skill}/SKILL.md") processSkillNames) (
       target:
-      sourceFile "${configDir}/grok/skills/${builtins.elemAt (lib.splitString "/" target) 2}/SKILL.md"
+      sourceFile "${configDir}/llm/process-skills/${builtins.elemAt (lib.splitString "/" target) 2}/SKILL.md"
     );
 
   mkReferenceLibraryFiles = root: {
-    "${root}/references" = sourceDir "${configDir}/grok/skills/references";
+    "${root}/references" = sourceDir "${configDir}/llm/references";
   };
 
   mkSharedSkillFiles =
@@ -176,6 +181,9 @@ in
     ".gitignore_global".source = "${configDir}/gitignore_global";
     ".gitmessage".source = "${configDir}/gitmessage";
     ".pryrc".source = "${configDir}/pryrc";
+  }
+  // lib.optionalAttrs stdenv.isDarwin {
+    ".aerospace.toml" = sourceFile "${configDir}/aerospace/aerospace.toml";
   }
   // mkAgentRuleFiles
   // mkGuideFiles

@@ -8,6 +8,13 @@
   home.enableNixpkgsReleaseCheck = false;
   programs.home-manager.enable = true;
 
+  targets = lib.mkIf pkgs.stdenv.isDarwin {
+    darwin = {
+      copyApps.enable = true;
+      linkApps.enable = false;
+    };
+  };
+
   news.display = "silent";
   news.json = lib.mkForce { };
   news.entries = lib.mkForce [ ];

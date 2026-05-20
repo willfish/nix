@@ -24,6 +24,7 @@ in
       # Utilities
       awscli2 # AWS command-line interface (version 2)
       bat # Cat clone with syntax highlighting and git integration
+      curl # Data transfer tool with support for many protocols
       bats # Bash automated testing system
       delta # Git diff viewer with syntax highlighting
       dive # Tool to explore Docker image layers
@@ -32,6 +33,7 @@ in
       fd # Fast, simple alternative to find
       fzf # Fuzzy finder for command-line searches
       gh # GitHub CLI for repository management
+      gnupg # OpenPGP encryption and signing tools
       httpie # User-friendly command-line HTTP client
       jq # Command-line JSON processor
       lazydocker # Terminal UI for Docker and Docker Compose
@@ -62,14 +64,17 @@ in
           xcolor
           ;
       }) # LaTeX distribution for PDF generation
+      pandoc # Universal markup converter
 
       # Build tools
       gcc # GNU Compiler Collection
+      go # Go compiler and tooling
       gnumake # GNU Make build automation tool
       makeWrapper # Nix utility to wrap executables with env vars
       nh # Nix helper for nixos-rebuild and home-manager with nice diffs
       nix-prefetch-github # Fetch GitHub repositories for Nix builds
       nix-tree # Visualize Nix derivation dependency trees
+      nodejs # JavaScript runtime used by frontend and diagram tooling
 
       # Networking tools
       dig # DNS lookup tool
@@ -93,12 +98,15 @@ in
       tflint # For terraform_tflint
 
       # Audio tools
+      ffmpeg # Audio/video conversion and inspection tools
       sox # Sound processing tool - used for Claude Code notification chimes
 
       # fun stuff
       fastfetch # Highly customizable system information tool
 
       antigravity # Google's Antigravity agentic IDE
+      claude-code # Command-line interface for Anthropic's Claude AI
+      codex # OpenAI Codex CLI coding agent
       gemini-cli # Google's Gemini CLI coding agent
       grok # Grok CLI from xAI
       sniffy # Simple TUI for sniffing out unused secrets in AWS
@@ -107,14 +115,22 @@ in
       ecs # Interactive tool for running commands in ECS tasks
     ]
     ++ lib.optionals stdenv.isDarwin [
+      aerospace # i3-like tiling window manager for macOS
+      brave # Privacy-focused browser
       colima # Lightweight container runtime for macOS
       docker # Docker client for talking to Colima or other Docker daemons
       docker-compose # Docker Compose CLI
+      ghostty-bin # GPU-accelerated terminal emulator
+      llama-cpp # Local LLM inference tools
+      ollama # Local LLM runtime
+      pango # Text layout/rendering tools used by graphics/document pipelines
+      slack # Team collaboration and messaging app
+      spotify # Music streaming application
+      tailscale # WireGuard-based private networking
+      telegram-desktop # Desktop client for Telegram messaging
     ]
     ++ lib.optionals stdenv.isLinux [
       bandwhich # Terminal bandwidth utilization tool
-      claude-code # Command-line interface for Anthropic's Claude AI
-      codex # OpenAI Codex CLI coding agent
       cosmic-ext-tweaks
       dropbox # Cloud storage and file synchronization service
       forte # Modern desktop music player with local library and streaming support
