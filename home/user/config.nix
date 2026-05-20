@@ -1,6 +1,169 @@
 { config, lib, pkgs, ... }:
 let
   configDir = ../config;
+  sourceFile = source: {
+    inherit source;
+    force = true;
+  };
+  sourceDir = source: {
+    inherit source;
+    recursive = true;
+    force = true;
+  };
+
+  agentRuleFiles = [
+    ".grok/AGENTS.md"
+    ".claude/CLAUDE.md"
+    ".claude/AGENTS.md"
+    ".codex/AGENTS.md"
+    ".gemini/GEMINI.md"
+    ".gemini/AGENTS.md"
+    ".agents/AGENTS.md"
+    ".agents/GEMINI.md"
+    ".antigravity/AGENTS.md"
+    ".antigravity/GEMINI.md"
+    ".antigravitycli/AGENTS.md"
+    ".antigravitycli/GEMINI.md"
+  ];
+
+  guideRoots = [
+    ".grok/guides"
+    ".claude/guides"
+    ".codex/guides"
+    ".gemini/guides"
+    ".agents/guides"
+    ".antigravity/guides"
+    ".antigravitycli/guides"
+  ];
+
+  sharedSkillRoots = [
+    ".grok/skills"
+    ".claude/skills"
+    ".codex/skills"
+    ".gemini/skills"
+    ".agents/skills"
+    ".antigravity/skills"
+    ".antigravitycli/skills"
+  ];
+
+  processSkillRoots = [
+    ".grok/skills"
+    ".claude/skills"
+    ".gemini/skills"
+    ".agents/skills"
+    ".antigravity/skills"
+    ".antigravitycli/skills"
+  ];
+
+  processSkillNames = [
+    "create-skill"
+    "superpowers"
+    "systematic-debugging"
+    "verification-before-completion"
+    "writing-plans"
+  ];
+
+  sharedSkillNames = [
+    "chain-of-verification"
+    "code-review-workflow"
+    "daily-notes"
+    "diagramming"
+    "hmrc-trade-tariff-workflow"
+    "jira-workflow"
+    "latex-pdfs"
+    "local-dev-environment"
+    "pull-request-workflow"
+    "rspec-testing"
+    "terminal-demos"
+    "will-voice"
+  ];
+
+  sharedSkillReferences = {
+    chain-of-verification = {
+      "planning.md" = "${configDir}/llm/guides/planning.md";
+    };
+    code-review-workflow = {
+      "reviews.md" = "${configDir}/llm/guides/reviews.md";
+      "voice.md" = "${configDir}/llm/guides/voice.md";
+    };
+    daily-notes = {
+      "daily-notes.md" = "${configDir}/llm/guides/daily-notes.md";
+    };
+    diagramming = {
+      "diagramming.md" = "${configDir}/llm/guides/diagramming.md";
+      "diagram-review-checklist.md" = "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
+      "diagramming-how-to.md" = "${configDir}/llm/guides/diagramming-how-to.md";
+    };
+    hmrc-trade-tariff-workflow = {
+      "jira.md" = "${configDir}/llm/guides/jira.md";
+      "prs.md" = "${configDir}/llm/guides/prs.md";
+      "epics-and-stories.md" = "${configDir}/llm/guides/epics-and-stories.md";
+      "git.md" = "${configDir}/llm/guides/git.md";
+      "reviews.md" = "${configDir}/llm/guides/reviews.md";
+      "rspec.md" = "${configDir}/llm/guides/rspec.md";
+      "testing.md" = "${configDir}/llm/guides/testing.md";
+      "trade-tariff-frontend.md" = "${configDir}/llm/guides/trade-tariff-frontend.md";
+    };
+    jira-workflow = {
+      "jira.md" = "${configDir}/llm/guides/jira.md";
+      "epics-and-stories.md" = "${configDir}/llm/guides/epics-and-stories.md";
+    };
+    latex-pdfs = {
+      "pdfs.md" = "${configDir}/llm/guides/pdfs.md";
+    };
+    local-dev-environment = { };
+    pull-request-workflow = {
+      "prs.md" = "${configDir}/llm/guides/prs.md";
+      "git.md" = "${configDir}/llm/guides/git.md";
+      "voice.md" = "${configDir}/llm/guides/voice.md";
+    };
+    rspec-testing = {
+      "rspec.md" = "${configDir}/llm/guides/rspec.md";
+      "testing.md" = "${configDir}/llm/guides/testing.md";
+    };
+    terminal-demos = {
+      "terminal-demos.md" = "${configDir}/llm/guides/terminal-demos.md";
+    };
+    will-voice = {
+      "voice.md" = "${configDir}/llm/guides/voice.md";
+    };
+  };
+
+  mkAgentRuleFiles = lib.genAttrs agentRuleFiles (_: sourceFile "${configDir}/llm/AGENTS.md");
+  mkGuideFiles = lib.genAttrs guideRoots (_: sourceDir "${configDir}/llm/guides");
+
+  mkProcessSkillFiles =
+    root:
+    lib.genAttrs
+      (map (skill: "${root}/${skill}/SKILL.md") processSkillNames)
+      (target: sourceFile "${configDir}/grok/skills/${builtins.elemAt (lib.splitString "/" target) 2}/SKILL.md");
+
+  mkReferenceLibraryFiles =
+    root: {
+      "${root}/references" = sourceDir "${configDir}/grok/skills/references";
+    };
+
+  mkSharedSkillFiles =
+    root:
+    lib.listToAttrs (
+      lib.concatMap
+        (
+          skill:
+          [
+            {
+              name = "${root}/${skill}/SKILL.md";
+              value = sourceFile "${configDir}/llm/skills/${skill}/SKILL.md";
+            }
+          ]
+          ++ lib.mapAttrsToList
+            (referenceName: referenceSource: {
+              name = "${root}/${skill}/references/${referenceName}";
+              value = sourceFile referenceSource;
+            })
+            sharedSkillReferences.${skill}
+        )
+        sharedSkillNames
+    );
 in
 {
   home.file = {
@@ -13,146 +176,12 @@ in
     ".gitignore_global".source = "${configDir}/gitignore_global";
     ".gitmessage".source = "${configDir}/gitmessage";
     ".pryrc".source = "${configDir}/pryrc";
-
-    # LLM Harness — single source of truth for Grok CLI, Claude Code, Codex, Gemini CLI (and future TUIs)
-    # Universal rules (portable discipline only; no dotfiles/Nix specifics)
-    ".grok/AGENTS.md".source = "${configDir}/llm/AGENTS.md";
-    ".claude/CLAUDE.md" = {
-      source = "${configDir}/llm/AGENTS.md";
-      force = true;
-    };
-    ".codex/AGENTS.md".source = "${configDir}/llm/AGENTS.md";
-    ".gemini/GEMINI.md" = {
-      source = "${configDir}/llm/AGENTS.md";
-      force = true;
-    };
-
-    # Gemini diagramming skill (placeholder)
-    # ".gemini/skills/diagramming/SKILL.md".source = "${configDir}/llm/gemini/skills/diagramming/SKILL.md";
-    # (Add reference mappings for the diagramming guides when Gemini skills deployment is enabled)
-
-    # Gemini CLI shared guides. Skill discovery is still pending confirmation,
-    # but the same reference material is available under ~/.gemini/guides/.
-    ".gemini/guides/" = {
-      source = "${configDir}/llm/guides";
-      recursive = true;
-      force = true;
-    };
-
-    # Job-specific guides (Claude Code "Guides" panel + shared with Codex references)
-    ".claude/guides/" = {
-      source = "${configDir}/llm/guides";
-      recursive = true;
-      force = true;
-    };
-
-    # Codex custom job-specific skill wrappers (SKILL.md only — references mapped individually below)
-    ".codex/skills/hmrc-trade-tariff-workflow/SKILL.md".source = "${configDir}/llm/codex-skills/hmrc-trade-tariff-workflow/SKILL.md";
-    ".codex/skills/jira-workflow/SKILL.md".source = "${configDir}/llm/codex-skills/jira-workflow/SKILL.md";
-    ".codex/skills/pull-request-workflow/SKILL.md".source = "${configDir}/llm/codex-skills/pull-request-workflow/SKILL.md";
-    ".codex/skills/code-review-workflow/SKILL.md".source = "${configDir}/llm/codex-skills/code-review-workflow/SKILL.md";
-    ".codex/skills/will-voice/SKILL.md".source = "${configDir}/llm/codex-skills/will-voice/SKILL.md";
-    ".codex/skills/daily-notes/SKILL.md".source = "${configDir}/llm/codex-skills/daily-notes/SKILL.md";
-    ".codex/skills/rspec-testing/SKILL.md".source = "${configDir}/llm/codex-skills/rspec-testing/SKILL.md";
-    ".codex/skills/local-dev-environment/SKILL.md".source = "${configDir}/llm/codex-skills/local-dev-environment/SKILL.md";
-    ".codex/skills/chain-of-verification/SKILL.md".source = "${configDir}/llm/codex-skills/chain-of-verification/SKILL.md";
-    ".codex/skills/latex-pdfs/SKILL.md".source = "${configDir}/llm/codex-skills/latex-pdfs/SKILL.md";
-    ".codex/skills/terminal-demos/SKILL.md".source = "${configDir}/llm/codex-skills/terminal-demos/SKILL.md";
-    ".codex/skills/diagramming/SKILL.md".source = "${configDir}/llm/codex-skills/diagramming/SKILL.md";
-
-    # Map canonical job guides into each Codex skill's references/ directory (single source of truth, no duplication)
-    ".codex/skills/hmrc-trade-tariff-workflow/references/jira.md".source = "${configDir}/llm/guides/jira.md";
-    ".codex/skills/hmrc-trade-tariff-workflow/references/prs.md".source = "${configDir}/llm/guides/prs.md";
-    ".codex/skills/hmrc-trade-tariff-workflow/references/epics-and-stories.md".source = "${configDir}/llm/guides/epics-and-stories.md";
-    ".codex/skills/hmrc-trade-tariff-workflow/references/git.md".source = "${configDir}/llm/guides/git.md";
-    ".codex/skills/hmrc-trade-tariff-workflow/references/reviews.md".source = "${configDir}/llm/guides/reviews.md";
-    ".codex/skills/hmrc-trade-tariff-workflow/references/rspec.md".source = "${configDir}/llm/guides/rspec.md";
-    ".codex/skills/hmrc-trade-tariff-workflow/references/testing.md".source = "${configDir}/llm/guides/testing.md";
-    ".codex/skills/hmrc-trade-tariff-workflow/references/trade-tariff-frontend.md".source = "${configDir}/llm/guides/trade-tariff-frontend.md";
-
-    ".codex/skills/jira-workflow/references/jira.md".source = "${configDir}/llm/guides/jira.md";
-    ".codex/skills/jira-workflow/references/epics-and-stories.md".source = "${configDir}/llm/guides/epics-and-stories.md";
-
-    ".codex/skills/pull-request-workflow/references/prs.md".source = "${configDir}/llm/guides/prs.md";
-    ".codex/skills/pull-request-workflow/references/git.md".source = "${configDir}/llm/guides/git.md";
-    ".codex/skills/pull-request-workflow/references/voice.md".source = "${configDir}/llm/guides/voice.md";
-
-    ".codex/skills/code-review-workflow/references/reviews.md".source = "${configDir}/llm/guides/reviews.md";
-    ".codex/skills/code-review-workflow/references/voice.md".source = "${configDir}/llm/guides/voice.md";
-
-    ".codex/skills/will-voice/references/voice.md".source = "${configDir}/llm/guides/voice.md";
-
-    ".codex/skills/daily-notes/references/daily-notes.md".source = "${configDir}/llm/guides/daily-notes.md";
-
-    ".codex/skills/rspec-testing/references/rspec.md".source = "${configDir}/llm/guides/rspec.md";
-    ".codex/skills/rspec-testing/references/testing.md".source = "${configDir}/llm/guides/testing.md";
-
-    ".codex/skills/chain-of-verification/references/planning.md".source = "${configDir}/llm/guides/planning.md";
-
-    ".codex/skills/latex-pdfs/references/pdfs.md".source = "${configDir}/llm/guides/pdfs.md";
-
-    ".codex/skills/terminal-demos/references/terminal-demos.md".source = "${configDir}/llm/guides/terminal-demos.md";
-
-    ".codex/skills/diagramming/references/diagramming.md".source = "${configDir}/llm/guides/diagramming.md";
-    ".codex/skills/diagramming/references/diagram-review-checklist.md".source = "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
-    ".codex/skills/diagramming/references/diagramming-how-to.md".source = "${configDir}/llm/guides/diagramming-how-to.md";
-
-    # Existing Grok-native process skills and reference library (unchanged)
-    ".grok/skills/create-skill/SKILL.md".source = "${configDir}/grok/skills/create-skill/SKILL.md";
-    ".grok/skills/superpowers/SKILL.md".source = "${configDir}/grok/skills/superpowers/SKILL.md";
-    ".grok/skills/systematic-debugging/SKILL.md".source = "${configDir}/grok/skills/systematic-debugging/SKILL.md";
-    ".grok/skills/verification-before-completion/SKILL.md".source = "${configDir}/grok/skills/verification-before-completion/SKILL.md";
-    ".grok/skills/writing-plans/SKILL.md".source = "${configDir}/grok/skills/writing-plans/SKILL.md";
-
-    ".grok/skills/references/" = {
-      source = "${configDir}/grok/skills/references";
-      recursive = true;
-    };
-
-    # Job-specific Grok-native skills (thin wrappers; canonical content lives in llm/guides/)
-    ".grok/skills/hmrc-trade-tariff-workflow/SKILL.md".source = "${configDir}/grok/skills/hmrc-trade-tariff-workflow/SKILL.md";
-    ".grok/skills/jira-workflow/SKILL.md".source = "${configDir}/grok/skills/jira-workflow/SKILL.md";
-    ".grok/skills/pull-request-workflow/SKILL.md".source = "${configDir}/grok/skills/pull-request-workflow/SKILL.md";
-    ".grok/skills/will-voice/SKILL.md".source = "${configDir}/grok/skills/will-voice/SKILL.md";
-    ".grok/skills/code-review-workflow/SKILL.md".source = "${configDir}/grok/skills/code-review-workflow/SKILL.md";
-    ".grok/skills/daily-notes/SKILL.md".source = "${configDir}/grok/skills/daily-notes/SKILL.md";
-    ".grok/skills/rspec-testing/SKILL.md".source = "${configDir}/grok/skills/rspec-testing/SKILL.md";
-    ".grok/skills/diagramming/SKILL.md".source = "${configDir}/grok/skills/diagramming/SKILL.md";
-
-    # Map canonical job guides into the Grok skill reference directories
-    ".grok/skills/hmrc-trade-tariff-workflow/references/jira.md".source = "${configDir}/llm/guides/jira.md";
-    ".grok/skills/hmrc-trade-tariff-workflow/references/prs.md".source = "${configDir}/llm/guides/prs.md";
-    ".grok/skills/hmrc-trade-tariff-workflow/references/epics-and-stories.md".source = "${configDir}/llm/guides/epics-and-stories.md";
-    ".grok/skills/hmrc-trade-tariff-workflow/references/git.md".source = "${configDir}/llm/guides/git.md";
-    ".grok/skills/hmrc-trade-tariff-workflow/references/reviews.md".source = "${configDir}/llm/guides/reviews.md";
-    ".grok/skills/hmrc-trade-tariff-workflow/references/rspec.md".source = "${configDir}/llm/guides/rspec.md";
-    ".grok/skills/hmrc-trade-tariff-workflow/references/testing.md".source = "${configDir}/llm/guides/testing.md";
-    ".grok/skills/hmrc-trade-tariff-workflow/references/trade-tariff-frontend.md".source = "${configDir}/llm/guides/trade-tariff-frontend.md";
-
-    ".grok/skills/jira-workflow/references/jira.md".source = "${configDir}/llm/guides/jira.md";
-    ".grok/skills/jira-workflow/references/epics-and-stories.md".source = "${configDir}/llm/guides/epics-and-stories.md";
-
-    ".grok/skills/pull-request-workflow/references/prs.md".source = "${configDir}/llm/guides/prs.md";
-    ".grok/skills/pull-request-workflow/references/git.md".source = "${configDir}/llm/guides/git.md";
-    ".grok/skills/pull-request-workflow/references/voice.md".source = "${configDir}/llm/guides/voice.md";
-
-    ".grok/skills/will-voice/references/voice.md".source = "${configDir}/llm/guides/voice.md";
-
-    ".grok/skills/code-review-workflow/references/reviews.md".source = "${configDir}/llm/guides/reviews.md";
-    ".grok/skills/code-review-workflow/references/voice.md".source = "${configDir}/llm/guides/voice.md";
-
-    ".grok/skills/daily-notes/references/daily-notes.md".source = "${configDir}/llm/guides/daily-notes.md";
-
-    ".grok/skills/rspec-testing/references/rspec.md".source = "${configDir}/llm/guides/rspec.md";
-    ".grok/skills/rspec-testing/references/testing.md".source = "${configDir}/llm/guides/testing.md";
-
-    ".grok/skills/diagramming/references/diagramming.md".source = "${configDir}/llm/guides/diagramming.md";
-    ".grok/skills/diagramming/references/tool-selection.md".source = "${configDir}/grok/skills/diagramming/references/tool-selection.md";
-    ".grok/skills/diagramming/references/mermaid-github-tips.md".source = "${configDir}/grok/skills/diagramming/references/mermaid-github-tips.md";
-    ".grok/skills/diagramming/references/diagram-review-checklist.md".source = "${configDir}/grok/skills/diagramming/references/diagram-review-checklist.md";
-    ".grok/skills/diagramming/references/diagramming-how-to.md".source = "${configDir}/llm/guides/diagramming-how-to.md";
-    ".grok/skills/diagramming/references/rendering-diagrams.md".source = "${configDir}/grok/skills/diagramming/references/rendering-diagrams.md";
-  };
+  }
+  // mkAgentRuleFiles
+  // mkGuideFiles
+  // lib.foldl' (acc: root: acc // mkSharedSkillFiles root) { } sharedSkillRoots
+  // lib.foldl' (acc: root: acc // mkProcessSkillFiles root) { } processSkillRoots
+  // lib.foldl' (acc: root: acc // mkReferenceLibraryFiles root) { } processSkillRoots;
 
   home.activation = {
     createDiagramDirectories = lib.hm.dag.entryAfter ["writeBoundary"] ''

@@ -100,6 +100,7 @@ in
       fastfetch # Highly customizable system information tool
 
       antigravity # Google's Antigravity agentic IDE
+      gemini-cli # Google's Gemini CLI coding agent
       grok # Grok CLI from xAI
       sniffy # Simple TUI for sniffing out unused secrets in AWS
       smailer # TUI for reviewing emails in an s3 bucket

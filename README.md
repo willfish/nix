@@ -42,7 +42,9 @@ flowchart TD
 | `sniffy` | AWS secrets scanner |
 | `smailer` | S3 email viewer |
 | `mux` | Tmux session manager |
+| `forte` | Desktop music player |
 | `trade-tariff-tools` | ECS task management CLI |
+| `llm-agents` | Grok, Codex, Claude Code, and Antigravity packages |
 
 ## Repository Structure
 
@@ -71,14 +73,14 @@ flowchart TD
         end
     end
 
-    subgraph OVERLAYS [Overlays]
-        TOOLS[sniffy, smailer, mux, claude-code...]
+    subgraph INPUTS [Package Inputs]
+        TOOLS[sniffy, smailer, mux, forte, llm-agents...]
     end
 
-    ROOT --> SYSTEM & HOME & OVERLAYS
+    ROOT --> SYSTEM & HOME & INPUTS
 
     classDef box stroke:#6366f1,stroke-width:2px
-    class ROOT,SYSTEM,HOME,OVERLAYS,MODULES,CONFIGS box
+    class ROOT,SYSTEM,HOME,INPUTS,MODULES,CONFIGS box
 ```
 
 ## Hosts
@@ -119,24 +121,8 @@ Over 100 packages organised by purpose. Linux-only packages (GUI apps, clipboard
 
 | Category | Packages | Platform |
 |----------|----------|----------|
-| **AI** | gemini-cli | All |
-| **AI** | claude-code | Linux |
-
-### AI / LLM Agent Harness
-
-A major recent addition is a **single-source-of-truth LLM agent harness** designed so that switching between different terminal AI tools feels seamless.
-
-- **Universal rules** live in `home/config/llm/AGENTS.md` and are deployed to:
-  - `~/.grok/AGENTS.md`
-  - `~/.claude/CLAUDE.md`
-  - `~/.codex/AGENTS.md`
-  - `~/.gemini/GEMINI.md`
-
-- **Job-specific content** (Jira workflows for the AI project on `transformuk.atlassian.net`, PR conventions, writing voice, RSpec patterns, trade-tariff frontend testing, epic/story style, etc.) lives in `home/config/llm/guides/` and is made available across tools.
-
-- Native skill wrappers exist for both Codex/Grok formats (and Gemini support is prepared).
-
-This means personal and work-specific conventions are consistent no matter whether you are using Grok CLI, Claude Code, Codex, or Gemini CLI. The architecture is documented in `home/config/llm/gemini/README.md` and the various `SKILL.md` files.
+| **AI** | antigravity, gemini-cli, grok | All |
+| **AI** | claude-code, codex | Linux |
 | **Desktop** | Brave, Chrome, Spotify, Slack, Telegram, LibreOffice, Variety | Linux |
 | **Dev Tools** | gh, delta, lazydocker, dive, fzf, ripgrep, fd, jq, yq, httpie | All |
 | **Networking** | nmap, mtr, doggo | All |
@@ -146,6 +132,34 @@ This means personal and work-specific conventions are consistent no matter wheth
 | **Monitoring** | btop, htop | All |
 | **Databases** | PostgreSQL, Valkey, pgcli | All |
 | **Custom** | sniffy, smailer, mux, ecs | All |
+
+### AI / LLM Agent Harness
+
+The LLM harness is deliberately single-source: universal rules, job guides, and job-specific skills live once in `home/config/llm/` and Home Manager expands them into each tool's expected config directories.
+
+- **Universal rules** live in `home/config/llm/AGENTS.md` and are deployed to:
+  - `~/.grok/AGENTS.md`
+  - `~/.claude/CLAUDE.md`
+  - `~/.codex/AGENTS.md`
+  - `~/.gemini/GEMINI.md`
+  - `~/.agents/AGENTS.md`
+  - Antigravity fallback paths under `~/.antigravity/` and `~/.antigravitycli/`
+
+- **Job-specific guides** live in `home/config/llm/guides/` and are deployed to every supported guide root.
+
+- **Shared job-specific skills** live in `home/config/llm/skills/` and are deployed to `~/.codex/skills/`, `~/.grok/skills/`, `~/.claude/skills/`, `~/.gemini/skills/`, `~/.agents/skills/`, and Antigravity fallback skill roots.
+
+- **Process skills and reference library** live in `home/config/grok/skills/` and are deployed to tools that do not already provide equivalent native skills.
+
+This keeps Grok CLI, Claude Code, Codex, Gemini CLI, and Antigravity aligned without maintaining separate skill copies.
+
+### Hermes / Mem0
+
+Hermes is currently managed outside this flake via Homebrew, but the repo keeps Qdrant support assets for Mem0-backed Hermes memory:
+
+- `home/config/docker-compose/mem0-qdrant/` contains the Qdrant Compose setup, health check, start script, and one-off migration helper.
+- Fish functions in `home/user/shells.nix` provide `mem0-qdrant-start`, `mem0-qdrant-logs`, and `mem0-status`.
+- `home/user/mem0-qdrant.nix` is retained as a seed for later promoting Hermes/Qdrant into Home Manager.
 
 ### Shell
 
@@ -176,14 +190,14 @@ Single `init.lua` configuration. Leader key is comma. Key mappings include `jk` 
 
 JetBrains Mono font, Catppuccin Mocha theme, slight transparency, 10K line scrollback, and a collection of custom GLSL shaders.
 
-## Overlays
+## Package Inputs And Overlays
 
-Packages that need to diverge from nixpkgs-unstable are overlaid through the flake:
+Personal tools and agent CLIs are exposed through flake inputs and package overlays:
 
 | Package | Source | Reason | Platform |
 |---------|--------|--------|----------|
-| `claude-code` | `overlays/claude-code/` | Pinned ahead of upstream | Linux |
-| `sniffy`, `smailer`, `mux` | GitHub flake inputs | Personal tools | All |
+| `antigravity`, `grok`, `codex`, `claude-code` | `llm-agents` flake input | Agent tooling | Mixed |
+| `sniffy`, `smailer`, `mux`, `forte` | GitHub flake inputs | Personal tools | Mixed |
 | `ecs` | `trade-tariff-tools` flake input | ECS task executor | All |
 
 ## Custom Scripts

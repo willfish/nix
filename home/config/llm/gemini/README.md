@@ -1,26 +1,27 @@
-# Gemini CLI Support
+# Gemini And Antigravity Support
 
-This directory exists so that Gemini CLI can be given the same harness experience as Grok, Claude Code, and Codex.
+Gemini CLI and Antigravity use the same canonical harness content as Grok, Claude Code, and Codex.
 
 ## Current state
 
-- Universal rules are deployed as `~/.gemini/GEMINI.md` (see `../AGENTS.md`).
-- Job-specific guides are deployed to `~/.gemini/guides/`.
-- Workflow skills are **not yet** deployed because the exact filesystem layout Gemini + Superpowers extension uses for skill discovery is not confirmed.
+- Universal rules are deployed as `~/.gemini/GEMINI.md`, `~/.gemini/AGENTS.md`, `~/.agents/AGENTS.md`, and Antigravity-specific fallback paths.
+- Shared guides are deployed under `~/.gemini/guides/`, `~/.agents/guides/`, `~/.antigravity/guides/`, and `~/.antigravitycli/guides/`.
+- Shared workflow skills are deployed from `home/config/llm/skills/` into `~/.gemini/skills/` and `~/.agents/skills/`.
+- The Grok process skills and reference library are also deployed into Gemini and `.agents` skill roots.
 
-## When you start using Gemini
+## Layout
 
-1. Install the Gemini CLI and the Superpowers extension (`gemini extensions install https://github.com/obra/superpowers`).
-2. Run it once so it creates its config directories.
-3. Tell me the paths it uses for skills / custom agents.
+Gemini CLI currently discovers user skills from `~/.gemini/skills/` and the `~/.agents/skills/` alias. Antigravity support is treated as the same harness plus defensive fallback paths until its CLI/IDE conventions settle.
 
-We will then:
-- Create thin Gemini-compatible skill wrappers under `llm/gemini/skills/` (or reuse Codex/Grok format if the extension supports it).
-- Add the corresponding `home.file` entries in `home/user/config.nix`.
-- Make sure the important workflow skills (`hmrc-trade-tariff-workflow`, `jira-workflow`, `will-voice`, etc.) are available with zero extra effort when you switch TUIs.
+Canonical sources:
+
+- `home/config/llm/AGENTS.md` — portable harness rules.
+- `home/config/llm/guides/` — detailed job-specific guides.
+- `home/config/llm/skills/` — shared job-specific `SKILL.md` wrappers.
+- `home/config/grok/skills/` — process skills and the broader reference library.
+
+Home Manager expands those sources into each tool's expected config directory in `home/user/config.nix`.
 
 ## Goal
 
-Switching between TUIs (Grok ↔ Claude Code ↔ Codex ↔ Gemini ↔ future) should be almost zero-friction for the harness, skills, and your personal/job-specific workflows. The only difference should be the tool's native capabilities and keybindings.
-
-This directory + the `llm/` structure is the mechanism that makes that possible.
+Switching between TUIs should be almost zero-friction for harness rules, skills, and personal/job-specific workflows. The only intended differences are each tool's native capabilities and keybindings.

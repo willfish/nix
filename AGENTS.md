@@ -33,14 +33,15 @@ This is William's personal NixOS + Home Manager dotfiles repository.
 
 ## AI / LLM Agent Setup
 
-This repository has a well-developed Grok CLI harness:
+This repository has a well-developed multi-TUI LLM harness:
 
-- Native skills: `superpowers`, `systematic-debugging`, `verification-before-completion`, `writing-plans`
-- High-quality reference library in `~/.grok/skills/references/` (Superpowers, plugin-eval, React/Supabase best practices)
-- Global rules deployed to `~/.grok/AGENTS.md` and `~/.claude/CLAUDE.md`
+- Universal rules from `home/config/llm/AGENTS.md` deployed to Grok, Claude Code, Codex, Gemini, `.agents`, and Antigravity fallback paths
+- Shared job-specific skills from `home/config/llm/skills/`
+- Shared guides from `home/config/llm/guides/`
+- Process skills and the broader reference library from `home/config/grok/skills/`
 - The root `AGENTS.md` contains repo-specific guidance
 
-When working in this directory, always follow the rules in the global `~/.grok/AGENTS.md` + this file.
+When working in this directory, always follow the universal harness rules plus this repo-local file.
 
 ## Other Notes
 
@@ -51,7 +52,7 @@ When working in this directory, always follow the rules in the global `~/.grok/A
 
 ---
 
-**Global agent rules** (harness discipline, debugging process, verification, planning, etc.) live in the managed file at `home/config/llm/AGENTS.md` and are deployed to `~/.grok/AGENTS.md`, `~/.claude/CLAUDE.md`, and `~/.codex/AGENTS.md`.
+**Global agent rules** (harness discipline, debugging process, verification, planning, etc.) live in the managed file at `home/config/llm/AGENTS.md` and are deployed to the supported TUI config directories via Home Manager.
 
 ---
 
@@ -110,8 +111,8 @@ This repository maintains a well-developed, multi-TUI harness:
 
 - **Universal harness**: `home/config/llm/AGENTS.md` (deployed everywhere)
 - **Job-specific guides**: `home/config/llm/guides/` (Jira, PRs, voice, epics/stories, RSpec, trade-tariff frontend, etc.)
-- **Codex-format skills**: `home/config/llm/codex-skills/` (hmrc-trade-tariff-workflow, jira-workflow, will-voice, etc.)
-- **Grok-native process skills**: `home/config/grok/skills/` (superpowers, systematic-debugging, verification-before-completion, writing-plans, create-skill) + large `references/` library
+- **Shared job-specific skills**: `home/config/llm/skills/` (hmrc-trade-tariff-workflow, jira-workflow, will-voice, etc.)
+- **Process skills and reference library**: `home/config/grok/skills/` (superpowers, systematic-debugging, verification-before-completion, writing-plans, create-skill, references)
 - **Repo-local guidance**: This file (the one you are reading)
 
 When working in this directory, always follow the rules in the universal `~/.grok/AGENTS.md` (or `~/.claude/CLAUDE.md`) **plus** this file.
@@ -125,4 +126,4 @@ When working in this directory, always follow the rules in the universal `~/.gro
 
 ---
 
-*Single-source LLM harness content (universal + job-specific) lives under `home/config/llm/`. The old dotfiles-centric "global" AGENTS.md has been retired in favour of the clean universal version + this repo-local document.*
+*Single-source LLM harness content (universal rules, shared guides, and shared job skills) lives under `home/config/llm/`. The old tool-specific global AGENTS files have been retired in favour of the clean universal version + this repo-local document.*

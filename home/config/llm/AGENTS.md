@@ -1,4 +1,4 @@
-# AGENTS.md - Universal Rules for AI Agents (Grok, Claude, Codex, Gemini, etc.)
+# AGENTS.md - Universal Rules for AI Agents (Grok, Claude, Codex, Gemini, Antigravity, etc.)
 
 This file is the single source of truth for portable agent harness discipline. It is deployed via Home Manager to:
 
@@ -6,6 +6,8 @@ This file is the single source of truth for portable agent harness discipline. I
 - `~/.claude/CLAUDE.md`
 - `~/.codex/AGENTS.md`
 - `~/.gemini/GEMINI.md`
+- `~/.agents/AGENTS.md`
+- Antigravity fallback config paths
 - (and any future TUIs)
 
 The same universal rules file is used for all of them. Job-specific guides and workflow skills are also made available where each TUI supports them.
@@ -22,7 +24,7 @@ These rules establish a disciplined, high-reliability workflow across all projec
 
 Before any significant action, clarification, or exploration on a non-trivial task:
 
-- Check whether any relevant skill applies (`/skills` in the current TUI, or the skills directory for your tool: `~/.grok/skills/`, `~/.claude/skills/`, `~/.codex/skills/`).
+- Check whether any relevant skill applies (`/skills` in the current TUI, or the skills directory for your tool: `~/.grok/skills/`, `~/.claude/skills/`, `~/.codex/skills/`, `~/.gemini/skills/`, `~/.agents/skills/`).
 - If there is even a 1% chance a skill is relevant → invoke it (read its `SKILL.md` or equivalent and follow it exactly).
 - Announce clearly: "Using [skill-name] for this..."
 
@@ -111,7 +113,7 @@ Always collect results via the proper output tool and clean up the subagent when
 
 ## Skill Authoring Guidelines
 
-When creating or updating skills (in `~/.grok/skills/<name>/`, `~/.claude/skills/<name>/`, `~/.codex/skills/<name>/`, or project-local equivalents):
+When creating or updating skills (in `~/.grok/skills/<name>/`, `~/.claude/skills/<name>/`, `~/.codex/skills/<name>/`, `~/.gemini/skills/<name>/`, `~/.agents/skills/<name>/`, or project-local equivalents):
 
 1. **Name**: lowercase, hyphens, 2–64 characters, verb-led where possible (e.g. `systematic-debugging`, `hmrc-trade-tariff-workflow`).
 
@@ -145,7 +147,7 @@ These core process skills are recommended for daily use regardless of project:
 - `verification-before-completion` — Strict evidence gate before claiming work is done
 - `writing-plans` — Detailed, bite-sized implementation planning (TDD style)
 
-Deeper supporting material and additional domain best-practices collections live in the reference libraries under your TUI's skills directory (e.g. `~/.grok/skills/references/`, `~/.codex/skills/.../references/`).
+Deeper supporting material and additional domain best-practices collections live in the reference libraries under your TUI's skills directory (e.g. `~/.grok/skills/references/`, `~/.gemini/skills/references/`, `~/.agents/skills/references/`, `~/.codex/skills/.../references/`).
 
 ---
 
@@ -168,7 +170,7 @@ For HMRC trade-tariff work (Jira AI project on `transformuk.atlassian.net`, PR c
 
 These guides are the canonical source for institutional knowledge on the AI Jira project and trade-tariff stack. They are deployed to all supported TUIs from a single location in this repository.
 
-**As native Grok skills**: The most frequently used workflows are also available as first-class Grok skills (discoverable via the Skill tool or `/skills`):
+**As shared skills**: The most frequently used workflows are available as first-class `SKILL.md` skills in each supported TUI:
 - `hmrc-trade-tariff-workflow`
 - `jira-workflow`
 - `pull-request-workflow`
@@ -178,10 +180,10 @@ These guides are the canonical source for institutional knowledge on the AI Jira
 - `rspec-testing`
 - `diagramming`
 
-These thin skills reference the same canonical content in `llm/guides/`.
+These thin skills live in `home/config/llm/skills/` and reference the same canonical content in `home/config/llm/guides/`.
 
 ---
 
 **Managed by**: `~/.dotfiles/home/config/llm/AGENTS.md` via Home Manager (`home/user/config.nix`).
 
-**Last major sync**: Codex Superpowers + job-specific HMRC trade-tariff guides consolidated into single-source `llm/` layout (2026).
+**Last major sync**: Shared job-specific skills, Gemini, and Antigravity harness targets consolidated into the single-source `llm/` layout (2026).
