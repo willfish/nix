@@ -11,6 +11,7 @@
   targets = lib.mkIf pkgs.stdenv.isDarwin {
     darwin = {
       copyApps.enable = true;
+      copyApps.directory = "Applications";
       linkApps.enable = false;
     };
   };
