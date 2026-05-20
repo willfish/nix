@@ -1,7 +1,6 @@
 .direnv
 .nix
 .claude/
-CLAUDE.md
 
 .worktrees
 .worktrees/
