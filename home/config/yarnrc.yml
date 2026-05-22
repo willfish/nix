@@ -1,0 +1,6 @@
+checksumBehavior: throw
+enableScripts: false
+enableStrictSsl: true
+enableTelemetry: false
+npmMinimalAgeGate: 3d
+npmPublishProvenance: true

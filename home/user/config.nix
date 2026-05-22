@@ -74,6 +74,7 @@ let
     "daily-notes"
     "diagramming"
     "hmrc-trade-tariff-workflow"
+    "javascript-supply-chain-security"
     "jira-workflow"
     "latex-pdfs"
     "local-dev-environment"
@@ -116,6 +117,10 @@ let
     jira-workflow = {
       "jira.md" = "${configDir}/llm/guides/jira.md";
       "epics-and-stories.md" = "${configDir}/llm/guides/epics-and-stories.md";
+    };
+    javascript-supply-chain-security = {
+      "javascript-supply-chain-security.md" =
+        "${configDir}/llm/guides/javascript-supply-chain-security.md";
     };
     latex-pdfs = {
       "pdfs.md" = "${configDir}/llm/guides/pdfs.md";
@@ -184,6 +189,10 @@ in
     ".pryrc".source = "${configDir}/pryrc";
     ".yarnrc" = {
       source = "${configDir}/yarnrc";
+      force = true;
+    };
+    ".yarnrc.yml" = {
+      source = "${configDir}/yarnrc.yml";
       force = true;
     };
   }

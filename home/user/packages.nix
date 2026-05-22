@@ -74,7 +74,7 @@ in
       nh # Nix helper for nixos-rebuild and home-manager with nice diffs
       nix-prefetch-github # Fetch GitHub repositories for Nix builds
       nix-tree # Visualize Nix derivation dependency trees
-      nodejs # JavaScript runtime used by frontend and diagram tooling
+      nodejs_24 # JavaScript runtime used by frontend and diagram tooling
 
       # Networking tools
       dig # DNS lookup tool
