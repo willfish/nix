@@ -180,6 +180,7 @@ in
     ".gemrc".source = "${configDir}/gemrc";
     ".gitignore_global".source = "${configDir}/gitignore_global";
     ".gitmessage".source = "${configDir}/gitmessage";
+    ".npmrc".source = "${configDir}/npmrc";
     ".pryrc".source = "${configDir}/pryrc";
   }
   // lib.optionalAttrs stdenv.isDarwin {
