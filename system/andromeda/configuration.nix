@@ -1,4 +1,10 @@
-{ pkgs, config, ... }:
+{
+  pkgs,
+  config,
+  lib,
+  options,
+  ...
+}:
 
 {
   system.stateVersion = "24.11";
@@ -21,12 +27,19 @@
   hardware.graphics.enable = true;
   hardware.nvidia = {
     modesetting.enable = true;
-    powerManagement.enable = true;
-    # NVIDIA 595 open modules default to the kernel suspend notifier path.
-    # On this RTX 5090/COSMIC setup that path is hitting GSP heartbeat
-    # timeouts after S3 resume and wedging nvidia-modeset.
-    powerManagement.kernelSuspendNotifier = false;
-    # powerManagement.finegrained = true; Fine-grained power management requires offload to be enabled.
+    powerManagement = {
+      enable = true;
+      # finegrained = true; Fine-grained power management requires offload to be enabled.
+    }
+    //
+      lib.optionalAttrs
+        (lib.hasAttrByPath [ "hardware" "nvidia" "powerManagement" "kernelSuspendNotifier" ] options)
+        {
+          # NVIDIA 595 open modules default to the kernel suspend notifier path.
+          # On this RTX 5090/COSMIC setup that path is hitting GSP heartbeat
+          # timeouts after S3 resume and wedging nvidia-modeset.
+          kernelSuspendNotifier = false;
+        };
     open = true; # Essential for Blackwell
     nvidiaSettings = true;
     package = config.boot.kernelPackages.nvidiaPackages.beta;
