@@ -37,6 +37,7 @@
       url = "github:trade-tariff/trade-tariff-tools";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    llm-agents.url = "github:numtide/llm-agents.nix";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # nixpkgs-local.url = "path:/home/william/Repositories/nixpkgs";
   };
@@ -50,6 +51,7 @@
       mux,
       forte,
       trade-tariff-tools,
+      llm-agents,
       nixos-hardware,
       # nixpkgs-local,
       ...
@@ -65,6 +67,13 @@
           mux = mux.packages.${linuxSystem}.default;
           forte = forte.packages.${linuxSystem}.default;
           inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
+          inherit (llm-agents.packages.${linuxSystem})
+            antigravity
+            claude-code
+            codex
+            gemini-cli
+            grok
+            ;
         }
       );
       darwinOverlay = (
@@ -73,6 +82,13 @@
           inherit (smailer.packages.${darwinSystem}) smailer;
           mux = mux.packages.${darwinSystem}.default;
           inherit (trade-tariff-tools.packages.${darwinSystem}) ecs;
+          inherit (llm-agents.packages.${darwinSystem})
+            antigravity
+            claude-code
+            codex
+            gemini-cli
+            grok
+            ;
         }
       );
       pkgs = import nixpkgs {

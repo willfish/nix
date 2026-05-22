@@ -108,6 +108,7 @@ in
       claude-code # Command-line interface for Anthropic's Claude AI
       codex # OpenAI Codex CLI coding agent
       gemini-cli # Google's Gemini CLI coding agent
+      grok # Grok CLI from xAI
       sniffy # Simple TUI for sniffing out unused secrets in AWS
       smailer # TUI for reviewing emails in an s3 bucket
       mux # Fast tmuxinator replacement in C
