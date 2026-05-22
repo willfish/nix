@@ -1,1 +1,5 @@
 ignore-scripts=true
+allow-git=none
+audit=true
+fund=false
+save-exact=true
