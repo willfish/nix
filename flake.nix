@@ -8,42 +8,41 @@
     - Home Manager configuration for my user account on all systems.
   '';
   inputs = {
-    nixpkgs-unstable.url = "nixpkgs/nixos-unstable";
-    pre-commit-hooks.url = "github:cachix/git-hooks.nix";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    pre-commit-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      url = "github:nix-community/home-manager/release-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     sniffy = {
       url = "github:willfish/sniffy";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     smailer = {
       url = "github:willfish/smailer";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     mux = {
       url = "github:willfish/mux";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     forte = {
       url = "github:willfish/forte";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     trade-tariff-tools = {
       url = "github:trade-tariff/trade-tariff-tools";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-    };
-    llm-agents = {
-      url = "github:numtide/llm-agents.nix";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # nixpkgs-local.url = "path:/home/william/Repositories/nixpkgs";
   };
   outputs =
     {
-      nixpkgs-unstable,
+      nixpkgs,
       pre-commit-hooks,
       home-manager,
       sniffy,
@@ -51,7 +50,6 @@
       mux,
       forte,
       trade-tariff-tools,
-      llm-agents,
       nixos-hardware,
       # nixpkgs-local,
       ...
@@ -59,7 +57,7 @@
     let
       linuxSystem = "x86_64-linux";
       darwinSystem = "aarch64-darwin";
-      lib = nixpkgs-unstable.lib;
+      lib = nixpkgs.lib;
       linuxOverlay = (
         _final: _prev: {
           inherit (sniffy.packages.${linuxSystem}) sniffy;
@@ -67,12 +65,6 @@
           mux = mux.packages.${linuxSystem}.default;
           forte = forte.packages.${linuxSystem}.default;
           inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
-          inherit (llm-agents.packages.${linuxSystem})
-            antigravity
-            codex
-            claude-code
-            grok
-            ;
         }
       );
       darwinOverlay = (
@@ -81,13 +73,9 @@
           inherit (smailer.packages.${darwinSystem}) smailer;
           mux = mux.packages.${darwinSystem}.default;
           inherit (trade-tariff-tools.packages.${darwinSystem}) ecs;
-          inherit (llm-agents.packages.${darwinSystem})
-            antigravity
-            grok
-            ;
         }
       );
-      pkgs = import nixpkgs-unstable {
+      pkgs = import nixpkgs {
         system = linuxSystem;
         config.allowUnfree = true;
         config.nvidia.acceptLicense = true;
@@ -95,7 +83,7 @@
           linuxOverlay
         ];
       };
-      darwinPkgs = import nixpkgs-unstable {
+      darwinPkgs = import nixpkgs {
         system = darwinSystem;
         config.allowUnfree = true;
         overlays = [
@@ -144,22 +132,15 @@
         andromeda = lib.nixosSystem {
           system = linuxSystem;
           modules = [ ./system/andromeda/configuration.nix ];
-          specialArgs = {
-            pkgs-unstable = pkgs;
-          };
         };
         starfish = lib.nixosSystem {
           system = linuxSystem;
           modules = [ ./system/starfish/configuration.nix ];
-          specialArgs = {
-            pkgs-unstable = pkgs;
-          };
         };
         foundation = lib.nixosSystem {
           system = linuxSystem;
           modules = [ ./system/foundation/configuration.nix ];
           specialArgs = {
-            pkgs-unstable = pkgs;
             inherit nixos-hardware;
           };
         };

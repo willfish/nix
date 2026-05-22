@@ -108,7 +108,6 @@ in
       claude-code # Command-line interface for Anthropic's Claude AI
       codex # OpenAI Codex CLI coding agent
       gemini-cli # Google's Gemini CLI coding agent
-      grok # Grok CLI from xAI
       sniffy # Simple TUI for sniffing out unused secrets in AWS
       smailer # TUI for reviewing emails in an s3 bucket
       mux # Fast tmuxinator replacement in C
@@ -117,17 +116,14 @@ in
     ++ lib.optionals stdenv.isDarwin [
       aerospace # i3-like tiling window manager for macOS
       brave # Privacy-focused browser
-      colima # Lightweight container runtime for macOS
       docker # Docker client for talking to Colima or other Docker daemons
       docker-compose # Docker Compose CLI
       ghostty-bin # GPU-accelerated terminal emulator
       llama-cpp # Local LLM inference tools
-      ollama # Local LLM runtime
       pango # Text layout/rendering tools used by graphics/document pipelines
       slack # Team collaboration and messaging app
       spotify # Music streaming application
       tailscale # WireGuard-based private networking
-      telegram-desktop # Desktop client for Telegram messaging
     ]
     ++ lib.optionals stdenv.isLinux [
       bandwhich # Terminal bandwidth utilization tool

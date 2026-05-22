@@ -35,6 +35,13 @@ let
       rev = "e78245995a09233e243bf48169b2f00dc76341f7";
       hash = "sha256-Q/SNFkMSREVEeDiikdMXQCVxrt3iThQUh08YMcN9qSk=";
     };
+    vim-angry = buildPlugin {
+      pname = "vim-angry";
+      owner = "b4winckler";
+      repo = "vim-angry";
+      rev = "08e9e9a50e6683ac7b0c1d6fddfb5f1235c75700";
+      hash = "sha256-YKhVMYoFpa1vUQbNb5kVemJ/0nZ8ExmFxu8CNenfrjM=";
+    };
     vim-textobj-python = buildPlugin {
       pname = "vim-textobj-python";
       owner = "bps";
@@ -83,7 +90,7 @@ let
     "tpope/vim-unimpaired" = vimPlugins.vim-unimpaired;
     "xiyaowong/nvim-cursorword" = vimPlugins.vim-cursorword;
     "github/copilot.vim" = vimPlugins.copilot-vim;
-    "b4winckler/vim-angry" = vimPlugins.vim-angry;
+    "b4winckler/vim-angry" = customPlugins.vim-angry;
     "bps/vim-textobj-python" = customPlugins.vim-textobj-python;
     "kana/vim-textobj-line" = vimPlugins.vim-textobj-line;
     "kana/vim-textobj-user" = vimPlugins.vim-textobj-user;
@@ -162,7 +169,7 @@ in
     withNodeJs = true;
     withPython3 = true;
     withRuby = false;
-    initLua = builtins.readFile ../config/nvim/init.lua;
+    extraLuaConfig = builtins.readFile ../config/nvim/init.lua;
 
     plugins = startPlugins ++ optionalPlugins;
 
