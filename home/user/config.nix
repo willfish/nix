@@ -182,6 +182,10 @@ in
     ".gitmessage".source = "${configDir}/gitmessage";
     ".npmrc".source = "${configDir}/npmrc";
     ".pryrc".source = "${configDir}/pryrc";
+    ".yarnrc" = {
+      source = "${configDir}/yarnrc";
+      force = true;
+    };
   }
   // lib.optionalAttrs stdenv.isDarwin {
     ".aerospace.toml" = sourceFile "${configDir}/aerospace/aerospace.toml";
