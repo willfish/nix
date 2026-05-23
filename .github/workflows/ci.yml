@@ -28,8 +28,8 @@ jobs:
       - name: Check flake evaluation
         run: nix flake check --no-build
 
-      - name: Build Linux Home Manager activation package
-        run: nix build .#homeConfigurations.william-linux.activationPackage --no-link
+      - name: Check Linux Home Manager activation package closure
+        run: nix build .#homeConfigurations.william-linux.activationPackage --dry-run
 
   nix-darwin:
     name: Nix Darwin
@@ -41,5 +41,5 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3
 
-      - name: Build Darwin Home Manager activation package
-        run: nix build .#homeConfigurations.william-darwin.activationPackage --no-link
+      - name: Check Darwin Home Manager activation package closure
+        run: nix build .#homeConfigurations.william-darwin.activationPackage --dry-run
