@@ -88,6 +88,7 @@
           inherit (sniffy.packages.${darwinSystem}) sniffy;
           inherit (smailer.packages.${darwinSystem}) smailer;
           mux = mux.packages.${darwinSystem}.default;
+          forte = forte.packages.${darwinSystem}.default;
           inherit (trade-tariff-tools.packages.${darwinSystem}) ecs;
           inherit (llm-agents.packages.${darwinSystem})
             antigravity

@@ -120,6 +120,7 @@ in
       brave # Privacy-focused browser
       docker # Docker client for talking to Colima or other Docker daemons
       docker-compose # Docker Compose CLI
+      forte # Modern desktop music player with local library and streaming support
       ghostty-bin # GPU-accelerated terminal emulator
       llama-cpp # Local LLM inference tools
       pango # Text layout/rendering tools used by graphics/document pipelines

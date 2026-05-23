@@ -193,11 +193,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1779562377,
-        "narHash": "sha256-FcdoD8qAi2zKqJ/MDuI46w9q2nkqQZk0epFIxNW/PMQ=",
+        "lastModified": 1779565665,
+        "narHash": "sha256-RxnMTdmtX7+qPlNiCmzFJwEvSjQi1b2iL3RBCsiPuiw=",
         "owner": "willfish",
         "repo": "forte",
-        "rev": "798b55f3aa8187e32d2cfd804c783d6992d339fc",
+        "rev": "afc253ba402a1a1822e8305c205996ce63e4d6de",
         "type": "github"
       },
       "original": {
