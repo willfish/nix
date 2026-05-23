@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ secrets.UPDATE_FLAKE_LOCK_TOKEN || github.token }}
 
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3
@@ -24,4 +26,31 @@ jobs:
       - name: Update flake.lock
         uses: DeterminateSystems/update-flake-lock@834c491b2ece4de0bbd00d85214bb5e83b4da5c6 # v28
         with:
+          token: ${{ secrets.UPDATE_FLAKE_LOCK_TOKEN || github.token }}
           pr-title: Update Nix flake inputs
+
+      - name: Enable auto-merge for flake.lock PR
+        env:
+          GH_TOKEN: ${{ secrets.UPDATE_FLAKE_LOCK_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+
+          pr_number="$(gh pr list \
+            --head update_flake_lock_action \
+            --base master \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -z "$pr_number" ]; then
+            echo "No open update_flake_lock_action PR found."
+            exit 0
+          fi
+
+          changed_files="$(gh pr view "$pr_number" --json files --jq '.files[].path')"
+          if [ "$changed_files" != "flake.lock" ]; then
+            printf 'Unexpected files changed in PR #%s:\n%s\n' "$pr_number" "$changed_files" >&2
+            exit 1
+          fi
+
+          gh pr merge "$pr_number" --auto --squash --delete-branch
