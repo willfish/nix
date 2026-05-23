@@ -113,6 +113,7 @@ in
       smailer # TUI for reviewing emails in an s3 bucket
       mux # Fast tmuxinator replacement in C
       ecs # Interactive tool for running commands in ECS tasks
+      bitwarden-desktop # Cross-platform password manager with a desktop client - enables fingerprint unlocking on macOS and Linux
     ]
     ++ lib.optionals stdenv.isDarwin [
       aerospace # i3-like tiling window manager for macOS
