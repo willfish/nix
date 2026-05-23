@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nix-linux:
+    name: Nix Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3
+
+      - name: Check flake evaluation
+        run: nix flake check --no-build
+
+      - name: Build Linux Home Manager activation package
+        run: nix build .#homeConfigurations.william-linux.activationPackage --no-link
+
+  nix-darwin:
+    name: Nix Darwin
+    runs-on: macos-15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3
+
+      - name: Build Darwin Home Manager activation package
+        run: nix build .#homeConfigurations.william-darwin.activationPackage --no-link
