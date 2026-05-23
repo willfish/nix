@@ -66,6 +66,13 @@
           inherit (smailer.packages.${linuxSystem}) smailer;
           mux = mux.packages.${linuxSystem}.default;
           forte = forte.packages.${linuxSystem}.default;
+          variety = _prev.variety.overrideAttrs (old: {
+            postPatch = (old.postPatch or "") + ''
+              substituteInPlace variety/Util.py \
+                --replace-fail "super(VarietyMetadata, self).__init__(path=path)" \
+                               "super(VarietyMetadata, self).__init__(); self.open_path(path)"
+            '';
+          });
           inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
           inherit (llm-agents.packages.${linuxSystem})
             antigravity
