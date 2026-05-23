@@ -29,8 +29,21 @@ let
       "gpt-5.3-codex" = "gpt-5.4";
     };
 
-    tui.model_availability_nux = {
-      "gpt-5.5" = 4;
+    tui = {
+      status_line = [
+        "model-with-reasoning"
+        "current-dir"
+        "git-branch"
+        "pull-request-number"
+        "context-remaining"
+        "five-hour-limit"
+        "used-tokens"
+      ];
+      status_line_use_colors = true;
+
+      model_availability_nux = {
+        "gpt-5.5" = 4;
+      };
     };
 
     plugins = {
