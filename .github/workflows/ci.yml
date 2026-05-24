@@ -26,7 +26,7 @@ jobs:
         uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3
 
       - name: Check flake evaluation
-        run: nix flake check --no-build --option extra-platforms ''
+        run: nix flake check --no-build --system x86_64-linux
 
       - name: Check Linux Home Manager activation package closure
         run: nix build .#homeConfigurations.william-linux.activationPackage --dry-run
