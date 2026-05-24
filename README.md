@@ -35,9 +35,13 @@ flowchart TD
 
 | Input | Purpose |
 |-------|---------|
-| `nixpkgs-unstable` | Primary package source |
+| `nixpkgs` | Primary package source |
 | `home-manager` | Declarative user environment |
 | `nixos-hardware` | Hardware-specific modules (Framework laptop) |
+| `flake-parts` | Composable flake structure and per-system outputs |
+| `treefmt-nix` | Shared formatter/check wiring for `nix fmt` |
+| `stylix` | Shared colour and font theming |
+| `nix-index-database` | Prebuilt nix-index database and `comma` integration |
 | `pre-commit-hooks` | Git hook management |
 | `sniffy` | AWS secrets scanner |
 | `smailer` | S3 email viewer |
@@ -186,6 +190,8 @@ COSMIC desktop with autotiling, focus-follows-cursor, and active window hints. P
 
 Single `init.lua` configuration. Leader key is comma. Key mappings include `jk` for escape, JIRA ticket insertion from branch names, and quickfix list toggling.
 
+Stylix owns Neovim's colour scheme through the shared Rose Pine Base16 palette. For this repository, Conform delegates formatting to `nix fmt` so save-on-format follows the same treefmt configuration as pre-commit and CI checks.
+
 ### Ghostty
 
 JetBrains Mono font, Catppuccin Mocha theme, slight transparency, 10K line scrollback, and a collection of custom GLSL shaders.
@@ -222,7 +228,7 @@ sudo nixos-rebuild switch --flake .#foundation  # framework laptop
 Rebuild the Home Manager configuration:
 
 ```bash
-home-manager switch --flake .#william          # Linux
+home-manager switch --flake .#william-linux    # Linux
 home-manager switch --flake .#william-darwin   # macOS
 ```
 
@@ -232,9 +238,18 @@ Update all flake inputs:
 nix flake update
 ```
 
+Format and verify the repository:
+
+```bash
+nix fmt
+nix flake check
+```
+
+`flake-parts` owns the per-system outputs in `flake.nix`, so new formatter, check, package, app, and dev shell outputs should usually be added under `perSystem`.
+
 ## Pre-commit Hooks
 
-Managed inline in `flake.nix` through `git-hooks.nix` and available in the dev shell (`nix develop`):
+Managed inline in `flake.nix` through `git-hooks.nix` and available in the dev shell (`nix develop`). Formatting is intentionally centralised through treefmt: `nix fmt`, pre-commit, and Neovim all use the same formatter path for this repository.
 
 - **actionlint** - GitHub Actions workflow linting
 - **check-added-large-files** - Prevent unexpectedly large files from being committed
@@ -248,8 +263,6 @@ Managed inline in `flake.nix` through `git-hooks.nix` and available in the dev s
 - **end-of-file-fixer** - Ensure files end with a newline
 - **fish-syntax** - Fish script syntax validation for custom scripts
 - **nil** - Nix language linting
-- **nixfmt** - Nix formatting
+- **treefmt** - Shared formatting for Nix, Lua, shell, Fish, JSON, and YAML
 - **shellcheck** - Shell script linting
-- **shfmt** - Shell script formatting
-- **stylua** - Lua formatting
 - **trim-trailing-whitespace** - Clean up trailing spaces
