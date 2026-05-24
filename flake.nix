@@ -9,6 +9,9 @@
   '';
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    # Keep Mullvad at least as new as the running generation; older daemons
+    # cannot parse newer settings and can fall back to a blocking firewall.
+    nixpkgs-mullvad.url = "github:NixOS/nixpkgs/nixos-unstable";
     pre-commit-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -60,6 +63,7 @@
   outputs =
     inputs@{
       nixpkgs,
+      nixpkgs-mullvad,
       pre-commit-hooks,
       flake-parts,
       treefmt-nix,
@@ -86,6 +90,12 @@
       ];
       mkOverlay =
         system: _final: prev:
+        let
+          mullvadPkgs = import nixpkgs-mullvad {
+            inherit system;
+            config.allowUnfree = true;
+          };
+        in
         {
           inherit (sniffy.packages.${system}) sniffy;
           inherit (smailer.packages.${system}) smailer;
@@ -101,6 +111,8 @@
             ;
         }
         // lib.optionalAttrs (system == linuxSystem) {
+          mullvad-vpn = mullvadPkgs.mullvad-vpn;
+
           variety = prev.variety.overrideAttrs (old: {
             postPatch = (old.postPatch or "") + ''
               substituteInPlace variety/Util.py \
@@ -182,6 +194,15 @@
         nix-index-database.homeModules.default
         ./home
       ];
+      nixosBaseModules = [
+        {
+          nixpkgs = {
+            config.allowUnfree = true;
+            config.nvidia.acceptLicense = true;
+            overlays = [ (mkOverlay linuxSystem) ];
+          };
+        }
+      ];
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       inherit systems;
@@ -197,15 +218,15 @@
         nixosConfigurations = {
           andromeda = lib.nixosSystem {
             system = linuxSystem;
-            modules = [ ./system/andromeda/configuration.nix ];
+            modules = nixosBaseModules ++ [ ./system/andromeda/configuration.nix ];
           };
           starfish = lib.nixosSystem {
             system = linuxSystem;
-            modules = [ ./system/starfish/configuration.nix ];
+            modules = nixosBaseModules ++ [ ./system/starfish/configuration.nix ];
           };
           foundation = lib.nixosSystem {
             system = linuxSystem;
-            modules = [ ./system/foundation/configuration.nix ];
+            modules = nixosBaseModules ++ [ ./system/foundation/configuration.nix ];
             specialArgs = {
               inherit nixos-hardware;
             };
