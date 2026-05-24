@@ -12,6 +12,7 @@
     ./packages.nix
     ./programs.nix
     ./shells.nix
+    ./stylix.nix
     ./tmux.nix
   ];
 }

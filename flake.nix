@@ -13,6 +13,22 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    stylix = {
+      url = "github:nix-community/stylix/release-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     home-manager = {
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -42,9 +58,13 @@
     # nixpkgs-local.url = "path:/home/william/Repositories/nixpkgs";
   };
   outputs =
-    {
+    inputs@{
       nixpkgs,
       pre-commit-hooks,
+      flake-parts,
+      treefmt-nix,
+      stylix,
+      nix-index-database,
       home-manager,
       sniffy,
       smailer,
@@ -60,60 +80,47 @@
       linuxSystem = "x86_64-linux";
       darwinSystem = "aarch64-darwin";
       lib = nixpkgs.lib;
-      linuxOverlay = (
-        _final: _prev: {
-          inherit (sniffy.packages.${linuxSystem}) sniffy;
-          inherit (smailer.packages.${linuxSystem}) smailer;
-          mux = mux.packages.${linuxSystem}.default;
-          forte = forte.packages.${linuxSystem}.default;
-          variety = _prev.variety.overrideAttrs (old: {
+      systems = [
+        linuxSystem
+        darwinSystem
+      ];
+      mkOverlay =
+        system: _final: prev:
+        {
+          inherit (sniffy.packages.${system}) sniffy;
+          inherit (smailer.packages.${system}) smailer;
+          mux = mux.packages.${system}.default;
+          forte = forte.packages.${system}.default;
+          inherit (trade-tariff-tools.packages.${system}) ecs;
+          inherit (llm-agents.packages.${system})
+            antigravity
+            claude-code
+            codex
+            gemini-cli
+            grok
+            ;
+        }
+        // lib.optionalAttrs (system == linuxSystem) {
+          variety = prev.variety.overrideAttrs (old: {
             postPatch = (old.postPatch or "") + ''
               substituteInPlace variety/Util.py \
                 --replace-fail "super(VarietyMetadata, self).__init__(path=path)" \
                                "super(VarietyMetadata, self).__init__(); self.open_path(path)"
             '';
           });
-          inherit (trade-tariff-tools.packages.${linuxSystem}) ecs;
-          inherit (llm-agents.packages.${linuxSystem})
-            antigravity
-            claude-code
-            codex
-            gemini-cli
-            grok
-            ;
-        }
-      );
-      darwinOverlay = (
-        _final: _prev: {
-          inherit (sniffy.packages.${darwinSystem}) sniffy;
-          inherit (smailer.packages.${darwinSystem}) smailer;
-          mux = mux.packages.${darwinSystem}.default;
-          forte = forte.packages.${darwinSystem}.default;
-          inherit (trade-tariff-tools.packages.${darwinSystem}) ecs;
-          inherit (llm-agents.packages.${darwinSystem})
-            antigravity
-            claude-code
-            codex
-            gemini-cli
-            grok
-            ;
-        }
-      );
-      pkgs = import nixpkgs {
-        system = linuxSystem;
-        config.allowUnfree = true;
-        config.nvidia.acceptLicense = true;
-        overlays = [
-          linuxOverlay
-        ];
-      };
-      darwinPkgs = import nixpkgs {
-        system = darwinSystem;
-        config.allowUnfree = true;
-        overlays = [
-          darwinOverlay
-        ];
-      };
+        };
+      mkPkgs =
+        system:
+        import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+          config.nvidia.acceptLicense = true;
+          overlays = [
+            (mkOverlay system)
+          ];
+        };
+      pkgs = mkPkgs linuxSystem;
+      darwinPkgs = mkPkgs darwinSystem;
       mkPreCommitCheck =
         system: pkgsFor:
         pre-commit-hooks.lib.${system}.run {
@@ -132,11 +139,31 @@
             end-of-file-fixer.enable = true;
             flake-checker.enable = false;
             nil.enable = true;
-            nixfmt.enable = true;
+            treefmt = {
+              enable = true;
+              package = treefmt-nix.lib.mkWrapper pkgsFor {
+                projectRootFile = "flake.nix";
+                programs = {
+                  nixfmt.enable = true;
+                  prettier = {
+                    enable = true;
+                    includes = [
+                      "*.json"
+                      "*.yaml"
+                      "*.yml"
+                    ];
+                  };
+                  shfmt.enable = true;
+                  stylua.enable = true;
+                };
+                settings.formatter.fish = {
+                  command = "${pkgsFor.fish}/bin/fish_indent";
+                  includes = [ "*.fish" ];
+                };
+              };
+            };
             shellcheck.enable = true;
             shellcheck.excludes = [ "^\\.envrc$" ];
-            shfmt.enable = true;
-            stylua.enable = true;
             trim-trailing-whitespace.enable = true;
 
             fish-syntax = {
@@ -150,90 +177,138 @@
         };
       pre-commit-check = mkPreCommitCheck linuxSystem pkgs;
       darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
+      homeModules = [
+        stylix.homeModules.stylix
+        nix-index-database.homeModules.default
+        ./home
+      ];
     in
-    {
-      nixosConfigurations = {
-        andromeda = lib.nixosSystem {
-          system = linuxSystem;
-          modules = [ ./system/andromeda/configuration.nix ];
-        };
-        starfish = lib.nixosSystem {
-          system = linuxSystem;
-          modules = [ ./system/starfish/configuration.nix ];
-        };
-        foundation = lib.nixosSystem {
-          system = linuxSystem;
-          modules = [ ./system/foundation/configuration.nix ];
-          specialArgs = {
-            inherit nixos-hardware;
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      inherit systems;
+
+      imports = [
+        treefmt-nix.flakeModule
+      ];
+
+      flake = {
+        overlays.default = final: prev: mkOverlay prev.stdenv.hostPlatform.system final prev;
+        homeModules.default = ./home;
+
+        nixosConfigurations = {
+          andromeda = lib.nixosSystem {
+            system = linuxSystem;
+            modules = [ ./system/andromeda/configuration.nix ];
+          };
+          starfish = lib.nixosSystem {
+            system = linuxSystem;
+            modules = [ ./system/starfish/configuration.nix ];
+          };
+          foundation = lib.nixosSystem {
+            system = linuxSystem;
+            modules = [ ./system/foundation/configuration.nix ];
+            specialArgs = {
+              inherit nixos-hardware;
+            };
           };
         };
+
+        homeConfigurations =
+          let
+            williamLinux = home-manager.lib.homeManagerConfiguration {
+              inherit pkgs;
+              modules = homeModules;
+              extraSpecialArgs = {
+                enableCuda = false;
+                isLinux = true;
+              };
+            };
+            williamDarwin = home-manager.lib.homeManagerConfiguration {
+              pkgs = darwinPkgs;
+              modules = homeModules;
+              extraSpecialArgs = {
+                enableCuda = false;
+                isLinux = false;
+              };
+            };
+          in
+          {
+            william = williamDarwin;
+            william-linux = williamLinux;
+            william-darwin = williamDarwin;
+            "william@foundation" = williamLinux;
+            "william@starfish" = williamLinux;
+            "william@andromeda" = home-manager.lib.homeManagerConfiguration {
+              inherit pkgs;
+              modules = homeModules;
+              extraSpecialArgs = {
+                enableCuda = true;
+                isLinux = true;
+              };
+            };
+          };
       };
-      homeConfigurations =
+
+      perSystem =
+        {
+          config,
+          pkgs,
+          system,
+          ...
+        }:
         let
-          williamLinux = home-manager.lib.homeManagerConfiguration {
-            inherit pkgs;
-            modules = [ ./home ];
-            extraSpecialArgs = {
-              enableCuda = false;
-              isLinux = true;
-            };
-          };
-          williamDarwin = home-manager.lib.homeManagerConfiguration {
-            pkgs = darwinPkgs;
-            modules = [ ./home ];
-            extraSpecialArgs = {
-              enableCuda = false;
-              isLinux = false;
-            };
-          };
+          preCommitCheck = if system == darwinSystem then darwin-pre-commit-check else pre-commit-check;
         in
         {
-          william = williamDarwin;
-          william-linux = williamLinux;
-          william-darwin = williamDarwin;
-          "william@foundation" = williamLinux;
-          "william@starfish" = williamLinux;
-          "william@andromeda" = home-manager.lib.homeManagerConfiguration {
-            inherit pkgs;
-            modules = [ ./home ];
-            extraSpecialArgs = {
-              enableCuda = true;
-              isLinux = true;
+          _module.args.pkgs = mkPkgs system;
+
+          treefmt = {
+            projectRootFile = "flake.nix";
+            programs = {
+              nixfmt.enable = true;
+              prettier = {
+                enable = true;
+                includes = [
+                  "*.json"
+                  "*.yaml"
+                  "*.yml"
+                ];
+              };
+              shfmt.enable = true;
+              stylua.enable = true;
+            };
+            settings.formatter.fish = {
+              command = "${pkgs.fish}/bin/fish_indent";
+              includes = [ "*.fish" ];
             };
           };
+
+          checks.pre-commit = preCommitCheck;
+
+          devShells.default = pkgs.mkShell {
+            buildInputs =
+              preCommitCheck.enabledPackages
+              ++ [
+                config.treefmt.build.wrapper
+              ]
+              ++ (with pkgs; [
+                d2
+                nodejs
+              ])
+              ++ lib.optionals (system == linuxSystem) [
+                (pkgs.writeShellScriptBin "mmdc" ''
+                  export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
+                  export PUPPETEER_EXECUTABLE_PATH=${pkgs.chromium}/bin/chromium
+                  exec ${pkgs.mermaid-cli}/bin/mmdc "$@"
+                '')
+              ];
+            shellHook =
+              preCommitCheck.shellHook
+              + lib.optionalString (system == darwinSystem) ''
+                # mmdc is available via npx (best experience on Apple Silicon)
+                # Run: npx @mermaid-js/mermaid-cli --help
+                echo "Diagram tools available: d2, nodejs (use npx @mermaid-js/mermaid-cli for mmdc)"
+              '';
+          };
         };
-      devShells.${linuxSystem} = {
-        default = pkgs.mkShell {
-          inherit (pre-commit-check) shellHook;
-          buildInputs =
-            pre-commit-check.enabledPackages
-            ++ (with pkgs; [
-              d2
-              nodejs
-              (writeShellScriptBin "mmdc" ''
-                export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
-                export PUPPETEER_EXECUTABLE_PATH=${chromium}/bin/chromium
-                exec ${pkgs.mermaid-cli}/bin/mmdc "$@"
-              '')
-            ]);
-        };
-      };
-      devShells.${darwinSystem} = {
-        default = darwinPkgs.mkShell {
-          buildInputs =
-            darwin-pre-commit-check.enabledPackages
-            ++ (with darwinPkgs; [
-              d2
-              nodejs
-            ]);
-          shellHook = ''
-            ${darwin-pre-commit-check.shellHook}
-            # mmdc is available via npx (best experience on Apple Silicon)
-            # Run: npx @mermaid-js/mermaid-cli --help
-            echo "Diagram tools available: d2, nodejs (use npx @mermaid-js/mermaid-cli for mmdc)"
-          '';
-        };
-      };
     };
 }

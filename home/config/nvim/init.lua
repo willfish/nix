@@ -576,19 +576,32 @@ require("conform").setup({
 			lsp_format = lsp_format_opt,
 		}
 	end,
+	formatters = {
+		treefmt_dotfiles = {
+			command = "nix",
+			args = { "fmt", vim.fn.expand("~/.dotfiles"), "--", "$FILENAME" },
+			stdin = false,
+			condition = function(_, ctx)
+				local root = vim.fs.root(ctx.filename, { "flake.nix", ".git" })
+				return root == vim.fn.expand("~/.dotfiles")
+			end,
+		},
+	},
 	formatters_by_ft = {
-		fish = { "fish_indent" },
-		javascript = { "prettier", stop_after_first = true },
-		lua = { "stylua" },
+		fish = { "treefmt_dotfiles", "fish_indent", stop_after_first = true },
+		javascript = { "treefmt_dotfiles", "prettier", stop_after_first = true },
+		json = { "treefmt_dotfiles", stop_after_first = true },
+		lua = { "treefmt_dotfiles", "stylua", stop_after_first = true },
+		nix = { "treefmt_dotfiles" },
 		python = { "isort", "black" },
+		sh = { "treefmt_dotfiles" },
+		yaml = { "treefmt_dotfiles" },
 	},
 })
 
 vim.keymap.set("", "<leader>a", function()
 	require("conform").format({ async = true, lsp_format = "fallback" })
 end, { desc = "Format buffer" })
-
-vim.cmd.colorscheme("rose-pine")
 
 vim.api.nvim_create_autocmd("VimEnter", {
 	once = true,
