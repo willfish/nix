@@ -23,10 +23,10 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Nix
-        uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3
+        uses: DeterminateSystems/determinate-nix-action@4eea0b33e3d1f02ecfe37cf16e7204c424009606 # v3.21.0
 
       - name: Check flake evaluation
-        run: nix flake check --no-build --option eval-cache false
+        run: nix flake check --no-build
 
       - name: Check Linux Home Manager activation package closure
         run: nix build .#homeConfigurations.william-linux.activationPackage --dry-run
@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Nix
-        uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3
+        uses: DeterminateSystems/determinate-nix-action@4eea0b33e3d1f02ecfe37cf16e7204c424009606 # v3.21.0
 
       - name: Check Darwin Home Manager activation package closure
         run: nix build .#homeConfigurations.william-darwin.activationPackage --dry-run
