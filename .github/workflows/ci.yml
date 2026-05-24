@@ -24,6 +24,9 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@4eea0b33e3d1f02ecfe37cf16e7204c424009606 # v3.21.0
+        with:
+          extra-conf: |
+            eval-cores = 1
 
       - name: Check flake evaluation
         run: nix flake check --no-build
