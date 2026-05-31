@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ssid="FishFamille"
+connection="FishFamille"
+iface=""
+duration=120
+settle=8
+keep_last=0
+
+usage() {
+  cat <<'USAGE'
+Usage: wifi-roam-test [options] [BSSID ...]
+
+Pins the NetworkManager Wi-Fi connection to each BSSID in turn, checks
+connectivity, and prints relevant journal lines for the test window.
+
+Options:
+  -s, --ssid SSID         SSID to scan for when no BSSIDs are supplied.
+                          Default: FishFamille
+  -c, --connection NAME   NetworkManager connection name.
+                          Default: FishFamille
+  -i, --iface IFACE       Wi-Fi interface. Default: inferred from connection.
+  -d, --duration SECONDS  Seconds to monitor each BSSID. Default: 120
+  --settle SECONDS        Seconds to wait after reconnect. Default: 8
+  --keep-last             Leave the connection pinned to the last tested BSSID.
+  -h, --help              Show this help.
+
+Examples:
+  wifi-roam-test
+  wifi-roam-test -d 300 D4:24:DD:D4:6D:60 D4:24:DD:D4:71:B9 34:E1:A9:46:6A:E6
+USAGE
+}
+
+log() {
+  printf '\n==> %s\n' "$*"
+}
+
+die() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+while (($#)); do
+  case "$1" in
+    -s|--ssid)
+      ssid="${2:?missing value for $1}"
+      shift 2
+      ;;
+    -c|--connection)
+      connection="${2:?missing value for $1}"
+      shift 2
+      ;;
+    -i|--iface)
+      iface="${2:?missing value for $1}"
+      shift 2
+      ;;
+    -d|--duration)
+      duration="${2:?missing value for $1}"
+      shift 2
+      ;;
+    --settle)
+      settle="${2:?missing value for $1}"
+      shift 2
+      ;;
+    --keep-last)
+      keep_last=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      die "unknown option: $1"
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+need nmcli
+need journalctl
+need ping
+
+if [[ -z "$iface" ]]; then
+  iface="$(nmcli -g connection.interface-name connection show "$connection" | head -n1)"
+fi
+
+if [[ -z "$iface" || "$iface" == "--" ]]; then
+  iface="$(nmcli -t -f DEVICE,TYPE,STATE device status | awk -F: '$2 == "wifi" && $3 == "connected" { print $1; exit }')"
+fi
+
+[[ -n "$iface" ]] || die "could not infer Wi-Fi interface"
+
+original_bssid="$(nmcli -g 802-11-wireless.bssid connection show "$connection" | head -n1)"
+restored=0
+
+restore() {
+  if ((restored)); then
+    return
+  fi
+  restored=1
+
+  if ((keep_last)); then
+    return
+  fi
+
+  log "Restoring original BSSID pin"
+  nmcli connection modify "$connection" 802-11-wireless.bssid "${original_bssid:-}" >/dev/null
+  nmcli connection down "$connection" >/dev/null 2>&1 || true
+  nmcli connection up "$connection" >/dev/null 2>&1 || true
+}
+
+trap restore EXIT INT TERM
+
+bssids=("$@")
+if ((${#bssids[@]} == 0)); then
+  log "Scanning for BSSIDs advertising ${ssid}"
+  mapfile -t bssids < <(
+    nmcli -f SSID,BSSID,SIGNAL device wifi list --rescan yes |
+      awk -v ssid="$ssid" '$1 == ssid { print $2, $3 }' |
+      sort -k2,2nr |
+      awk '{ print $1 }'
+  )
+fi
+
+((${#bssids[@]} > 0)) || die "no BSSIDs supplied or found for SSID: $ssid"
+
+log "Test target"
+printf 'connection=%s\nssid=%s\niface=%s\nduration=%ss\n' "$connection" "$ssid" "$iface" "$duration"
+printf 'original_bssid=%s\n' "${original_bssid:-<none>}"
+printf 'bssids=%s\n' "${bssids[*]}"
+
+gateway_for_iface() {
+  ip route show default dev "$iface" 2>/dev/null | awk '{ print $3; exit }'
+}
+
+journal_since() {
+  local since="$1"
+  local pattern='wlp|NetworkManager|wpa_supplicant|mt7925|mt76|deauth|disassoc|4WAY|handshake|wrong_key|WNM|CTRL-EVENT|auth|assoc|connectivity|dhcp'
+
+  if command -v rg >/dev/null 2>&1; then
+    journalctl -b --since "$since" --no-pager -o short-iso | rg -i "$pattern" || true
+  else
+    journalctl -b --since "$since" --no-pager -o short-iso | grep -Ei "$pattern" || true
+  fi
+}
+
+for bssid in "${bssids[@]}"; do
+  start_iso="$(date --iso-8601=seconds)"
+
+  log "Testing $bssid"
+  nmcli connection modify "$connection" 802-11-wireless.bssid "$bssid"
+  nmcli connection down "$connection" >/dev/null 2>&1 || true
+
+  if ! nmcli connection up "$connection"; then
+    printf 'connect_result=failed\n'
+    journal_since "$start_iso"
+    continue
+  fi
+
+  sleep "$settle"
+
+  log "Association"
+  nmcli -f GENERAL.STATE,GENERAL.CONNECTION,GENERAL.IP4-CONNECTIVITY,GENERAL.IP6-CONNECTIVITY device show "$iface"
+  nmcli -f ACTIVE,SSID,BSSID,CHAN,FREQ,SIGNAL,SECURITY device wifi list | awk '$1 == "yes" || NR == 1'
+
+  gateway="$(gateway_for_iface)"
+  log "Connectivity"
+  if [[ -n "$gateway" ]]; then
+    printf 'gateway=%s\n' "$gateway"
+    ping -I "$iface" -c 3 -W 2 "$gateway" || true
+  else
+    printf 'gateway=<none>\n'
+  fi
+
+  ping -I "$iface" -c 3 -W 2 1.1.1.1 || true
+
+  log "Monitoring for ${duration}s"
+  end=$((SECONDS + duration))
+  while ((SECONDS < end)); do
+    active_bssid="$(nmcli -f ACTIVE,BSSID device wifi list | awk '$1 == "yes" { print $2; exit }')"
+    ip4_state="$(nmcli -g GENERAL.IP4-CONNECTIVITY device show "$iface")"
+    printf '%s active_bssid=%s ip4=%s\n' "$(date --iso-8601=seconds)" "${active_bssid:-unknown}" "${ip4_state:-unknown}"
+    sleep 10
+  done
+
+  log "Journal for $bssid"
+  journal_since "$start_iso"
+done
