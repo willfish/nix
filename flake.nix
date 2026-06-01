@@ -126,7 +126,6 @@
         import nixpkgs {
           inherit system;
           config.allowUnfree = true;
-          config.nvidia.acceptLicense = true;
           overlays = [
             (mkOverlay system)
           ];
@@ -198,7 +197,6 @@
         {
           nixpkgs = {
             config.allowUnfree = true;
-            config.nvidia.acceptLicense = true;
             overlays = [ (mkOverlay linuxSystem) ];
           };
         }
@@ -239,7 +237,6 @@
               inherit pkgs;
               modules = homeModules;
               extraSpecialArgs = {
-                enableCuda = false;
                 isLinux = true;
               };
             };
@@ -247,13 +244,12 @@
               pkgs = darwinPkgs;
               modules = homeModules;
               extraSpecialArgs = {
-                enableCuda = false;
                 isLinux = false;
               };
             };
           in
           {
-            william = williamDarwin;
+            william = williamLinux;
             william-linux = williamLinux;
             william-darwin = williamDarwin;
             "william@foundation" = williamLinux;
@@ -262,7 +258,6 @@
               inherit pkgs;
               modules = homeModules;
               extraSpecialArgs = {
-                enableCuda = true;
                 isLinux = true;
               };
             };

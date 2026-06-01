@@ -27,6 +27,7 @@ This is William's personal NixOS + Home Manager dotfiles repository.
 - Prefer small, focused changes
 - Branch names should use the relevant ticket or `BAU` prefix, never an agent/tool prefix like `codex/`
 - Test with `nix build .#homeConfigurations.<host>.activationPackage` before switching
+- Bare `homeConfigurations.william` defaults to the Linux Home Manager config; use `william-darwin` explicitly on macOS.
 - Use `nh home switch` or `home-manager switch --flake .#william` for user changes
 - Full system rebuilds via `nh os switch` or `sudo nixos-rebuild switch --flake .`
 - Run `nix flake check` when touching flake.nix or major module changes
@@ -77,7 +78,7 @@ When working inside this repository, the following conventions apply in addition
 
 - Prefer small, focused changes.
 - Test with `nix build .#homeConfigurations.<host>.activationPackage` (or the appropriate attribute) before switching.
-- Use `nh home switch` or `home-manager switch --flake .#william` for user environment changes.
+- Use `nh home switch .` on Linux; `nh` should auto-detect `william@<hostname>` and fall back to the Linux `william` config. Use `william-darwin` explicitly on macOS.
 - Full system rebuilds via `nh os switch` or `sudo nixos-rebuild switch --flake .`.
 - Run `nix flake check` when touching `flake.nix` or major module changes.
 - After changes to Home Manager modules, run the activation and verify before committing.
@@ -86,7 +87,7 @@ When working inside this repository, the following conventions apply in addition
 
 - Prefer small, focused changes. Run `git diff` (mentally or actually) before committing.
 - After editing `.nix` files under `home/user/`, test with a build:
-  `nix build .#homeConfigurations.william.activationPackage` (adjust for your host/username).
+  `nix build .#homeConfigurations.william.activationPackage` (Linux default) or a host-specific attribute such as `william@andromeda`.
 - For additions to `programs.nix` or `packages.nix`, ensure the package exists in the flake inputs or nixpkgs.
 - Shell configuration lives in `shells.nix` + `programs.nix`. Fish is the primary shell.
 - Secrets / private data: never commit. Use `agenix` (or equivalent) if present; otherwise keep out of git.

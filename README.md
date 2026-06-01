@@ -91,7 +91,7 @@ flowchart TD
 
 ### andromeda - Desktop Workstation
 
-System76 Thelio Major with AMD Threadripper. Runs NVIDIA beta drivers with open source kernel modules and modesetting. Steam is enabled with firewall rules for local game transfers.
+System76 Thelio Major with AMD Threadripper and AMD graphics. Steam is enabled with firewall rules for local game transfers.
 
 ### starfish - Laptop
 
