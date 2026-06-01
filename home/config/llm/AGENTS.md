@@ -41,6 +41,28 @@ Before any significant action, clarification, or exploration on a non-trivial ta
 - "I can do this quickly without a skill"
 - "This feels productive, I'll just start"
 
+**Grok-specific invocation:** Descriptions in the skills list are not enough. Run `/skills <name>` or Read `~/.grok/skills/<name>/SKILL.md` before acting. For a new session, `/superpowers` and `/using-superpowers` are recommended.
+
+### Skill routing (mandatory checklist)
+
+Before non-trivial work, match the situation and **load the skill first** (slash command or Read `SKILL.md`):
+
+| Situation | Skill(s) — in order |
+|-----------|---------------------|
+| Start of non-trivial session | `using-superpowers` or `superpowers` |
+| New feature, component, or behavior change | `brainstorming` → user approves design → `writing-plans` |
+| Bug, test failure, unexpected behavior | `systematic-debugging` |
+| Architecture, multi-file refactor, unclear approach | Plan mode + `writing-plans` or `chain-of-verification` |
+| About to claim done, commit, push, or open PR | `verification-before-completion` |
+| HMRC trade-tariff repos | `hmrc-trade-tariff-workflow` (then domain skills as needed) |
+| Jira / epics / stories | `jira-workflow` |
+| PR create or update | `pull-request-workflow` |
+| Code review (write or respond) | `code-review-workflow` |
+| RSpec / tests | `rspec-testing` |
+| Dotfiles / Nix / local ports | `local-dev-environment` |
+
+Process skills under `process-skills/` are deployed as top-level skills (e.g. `~/.grok/skills/superpowers/`). Additional upstream superpowers skills live under `skills/references/superpowers/skills/` and are also discoverable by Grok.
+
 ### 2. Todo Tracking on Complexity
 
 For any task with 3 or more meaningful steps, or any work that will take more than a few minutes:
@@ -148,6 +170,7 @@ See also the `create-skill` skill (or equivalent) and your TUI's skills document
 
 These core process skills are recommended for daily use regardless of project:
 
+- `using-superpowers` — **Start here:** how and when to invoke skills (mandatory before acting on Grok)
 - `superpowers` — Agent discipline, skills-first rule, todo tracking, plan mode, verification culture
 - `systematic-debugging` — Rigorous 4-phase root-cause process (Investigation → Pattern Analysis → Hypothesis → Implementation). **Always** find root cause before proposing fixes.
 - `verification-before-completion` — Strict evidence gate before claiming work is done

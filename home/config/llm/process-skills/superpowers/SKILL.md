@@ -72,7 +72,7 @@ Always use `get_command_or_subagent_output` to retrieve results, and clean up wi
 
 ## Skill Priority Order (when multiple could apply)
 
-1. **Process / Meta skills first** (this skill, systematic-debugging, brainstorming, writing-plans)
+1. **Process / Meta skills first** (using-superpowers, this skill, systematic-debugging, brainstorming, writing-plans)
 2. **Domain or implementation skills second**
 
 Example:
@@ -84,7 +84,7 @@ Example:
 Deeper supporting documents (original detailed references, additional examples, root-cause tracing techniques, etc.) live in:
 `~/.grok/skills/references/superpowers/`
 
-The four native skills in this directory (`superpowers`, `systematic-debugging`, `verification-before-completion`, `writing-plans`) are the primary, maintained versions. The references directory is for when you need the expanded original material.
+The native process skills (`using-superpowers`, `superpowers`, `systematic-debugging`, `verification-before-completion`, `writing-plans`) are the primary, maintained versions. The references directory holds expanded upstream material (e.g. full `brainstorming`, `test-driven-development`).
 
 ## Skill Types
 

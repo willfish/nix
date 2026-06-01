@@ -63,6 +63,7 @@ let
   processSkillNames = [
     "create-skill"
     "superpowers"
+    "using-superpowers"
     "systematic-debugging"
     "verification-before-completion"
     "writing-plans"
