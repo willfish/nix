@@ -106,7 +106,7 @@ in
       # fun stuff
       fastfetch # Highly customizable system information tool
 
-      antigravity # Google's Antigravity agentic IDE
+      antigravity-cli # Google's Antigravity agentic IDE
       claude-code # Command-line interface for Anthropic's Claude AI
       codex # OpenAI Codex CLI coding agent
       gemini-cli # Google's Gemini CLI coding agent

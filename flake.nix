@@ -103,7 +103,7 @@
           forte = forte.packages.${system}.default;
           inherit (trade-tariff-tools.packages.${system}) ecs;
           inherit (llm-agents.packages.${system})
-            antigravity
+            antigravity-cli
             claude-code
             codex
             gemini-cli
