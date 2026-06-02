@@ -156,11 +156,18 @@ vim.api.nvim_create_autocmd("User", {
 	callback = function()
 		require_after_packadd("nvim-surround", { "nvim-surround" }).setup({})
 
-		require_after_packadd("noice", {
+		local noice = require_after_packadd("noice", {
 			"nui.nvim",
 			"nvim-notify",
 			"noice.nvim",
-		}).setup({
+		})
+		require("notify").setup({
+			background_colour = "#000000",
+		})
+		noice.setup({
+			notify = {
+				view = "notify",
+			},
 			lsp = {
 				override = {
 					["vim.lsp.util.convert_input_to_markdown_lines"] = true,
