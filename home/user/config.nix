@@ -211,6 +211,20 @@ in
       mkdir -p "$HOME/diagrams/generated"
       mkdir -p "$HOME/diagrams/architecture"
     '';
+
+    # cosmic-screenshot crashes on launch when CosmicPortal remembers Window mode
+    # (NixOS/nixpkgs#409441). Reset only that broken persisted choice.
+    fixCosmicScreenshotPortalConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      portalScreenshot="$HOME/.config/cosmic/com.system76.CosmicPortal/v1/screenshot"
+      if [ -f "$portalScreenshot" ] && grep -q 'choice: Window' "$portalScreenshot"; then
+        ${pkgs.gnused}/bin/sed -i 's/choice: Window/choice: Rectangle/' "$portalScreenshot"
+        echo "Reset cosmic screenshot mode from Window to Rectangle (avoids crash loop)"
+      elif [ ! -f "$portalScreenshot" ]; then
+        mkdir -p "$(dirname "$portalScreenshot")"
+        cp ${configDir}/cosmic/portal-screenshot "$portalScreenshot"
+        echo "Installed default cosmic screenshot portal config"
+      fi
+    '';
   };
 
   xdg.configFile = {
