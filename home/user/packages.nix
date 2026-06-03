@@ -5,24 +5,6 @@
 }:
 let
   inherit (pkgs) stdenv;
-  # Wrap forte (provided via overlay, which has vendorHash fix) to inject mpv's libmpv.* for the runtime dlopen (go-mpv).
-  # mpv is also listed in audio tools so it's in the profile.
-  wrappedForte = pkgs.symlinkJoin {
-    name = "forte";
-    paths = [ pkgs.forte ];
-    buildInputs = [ pkgs.makeWrapper ];
-    postBuild =
-      if stdenv.isDarwin then
-        ''
-          wrapProgram $out/bin/forte \
-            --prefix DYLD_LIBRARY_PATH : ${pkgs.mpv}/lib
-        ''
-      else
-        ''
-          wrapProgram $out/bin/forte \
-            --prefix LD_LIBRARY_PATH : ${pkgs.mpv}/lib
-        '';
-  };
 in
 {
   home.packages =
@@ -141,7 +123,7 @@ in
       brave # Privacy-focused browser
       docker # Docker client for talking to Colima or other Docker daemons
       docker-compose # Docker Compose CLI
-      wrappedForte # (see let; wrapped to provide libmpv for darwin runtime)
+      forte
       ghostty-bin # GPU-accelerated terminal emulator
       pango # Text layout/rendering tools used by graphics/document pipelines
       slack # Team collaboration and messaging app
