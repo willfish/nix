@@ -335,11 +335,11 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1780435987,
-        "narHash": "sha256-djAIDPBeHExiXEx9rkruook+ZxQH8gET0c6y9jnrSs4=",
+        "lastModified": 1780437792,
+        "narHash": "sha256-v3ya8kSvnjOSZ0TDDP7MGbUvVecaU+gFQNVPiBfgEqY=",
         "owner": "willfish",
         "repo": "forte",
-        "rev": "ece02fdc7b24f039a2a94895267b57846dd542a6",
+        "rev": "5d3db5f269db3ac4325bfbb065088edb2eecf360",
         "type": "github"
       },
       "original": {
