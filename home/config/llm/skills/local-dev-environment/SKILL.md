@@ -17,17 +17,23 @@ Key facts:
 - Do not assume services are stopped just because a connection fails; the project environment may not be activated.
 - Brave remote debugging is expected on `http://127.0.0.1:9222` when Brave is running.
 
-**macOS home attribute (always explicit):** on Apple Silicon (aarch64-darwin), use `homeConfigurations.william-darwin` — not `homeConfigurations.william`. The bare `william` attribute defaults to the Linux config and produces confusing x86_64-linux build failures (adw-gtk3 fish-completions, dconf-keys) on a Mac. The explicit forms are:
+**Home attribute (always explicit on every host):** `homeConfigurations` exposes platform-level attributes (`william-darwin`, `william-linux`) and per-host attributes (`william@andromeda`, `william@foundation`, `william@starfish`). The bare `william` attribute defaults to the Linux config and will produce confusing x86_64-linux build failures (adw-gtk3 fish-completions, dconf-keys) on a Mac. Pick the right one for the current host — don't guess; verify with `nix eval '.#homeConfigurations' --apply 'builtins.attrNames'` if unsure:
 
 ```sh
-# Build:
+# macOS host:
 nix build .#homeConfigurations.william-darwin.activationPackage
-
-# Switch (the suffix is a flake attribute, NOT a nh flag — quote the whole arg):
 nh home switch '.#william-darwin'
+
+# Linux host:
+nix build .#homeConfigurations.william-linux.activationPackage
+nh home switch '.#william-linux'
+
+# Per-host (if a `william@<hostname>` attribute is defined for this machine):
+nix build .#homeConfigurations."william@$(hostname)".activationPackage
+nh home switch ".#william@$(hostname)"
 ```
 
-`nh home switch .` (no attribute) also works because `nh` auto-detects, but the explicit form is the safer reflex. **Never** `nh home switch #william-darwin` without a leading `.` — the shell treats `#` as a comment character and the suffix gets dropped, breaking the command silently.
+`nh home switch .` (no attribute) also works because `nh` auto-detects from the current host, but the explicit form is the safer reflex when working on a new box. **Never** `nh home switch #william-darwin` (or any other `#attr` form) without a leading `.` — the shell treats `#` as a comment character and the suffix gets dropped, breaking the command silently.
 
 Trade Tariff local ports:
 - backend: 3000
