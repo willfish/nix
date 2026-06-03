@@ -323,6 +323,11 @@ in
         excludesfile = "~/.gitignore_global";
         fsmonitor = true;
         untrackedCache = true;
+        # Permanent equivalent of GIT_SSH_COMMAND workaround for the
+        # "Bad owner or permissions" error on Nix store ssh_config.d files
+        # (e.g. systemd-ssh-proxy.conf). -F /dev/null skips broken system
+        # configs (no ~/.ssh/config is present anyway).
+        sshCommand = "ssh -F /dev/null";
       };
 
       push = {
