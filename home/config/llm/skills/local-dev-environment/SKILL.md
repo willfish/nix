@@ -17,7 +17,17 @@ Key facts:
 - Do not assume services are stopped just because a connection fails; the project environment may not be activated.
 - Brave remote debugging is expected on `http://127.0.0.1:9222` when Brave is running.
 
-**macOS home attribute (always explicit):** on Apple Silicon (aarch64-darwin), use `homeConfigurations.william-darwin` — not `homeConfigurations.william`. The bare `william` attribute defaults to the Linux config and produces confusing x86_64-linux build failures (adw-gtk3 fish-completions, dconf-keys) on a Mac. Use the explicit form for both `nix build` and `nh home switch .`.
+**macOS home attribute (always explicit):** on Apple Silicon (aarch64-darwin), use `homeConfigurations.william-darwin` — not `homeConfigurations.william`. The bare `william` attribute defaults to the Linux config and produces confusing x86_64-linux build failures (adw-gtk3 fish-completions, dconf-keys) on a Mac. The explicit forms are:
+
+```sh
+# Build:
+nix build .#homeConfigurations.william-darwin.activationPackage
+
+# Switch (the suffix is a flake attribute, NOT a nh flag — quote the whole arg):
+nh home switch '.#william-darwin'
+```
+
+`nh home switch .` (no attribute) also works because `nh` auto-detects, but the explicit form is the safer reflex. **Never** `nh home switch #william-darwin` without a leading `.` — the shell treats `#` as a comment character and the suffix gets dropped, breaking the command silently.
 
 Trade Tariff local ports:
 - backend: 3000
