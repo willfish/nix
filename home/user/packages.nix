@@ -134,7 +134,7 @@ in
       bandwhich # Terminal bandwidth utilization tool
       cosmic-ext-tweaks
       dropbox # Cloud storage and file synchronization service
-      wrappedForte # (see let; wrapped for libmpv)
+      # wrappedForte # (see let; wrapped for libmpv) — disabled 2026-06-03: let-binding removed by d05375f, reference orphaned
       git-lfs # Large file support for model repos when needed
       iftop # Real-time network bandwidth monitoring tool
       inxi # System information script
