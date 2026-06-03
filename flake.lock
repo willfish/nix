@@ -330,7 +330,7 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-go"
         ],
         "pre-commit-hooks": "pre-commit-hooks"
       },
