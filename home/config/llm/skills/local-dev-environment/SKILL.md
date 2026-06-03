@@ -17,6 +17,8 @@ Key facts:
 - Do not assume services are stopped just because a connection fails; the project environment may not be activated.
 - Brave remote debugging is expected on `http://127.0.0.1:9222` when Brave is running.
 
+**macOS home attribute (always explicit):** on Apple Silicon (aarch64-darwin), use `homeConfigurations.william-darwin` — not `homeConfigurations.william`. The bare `william` attribute defaults to the Linux config and produces confusing x86_64-linux build failures (adw-gtk3 fish-completions, dconf-keys) on a Mac. Use the explicit form for both `nix build` and `nh home switch .`.
+
 Trade Tariff local ports:
 - backend: 3000
 - frontend: 3001
