@@ -335,11 +335,11 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1780437792,
-        "narHash": "sha256-v3ya8kSvnjOSZ0TDDP7MGbUvVecaU+gFQNVPiBfgEqY=",
+        "lastModified": 1780483993,
+        "narHash": "sha256-0dghXQtsDcB8NT7mBOtZrtTYWf0+lpezPHpHE8VuT6s=",
         "owner": "willfish",
         "repo": "forte",
-        "rev": "5d3db5f269db3ac4325bfbb065088edb2eecf360",
+        "rev": "a098e90571de065b306e0bfb99880fa9808ff496",
         "type": "github"
       },
       "original": {
@@ -546,6 +546,21 @@
         "type": "github"
       }
     },
+    "nixpkgs-go": {
+      "locked": {
+        "lastModified": 1780486476,
+        "narHash": "sha256-D+75MjYDen1KAuxfDaJRNi3efvCQiFziOJBrrpgmAAA=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "e04fc82ec580e52facfc53431a7c9943277ae2da",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-mullvad": {
       "locked": {
         "lastModified": 1780243769,
@@ -671,6 +686,7 @@
         "nix-index-database": "nix-index-database",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_3",
+        "nixpkgs-go": "nixpkgs-go",
         "nixpkgs-mullvad": "nixpkgs-mullvad",
         "pre-commit-hooks": "pre-commit-hooks_2",
         "smailer": "smailer",
