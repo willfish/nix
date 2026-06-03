@@ -5,6 +5,24 @@
 }:
 let
   inherit (pkgs) stdenv;
+  # Wrap forte (provided via overlay, which has vendorHash fix) to inject mpv's libmpv.* for the runtime dlopen (go-mpv).
+  # mpv is also listed in audio tools so it's in the profile.
+  wrappedForte = pkgs.symlinkJoin {
+    name = "forte";
+    paths = [ pkgs.forte ];
+    buildInputs = [ pkgs.makeWrapper ];
+    postBuild =
+      if stdenv.isDarwin then
+        ''
+          wrapProgram $out/bin/forte \
+            --prefix DYLD_LIBRARY_PATH : ${pkgs.mpv}/lib
+        ''
+      else
+        ''
+          wrapProgram $out/bin/forte \
+            --prefix LD_LIBRARY_PATH : ${pkgs.mpv}/lib
+        '';
+  };
 in
 {
   home.packages =
@@ -101,6 +119,7 @@ in
 
       # Audio tools
       ffmpeg # Audio/video conversion and inspection tools
+      mpv # Media player (provides libmpv for forte and other apps)
       sox # Sound processing tool - used for Claude Code notification chimes
 
       # fun stuff
@@ -122,9 +141,8 @@ in
       brave # Privacy-focused browser
       docker # Docker client for talking to Colima or other Docker daemons
       docker-compose # Docker Compose CLI
-      forte # Modern desktop music player with local library and streaming support
+      wrappedForte # (see let; wrapped to provide libmpv for darwin runtime)
       ghostty-bin # GPU-accelerated terminal emulator
-      llama-cpp # Local LLM inference tools
       pango # Text layout/rendering tools used by graphics/document pipelines
       slack # Team collaboration and messaging app
       spotify # Music streaming application
@@ -134,7 +152,7 @@ in
       bandwhich # Terminal bandwidth utilization tool
       cosmic-ext-tweaks
       dropbox # Cloud storage and file synchronization service
-      forte # Modern desktop music player with local library and streaming support
+      wrappedForte # (see let; wrapped for libmpv)
       git-lfs # Large file support for model repos when needed
       iftop # Real-time network bandwidth monitoring tool
       inxi # System information script

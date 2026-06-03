@@ -127,7 +127,6 @@ let
     "rafamadriz/friendly-snippets" = vimPlugins.friendly-snippets;
     "rose-pine/neovim" = vimPlugins.rose-pine;
     "rose-pine" = vimPlugins.rose-pine;
-    "folke/todo-comments.nvim" = vimPlugins.todo-comments-nvim;
     "echasnovski/mini.nvim" = vimPlugins.mini-nvim;
     "nvim-treesitter/nvim-treesitter" = vimPlugins.nvim-treesitter;
   };

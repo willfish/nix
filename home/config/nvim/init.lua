@@ -610,12 +610,7 @@ vim.keymap.set("", "<leader>a", function()
 	require("conform").format({ async = true, lsp_format = "fallback" })
 end, { desc = "Format buffer" })
 
-vim.api.nvim_create_autocmd("VimEnter", {
-	once = true,
-	callback = function()
-		require("todo-comments").setup({ signs = false })
-	end,
-})
+vim.cmd.colorscheme("rose-pine")
 
 local statusline = require("mini.statusline")
 statusline.setup({ use_icons = vim.g.have_nerd_font })

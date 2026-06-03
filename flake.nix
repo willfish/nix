@@ -100,7 +100,13 @@
           inherit (sniffy.packages.${system}) sniffy;
           inherit (smailer.packages.${system}) smailer;
           mux = mux.packages.${system}.default;
-          forte = forte.packages.${system}.default;
+          forte = (
+            forte.packages.${system}.default.overrideAttrs (_: {
+              # Fix stale vendorHash in upstream forte package (caused go-modules FOD hash mismatch on build).
+              # Value taken from previous build error "got:" hash.
+              vendorHash = "sha256-5ZcYXLLMFMb2DSiz9t4ghes8uFUQmH5Cw+tiSMRh5E8=";
+            })
+          );
           inherit (trade-tariff-tools.packages.${system}) ecs;
           inherit (llm-agents.packages.${system})
             antigravity-cli
