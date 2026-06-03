@@ -50,8 +50,9 @@
     };
     forte = {
       url = "github:willfish/forte";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs-go";
     };
+    nixpkgs-go.url = "github:NixOS/nixpkgs";
     trade-tariff-tools = {
       url = "github:trade-tariff/trade-tariff-tools";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -103,8 +104,12 @@
           forte = (
             forte.packages.${system}.default.overrideAttrs (_: {
               # Fix stale vendorHash in upstream forte package (caused go-modules FOD hash mismatch on build).
-              # Value taken from previous build error "got:" hash.
-              vendorHash = "sha256-5ZcYXLLMFMb2DSiz9t4ghes8uFUQmH5Cw+tiSMRh5E8=";
+              # Use the per-system value from forte's own flake (updated for current Go in nixpkgs-go).
+              vendorHash =
+                if system == linuxSystem then
+                  "sha256-ET8WcOfBmVK5y4mqICLeD3OTTPd4eQ/ZwnnbImmRHd8="
+                else
+                  "sha256-5ZcYXLLMFMb2DSiz9t4ghes8uFUQmH5Cw+tiSMRh5E8=";
             })
           );
           inherit (trade-tariff-tools.packages.${system}) ecs;
