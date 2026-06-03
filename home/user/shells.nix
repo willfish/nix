@@ -40,6 +40,7 @@ let
   // lib.optionalAttrs stdenv.isLinux {
     pbcopy = "xclip -selection clipboard";
     pbpaste = "xclip -selection clipboard -o";
+    aw = "awake toggle";
   };
   git-cleanup = pkgs.writeShellScriptBin "git-cleanup" ''
     set -euo pipefail
@@ -84,11 +85,101 @@ let
     git checkout "$default"
     git-cleanup
   '';
+  awake = pkgs.writeShellScriptBin "awake" ''
+    #!${pkgs.bash}/bin/bash
+    set -euo pipefail
+
+    WHO=awake
+    WHY="Stay awake"
+    WHAT=idle:sleep:handle-lid-switch
+    PID_FILE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/awake.pid"
+
+    is_running() {
+      [[ -f "$PID_FILE" ]] || return 1
+      kill -0 "$(<"$PID_FILE")" 2>/dev/null
+    }
+
+    usage() {
+      echo "usage: awake {start|stop|status|toggle}" >&2
+      echo "  Blocks idle, suspend, and lid-close sleep via systemd-inhibit." >&2
+    }
+
+    start() {
+      if is_running; then
+        echo "already awake (pid $(<"$PID_FILE"))"
+        return 0
+      fi
+
+      mkdir -p "$(dirname "$PID_FILE")"
+      ${pkgs.systemd}/bin/systemd-inhibit \
+        --what="$WHAT" \
+        --who="$WHO" \
+        --why="$WHY" \
+        --mode=block \
+        sleep infinity &
+      echo $! > "$PID_FILE"
+
+      sleep 0.2
+      if ! is_running; then
+        rm -f "$PID_FILE"
+        echo "failed to start awake inhibitor" >&2
+        return 1
+      fi
+
+      echo "awake (pid $(<"$PID_FILE"))"
+    }
+
+    stop() {
+      if ! is_running; then
+        rm -f "$PID_FILE"
+        echo "not awake"
+        return 0
+      fi
+
+      kill "$(<"$PID_FILE")" 2>/dev/null || true
+      rm -f "$PID_FILE"
+      echo "stopped awake"
+    }
+
+    status() {
+      if is_running; then
+        echo "awake (pid $(<"$PID_FILE"))"
+        ${pkgs.systemd}/bin/systemd-inhibit --list 2>/dev/null \
+          | ${pkgs.gnugrep}/bin/grep -E "^WHO|''${WHO}[[:space:]]" || true
+        return 0
+      fi
+
+      rm -f "$PID_FILE"
+      echo "not awake"
+      return 1
+    }
+
+    case "''${1:-toggle}" in
+      start) start ;;
+      stop) stop ;;
+      status) status ;;
+      toggle)
+        if is_running; then
+          stop
+        else
+          start
+        fi
+        ;;
+      -h|--help|help) usage ;;
+      *)
+        usage
+        exit 2
+        ;;
+    esac
+  '';
 in
 {
   home.packages = [
     git-cleanup
     git-cm
+  ]
+  ++ lib.optionals stdenv.isLinux [
+    awake
   ];
 
   programs.bash = {
