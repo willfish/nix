@@ -330,7 +330,7 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-go"
         ],
         "pre-commit-hooks": "pre-commit-hooks"
       },
@@ -546,6 +546,21 @@
         "type": "github"
       }
     },
+    "nixpkgs-go": {
+      "locked": {
+        "lastModified": 1780567079,
+        "narHash": "sha256-5GBfNJ0L7kORPvzBobLJYuEki6p9PR8A/vP5CNAtvWw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "bdfd698db632d50d16854ddfe3bfb736355e4065",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-mullvad": {
       "locked": {
         "lastModified": 1780243769,
@@ -671,6 +686,7 @@
         "nix-index-database": "nix-index-database",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_3",
+        "nixpkgs-go": "nixpkgs-go",
         "nixpkgs-mullvad": "nixpkgs-mullvad",
         "pre-commit-hooks": "pre-commit-hooks_2",
         "smailer": "smailer",
