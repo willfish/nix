@@ -330,16 +330,16 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": [
-          "nixpkgs-go"
+          "nixpkgs"
         ],
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1780597369,
-        "narHash": "sha256-yrLZY95dPtGajrcsGD4YnCxQCz9o/pGs6/WOHG2w/GU=",
+        "lastModified": 1780606106,
+        "narHash": "sha256-Y7HWxIxicRFpp5EzVb76hcM/u3p4KHoWqblZiKRhgzg=",
         "owner": "willfish",
         "repo": "forte",
-        "rev": "f3ea6cbe06b7581bbf299b651f3d4caf95cd46ca",
+        "rev": "54df0f433301c68d41d044a88813ab48c31dc239",
         "type": "github"
       },
       "original": {
@@ -546,21 +546,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-go": {
-      "locked": {
-        "lastModified": 1780597076,
-        "narHash": "sha256-Vb7zZGf7srcsvTj0i9wgz8ipUpxHN0TTCaoAheaPgCk=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "e97453ac8b00aa8439a4c181e74210c1a6ee4be4",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "nixpkgs-mullvad": {
       "locked": {
         "lastModified": 1780243769,
@@ -686,7 +671,6 @@
         "nix-index-database": "nix-index-database",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_3",
-        "nixpkgs-go": "nixpkgs-go",
         "nixpkgs-mullvad": "nixpkgs-mullvad",
         "pre-commit-hooks": "pre-commit-hooks_2",
         "smailer": "smailer",
