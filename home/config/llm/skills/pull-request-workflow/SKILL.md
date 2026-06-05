@@ -17,6 +17,6 @@ Defaults:
 - Branch names use `{story}-short-kebab-description`; never add agent/tool prefixes such as `codex/`.
 - Link the child story, not only the parent epic.
 - Use a checklist in the `What?` section.
-- Include diagrams for non-trivial changes.
+- Include diagrams for non-trivial changes; when adding Mermaid, use the `diagramming` skill and its preferred inline Mermaid style.
 - Use `gh` for GitHub operations.
 - For Slack PR roundups, draft one concise line per PR with plain-language summaries.
