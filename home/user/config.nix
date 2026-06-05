@@ -82,6 +82,7 @@ let
     "pull-request-workflow"
     "rspec-testing"
     "terminal-demos"
+    "tui-design"
     "will-voice"
   ];
 
@@ -139,6 +140,7 @@ let
     terminal-demos = {
       "terminal-demos.md" = "${configDir}/llm/guides/terminal-demos.md";
     };
+    tui-design = { };
     will-voice = {
       "voice.md" = "${configDir}/llm/guides/voice.md";
     };
