@@ -9,6 +9,15 @@
 
 ## Common API patterns
 
+## Project selection
+
+- Use project key `HMRC` for HMRC trade-tariff or other non-AI work.
+- Use project key `AI` only when the work is explicitly for the AI project.
+- If the user says "HMRC board", create the issue in project `HMRC` unless they name a more specific HMRC board/project.
+- HMRC board examples:
+  - `OTT Operations` board: project key `HMRC`, board ID `155`
+  - `OTT Assessment` board: project key `HMRC`, board ID `158`
+
 **Search issues (POST — not GET):**
 ```bash
 source ~/.env && curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
@@ -72,12 +81,24 @@ source ~/.env && curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
 ## AI project specifics
 
 - Project key: `AI`
+- Use only for explicitly AI project work. Do not use this as the default for HMRC/non-AI trade-tariff work.
 - Project type: next-gen (team-managed, simplified)
 - Hierarchy: Epic (level 1) → Story/Task/Bug/Feature (level 0) → Subtask (level -1)
 - No native Feature > Epic hierarchy — Feature is at the same level as Story
 - Issue type IDs: Epic `10639`, Story `10638`, Task `10636`, Bug `10637`, Subtask `10640`, Feature `10706`
 - Child stories link to epics via the `parent` field: `"parent": {"key": "AI-137"}`
 - Transition IDs: To Do `11`, In Progress `21`, Done `31`
+
+## HMRC project specifics
+
+- Project key: `HMRC`
+- Use for HMRC trade-tariff or other non-AI work.
+- Project type: company-managed software project.
+- Common boards:
+  - `OTT Operations` board: board ID `155`
+  - `OTT Assessment` board: board ID `158`
+- Issue type IDs: Epic `10000`, Story `10001`, Task `3`, Bug `1`, Sub-task `5`
+- Board membership is normally driven by board filters, not a separate field on issue creation.
 
 ## Atlassian Document Format (ADF)
 

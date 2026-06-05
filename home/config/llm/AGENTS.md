@@ -182,7 +182,7 @@ Deeper supporting material and additional domain best-practices collections live
 
 ## Job-Specific Workflow Guides
 
-For HMRC trade-tariff work (Jira AI project on `transformuk.atlassian.net`, PR conventions, epic/story writing, voice, RSpec, local testing, etc.), the following guides are available in your TUI's guides/skills system:
+For HMRC trade-tariff work (Jira `HMRC` project for HMRC/non-AI work, Jira `AI` project only for explicitly AI work, PR conventions, epic/story writing, voice, RSpec, local testing, etc.), the following guides are available in your TUI's guides/skills system:
 
 - `jira-workflow` / `jira.md` — API v3 usage, ADF formatting, auth via `~/.env`, transitions, issue creation/update, known quirks
 - `hmrc-trade-tariff-workflow` — Top-level router for trade-tariff repos, PRs, reviews, RSpec, frontend auth, Slack summaries
@@ -198,7 +198,7 @@ For HMRC trade-tariff work (Jira AI project on `transformuk.atlassian.net`, PR c
 - `terminal-demos` / `terminal-demos.md` — asciinema+agg or gpu-screen-recorder+ffmpeg patterns for CLI GIFs
 - `latex-pdfs` / `pdfs.md` — Professional PDF generation via `nix-shell -p texlive...`
 
-These guides are the canonical source for institutional knowledge on the AI Jira project and trade-tariff stack. They are deployed to all supported TUIs from a single location in this repository.
+These guides are the canonical source for institutional knowledge on the HMRC and AI Jira projects and trade-tariff stack. They are deployed to all supported TUIs from a single location in this repository.
 
 **As shared skills**: The most frequently used workflows are available as first-class `SKILL.md` skills in each supported TUI:
 - `hmrc-trade-tariff-workflow`
