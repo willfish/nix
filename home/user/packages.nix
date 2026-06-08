@@ -115,6 +115,7 @@ in
       sniffy # Simple TUI for sniffing out unused secrets in AWS
       smailer # TUI for reviewing emails in an s3 bucket
       mux # Fast tmuxinator replacement in C
+      walls # Personal wallpaper manager (Rust); provides walls + walls-tray binaries
       ecs # Interactive tool for running commands in ECS tasks
       bitwarden-desktop # Cross-platform password manager with a desktop client - enables fingerprint unlocking on macOS and Linux
     ]

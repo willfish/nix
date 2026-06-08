@@ -27,6 +27,10 @@
     stylix = {
       url = "github:nix-community/stylix/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.gnome-shell = {
+        url = "github:GNOME/gnome-shell/gnome-49";
+        flake = false;
+      };
     };
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
@@ -52,6 +56,10 @@
       url = "github:willfish/forte";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    walls = {
+      url = "github:willfish/walls";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     trade-tariff-tools = {
       url = "github:trade-tariff/trade-tariff-tools";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -74,6 +82,7 @@
       smailer,
       mux,
       forte,
+      walls,
       trade-tariff-tools,
       llm-agents,
       nixos-hardware,
@@ -101,6 +110,7 @@
           inherit (smailer.packages.${system}) smailer;
           mux = mux.packages.${system}.default;
           forte = forte.packages.${system}.default;
+          inherit (walls.packages.${system}) walls;
           inherit (trade-tariff-tools.packages.${system}) ecs;
           inherit (llm-agents.packages.${system})
             antigravity-cli
