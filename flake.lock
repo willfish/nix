@@ -1107,11 +1107,11 @@
         "pre-commit-hooks": "pre-commit-hooks_3"
       },
       "locked": {
-        "lastModified": 1780912553,
-        "narHash": "sha256-y/Jz0tSE0CTMNFO10hKdIp6JMCHvJNugNLKZfCZppQA=",
+        "lastModified": 1780914846,
+        "narHash": "sha256-GUK1APAyaYLWog/uJI0+XlJsk3n8PHoLEDMQYTjCwbs=",
         "owner": "willfish",
         "repo": "walls",
-        "rev": "1132d934045908222f384f7a2324503efdd5c23c",
+        "rev": "1b42a167b3c0e67098ff17f2180300b4fc2523f1",
         "type": "github"
       },
       "original": {

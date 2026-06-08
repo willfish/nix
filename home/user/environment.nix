@@ -5,6 +5,7 @@
     DEFAULT_BROWSER = "brave";
     EDITOR = "nvim";
     GIT_PAGER = "delta";
+    TERMINAL = "ghostty";
     # Work around ssh client rejecting Nix store ssh_config snippets
     # (e.g. systemd's 20-systemd-ssh-proxy.conf owned by nobody:0444).
     # Without this, git@github.com operations fail with "Bad owner or

@@ -277,5 +277,6 @@ in
       recursive = true;
       force = true;
     };
+    "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
   };
 }

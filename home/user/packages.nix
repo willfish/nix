@@ -23,6 +23,7 @@ in
 
       # Utilities
       awscli2 # AWS command-line interface (version 2)
+      xdg-terminal-exec # Utility to launch the user's preferred terminal emulator (used by walls-tray, DEs, scripts)
       bat # Cat clone with syntax highlighting and git integration
       curl # Data transfer tool with support for many protocols
       bats # Bash automated testing system
@@ -134,6 +135,7 @@ in
     ++ lib.optionals stdenv.isLinux [
       bandwhich # Terminal bandwidth utilization tool
       cosmic-ext-tweaks
+      ghostty # GPU-accelerated terminal emulator (system package on NixOS; set as default via TERMINAL + xdg-terminal-exec)
       dropbox # Cloud storage and file synchronization service
       forte
       git-lfs # Large file support for model repos when needed
