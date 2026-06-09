@@ -142,6 +142,7 @@ in
       isd # Interactive systemd journal browser
       libation # Audio player with a focus on music libraries
       libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
+      loupe # Image viewer with previous/next navigation for images in the same directory
       nload # Network traffic and bandwidth monitor
       pavucontrol # Graphical PulseAudio volume control
       python3Packages.huggingface-hub # Hugging Face CLI for model downloads
