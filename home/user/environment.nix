@@ -1,4 +1,20 @@
-{ config, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  graphicalSessionPath = lib.concatStringsSep ":" [
+    "${config.home.homeDirectory}/.local/bin"
+    "${config.home.homeDirectory}/.bin"
+    "${config.home.homeDirectory}/go/bin"
+    "${config.home.profileDirectory}/bin"
+    "/etc/profiles/per-user/${config.home.username}/bin"
+    "/nix/var/nix/profiles/default/bin"
+    "/run/current-system/sw/bin"
+  ];
+in
 {
   home.sessionVariables = {
     BROWSER = "brave";
@@ -27,4 +43,22 @@
     "$HOME/.bin"
     "$HOME/go/bin"
   ];
+
+  systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
+    PATH = graphicalSessionPath;
+    SHELL = "/run/current-system/sw/bin/fish";
+  };
+
+  home.activation.importGraphicalSessionEnvironment = lib.mkIf pkgs.stdenv.isLinux (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      ${pkgs.systemd}/bin/systemctl --user set-environment \
+        PATH=${lib.escapeShellArg graphicalSessionPath} \
+        SHELL=/run/current-system/sw/bin/fish
+
+      env \
+        PATH=${lib.escapeShellArg graphicalSessionPath} \
+        SHELL=/run/current-system/sw/bin/fish \
+        ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd PATH SHELL
+    ''
+  );
 }

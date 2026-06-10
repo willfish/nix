@@ -315,10 +315,14 @@ in
       force = true;
     };
     "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
+  }
+  // lib.optionalAttrs stdenv.isLinux {
     "mimeapps.list".force = true;
   };
 
-  xdg.dataFile."applications/mimeapps.list".force = true;
+  xdg.dataFile = lib.optionalAttrs stdenv.isLinux {
+    "applications/mimeapps.list".force = true;
+  };
 
   xdg.mimeApps = lib.mkIf stdenv.isLinux {
     enable = true;

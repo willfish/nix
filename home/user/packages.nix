@@ -121,7 +121,7 @@ in
     ++ lib.optionals stdenv.isDarwin [
       aerospace # i3-like tiling window manager for macOS
       brave # Privacy-focused browser
-      docker # Docker client for talking to Colima or other Docker daemons
+      docker_29 # Docker client for talking to Colima or other Docker daemons
       docker-compose # Docker Compose CLI
       forte
       ghostty-bin # GPU-accelerated terminal emulator
@@ -153,7 +153,6 @@ in
       strace # System call tracer for debugging
       telegram-desktop # Desktop client for Telegram messaging
       tshark # Network protocol analyzer (terminal version of Wireshark)
-      variety # Wallpaper changer with customization options
       vokoscreen-ng # Screen recording tool with audio support
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
       zoom-us
