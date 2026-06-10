@@ -71,7 +71,7 @@
     ];
 
     packages = with pkgs; [
-      docker
+      docker_29
       docker-compose
     ];
 
@@ -115,7 +115,10 @@
     package = pkgs.fish;
   };
 
-  virtualisation.docker.enable = true;
+  virtualisation.docker = {
+    enable = true;
+    package = pkgs.docker_29;
+  };
 
   services = {
     openssh = {

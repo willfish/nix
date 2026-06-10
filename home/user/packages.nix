@@ -23,6 +23,7 @@ in
 
       # Utilities
       awscli2 # AWS command-line interface (version 2)
+      xdg-terminal-exec # Utility to launch the user's preferred terminal emulator (used by walls-tray, DEs, scripts)
       bat # Cat clone with syntax highlighting and git integration
       curl # Data transfer tool with support for many protocols
       bats # Bash automated testing system
@@ -110,18 +111,17 @@ in
       antigravity-cli # Google's Antigravity agentic IDE
       claude-code # Command-line interface for Anthropic's Claude AI
       codex # OpenAI Codex CLI coding agent
-      gemini-cli # Google's Gemini CLI coding agent
       grok # Grok CLI from xAI
       sniffy # Simple TUI for sniffing out unused secrets in AWS
       smailer # TUI for reviewing emails in an s3 bucket
       mux # Fast tmuxinator replacement in C
+      walls # Personal wallpaper manager (Rust); provides walls + walls-tray binaries
       ecs # Interactive tool for running commands in ECS tasks
-      bitwarden-desktop # Cross-platform password manager with a desktop client - enables fingerprint unlocking on macOS and Linux
     ]
     ++ lib.optionals stdenv.isDarwin [
       aerospace # i3-like tiling window manager for macOS
       brave # Privacy-focused browser
-      docker # Docker client for talking to Colima or other Docker daemons
+      docker_29 # Docker client for talking to Colima or other Docker daemons
       docker-compose # Docker Compose CLI
       forte
       ghostty-bin # GPU-accelerated terminal emulator
@@ -133,6 +133,7 @@ in
     ++ lib.optionals stdenv.isLinux [
       bandwhich # Terminal bandwidth utilization tool
       cosmic-ext-tweaks
+      ghostty # GPU-accelerated terminal emulator (system package on NixOS; set as default via TERMINAL + xdg-terminal-exec)
       dropbox # Cloud storage and file synchronization service
       forte
       git-lfs # Large file support for model repos when needed
@@ -141,6 +142,7 @@ in
       isd # Interactive systemd journal browser
       libation # Audio player with a focus on music libraries
       libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
+      loupe # Image viewer with previous/next navigation for images in the same directory
       nload # Network traffic and bandwidth monitor
       pavucontrol # Graphical PulseAudio volume control
       python3Packages.huggingface-hub # Hugging Face CLI for model downloads
@@ -151,7 +153,6 @@ in
       strace # System call tracer for debugging
       telegram-desktop # Desktop client for Telegram messaging
       tshark # Network protocol analyzer (terminal version of Wireshark)
-      variety # Wallpaper changer with customization options
       vokoscreen-ng # Screen recording tool with audio support
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
       zoom-us

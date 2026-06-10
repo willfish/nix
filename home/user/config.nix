@@ -6,6 +6,43 @@
 let
   inherit (pkgs) stdenv;
   configDir = ../config;
+  defaultImageViewer = "org.gnome.Loupe.desktop";
+  browserDesktop = "brave-browser.desktop";
+  telegramDesktop = "org.telegram.desktop.desktop";
+  imageMimeTypes = [
+    "image/avif"
+    "image/bmp"
+    "image/gif"
+    "image/heic"
+    "image/jpeg"
+    "image/jxl"
+    "image/png"
+    "image/qoi"
+    "image/svg+xml"
+    "image/svg+xml-compressed"
+    "image/tiff"
+    "image/vnd.microsoft.icon"
+    "image/vnd-ms.dds"
+    "image/vnd.radiance"
+    "image/webp"
+    "image/x-dds"
+    "image/x-exr"
+    "image/x-portable-anymap"
+    "image/x-portable-bitmap"
+    "image/x-portable-graymap"
+    "image/x-portable-pixmap"
+    "image/x-qoi"
+    "image/x-tga"
+  ];
+  existingMimeDefaults = {
+    "x-scheme-handler/mailto" = browserDesktop;
+    "x-scheme-handler/tg" = telegramDesktop;
+    "x-scheme-handler/tonsite" = telegramDesktop;
+  };
+  existingMimeAssociations = {
+    "x-scheme-handler/tg" = telegramDesktop;
+    "x-scheme-handler/tonsite" = telegramDesktop;
+  };
   sourceFile = source: {
     inherit source;
     force = true;
@@ -277,5 +314,19 @@ in
       recursive = true;
       force = true;
     };
+    "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
+  }
+  // lib.optionalAttrs stdenv.isLinux {
+    "mimeapps.list".force = true;
+  };
+
+  xdg.dataFile = lib.optionalAttrs stdenv.isLinux {
+    "applications/mimeapps.list".force = true;
+  };
+
+  xdg.mimeApps = lib.mkIf stdenv.isLinux {
+    enable = true;
+    defaultApplications = existingMimeDefaults // lib.genAttrs imageMimeTypes (_: defaultImageViewer);
+    associations.added = existingMimeAssociations;
   };
 }

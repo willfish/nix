@@ -15,19 +15,19 @@ echo "============================="
 # 1. Check Qdrant is running
 echo -e "\n[1/5] Checking Qdrant..."
 if ! curl -s http://localhost:6333/collections >/dev/null 2>&1; then
-	echo "❌ Qdrant not running. Start with:"
-	echo "   $SCRIPT_DIR/start.sh"
-	exit 1
+  echo "❌ Qdrant not running. Start with:"
+  echo "   $SCRIPT_DIR/start.sh"
+  exit 1
 fi
 echo "✓ Qdrant is healthy"
 
 # 2. Copy config
 echo -e "\n[2/5] Installing Mem0 config..."
 if [ -f "$HERMES_DIR/mem0-selfhosted.json" ]; then
-	cp "$HERMES_DIR/mem0-selfhosted.json" "$MEM0_DIR/config.json"
-	echo "✓ Config installed to $MEM0_DIR/config.json"
+  cp "$HERMES_DIR/mem0-selfhosted.json" "$MEM0_DIR/config.json"
+  echo "✓ Config installed to $MEM0_DIR/config.json"
 else
-	echo "⚠️  No config found at $HERMES_DIR/mem0-selfhosted.json"
+  echo "⚠️  No config found at $HERMES_DIR/mem0-selfhosted.json"
 fi
 
 # 3. Migrate flat-file memories
@@ -35,9 +35,9 @@ echo -e "\n[3/5] Migrating flat-file memories..."
 
 # Extract facts from MEMORY.md
 if [ -f "$HERMES_DIR/MEMORY.md" ]; then
-	echo "  → Processing MEMORY.md..."
-	# Parse MEMORY.md into facts (strip headers, bullets, etc.)
-	python3 <<'EOF'
+  echo "  → Processing MEMORY.md..."
+  # Parse MEMORY.md into facts (strip headers, bullets, etc.)
+  python3 <<'EOF'
 import re
 
 memory_file = "$HERMES_DIR/MEMORY.md"
@@ -84,8 +84,8 @@ fi
 
 # Extract from daily memory files
 if [ -d "$MEMORY_DIR" ]; then
-	echo "  → Processing daily memory files..."
-	python3 <<'EOF'
+  echo "  → Processing daily memory files..."
+  python3 <<'EOF'
 import os
 import re
 from pathlib import Path
@@ -120,7 +120,7 @@ fi
 # 4. Update Hermes config
 echo -e "\n[4/5] Updating Hermes memory config..."
 ~/.hermes/hermes-agent/venv/bin/hermes config set memory.provider mem0 2>/dev/null ||
-	echo "  (Manual: hermes config set memory.provider mem0)"
+  echo "  (Manual: hermes config set memory.provider mem0)"
 ~/.hermes/hermes-agent/venv/bin/hermes config set memory.memory_enabled true 2>/dev/null || true
 
 echo "✓ Hermes memory provider set to mem0"

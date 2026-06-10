@@ -1,10 +1,27 @@
-{ config, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  graphicalSessionPath = lib.concatStringsSep ":" [
+    "${config.home.homeDirectory}/.local/bin"
+    "${config.home.homeDirectory}/.bin"
+    "${config.home.homeDirectory}/go/bin"
+    "${config.home.profileDirectory}/bin"
+    "/etc/profiles/per-user/${config.home.username}/bin"
+    "/nix/var/nix/profiles/default/bin"
+    "/run/current-system/sw/bin"
+  ];
+in
 {
   home.sessionVariables = {
     BROWSER = "brave";
     DEFAULT_BROWSER = "brave";
     EDITOR = "nvim";
     GIT_PAGER = "delta";
+    TERMINAL = "ghostty";
     # Work around ssh client rejecting Nix store ssh_config snippets
     # (e.g. systemd's 20-systemd-ssh-proxy.conf owned by nobody:0444).
     # Without this, git@github.com operations fail with "Bad owner or
@@ -26,4 +43,22 @@
     "$HOME/.bin"
     "$HOME/go/bin"
   ];
+
+  systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
+    PATH = graphicalSessionPath;
+    SHELL = "/run/current-system/sw/bin/fish";
+  };
+
+  home.activation.importGraphicalSessionEnvironment = lib.mkIf pkgs.stdenv.isLinux (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      ${pkgs.systemd}/bin/systemctl --user set-environment \
+        PATH=${lib.escapeShellArg graphicalSessionPath} \
+        SHELL=/run/current-system/sw/bin/fish
+
+      env \
+        PATH=${lib.escapeShellArg graphicalSessionPath} \
+        SHELL=/run/current-system/sw/bin/fish \
+        ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd PATH SHELL
+    ''
+  );
 }

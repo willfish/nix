@@ -98,7 +98,7 @@
         darwinSystem
       ];
       mkOverlay =
-        system: _final: _prev:
+        system: _final: prev:
         let
           mullvadPkgs = import nixpkgs-mullvad {
             inherit system;
@@ -121,6 +121,14 @@
         }
         // lib.optionalAttrs (system == linuxSystem) {
           mullvad-vpn = mullvadPkgs.mullvad-vpn;
+
+          variety = prev.variety.overrideAttrs (old: {
+            postPatch = (old.postPatch or "") + ''
+              substituteInPlace variety/Util.py \
+                --replace-fail "super(VarietyMetadata, self).__init__(path=path)" \
+                               "super(VarietyMetadata, self).__init__(); self.open_path(path)"
+            '';
+          });
         };
       mkPkgs =
         system:
