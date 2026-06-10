@@ -2,10 +2,12 @@
 
 name: work
 windows:
-  - 📀:
+  - postgres:
       panes:
-        - cd ~/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && pg-start
-        - cd ~/Repositories/hmrc/trade-tariff-dev-hub && eval "$(direnv export fish)" && pg-start
-        - cd ~/Repositories/hmrc/trade-tariff-admin && eval "$(direnv export fish)" && pg-start
-        - valkey-server
-        - cd ~/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && opensearch-start
+        - backend: cd ~/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && pg-start
+        - dev-hub: cd ~/Repositories/hmrc/trade-tariff-dev-hub && eval "$(direnv export fish)" && pg-start
+        - admin: cd ~/Repositories/hmrc/trade-tariff-admin && eval "$(direnv export fish)" && pg-start
+  - services:
+      panes:
+        - valkey: valkey-server
+        - opensearch: cd ~/Repositories/hmrc/trade-tariff-backend && eval "$(direnv export fish)" && opensearch-start
