@@ -118,6 +118,7 @@ let
     "local-dev-environment"
     "pull-request-workflow"
     "rspec-testing"
+    "teach"
     "terminal-demos"
     "tui-design"
     "will-voice"
@@ -174,6 +175,7 @@ let
       "rspec.md" = "${configDir}/llm/guides/rspec.md";
       "testing.md" = "${configDir}/llm/guides/testing.md";
     };
+    teach = { };
     terminal-demos = {
       "terminal-demos.md" = "${configDir}/llm/guides/terminal-demos.md";
     };
