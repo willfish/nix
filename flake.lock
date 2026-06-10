@@ -532,11 +532,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781005153,
-        "narHash": "sha256-NiTyeWm6oqHlHYcGdOBnl+l7LxIHI/7YOYghihFFrdQ=",
+        "lastModified": 1781082512,
+        "narHash": "sha256-+1O6EMlSMRQGT9Uh/xonOi4E63iSGSjSuezQuOmHeaQ=",
         "owner": "willfish",
         "repo": "mux",
-        "rev": "79d6f4a531d3ead4ed0a77d540b5dfaad7f2699d",
+        "rev": "13665ec406c7c902d3273f1d43dad929ac0a18e6",
         "type": "github"
       },
       "original": {
@@ -1107,11 +1107,11 @@
         "pre-commit-hooks": "pre-commit-hooks_3"
       },
       "locked": {
-        "lastModified": 1781012129,
-        "narHash": "sha256-HaSXEB1hFUMk5R5MWuaM9EURy3S+U4DAd1C9GHCLsuA=",
+        "lastModified": 1781080882,
+        "narHash": "sha256-xgewEbVPcfM96Qnympg1G9kk019xFkekUiidtFwoGnY=",
         "owner": "willfish",
         "repo": "walls",
-        "rev": "d8da78ee291bcabd9cc5caef80a504ebe49498a3",
+        "rev": "d491c9bc7f9c8b715828883b7eaf6ac551271f47",
         "type": "github"
       },
       "original": {
