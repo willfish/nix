@@ -98,7 +98,7 @@
         darwinSystem
       ];
       mkOverlay =
-        system: _final: _prev:
+        system: final: prev:
         let
           mullvadPkgs = import nixpkgs-mullvad {
             inherit system;
@@ -120,6 +120,27 @@
             ;
         }
         // lib.optionalAttrs (system == linuxSystem) {
+          cosmic-applets =
+            let
+              src = final.fetchFromGitHub {
+                owner = "willfish";
+                repo = "cosmic-applets";
+                rev = "18ca3bde6d8a6e3c77bfe5339f595e341959a167";
+                hash = "sha256-uDfxxIMOtDUuEyVkUIXDjkjXE5M9g7ESv3F5vuPZo7I=";
+              };
+            in
+            (prev.cosmic-applets.override {
+              rustPlatform = final.rustPackages_1_94.rustPlatform;
+            }).overrideAttrs
+              (_old: {
+                # Temporary local test of https://github.com/pop-os/cosmic-applets/pull/1431
+                inherit src;
+                cargoDeps = final.rustPackages_1_94.rustPlatform.fetchCargoVendor {
+                  inherit src;
+                  name = "cosmic-applets-1.0.0-vendor";
+                  hash = "sha256-tbGuyqdDTsKYpKxeAuachwbPHTPhmb9Sg3qzxHYosjo=";
+                };
+              });
           mullvad-vpn = mullvadPkgs.mullvad-vpn;
         };
       mkPkgs =
