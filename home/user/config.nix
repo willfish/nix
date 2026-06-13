@@ -111,6 +111,7 @@ let
     "code-review-workflow"
     "daily-notes"
     "diagramming"
+    "github-pr-review"
     "hmrc-trade-tariff-workflow"
     "javascript-supply-chain-security"
     "jira-workflow"
@@ -144,6 +145,7 @@ let
       "rendering-diagrams.md" = "${configDir}/llm/skills/diagramming/references/rendering-diagrams.md";
       "tool-selection.md" = "${configDir}/llm/skills/diagramming/references/tool-selection.md";
     };
+    github-pr-review = { };
     hmrc-trade-tariff-workflow = {
       "jira.md" = "${configDir}/llm/guides/jira.md";
       "prs.md" = "${configDir}/llm/guides/prs.md";
