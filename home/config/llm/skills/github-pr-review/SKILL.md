@@ -9,6 +9,8 @@ Use this when reviewing GitHub PRs and when posting review comments or code sugg
 
 This skill is specifically about publishing review feedback. If you are only reading code and reporting findings to the user, follow normal code-review practice and do not post anything to GitHub.
 
+For review judgement, findings, tone, and Will's review voice, also use `code-review-workflow`; it provides `references/reviews.md` and `references/voice.md`. This skill only governs GitHub publication mechanics.
+
 ## Non-Negotiables
 
 - Check `gh --version` before running GitHub review commands.
