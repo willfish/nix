@@ -96,7 +96,7 @@ Each plan must include:
 - STOP conditions
 - maintenance notes for reviewers
 
-Use the repo's branch naming convention. If none exists, use a neutral work description such as `BAU-<short-description>`; do not use agent/tool prefixes.
+Use the repo's branch naming convention. If none exists, use a neutral short description; do not use agent/tool prefixes.
 
 ## Invocation Variants
 
