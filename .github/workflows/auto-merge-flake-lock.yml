@@ -1,7 +1,7 @@
 name: Auto-merge flake.lock updates
 
 on:
-  pull_request:
+  pull_request_target:
     types:
       - opened
       - reopened
@@ -9,35 +9,136 @@ on:
       - ready_for_review
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
+env:
+  AUTO_MERGE_GITHUB_OWNERS: |
+    willfish
+
 jobs:
   enable-auto-merge:
-    name: Enable auto-merge
+    name: Approve CI and enable auto-merge
     runs-on: ubuntu-latest
     if: >-
       github.event.pull_request.user.login == 'github-actions[bot]' &&
       github.event.pull_request.head.ref == 'update_flake_lock_action' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.base.ref == 'master' &&
       github.event.pull_request.draft == false
     steps:
-      - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-
       - name: Verify PR only updates flake.lock
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+
+          changed_files="$(gh pr view "$PR_NUMBER" --json files --jq '.files[].path')"
           if [ "$changed_files" != "flake.lock" ]; then
             printf 'Unexpected files changed:\n%s\n' "$changed_files" >&2
             exit 1
           fi
+
+      - name: Verify changed flake inputs are auto-mergeable
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"' EXIT
+
+          gh api --method GET "repos/$GH_REPO/contents/flake.lock" \
+            -f ref="$BASE_SHA" \
+            --jq '.content' | base64 --decode > "$tmpdir/base.lock"
+          gh api --method GET "repos/$GH_REPO/contents/flake.lock" \
+            -f ref="$HEAD_SHA" \
+            --jq '.content' | base64 --decode > "$tmpdir/head.lock"
+
+          jq -S '.nodes.root.inputs' "$tmpdir/base.lock" > "$tmpdir/base-inputs.json"
+          jq -S '.nodes.root.inputs' "$tmpdir/head.lock" > "$tmpdir/head-inputs.json"
+          if ! cmp -s "$tmpdir/base-inputs.json" "$tmpdir/head-inputs.json"; then
+            echo "flake.lock changes the root input graph; manual review required." >&2
+            exit 1
+          fi
+
+          jq -r '.nodes.root.inputs | to_entries[] | [.key, .value] | @tsv' "$tmpdir/head.lock" |
+            while IFS=$'\t' read -r input node; do
+              jq -S --arg node "$node" '.nodes[$node].locked // null' "$tmpdir/base.lock" > "$tmpdir/base-$input.json"
+              jq -S --arg node "$node" '.nodes[$node].locked // null' "$tmpdir/head.lock" > "$tmpdir/head-$input.json"
+
+              if ! cmp -s "$tmpdir/base-$input.json" "$tmpdir/head-$input.json"; then
+                printf '%s\n' "$input"
+              fi
+            done > "$tmpdir/changed-inputs"
+
+          if [ ! -s "$tmpdir/changed-inputs" ]; then
+            echo "No changed top-level flake inputs found."
+            exit 0
+          fi
+
+          printf '%s\n' "$AUTO_MERGE_GITHUB_OWNERS" |
+            sed '/^[[:space:]]*$/d' |
+            sort > "$tmpdir/allowed-owners.sorted"
+
+          while IFS= read -r input; do
+            node="$(jq -r --arg input "$input" '.nodes.root.inputs[$input]' "$tmpdir/head.lock")"
+            base_identity="$(jq -r --arg node "$node" '.nodes[$node].locked | [.type, .owner, .repo] | @tsv' "$tmpdir/base.lock")"
+            head_identity="$(jq -r --arg node "$node" '.nodes[$node].locked | [.type, .owner, .repo] | @tsv' "$tmpdir/head.lock")"
+
+            if [ "$base_identity" != "$head_identity" ]; then
+              printf 'Manual review required for %s: locked source changed from %s to %s.\n' \
+                "$input" "$base_identity" "$head_identity" >&2
+              exit 1
+            fi
+
+            owner="$(printf '%s\n' "$head_identity" | cut -f2)"
+            if ! grep -Fxq "$owner" "$tmpdir/allowed-owners.sorted"; then
+              printf 'Manual review required for %s: GitHub owner %s is not auto-mergeable.\n' \
+                "$input" "$owner" >&2
+              exit 1
+            fi
+          done < "$tmpdir/changed-inputs"
+
+          printf 'Auto-merge allowed for changed flake input(s):\n'
+          sort "$tmpdir/changed-inputs"
+
+      - name: Approve CI workflow run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          for _ in $(seq 1 12); do
+            run_ids="$(gh api --method GET "repos/$GH_REPO/actions/runs" \
+              -f event=pull_request \
+              -f branch="$HEAD_REF" \
+              --jq '.workflow_runs[]
+                | select(.name == "CI")
+                | select(.head_sha == env.HEAD_SHA)
+                | select(.conclusion == "action_required")
+                | .id')"
+
+            if [ -n "$run_ids" ]; then
+              printf '%s\n' "$run_ids" | while IFS= read -r run_id; do
+                gh api --method POST "repos/$GH_REPO/actions/runs/$run_id/approve"
+              done
+              exit 0
+            fi
+
+            sleep 5
+          done
+
+          echo "No pending CI workflow run found for $HEAD_SHA."
 
       - name: Enable pull request auto-merge
         env:

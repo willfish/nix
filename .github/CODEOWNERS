@@ -1,0 +1,2 @@
+# Workflow changes affect repository automation and must be reviewed manually.
+/.github/workflows/ @willfish
