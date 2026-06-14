@@ -15,7 +15,7 @@ updates:
       - dependencies
       - github-actions
     commit-message:
-      prefix: BAU
+      prefix: chore(deps)
     groups:
       github-actions:
         patterns:

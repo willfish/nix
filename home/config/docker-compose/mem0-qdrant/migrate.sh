@@ -2,12 +2,14 @@
 # Mem0 Self-Hosted Setup & Migration Script
 # Migrates existing flat-file memory to Mem0 + Qdrant
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MEM0_DIR="$HOME/.mem0"
 HERMES_DIR="$HOME/.hermes"
 MEMORY_DIR="$HERMES_DIR/memory"
+
+mkdir -p "$MEM0_DIR" "$MEMORY_DIR"
 
 echo "🦉 Mem0 Self-Hosted Migration"
 echo "============================="
@@ -37,11 +39,15 @@ echo -e "\n[3/5] Migrating flat-file memories..."
 if [ -f "$HERMES_DIR/MEMORY.md" ]; then
   echo "  → Processing MEMORY.md..."
   # Parse MEMORY.md into facts (strip headers, bullets, etc.)
+  export HERMES_MEMORY_FILE="$HERMES_DIR/MEMORY.md"
+  export HERMES_MIGRATED_FACTS_FILE="$MEMORY_DIR/migrated-facts.jsonl"
   python3 <<'EOF'
+import json
+import os
 import re
 
-memory_file = "$HERMES_DIR/MEMORY.md"
-output_file = "$HERMES_DIR/memory/migrated-facts.jsonl"
+memory_file = os.environ["HERMES_MEMORY_FILE"]
+output_file = os.environ["HERMES_MIGRATED_FACTS_FILE"]
 
 try:
     with open(memory_file) as f:
@@ -75,7 +81,7 @@ try:
     with open(output_file, 'w') as f:
         for fact in facts:
             if fact:
-                f.write(f'{{"text": "{fact.replace(chr(34), chr(92)+chr(34))}"}}\n')
+                f.write(json.dumps({"text": fact}) + "\n")
 
 except Exception as e:
     print(f"  Warning: {e}")
@@ -85,13 +91,16 @@ fi
 # Extract from daily memory files
 if [ -d "$MEMORY_DIR" ]; then
   echo "  → Processing daily memory files..."
+  export HERMES_MEMORY_DIR="$MEMORY_DIR"
+  export HERMES_PROCESSED_FACTS_FILE="$MEMORY_DIR/processed-facts.jsonl"
   python3 <<'EOF'
+import json
 import os
 import re
 from pathlib import Path
 
-memories_dir = Path("$MEMORY_DIR")
-output_file = "$HERMES_DIR/memory/processed-facts.jsonl"
+memories_dir = Path(os.environ["HERMES_MEMORY_DIR"])
+output_file = os.environ["HERMES_PROCESSED_FACTS_FILE"]
 
 facts = []
 
@@ -113,7 +122,7 @@ for md_file in sorted(memories_dir.glob("*.md"))[-7:]:  # Last 7 days
 print(f"  Extracted {len(facts)} facts from daily memories")
 with open(output_file, 'w') as f:
     for fact in facts:
-        f.write(f'{{"text": "{fact.replace(chr(34), chr(92)+chr(34))}"}}\n')
+        f.write(json.dumps({"text": fact}) + "\n")
 EOF
 fi
 
@@ -127,15 +136,20 @@ echo "✓ Hermes memory provider set to mem0"
 
 # 5. Verify setup
 echo -e "\n[5/5] Verifying Mem0 integration..."
+export MEM0_CONFIG_FILE="$MEM0_DIR/config.json"
 ~/.hermes/hermes-agent/venv/bin/python3 <<'EOF'
+import os
 import sys
-sys.path.insert(0, '$HOME/.hermes/hermes-agent/venv/lib/python3.11/site-packages')
+from pathlib import Path
+
+hermes_site_packages = Path.home() / ".hermes/hermes-agent/venv/lib/python3.11/site-packages"
+sys.path.insert(0, str(hermes_site_packages))
 
 try:
     from mem0.configs.base import MemoryConfig, VectorStoreConfig
     from mem0.configs.vector_stores.qdrant import QdrantConfig
 
-    config = MemoryConfig.from_config_file("$HOME/.mem0/config.json")
+    config = MemoryConfig.from_config_file(os.environ["MEM0_CONFIG_FILE"])
     print("✓ Mem0 config loaded successfully")
     print(f"  Vector store: {config.vector_store.config.collection_name}")
 except Exception as e:

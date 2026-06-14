@@ -29,8 +29,8 @@ jobs:
           extra-conf: |
             eval-cores = 1
 
-      - name: Check flake evaluation
-        run: nix flake check --no-build
+      - name: Run flake checks
+        run: nix flake check -L
 
       - name: Check Linux Home Manager activation package closure
         run: nix build .#homeConfigurations.william-linux.activationPackage --dry-run

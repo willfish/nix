@@ -2,7 +2,7 @@
 # Start Qdrant for Mem0 semantic memory
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
+COMPOSE_DIR="$SCRIPT_DIR"
 
 cd "$COMPOSE_DIR" || exit 1
 
