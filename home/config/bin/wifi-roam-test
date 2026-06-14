@@ -7,6 +7,8 @@ iface=""
 duration=120
 settle=8
 keep_last=0
+diagnose_only=0
+journal_window="15 minutes ago"
 
 usage() {
   cat <<'USAGE'
@@ -23,6 +25,9 @@ Options:
   -i, --iface IFACE       Wi-Fi interface. Default: inferred from connection.
   -d, --duration SECONDS  Seconds to monitor each BSSID. Default: 120
   --settle SECONDS        Seconds to wait after reconnect. Default: 8
+  --diagnose-only         Print current Wi-Fi state and recent journal only.
+  --journal-since VALUE   Journal start time for --diagnose-only.
+                          Default: 15 minutes ago
   --keep-last             Leave the connection pinned to the last tested BSSID.
   -h, --help              Show this help.
 
@@ -67,6 +72,14 @@ while (($#)); do
       settle="${2:?missing value for $1}"
       shift 2
       ;;
+    --diagnose-only)
+      diagnose_only=1
+      shift
+      ;;
+    --journal-since)
+      journal_window="${2:?missing value for $1}"
+      shift 2
+      ;;
     --keep-last)
       keep_last=1
       shift
@@ -91,6 +104,7 @@ done
 need nmcli
 need journalctl
 need ping
+need ip
 
 if [[ -z "$iface" ]]; then
   iface="$(nmcli -g connection.interface-name connection show "$connection" | head -n1)"
@@ -106,6 +120,8 @@ original_bssid="$(nmcli -g 802-11-wireless.bssid connection show "$connection" |
 restored=0
 
 restore() {
+  trap - INT TERM
+
   if ((restored)); then
     return
   fi
@@ -120,6 +136,72 @@ restore() {
   nmcli connection down "$connection" >/dev/null 2>&1 || true
   nmcli connection up "$connection" >/dev/null 2>&1 || true
 }
+
+gateway_for_iface() {
+  ip route show default dev "$iface" 2>/dev/null | awk '{ print $3; exit }'
+}
+
+journal_since() {
+  local since="$1"
+  local pattern='wlp|NetworkManager|wpa_supplicant|mt7925|mt76|deauth|disassoc|4WAY|handshake|wrong_key|WNM|CTRL-EVENT|auth|assoc|connectivity|dhcp|chan-switch|channel switch|no secrets|scan-failed'
+
+  if command -v rg >/dev/null 2>&1; then
+    journalctl -b --since "$since" --no-pager -o short-iso | rg -i "$pattern" || true
+  else
+    journalctl -b --since "$since" --no-pager -o short-iso | grep -Ei "$pattern" || true
+  fi
+}
+
+connection_profile() {
+  nmcli -f connection.id,connection.uuid,connection.type,connection.interface-name,connection.autoconnect,connection.autoconnect-retries,802-11-wireless.ssid,802-11-wireless.mode,802-11-wireless.band,802-11-wireless.channel,802-11-wireless.bssid,802-11-wireless-security.key-mgmt,802-11-wireless-security.auth-alg,802-11-wireless-security.proto,802-11-wireless-security.pairwise,802-11-wireless-security.group,802-11-wireless-security.pmf,802-11-wireless-security.psk-flags connection show "$connection"
+}
+
+association_snapshot() {
+  log "Device"
+  nmcli -f GENERAL.STATE,GENERAL.CONNECTION,GENERAL.IP4-CONNECTIVITY,GENERAL.IP6-CONNECTIVITY,GENERAL.DRIVER,GENERAL.FIRMWARE-VERSION,GENERAL.HWADDR device show "$iface" || true
+
+  log "Association"
+  nmcli -f ACTIVE,SSID,BSSID,CHAN,FREQ,RATE,SIGNAL,SECURITY device wifi list | awk '$1 == "yes" || NR == 1'
+
+  log "Routes"
+  ip route show dev "$iface" || true
+  ip route show default dev "$iface" || true
+}
+
+ping_supports_iface=0
+if ping --help 2>&1 | grep -Eq -- '(^|[[:space:]])-I[,[:space:]]|--interface'; then
+  ping_supports_iface=1
+fi
+
+ping_host() {
+  local host="$1"
+
+  printf 'route_to_%s=%s\n' "$host" "$(ip route get "$host" 2>/dev/null | head -n1 || true)"
+  if ((ping_supports_iface)); then
+    ping -I "$iface" -c 3 -W 2 "$host" || true
+  else
+    printf 'note=ping lacks interface binding support; running unbound ping\n'
+    ping -c 3 -W 2 "$host" || true
+  fi
+}
+
+if ((diagnose_only)); then
+  log "Diagnostic target"
+  printf 'connection=%s\nssid=%s\niface=%s\njournal_since=%s\n' "$connection" "$ssid" "$iface" "$journal_window"
+
+  log "Connection profile"
+  connection_profile
+
+  association_snapshot
+
+  log "Visible ${ssid} BSSIDs"
+  nmcli -f SSID,BSSID,CHAN,FREQ,RATE,SIGNAL,BARS,SECURITY device wifi list --rescan yes |
+    awk -v ssid="$ssid" '$1 == ssid || NR == 1'
+
+  log "Recent journal"
+  journal_since "$journal_window"
+  exit 0
+fi
 
 trap restore EXIT INT TERM
 
@@ -141,20 +223,8 @@ printf 'connection=%s\nssid=%s\niface=%s\nduration=%ss\n' "$connection" "$ssid" 
 printf 'original_bssid=%s\n' "${original_bssid:-<none>}"
 printf 'bssids=%s\n' "${bssids[*]}"
 
-gateway_for_iface() {
-  ip route show default dev "$iface" 2>/dev/null | awk '{ print $3; exit }'
-}
-
-journal_since() {
-  local since="$1"
-  local pattern='wlp|NetworkManager|wpa_supplicant|mt7925|mt76|deauth|disassoc|4WAY|handshake|wrong_key|WNM|CTRL-EVENT|auth|assoc|connectivity|dhcp'
-
-  if command -v rg >/dev/null 2>&1; then
-    journalctl -b --since "$since" --no-pager -o short-iso | rg -i "$pattern" || true
-  else
-    journalctl -b --since "$since" --no-pager -o short-iso | grep -Ei "$pattern" || true
-  fi
-}
+log "Connection profile"
+connection_profile
 
 for bssid in "${bssids[@]}"; do
   start_iso="$(date --iso-8601=seconds)"
@@ -163,28 +233,27 @@ for bssid in "${bssids[@]}"; do
   nmcli connection modify "$connection" 802-11-wireless.bssid "$bssid"
   nmcli connection down "$connection" >/dev/null 2>&1 || true
 
-  if ! nmcli connection up "$connection"; then
+  if ! nmcli --wait 20 connection up "$connection"; then
     printf 'connect_result=failed\n'
+    association_snapshot
     journal_since "$start_iso"
     continue
   fi
 
   sleep "$settle"
 
-  log "Association"
-  nmcli -f GENERAL.STATE,GENERAL.CONNECTION,GENERAL.IP4-CONNECTIVITY,GENERAL.IP6-CONNECTIVITY device show "$iface"
-  nmcli -f ACTIVE,SSID,BSSID,CHAN,FREQ,SIGNAL,SECURITY device wifi list | awk '$1 == "yes" || NR == 1'
+  association_snapshot
 
   gateway="$(gateway_for_iface)"
   log "Connectivity"
   if [[ -n "$gateway" ]]; then
     printf 'gateway=%s\n' "$gateway"
-    ping -I "$iface" -c 3 -W 2 "$gateway" || true
+    ping_host "$gateway"
   else
     printf 'gateway=<none>\n'
   fi
 
-  ping -I "$iface" -c 3 -W 2 1.1.1.1 || true
+  ping_host 1.1.1.1
 
   log "Monitoring for ${duration}s"
   end=$((SECONDS + duration))
