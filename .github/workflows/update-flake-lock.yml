@@ -27,7 +27,19 @@ jobs:
         uses: DeterminateSystems/update-flake-lock@834c491b2ece4de0bbd00d85214bb5e83b4da5c6 # v28
         with:
           token: ${{ secrets.UPDATE_FLAKE_LOCK_TOKEN || github.token }}
-          pr-title: Update Nix flake inputs
+          commit-msg: |
+            chore(deps): update nix flake inputs
+
+            Issue: No ticket/issue
+          pr-title: "chore(deps): update nix flake inputs"
+          pr-body: |
+            Automated flake input update.
+
+            Issue: No ticket/issue
+
+            ```text
+            {{ env.GIT_COMMIT_MESSAGE }}
+            ```
 
       - name: Enable auto-merge for flake.lock PR
         env:
@@ -53,4 +65,9 @@ jobs:
             exit 1
           fi
 
-          gh pr merge "$pr_number" --auto --squash --delete-branch
+          gh pr merge "$pr_number" \
+            --auto \
+            --squash \
+            --delete-branch \
+            --subject "chore(deps): update nix flake inputs" \
+            --body "Issue: No ticket/issue"

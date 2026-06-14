@@ -144,4 +144,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge "$PR_URL" --auto --squash --delete-branch
+        run: |
+          gh pr merge "$PR_URL" \
+            --auto \
+            --squash \
+            --delete-branch \
+            --subject "chore(deps): update nix flake inputs" \
+            --body "Issue: No ticket/issue"
