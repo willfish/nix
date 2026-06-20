@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0001: What Makes an AI Feature a System?</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #5c667a;
+      --line: #d9dee8;
+      --panel: #f7f9fc;
+      --blue: #165dff;
+      --green: #147d64;
+      --purple: #6b3fc9;
+      --red: #b42318;
+      --amber: #9a6700;
+      --white: #ffffff;
+      --focus: #1d4ed8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--white);
+      line-height: 1.55;
+    }
+    main {
+      width: min(1080px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 34px 0 56px;
+    }
+    h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: 0; }
+    h1 { font-size: clamp(2.1rem, 5.2vw, 4rem); max-width: 900px; }
+    h2 { font-size: clamp(1.35rem, 3vw, 2rem); margin-top: 34px; }
+    h3 { font-size: 1rem; }
+    p { margin: 12px 0 0; color: var(--muted); }
+    a { color: var(--blue); text-decoration-thickness: 0.08em; text-underline-offset: 0.18em; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.95em;
+      background: #eef2ff;
+      padding: 0.1em 0.32em;
+      border-radius: 4px;
+    }
+    .hero {
+      padding: 22px 0 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .lede { font-size: 1.18rem; max-width: 780px; }
+    .band {
+      margin-top: 24px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fff;
+      min-height: 164px;
+    }
+    .phase {
+      border-top: 5px solid var(--blue);
+    }
+    .phase:nth-child(2) { border-top-color: var(--purple); }
+    .phase:nth-child(3) { border-top-color: var(--green); }
+    .checklist {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    label.choice {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+    }
+    input[type="checkbox"], input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      accent-color: var(--blue);
+    }
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+      resize: vertical;
+    }
+    button {
+      min-height: 38px;
+      border: 1px solid var(--blue);
+      border-radius: 8px;
+      background: var(--blue);
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    button.secondary {
+      color: var(--blue);
+      background: #fff;
+    }
+    button:focus-visible, textarea:focus-visible, input:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--focus) 28%, transparent);
+      outline-offset: 2px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .result {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      min-height: 64px;
+      color: var(--ink);
+    }
+    .result.good { border-color: #82c7ad; background: #eefaf5; }
+    .result.warn { border-color: #efc56b; background: #fff8e7; }
+    .result.bad { border-color: #ee9b94; background: #fff1f0; }
+    .source-list {
+      margin: 12px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+    .source-list li { margin-top: 8px; }
+    .rubric {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .rubric div {
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .footer {
+      margin-top: 34px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="meta">
+        <span class="pill">Lesson 0001</span>
+        <span class="pill">Phase 2 to Phase 3</span>
+        <span class="pill">Artifact: AI system one-pager</span>
+      </div>
+      <h1>What Makes an AI Feature a System?</h1>
+      <p class="lede">A Phase 2 engineer can make a model useful. A Phase 3 engineer can make the model part of an operated system: constrained, measured, interruptible, observable, and replaceable.</p>
+    </section>
+
+    <section aria-labelledby="win">
+      <h2 id="win">The Win</h2>
+      <div class="band">
+        <p>By the end of this lesson, you will have a one-page design for an AI system that sounds like production engineering rather than AI feature enthusiasm. This becomes the seed of your first portfolio case study.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="shift">
+      <h2 id="shift">The Shift</h2>
+      <div class="grid">
+        <article class="card phase">
+          <h3>Traditional backend foundation</h3>
+          <p>You already know APIs, databases, queues, caching, auth, cloud, security, and observability. Keep that identity. It is the base layer.</p>
+        </article>
+        <article class="card phase">
+          <h3>Bridge-layer AI features</h3>
+          <p>LLM APIs, embeddings, vector databases, RAG, context engineering, tool calling, and routing make AI useful inside applications.</p>
+        </article>
+        <article class="card phase">
+          <h3>AI systems engineering</h3>
+          <p>Agents, state, memory, MCP boundaries, evals, guardrails, human review, traces, cost controls, and fallbacks make AI reliable enough to own.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="sources">
+      <h2 id="sources">Source Material</h2>
+      <p>Use these as the primary reading queue for this lesson. The companion reference is <a href="../reference/source-map.html">source-map.html</a>.</p>
+      <ul class="source-list">
+        <li><a href="https://developers.openai.com/api/docs/guides/function-calling">OpenAI Function calling</a>: tool contracts and application-owned actions.</li>
+        <li><a href="https://developers.openai.com/api/docs/guides/evals">OpenAI Evals</a>: datasets, testing criteria, graders, and regression checks.</li>
+        <li><a href="https://modelcontextprotocol.io/docs/getting-started/intro">MCP introduction</a>: the standard connection layer for AI apps, tools, data, and workflows.</li>
+        <li><a href="https://docs.langchain.com/oss/python/langgraph/overview">LangGraph overview</a>: durable execution, persistence, human-in-the-loop, and memory.</li>
+        <li><a href="https://github.com/open-telemetry/semantic-conventions/tree/main/docs/gen-ai">OpenTelemetry GenAI conventions</a>: traces, metrics, events, exceptions, agent spans, and MCP observability vocabulary.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="lens">
+      <h2 id="lens">The Production Lens</h2>
+      <div class="rubric">
+        <div><strong>Goal</strong><p>What user or business outcome is the system accountable for?</p></div>
+        <div><strong>Tools</strong><p>What can the model request, and what does application code execute?</p></div>
+        <div><strong>State</strong><p>What does the workflow remember during a run and across runs?</p></div>
+        <div><strong>Evals</strong><p>What examples prove expected behavior and catch regressions?</p></div>
+        <div><strong>Guardrails</strong><p>What inputs, outputs, actions, or data access need constraints?</p></div>
+        <div><strong>Human review</strong><p>Where should the system pause before risk crosses a boundary?</p></div>
+        <div><strong>Observability</strong><p>What traces, metrics, logs, and costs must be visible?</p></div>
+        <div><strong>Fallbacks</strong><p>What happens when the model, tool, retrieval, or budget fails?</p></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="quiz">
+      <h2 id="quiz">Quick Check</h2>
+      <div class="band">
+        <p>Which description best signals AI systems engineering rather than bridge-layer feature work?</p>
+        <div class="checklist" id="quiz-options">
+          <label class="choice"><input type="radio" name="q1" value="a"><span>I connected an LLM to our documents with RAG and improved answer quality.</span></label>
+          <label class="choice"><input type="radio" name="q1" value="b"><span>I built a support triage agent with tool schemas, resumable state, human approval for refunds, evals for routing accuracy, traces for tool calls, and fallbacks when confidence or latency budgets fail.</span></label>
+          <label class="choice"><input type="radio" name="q1" value="c"><span>I replaced prompt engineering with context engineering and model routing.</span></label>
+        </div>
+        <div class="actions">
+          <button type="button" id="check-quiz">Check answer</button>
+        </div>
+        <div class="result" id="quiz-result" aria-live="polite">Choose an answer, then check it.</div>
+      </div>
+    </section>
+
+    <section aria-labelledby="exercise">
+      <h2 id="exercise">Exercise: Draft Your First AI System One-Pager</h2>
+      <div class="band">
+        <p>Pick a small but real workflow. Good options: PR review assistant, Jira triage assistant, release-note generator with human approval, incident summarizer, or personal knowledge assistant with MCP access.</p>
+        <label for="onepager"><strong>Draft</strong></label>
+        <textarea id="onepager" spellcheck="true">System:
+User outcome:
+Tools:
+State and memory:
+Eval cases:
+Guardrails:
+Human review:
+Observability:
+Cost and latency budget:
+Fallbacks:
+Portfolio proof:</textarea>
+        <div class="actions">
+          <button type="button" id="score">Score draft</button>
+          <button type="button" class="secondary" id="reset">Reset template</button>
+        </div>
+        <div class="result" id="score-result" aria-live="polite">Fill in the draft, then score it. A credible Phase 3 one-pager covers at least seven production concerns.</div>
+      </div>
+    </section>
+
+    <section aria-labelledby="market">
+      <h2 id="market">Marketing Translation</h2>
+      <div class="band">
+        <p>Weak positioning: <code>Backend engineer learning AI</code></p>
+        <p>Stronger positioning: <code>Backend engineer specializing in production AI systems: agents, tool orchestration, evals, observability, guardrails, and reliable integration with existing software systems.</code></p>
+        <p>Your proof should be a case study, not a claim: architecture, tradeoffs, eval suite, traces, cost profile, failure modes, and a demo path.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="next">
+      <h2 id="next">Next Lesson</h2>
+      <div class="band">
+        <p>Lesson 0002 should turn your one-pager into an executable skeleton: a minimal workflow with explicit state, one safe tool, one risky tool that requires review, and three eval cases.</p>
+      </div>
+    </section>
+
+    <p class="footer">When you complete the exercise, paste the one-pager back into the teaching session. That is evidence for the next learning record and determines the next lesson.</p>
+  </main>
+
+  <script>
+    const template = `System:
+User outcome:
+Tools:
+State and memory:
+Eval cases:
+Guardrails:
+Human review:
+Observability:
+Cost and latency budget:
+Fallbacks:
+Portfolio proof:`;
+
+    document.getElementById("check-quiz").addEventListener("click", () => {
+      const chosen = document.querySelector("input[name='q1']:checked");
+      const result = document.getElementById("quiz-result");
+      result.className = "result";
+      if (!chosen) {
+        result.textContent = "Choose an answer first.";
+        result.classList.add("warn");
+        return;
+      }
+      if (chosen.value === "b") {
+        result.textContent = "Correct. It names the workflow, tool boundary, state, human review, evals, observability, and fallback behavior.";
+        result.classList.add("good");
+      } else {
+        result.textContent = "Not quite. That answer describes useful AI feature work, but it does not show enough production ownership.";
+        result.classList.add("bad");
+      }
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      document.getElementById("onepager").value = template;
+      const result = document.getElementById("score-result");
+      result.className = "result";
+      result.textContent = "Template reset. Fill in the draft, then score it.";
+    });
+
+    document.getElementById("score").addEventListener("click", () => {
+      const value = document.getElementById("onepager").value.toLowerCase();
+      const result = document.getElementById("score-result");
+      const checks = [
+        ["tools", "tool"],
+        ["state and memory", "state"],
+        ["eval cases", "eval"],
+        ["guardrails", "guardrail"],
+        ["human review", "human"],
+        ["observability", "observ"],
+        ["cost and latency budget", "latency"],
+        ["fallbacks", "fallback"],
+        ["portfolio proof", "portfolio"]
+      ];
+      const hits = checks.filter(([, needle]) => value.includes(needle)).length;
+      result.className = "result";
+      if (hits >= 7) {
+        result.textContent = `Phase 3 shape: ${hits}/9 concerns are present. Now make each line concrete enough that another engineer could challenge it.`;
+        result.classList.add("good");
+      } else if (hits >= 4) {
+        result.textContent = `Bridge to Phase 3: ${hits}/9 concerns are present. Add the missing operational pieces before treating this as a systems design.`;
+        result.classList.add("warn");
+      } else {
+        result.textContent = `Still mostly feature-shaped: ${hits}/9 concerns are present. Start by adding evals, observability, human review, and fallbacks.`;
+        result.classList.add("bad");
+      }
+    });
+  </script>
+</body>
+</html>

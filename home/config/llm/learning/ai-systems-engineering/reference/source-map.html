@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Systems Engineering Source Map</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #5c667a;
+      --line: #d9dee8;
+      --panel: #f7f9fc;
+      --blue: #165dff;
+      --green: #147d64;
+      --purple: #6b3fc9;
+      --amber: #9a6700;
+      --white: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--white);
+      line-height: 1.55;
+    }
+    main {
+      width: min(1040px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 40px 0 56px;
+    }
+    h1, h2, h3 { line-height: 1.15; margin: 0; letter-spacing: 0; }
+    h1 { font-size: clamp(2rem, 5vw, 3.4rem); max-width: 820px; }
+    h2 { font-size: 1.4rem; margin-top: 34px; }
+    h3 { font-size: 1rem; }
+    p { margin: 12px 0 0; color: var(--muted); }
+    a { color: var(--blue); text-decoration-thickness: 0.08em; text-underline-offset: 0.18em; }
+    .lede { font-size: 1.15rem; max-width: 760px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      background: var(--panel);
+      min-height: 190px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .tag.blue { background: var(--blue); }
+    .tag.green { background: var(--green); }
+    .tag.purple { background: var(--purple); }
+    .tag.amber { background: var(--amber); }
+    .source-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .source {
+      border-left: 4px solid var(--blue);
+      padding: 12px 14px;
+      background: var(--panel);
+      border-radius: 0 8px 8px 0;
+    }
+    .source strong { display: block; }
+    .source p { margin-top: 6px; }
+    .note {
+      margin-top: 28px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff9e8;
+      color: #4f3b00;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>AI Systems Engineering Source Map</h1>
+    <p class="lede">Use this map to decide which source to open for each production concern. The goal is not to memorize every framework. The goal is to know which engineering question each source helps answer.</p>
+
+    <section aria-labelledby="questions">
+      <h2 id="questions">Production Questions</h2>
+      <div class="grid">
+        <article class="card">
+          <span class="tag blue">Agent runtime</span>
+          <h3>How does the workflow run, pause, resume, and carry state?</h3>
+          <p>Start with LangGraph for durable execution, persistence, human-in-the-loop, and memory concepts.</p>
+        </article>
+        <article class="card">
+          <span class="tag green">Tool boundary</span>
+          <h3>What can the model ask the application to do?</h3>
+          <p>Start with OpenAI function calling for JSON-schema tool contracts, strict mode, and application-owned execution.</p>
+        </article>
+        <article class="card">
+          <span class="tag purple">Integration surface</span>
+          <h3>How does this AI system connect to external systems cleanly?</h3>
+          <p>Start with MCP for standard resource, prompt, and tool exposure across clients and servers.</p>
+        </article>
+        <article class="card">
+          <span class="tag amber">Operational proof</span>
+          <h3>How do we know it works and stays working?</h3>
+          <p>Start with OpenAI evals and OpenTelemetry GenAI conventions for regression checks, traces, metrics, latency, and token/cost visibility.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="sources">
+      <h2 id="sources">Source Checklist</h2>
+      <div class="source-list">
+        <article class="source">
+          <strong><a href="https://developers.openai.com/api/docs/guides/agents">OpenAI Agents SDK guide</a></strong>
+          <p>Use when designing agent definitions, orchestration, guardrails, state, integrations, observability, and workflow evaluation.</p>
+        </article>
+        <article class="source">
+          <strong><a href="https://developers.openai.com/api/docs/guides/function-calling">OpenAI Function calling guide</a></strong>
+          <p>Use when designing tool schemas and deciding which actions stay under application control.</p>
+        </article>
+        <article class="source">
+          <strong><a href="https://developers.openai.com/api/docs/guides/evals">OpenAI Evals guide</a></strong>
+          <p>Use when converting expected behavior into datasets, graders, and regression checks.</p>
+        </article>
+        <article class="source">
+          <strong><a href="https://modelcontextprotocol.io/docs/getting-started/intro">MCP introduction</a> and <a href="https://modelcontextprotocol.io/specification/2025-11-25">MCP specification</a></strong>
+          <p>Use when building or assessing standard connections between AI clients and external systems.</p>
+        </article>
+        <article class="source">
+          <strong><a href="https://docs.langchain.com/oss/python/langgraph/overview">LangGraph overview</a> and <a href="https://docs.langchain.com/oss/python/langgraph/persistence">persistence docs</a></strong>
+          <p>Use when a workflow needs state, resumability, memory, fault tolerance, streaming, or human review.</p>
+        </article>
+        <article class="source">
+          <strong><a href="https://github.com/open-telemetry/semantic-conventions/tree/main/docs/gen-ai">OpenTelemetry GenAI semantic conventions</a></strong>
+          <p>Use when naming traces, spans, metrics, events, exceptions, agent activity, and MCP activity in a vendor-neutral way.</p>
+        </article>
+      </div>
+    </section>
+
+    <p class="note">Rule of thumb: a Phase 2 AI feature calls a model. A Phase 3 AI system can explain how the model is constrained, measured, interrupted, resumed, observed, and replaced when it fails.</p>
+  </main>
+</body>
+</html>
