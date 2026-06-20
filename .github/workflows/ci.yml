@@ -32,6 +32,9 @@ jobs:
       - name: Run flake checks
         run: nix flake check -L
 
+      - name: Check formatting
+        run: nix fmt -- --ci
+
       - name: Check Linux Home Manager activation package closure
         run: nix build .#homeConfigurations.william-linux.activationPackage --dry-run
 
