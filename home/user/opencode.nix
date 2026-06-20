@@ -1,10 +1,12 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
 let
   defaultModel = "openrouter/z-ai/glm-5.2";
+  llmMcps = import ./llm-mcps.nix { inherit config lib; };
   mcpCommand = name: "${config.home.homeDirectory}/.local/bin/${name}";
   localMcp = name: {
     type = "local";
@@ -103,13 +105,7 @@ let
       };
     };
 
-    mcp = {
-      jira = localMcp "mcp-jira";
-      github = localMcp "mcp-github";
-      brave = localMcp "mcp-brave";
-      terraform = localMcp "mcp-terraform";
-      nixos = localMcp "mcp-nixos";
-    };
+    mcp = llmMcps.opencodeServers localMcp;
 
     permission = "allow";
   };
@@ -133,6 +129,18 @@ in
           OPENROUTER_API_KEY="''${OPENROUTER_API_KEY%\"}"
           OPENROUTER_API_KEY="''${OPENROUTER_API_KEY#\"}"
           export OPENROUTER_API_KEY
+        fi
+      fi
+
+      if [ -z "''${OPENCODE_API_KEY:-}" ]; then
+        opencode_key_file="$HOME/.config/sops-nix/secrets/OPENCODE_API_KEY"
+        if [ -r "$opencode_key_file" ]; then
+          OPENCODE_API_KEY="$(<"$opencode_key_file")"
+          OPENCODE_API_KEY="''${OPENCODE_API_KEY%\"}"
+          OPENCODE_API_KEY="''${OPENCODE_API_KEY#\"}"
+          if [ -n "$OPENCODE_API_KEY" ] && [ "$OPENCODE_API_KEY" != "__UNSET__" ]; then
+            export OPENCODE_API_KEY
+          fi
         fi
       fi
 
