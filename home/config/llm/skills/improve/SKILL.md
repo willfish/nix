@@ -1,6 +1,7 @@
 ---
 name: improve
 description: /improve audits and improvement planning. Use for repo audits, finding bugs/security/performance/test/debt/DX/doc opportunities, handoff plans, plan review, plan execution, or backlog reconciliation.
+disable-model-invocation: true
 ---
 
 # Improve

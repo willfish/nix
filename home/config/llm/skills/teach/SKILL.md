@@ -4,6 +4,7 @@ description: >
   Stateful teaching workspace. Use for deep progressive learning, "teach me X",
   lessons, quizzes, learning records, curated resources, glossaries, or helping
   the user understand a topic properly over time.
+disable-model-invocation: true
 ---
 
 The user has asked you to teach them something. This is a stateful request — they intend to learn the topic over multiple sessions, possibly across days or weeks.

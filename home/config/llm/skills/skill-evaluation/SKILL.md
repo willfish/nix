@@ -1,6 +1,7 @@
 ---
 name: skill-evaluation
 description: Skill harness evaluation and maintenance. Use for auditing skills, checking token/disclosure drift, running audit-skills, reviewing plugin-eval references, or planning richer skill/plugin evaluation.
+disable-model-invocation: true
 ---
 
 # Skill Evaluation
