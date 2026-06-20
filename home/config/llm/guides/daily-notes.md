@@ -34,12 +34,15 @@ Team Blockages and follow up
 When asked to populate daily notes:
 
 1. **Read the previous day's file** (`~/Notes/YYYY-MM-DD/today.md` for yesterday's date) to see what was planned and any PR links
-2. **Summarise completed work** in "What I did yesterday":
+2. **Gather recent work context** if the user asks you to infer it:
+   - Use GitHub MCP for PRs/issues/commits when available; use `gh` as fallback.
+   - Use Slack MCP for relevant work-channel context only when useful. Do not post messages.
+3. **Summarise completed work** in "What I did yesterday":
    - PRs merged/reviewed (reference by number, not full URL)
    - Meetings and discussions (topic only, not attendees)
    - Development work (feature names, version numbers)
-3. **Leave "What I plan to do today" blank** unless the user specifies tasks
-4. **Keep entries concise** — one line per item, no sub-bullets
+4. **Leave "What I plan to do today" blank** unless the user specifies tasks
+5. **Keep entries concise** — one line per item, no sub-bullets
 
 ## Style
 

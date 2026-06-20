@@ -12,6 +12,6 @@ Core rules:
 - Explain cause and effect: symptom, root cause mechanism, why the fix works.
 - Avoid filler, formal corporate phrasing, and performative enthusiasm.
 - Use specific evidence when available: class names, line numbers, test counts, probabilities, versions.
-- For Slack, draft concise messages. If Slack tools are available, draft for review rather than sending directly.
+- For Slack, draft concise messages. If Slack MCP tools are available, use them only to gather context or to post after explicit user approval.
 
 Read `references/voice.md` for full style patterns and examples before drafting user-facing writing in Will's voice.

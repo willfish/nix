@@ -1,11 +1,11 @@
 ---
 name: github-pr-review
-description: Use when reviewing GitHub pull requests, posting GitHub review comments, adding GitHub code suggestions, or using gh CLI to submit APPROVE, COMMENT, or REQUEST_CHANGES reviews. Requires drafting comments first, getting explicit user approval, and submitting comments as one pending GitHub review.
+description: Use when reviewing GitHub pull requests, posting GitHub review comments, adding GitHub code suggestions, or using GitHub MCP/gh CLI to submit APPROVE, COMMENT, or REQUEST_CHANGES reviews. Requires drafting comments first, getting explicit user approval, and submitting comments as one pending GitHub review.
 ---
 
 # GitHub PR Review
 
-Use this when reviewing GitHub PRs and when posting review comments or code suggestions through `gh`.
+Use this when reviewing GitHub PRs and when posting review comments or code suggestions through GitHub MCP or `gh`.
 
 This skill is specifically about publishing review feedback. If you are only reading code and reporting findings to the user, follow normal code-review practice and do not post anything to GitHub.
 
@@ -13,17 +13,19 @@ For review judgement, findings, tone, and Will's review voice, also use `code-re
 
 ## Non-Negotiables
 
+- Inspect configured GitHub MCP tools first.
+- Use GitHub MCP for PR metadata, diff/context reads, comments, and reviews when it supports the required operation.
 - Check `gh --version` before running GitHub review commands.
 - Draft the complete review before posting.
 - Show the user exactly what will be posted: file paths, line numbers, comment text, code suggestions, event type, and overall body.
 - Get explicit approval before posting any public review comment.
 - Use a pending review, even for one comment, then submit that pending review.
 
-If `gh` is missing, stop and tell the user to install GitHub CLI and run `gh auth login`.
+If neither GitHub MCP nor `gh` can perform the required publishing operation, stop and explain the missing capability. `gh` is configured through sops-nix on Will's machines; do not print tokens.
 
 ## Workflow
 
-1. Verify tools and context:
+1. Verify tools and context. Prefer GitHub MCP where available; otherwise use `gh`:
 
 ```bash
 gh --version
@@ -31,7 +33,7 @@ gh pr view <PR_NUMBER> --json commits --jq '.commits[-1].oid'
 gh repo view --json owner,name
 ```
 
-2. Review the PR and draft every comment locally.
+2. Review the PR and draft every comment locally. Use GitHub MCP or `gh` for PR metadata and diff context; use local checkout reads for code-level inspection.
 
 3. Ask for approval. In Codex, ask the user directly unless a structured user-input tool is available. Include:
 
@@ -40,7 +42,7 @@ gh repo view --json owner,name
 - Review event: `COMMENT`, `APPROVE`, or `REQUEST_CHANGES`.
 - Overall review body.
 
-4. Create a pending review after approval:
+4. Create a pending review after approval. If GitHub MCP supports pending batched reviews in the current agent, use it. Otherwise use `gh api`:
 
 ```bash
 gh api repos/:owner/:repo/pulls/<PR_NUMBER>/reviews \
