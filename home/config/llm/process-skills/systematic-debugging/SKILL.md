@@ -1,8 +1,8 @@
 ---
 name: systematic-debugging
 description: >
-  Rigorous root-cause debugging process. Use for ANY bug, test failure, unexpected behavior, performance issue, or when previous fix attempts have failed.
-  Forces you to find the real cause before proposing or applying any fixes. This is the single most effective way to stop thrashing and actually solve hard problems.
+  Root-cause debugging. Use for bugs, test failures, unexpected behavior,
+  performance issues, regressions, or failed fix attempts before proposing fixes.
 metadata:
   short-description: "Systematic root cause debugging (no fixes before investigation)"
 ---

@@ -1,6 +1,6 @@
 ---
 name: daily-notes
-description: Use when populating or updating Will's daily standup notes under ~/Notes, summarising yesterday's completed work, PRs, meetings, blockers, or today's plan.
+description: Daily standup notes. Use for ~/Notes updates, yesterday/today summaries, completed work, PRs, meetings, blockers, and plans.
 ---
 
 # Daily Notes

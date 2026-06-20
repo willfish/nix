@@ -1,8 +1,9 @@
 ---
 name: writing-plans
 description: >
-  Create high-quality, detailed implementation plans for multi-step work before writing code.
-  Use when you have a spec, feature request, or complex task. Produces bite-sized, verifiable tasks with exact file paths, code examples, commands, and expected outcomes. Strongly encourages TDD and frequent commits.
+  Implementation planning. Use for specs, feature requests, multi-step changes,
+  complex tasks, TDD plans, handoff plans, file-level tasks, and expected
+  verification commands before coding.
 metadata:
   short-description: "Write excellent, actionable implementation plans (TDD, small steps, clear handoff)"
 ---

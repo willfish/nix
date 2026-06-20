@@ -1,9 +1,9 @@
 ---
 name: superpowers
 description: >
-  Core agent discipline and workflow harness (adapted from Codex Superpowers).
-  Establishes strict habits: always check for relevant skills before acting, use todo tracking on complex work, prefer plan mode for big changes, and verify before declaring completion.
-  Use at the start of any non-trivial session or when you want maximum reliability and structure.
+  Core harness discipline. Use at the start of non-trivial sessions or when work
+  needs strict skill selection, todo tracking, plan mode, verification, and
+  reliable agent workflow habits.
 metadata:
   short-description: "Agent harness - skills discipline, todo usage, verification, planning"
 ---

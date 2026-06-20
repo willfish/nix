@@ -2,6 +2,13 @@
 
 When working on CLI tools, proactively generate animated GIF demos for READMEs and PR descriptions.
 
+## Contents
+
+- Choose your approach
+- Approach 1: asciinema (simple CLI demos)
+- Approach 2: gpu-screen-recorder (tmux, vim, htop, etc.)
+- Tips
+
 ## Choose your approach
 
 | Approach | Use when | Limitations |

@@ -2,6 +2,14 @@
 
 This guide explains how to turn Mermaid (or D2) source into actual image files for preview and verification.
 
+## Contents
+
+- Mermaid CLI (Recommended for README diagrams)
+- Mermaid Syntax Gotchas That Break Rendering
+- D2 Rendering (for higher quality architecture diagrams)
+- When to Use Which
+- Adding Rendering to Your Workflow
+
 ## Mermaid CLI (Recommended for README diagrams)
 
 The best tool for rendering Mermaid is the official CLI: `@mermaid-js/mermaid-cli`

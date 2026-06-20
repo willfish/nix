@@ -1,6 +1,6 @@
 ---
 name: terminal-demos
-description: Use when creating animated terminal GIF demos for CLI tools, PR descriptions, READMEs, asciinema recordings, agg conversion, gpu-screen-recorder captures, or tmux/TUI demonstrations.
+description: Terminal demo recording. Use for CLI GIFs, PR/README demos, asciinema, agg conversion, gpu-screen-recorder, tmux, or TUI demonstrations.
 ---
 
 # Terminal Demos

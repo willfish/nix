@@ -1,8 +1,8 @@
 ---
 name: verification-before-completion
 description: >
-  Mandatory verification gate before claiming any work is complete, fixed, or passing.
-  Use when you are about to say "done", "fixed", "tests pass", "it works", or similar — requires fresh evidence from running the actual verification command(s) in the current context.
+  Completion verification gate. Use before saying done, fixed, passing, it works,
+  ready, or before commits, pushes, PRs, and completion claims.
 metadata:
   short-description: "Never claim success without fresh verification evidence"
 ---

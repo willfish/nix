@@ -1,9 +1,9 @@
 ---
 name: teach
 description: >
-  Teach the user a new skill or concept over multiple sessions using a dedicated stateful workspace.
-  Use for deep, progressive learning: "teach me how X works", "help me learn Y with lessons and quizzes", "I want to understand Z properly over time", "create a learning workspace for Nix flakes / Home Manager / fish / [any topic]".
-  Creates MISSION.md, learning records (like ADRs), beautiful self-contained HTML lessons, reference docs, curated resources, and a glossary. Grounds teaching in the user's real goals and zone of proximal development.
+  Stateful teaching workspace. Use for deep progressive learning, "teach me X",
+  lessons, quizzes, learning records, curated resources, glossaries, or helping
+  the user understand a topic properly over time.
 ---
 
 The user has asked you to teach them something. This is a stateful request — they intend to learn the topic over multiple sessions, possibly across days or weeks.

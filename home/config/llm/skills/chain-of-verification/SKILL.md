@@ -1,6 +1,6 @@
 ---
 name: chain-of-verification
-description: Use for architecture decisions, research, strategic analysis, risk assessment, RFCs, specs, or any answer where being wrong would waste significant time or mislead downstream work.
+description: Architecture, research, and risk verification. Use for RFCs, specs, strategic analysis, architecture decisions, or high-cost-to-be-wrong answers.
 ---
 
 # Chain Of Verification

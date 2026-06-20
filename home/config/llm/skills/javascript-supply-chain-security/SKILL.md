@@ -1,6 +1,6 @@
 ---
 name: javascript-supply-chain-security
-description: Use when working with npm, Yarn, pnpm, Bun, Node dependencies, package installs, lockfile diffs, dependency upgrades, package audits, JavaScript supply chain security, lifecycle scripts, npm tokens, package publishing, trusted publishing, or provenance.
+description: JavaScript supply-chain security. Use for npm/Yarn/pnpm/Bun installs, lockfiles, dependency upgrades, audits, lifecycle scripts, tokens, publishing, trusted publishing, or provenance.
 ---
 
 # JavaScript Supply Chain Security

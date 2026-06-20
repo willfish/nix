@@ -1,6 +1,6 @@
 ---
 name: code-review-workflow
-description: Use when reviewing PRs, writing review comments, responding to review feedback, deciding whether to request changes, or drafting comments in Will's review style.
+description: Code review judgement and private review drafting. Use for PR findings, requested-changes decisions, review feedback responses, and Will-style review comments.
 ---
 
 # Code Review Workflow

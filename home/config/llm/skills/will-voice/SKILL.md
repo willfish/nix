@@ -1,6 +1,6 @@
 ---
 name: will-voice
-description: Use when writing text as Will, including PR descriptions, Slack drafts, code review comments, Jira comments, docs, status updates, and summaries that should match Will's direct, economical technical style.
+description: Will-style writing. Use for PR descriptions, Slack drafts, code review comments, Jira comments, docs, status updates, or summaries in Will's direct technical voice.
 ---
 
 # Will Voice

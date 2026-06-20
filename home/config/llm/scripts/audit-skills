@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""Static checks for the shared LLM skill harness."""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from collections import Counter, defaultdict
+from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[4]
+LLM_ROOT = ROOT / "home" / "config" / "llm"
+CATALOG = LLM_ROOT / "skill-catalog.json"
+
+VALID_TYPES = {
+    "user-invoked router/orchestrator",
+    "model-invoked discipline",
+    "process guardrail",
+    "reference-backed domain skill",
+}
+
+STOPWORDS = {
+    "a",
+    "about",
+    "agent",
+    "agents",
+    "all",
+    "and",
+    "any",
+    "as",
+    "before",
+    "by",
+    "code",
+    "creating",
+    "for",
+    "from",
+    "in",
+    "including",
+    "into",
+    "or",
+    "repo",
+    "skill",
+    "skills",
+    "that",
+    "the",
+    "this",
+    "to",
+    "use",
+    "when",
+    "will",
+    "with",
+    "workflow",
+    "work",
+    "working",
+    "writing",
+}
+
+
+@dataclass(frozen=True)
+class Skill:
+    name: str
+    kind: str
+    path: Path
+    description: str
+    line_count: int
+
+
+def unique_object(pairs: list[tuple[str, object]]) -> dict:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def safe_path(root: Path, value: str) -> Path:
+    if (not isinstance(value, str) or not value or "\\" in value
+            or value.startswith("/") or any(p in {"", ".", ".."} for p in value.split("/"))):
+        raise ValueError(f"unsafe catalogue path: {value!r}")
+    path = root / value
+    if not path.resolve().is_relative_to(root.resolve()):
+        raise ValueError(f"catalogue path escapes source root: {value!r}")
+    if not path.is_file():
+        raise ValueError(f"missing catalogue source: {value}")
+    return path
+
+
+def load_catalog(path: Path = CATALOG, root: Path = LLM_ROOT) -> list[dict]:
+    entries = json.loads(path.read_text(), object_pairs_hook=unique_object)
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("catalogue must be a nonempty array")
+    names = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != {"name", "kind", "invocation", "hermes", "references"}:
+            raise ValueError("catalogue entry has missing or unknown fields")
+        name = entry["name"]
+        if not isinstance(name, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) or not 2 <= len(name) <= 64:
+            raise ValueError(f"invalid skill name: {name!r}")
+        if name in names:
+            raise ValueError(f"duplicate skill: {name}")
+        names.add(name)
+        if entry["kind"] not in ("shared", "process") or entry["invocation"] not in tuple(VALID_TYPES):
+            raise ValueError(f"{name}: invalid kind or invocation")
+        if type(entry["hermes"]) is not bool or (entry["hermes"] and entry["kind"] != "shared"):
+            raise ValueError(f"{name}: invalid Hermes deployment")
+        base = "skills" if entry["kind"] == "shared" else "process-skills"
+        skill = safe_path(root, f"{base}/{name}/SKILL.md")
+        refs = entry["references"]
+        if not isinstance(refs, dict) or (entry["kind"] == "process" and refs):
+            raise ValueError(f"{name}: invalid reference map")
+        for target, source in refs.items():
+            if not re.fullmatch(r"[A-Za-z0-9_-][A-Za-z0-9_.-]*\.md", target):
+                raise ValueError(f"{name}: unsafe reference target: {target!r}")
+            safe_path(root, source)
+            if (skill.parent / "references" / target).exists():
+                raise ValueError(f"{name}: mapped reference duplicates local reference: {target}")
+    return entries
+
+
+def parse_frontmatter_description(path: Path) -> str:
+    lines = path.read_text().splitlines()
+    if not lines or lines[0] != "---":
+        return ""
+
+    body: list[str] = []
+    collecting = False
+    for line in lines[1:]:
+        if line == "---":
+            break
+        if collecting:
+            if line.startswith((" ", "\t")):
+                body.append(line.strip())
+                continue
+            collecting = False
+        if line.startswith("description:"):
+            value = line.split(":", 1)[1].strip()
+            if value in {">", "|", ">-", "|-"}:
+                collecting = True
+            elif value:
+                body.append(value.strip('"'))
+    return " ".join(part for part in body if part).strip()
+
+
+def frontmatter_value(path: Path, key: str) -> str | None:
+    lines = path.read_text().splitlines()
+    if not lines or lines[0] != "---":
+        return None
+
+    prefix = f"{key}:"
+    for line in lines[1:]:
+        if line == "---":
+            break
+        if line.startswith(prefix):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
+def frontmatter_bool(path: Path, key: str) -> bool:
+    value = frontmatter_value(path, key)
+    return value is not None and value.lower() in {"true", "yes", "1"}
+
+
+def load_skills() -> list[Skill]:
+    skills: list[Skill] = []
+    for kind, base in (
+        ("shared", LLM_ROOT / "skills"),
+        ("process", LLM_ROOT / "process-skills"),
+    ):
+        for path in sorted(base.glob("*/SKILL.md")):
+            text = path.read_text()
+            skills.append(
+                Skill(
+                    name=path.parent.name,
+                    kind=kind,
+                    path=path,
+                    description=parse_frontmatter_description(path),
+                    line_count=len(text.splitlines()),
+                )
+            )
+    return skills
+
+
+def mentioned_reference_names(path: Path) -> set[str]:
+    text = path.read_text()
+    names: set[str] = set()
+    for match in re.finditer(r"(?:\./)?references/([A-Za-z0-9_.-]+\.md)", text):
+        names.add(match.group(1))
+    return names
+
+
+def has_contents_section(path: Path) -> bool:
+    first_chunk = "\n".join(path.read_text().splitlines()[:40]).lower()
+    return "table of contents" in first_chunk or re.search(r"^#+\s+contents\b", first_chunk, re.M) is not None
+
+
+def interesting_terms(description: str) -> set[str]:
+    words = {
+        word
+        for word in re.findall(r"[a-z][a-z0-9-]{2,}", description.lower())
+        if word not in STOPWORDS
+    }
+    return words
+
+
+def print_section(title: str) -> None:
+    print(f"\n== {title} ==")
+
+
+def freshness_header(path: Path) -> dict[str, str]:
+    header: dict[str, str] = {}
+    for line in path.read_text().splitlines()[:12]:
+        for key in ("Source", "Checked", "Update trigger"):
+            prefix = f"{key}:"
+            if line.startswith(prefix):
+                header[key] = line.split(":", 1)[1].strip()
+    return header
+
+
+def main() -> int:
+    try:
+        catalog = load_catalog()
+    except (ValueError, OSError) as error:
+        print(f"Invalid skill catalogue: {error}", file=sys.stderr)
+        return 1
+    shared_names = {entry["name"] for entry in catalog if entry["kind"] == "shared"}
+    process_names = {entry["name"] for entry in catalog if entry["kind"] == "process"}
+    mapped_refs = {entry["name"]: set(entry["references"]) for entry in catalog}
+    skills = load_skills()
+    skills_by_name = {skill.name: skill for skill in skills}
+    classifications = {entry["name"]: entry["invocation"] for entry in catalog}
+
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    print_section("Skills")
+    for skill in skills:
+        desc_len = len(skill.description)
+        print(f"{skill.kind:7} {skill.name:36} lines={skill.line_count:3} desc_chars={desc_len:3} {skill.description}")
+        if not skill.description:
+            errors.append(f"{skill.name}: missing frontmatter description")
+        if skill.name not in classifications:
+            errors.append(f"{skill.name}: missing invocation classification in {CATALOG.relative_to(ROOT)}")
+        elif classifications[skill.name] not in VALID_TYPES:
+            errors.append(f"{skill.name}: unknown invocation type {classifications[skill.name]!r}")
+
+    print_section("Deployment Lists")
+    disk_shared = {skill.name for skill in skills if skill.kind == "shared"}
+    disk_process = {skill.name for skill in skills if skill.kind == "process"}
+    for missing in sorted(shared_names - disk_shared):
+        errors.append(f"sharedSkillNames lists missing skill directory: {missing}")
+    for extra in sorted(disk_shared - shared_names):
+        errors.append(f"shared skill exists on disk but is absent from sharedSkillNames: {extra}")
+    for missing in sorted(process_names - disk_process):
+        errors.append(f"processSkillNames lists missing skill directory: {missing}")
+    for extra in sorted(disk_process - process_names):
+        errors.append(f"process skill exists on disk but is absent from processSkillNames: {extra}")
+    print(f"shared listed={len(shared_names)} disk={len(disk_shared)}")
+    print(f"process listed={len(process_names)} disk={len(disk_process)}")
+
+    print_section("References")
+    for skill in skills:
+        if skill.kind != "shared":
+            continue
+        skill_dir = skill.path.parent
+        local_refs = {path.name for path in (skill_dir / "references").glob("*.md")}
+        deployed_refs = local_refs | mapped_refs.get(skill.name, set())
+        mentioned_refs = mentioned_reference_names(skill.path)
+
+        for ref in sorted(mentioned_refs - deployed_refs):
+            errors.append(f"{skill.name}: mentions references/{ref}, but it is not local or mapped in sharedSkillReferences")
+        for ref in sorted(local_refs - mentioned_refs):
+            warnings.append(f"{skill.name}: local references/{ref} is not mentioned by SKILL.md")
+        print(
+            f"{skill.name:36} mentioned={len(mentioned_refs):2} local={len(local_refs):2} mapped={len(mapped_refs.get(skill.name, set())):2}"
+        )
+
+    print_section("Long References Without Contents")
+    reference_roots = [LLM_ROOT / "guides", LLM_ROOT / "skills"]
+    for root in reference_roots:
+        for path in sorted(root.rglob("*.md")):
+            if path.name == "SKILL.md":
+                continue
+            line_count = len(path.read_text().splitlines())
+            if line_count > 100 and not has_contents_section(path):
+                warnings.append(f"{path.relative_to(ROOT)}: {line_count} lines and no contents section")
+                print(f"{line_count:3} {path.relative_to(ROOT)}")
+
+    print_section("Trigger Overlap")
+    term_to_skills: dict[str, list[str]] = defaultdict(list)
+    for skill in skills:
+        for term in interesting_terms(skill.description):
+            term_to_skills[term].append(skill.name)
+    overlaps = {
+        term: names
+        for term, names in term_to_skills.items()
+        if len(names) >= 4
+    }
+    for term, names in sorted(overlaps.items(), key=lambda item: (-len(item[1]), item[0]))[:20]:
+        print(f"{term:24} {', '.join(sorted(names))}")
+
+    print_section("Explicit Invocation Metadata")
+    for skill_name, invocation_type in sorted(classifications.items()):
+        skill = skills_by_name.get(skill_name)
+        if not skill:
+            errors.append(f"{CATALOG.relative_to(ROOT)} lists unknown skill: {skill_name}")
+            continue
+        if invocation_type == "user-invoked router/orchestrator":
+            if not (skill.path.parent / "agents" / "openai.yaml").exists():
+                errors.append(f"{skill_name}: user-invoked skill has no agents/openai.yaml explicit-invocation metadata")
+            if not frontmatter_bool(skill.path, "disable-model-invocation"):
+                errors.append(f"{skill_name}: user-invoked skill missing Pi disable-model-invocation: true")
+
+    for process_name in ("superpowers", "using-superpowers"):
+        skill = skills_by_name.get(process_name)
+        if skill and frontmatter_bool(skill.path, "disable-model-invocation"):
+            warnings.append(f"{process_name}: process guardrail should stay model-invoked")
+
+    print_section("Source Freshness Markers")
+    markers = Counter()
+    freshness_paths = (
+        sorted((LLM_ROOT / "guides").glob("*.md"))
+        + sorted((LLM_ROOT / "skills").glob("*/references/*.md"))
+        + sorted((LLM_ROOT / "references" / "plugin-eval").rglob("*.md"))
+    )
+    today = date.today()
+    for path in freshness_paths:
+        header = freshness_header(path)
+        if "Source" in header:
+            markers["Source"] += 1
+            for key in ("Checked", "Update trigger"):
+                if key not in header:
+                    warnings.append(f"{path.relative_to(ROOT)}: Source header missing {key}:")
+        if "Checked" in header:
+            markers["Checked"] += 1
+            try:
+                checked = date.fromisoformat(header["Checked"])
+            except ValueError:
+                warnings.append(f"{path.relative_to(ROOT)}: invalid Checked date {header['Checked']!r}")
+            else:
+                age_days = (today - checked).days
+                if age_days > 120:
+                    warnings.append(f"{path.relative_to(ROOT)}: freshness check is {age_days} days old")
+        if "Update trigger" in header:
+            markers["Update trigger"] += 1
+    print(f"Source={markers['Source']} Checked={markers['Checked']} Update trigger={markers['Update trigger']}")
+
+    print_section("Quarterly Review Prompts")
+    for prompt in (
+        "OpenAI/Codex docs and skills behavior",
+        "Anthropic Agent Skills best practices",
+        "Jira API/auth behavior",
+        "GitHub review API behavior",
+        "Private domain workflow conventions",
+        "RSpec/Rails conventions after major framework changes",
+    ):
+        print(f"- {prompt}")
+
+    print_section("Findings")
+    if errors:
+        print("Errors:")
+        for error in errors:
+            print(f"- {error}")
+    if warnings:
+        print("Warnings:")
+        for warning in warnings:
+            print(f"- {warning}")
+    if not errors and not warnings:
+        print("No findings.")
+
+    return 1 if errors or warnings else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

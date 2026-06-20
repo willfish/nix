@@ -1,0 +1,7 @@
+interface:
+  display_name: "Teach"
+  short_description: "Create durable learning workspaces"
+  default_prompt: "Use $teach to build a learning workspace for this topic."
+
+policy:
+  allow_implicit_invocation: false

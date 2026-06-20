@@ -1,6 +1,21 @@
 # JavaScript Supply Chain Security
 
+Source: https://docs.npmjs.com/trusted-publishers/, https://docs.npmjs.com/cli/v11/commands/npm-install/, https://yarnpkg.com/configuration/yarnrc, https://pnpm.io/cli/approve-builds
+Checked: 2026-06-20
+Update trigger: package manager major release, npm publishing policy change, trusted publishing change, or quarterly review.
+
 Use this guide for npm, Yarn, pnpm, Bun, Node package updates, lockfile review, package publishing, and JavaScript dependency security.
+
+## Contents
+
+- Baseline Policy
+- Local Machine Defaults
+- Installing Dependencies
+- Temporarily Allowing Scripts
+- Auditing And Risk Signals
+- Publishing Packages
+- Agent Workflow
+- References
 
 ## Baseline Policy
 

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Skill Evaluation"
+  short_description: "Audit and maintain skill quality"
+  default_prompt: "Use $skill-evaluation to audit this skill harness."
+
+policy:
+  allow_implicit_invocation: false

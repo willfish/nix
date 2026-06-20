@@ -1,0 +1,7 @@
+interface:
+  display_name: "Skill Router"
+  short_description: "Choose the right workflow skill"
+  default_prompt: "Use $skill-router to choose the right skill for this task."
+
+policy:
+  allow_implicit_invocation: false

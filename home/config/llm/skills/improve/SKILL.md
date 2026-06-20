@@ -1,6 +1,6 @@
 ---
 name: improve
-description: Senior advisor workflow for /improve-style codebase audits, improvement discovery, and self-contained implementation plans. Use when asked to audit a repo, find bugs/security/performance/test/debt/DX/doc/roadmap opportunities, write handoff plans, review plans, execute a plan through an isolated executor, or reconcile an existing plans backlog.
+description: /improve audits and improvement planning. Use for repo audits, finding bugs/security/performance/test/debt/DX/doc opportunities, handoff plans, plan review, plan execution, or backlog reconciliation.
 ---
 
 # Improve

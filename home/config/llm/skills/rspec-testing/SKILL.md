@@ -1,6 +1,6 @@
 ---
 name: rspec-testing
-description: Use when writing, reviewing, or debugging RSpec tests in Will's Ruby/Rails repos, including model/service/controller specs, FactoryBot setup, flaky test fixes, and Betterspecs-style RSpec conventions.
+description: RSpec test work. Use for Ruby/Rails specs, model/service/controller tests, FactoryBot, flaky specs, debugging failures, and Better Specs conventions.
 ---
 
 # RSpec Testing
@@ -9,8 +9,11 @@ Use this for Ruby/Rails test work.
 
 Read:
 - `references/testing.md` for test strategy and when to write tests.
-- `references/rspec.md` for the Better Specs-derived rule checklist and
-  detailed RSpec syntax and style.
+- `references/rspec.md` for the Better Specs-derived overview and checklist.
+- `references/rspec-structure.md` for describe/context shape, expectations, naming, and shared examples.
+- `references/rspec-factories.md` for FactoryBot, fixtures, minimal records, and database setup.
+- `references/rspec-rails.md` for request/model/service boundaries, external HTTP stubs, and service object specs.
+- `references/rspec-flakiness.md` for focused runs, final verification, formatter output, and flaky tests.
 
 Defaults:
 - RSpec everywhere; no minitest or cucumber.

@@ -1,10 +1,10 @@
 ---
 name: create-skill
 description: >
-  Interactively create a new Grok skill (SKILL.md + optional scripts/references).
-  Use when the user wants to create a skill, scaffold a skill, or runs /create-skill.
+  Skill creation and updates. Use when creating, scaffolding, or revising a skill,
+  SKILL.md, references, scripts, agents metadata, or /create-skill output.
 metadata:
-  short-description: "Create a new Grok skill"
+  short-description: "Create or update a skill"
 ---
 
 # Create Skill

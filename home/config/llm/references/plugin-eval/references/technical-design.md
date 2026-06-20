@@ -1,5 +1,9 @@
 # Plugin Eval Technical Design
 
+Source: https://github.com/thisdot/plugin-eval, https://developers.openai.com/codex/skills
+Checked: 2026-06-20
+Update trigger: Codex skills/plugin API change, OpenAI token usage API change, plugin-eval is vendored/removed, or quarterly review.
+
 ## Overview
 
 `plugin-eval` is a local-first Codex plugin and CLI for evaluating Codex skills and plugins. The design centers on a deterministic local engine that emits a stable `evaluation-result` JSON document. Skills orchestrate the engine. Report renderers, comparison views, workflow guides, and future app visualizations consume the same JSON contract.

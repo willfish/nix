@@ -1,10 +1,28 @@
 # Audit Playbook
 
+Source: https://github.com/shadcn/improve
+Checked: 2026-06-20
+Update trigger: improve workflow change, recurring audit quality issue, or quarterly review.
+
 What to look for, per category. Each subagent (or direct audit pass) gets the relevant section plus the **Finding format** at the bottom. Adapt depth to repo size — a 2K-line CLI gets a lighter pass than a 500K-line monorepo.
 
 A finding is only a finding with evidence. "Probably has N+1 queries somewhere" is not a finding; `orders/api.ts:142 issues one query per order item inside a loop` is.
 
 ---
+
+## Contents
+
+- Correctness / Bugs
+- Security
+- Performance
+- Test Coverage
+- Tech Debt & Architecture
+- Dependencies & Migrations
+- DX & Tooling
+- Docs
+- Direction - features & where to take this next
+- Finding format
+- Prioritization rubric
 
 ## 1. Correctness / Bugs
 

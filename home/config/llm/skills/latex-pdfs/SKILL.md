@@ -1,6 +1,6 @@
 ---
 name: latex-pdfs
-description: Use when creating, editing, or troubleshooting professional PDF documents with LaTeX, nix-shell, pdflatex, document templates, or missing TeX packages.
+description: LaTeX PDF generation. Use for professional PDFs, pdflatex, nix-shell TeX environments, document templates, missing packages, or PDF troubleshooting.
 ---
 
 # LaTeX PDFs

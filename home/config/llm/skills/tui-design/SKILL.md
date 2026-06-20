@@ -1,6 +1,6 @@
 ---
 name: tui-design
-description: Project guide for planning, designing, implementing, and reviewing terminal UI work. Use for Ratatui UI changes, reactive terminal UI architecture, keyboard workflows, colour/theme choices, image preview support, accessibility, TUI issue sequencing, or TUI test planning.
+description: Terminal UI and Ratatui design. Use for TUI features, reactive terminal UI architecture, keyboard workflows, color/themes, image previews, accessibility, issue sequencing, or TUI tests.
 ---
 
 # TUI Design

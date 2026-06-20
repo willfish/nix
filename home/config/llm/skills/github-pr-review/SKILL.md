@@ -1,6 +1,6 @@
 ---
 name: github-pr-review
-description: Use when reviewing GitHub pull requests, posting GitHub review comments, adding GitHub code suggestions, or using GitHub MCP/gh CLI to submit APPROVE, COMMENT, or REQUEST_CHANGES reviews. Requires drafting comments first, getting explicit user approval, and submitting comments as one pending GitHub review.
+description: GitHub review publishing. Use only for posting PR review comments, code suggestions, or APPROVE/COMMENT/REQUEST_CHANGES reviews through GitHub MCP or gh after user approval.
 ---
 
 # GitHub PR Review
@@ -9,7 +9,7 @@ Use this when reviewing GitHub PRs and when posting review comments or code sugg
 
 This skill is specifically about publishing review feedback. If you are only reading code and reporting findings to the user, follow normal code-review practice and do not post anything to GitHub.
 
-For review judgement, findings, tone, and Will's review voice, also use `code-review-workflow`; it provides `references/reviews.md` and `references/voice.md`. This skill only governs GitHub publication mechanics.
+For review judgement, findings, tone, and Will's review voice, also use `code-review-workflow`. This skill only governs GitHub publication mechanics.
 
 ## Non-Negotiables
 
