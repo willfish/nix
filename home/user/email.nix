@@ -5,7 +5,7 @@
     address = "william.michael.fish@gmail.com";
     realName = "William Fish";
     userName = "william.michael.fish@gmail.com";
-    passwordCommand = "cat ${config.home.homeDirectory}/.secrets/gmail-app-password";
+    passwordCommand = "cat ${config.sops.secrets.GMAIL_APP_PASSWORD.path}";
 
     imap = {
       host = "imap.gmail.com";
