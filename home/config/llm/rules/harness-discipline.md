@@ -1,7 +1,8 @@
 # Harness Discipline
 
-These rules are always-on guardrails for agent sessions. They do not replace
-skills; they stop core workflow discipline from depending on voluntary recall.
+These rules are always-on guardrails for agent sessions. They do not inject
+skill bodies automatically. They carry the minimum discipline that must always
+be in context, then point to skills for deeper task-specific procedure.
 
 ## Skills First
 
@@ -11,6 +12,16 @@ skills; they stop core workflow discipline from depending on voluntary recall.
 - If unsure which skill applies, use `skill-router`.
 - In Grok, descriptions are not enough: run `/skills <name>` or read the skill
   file directly.
+
+Minimum always-on algorithm:
+
+1. Classify the task: simple answer, bug/debugging, implementation, plan/RFC,
+   review, PR/Jira, tests, dotfiles/Nix, docs, or design.
+2. Match the task to the skill list or routing table.
+3. Load the matched skill before the first substantive action.
+4. If no skill fits, say that briefly and proceed with normal engineering
+   judgment.
+5. For work that continues past a quick answer, create and maintain a checklist.
 
 Red flags that mean a skill check is being skipped:
 
