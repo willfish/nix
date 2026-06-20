@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0004: Build Evals and Guardrails</title>
+  <style>
+    :root { --ink: #172033; --muted: #5c667a; --line: #d9dee8; --panel: #f7f9fc; --blue: #165dff; --green: #147d64; --red: #b42318; --amber: #9a6700; --white: #fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--white); line-height: 1.55; }
+    main { width: min(1040px, calc(100vw - 32px)); margin: 0 auto; padding: 34px 0 56px; }
+    h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: 0; }
+    h1 { font-size: clamp(2rem, 5vw, 3.7rem); max-width: 900px; }
+    h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); margin-top: 34px; }
+    h3 { font-size: 1rem; }
+    p { margin: 12px 0 0; color: var(--muted); }
+    a { color: var(--blue); text-underline-offset: 0.18em; }
+    code { background: #eef2ff; border-radius: 4px; padding: 0.1em 0.32em; }
+    .hero { padding: 22px 0 20px; border-bottom: 1px solid var(--line); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .pill { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 0.82rem; font-weight: 700; }
+    .lede { font-size: 1.15rem; max-width: 780px; }
+    .band { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fff; min-height: 150px; }
+    textarea { width: 100%; min-height: 260px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; resize: vertical; }
+    button { min-height: 38px; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; font: inherit; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .result { margin-top: 14px; padding: 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; min-height: 56px; }
+    .good { border-color: #82c7ad; background: #eefaf5; }
+    .warn { border-color: #efc56b; background: #fff8e7; }
+    .bad { border-color: #ee9b94; background: #fff1f0; }
+    .source-list { padding-left: 20px; color: var(--muted); }
+    .source-list li { margin-top: 8px; }
+    .footer { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="meta">
+        <span class="pill">Lesson 0004</span>
+        <span class="pill">Artifact: eval matrix</span>
+        <span class="pill">Focus: proof</span>
+      </div>
+      <h1>Build Evals and Guardrails</h1>
+      <p class="lede">Prompt quality is not an operating claim. Evals and guardrails turn expected behavior, unsafe behavior, and regression risk into something you can inspect repeatedly.</p>
+    </section>
+
+    <section>
+      <h2>The Win</h2>
+      <div class="band">
+        <p>You will create an eval matrix for your agent workflow: success cases, edge cases, adversarial cases, tool-use checks, and guardrail checks.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Primary Sources</h2>
+      <ul class="source-list">
+        <li><a href="https://developers.openai.com/api/docs/guides/evals">OpenAI Evals</a> for datasets, graders, and regression-oriented evaluation.</li>
+        <li><a href="https://developers.openai.com/api/docs/guides/agents">OpenAI Agents SDK guide</a> for agent guardrails and workflow evaluation.</li>
+        <li><a href="https://developers.openai.com/api/docs/guides/function-calling">OpenAI Function calling</a> for checking whether model-selected tool arguments match strict schemas.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Eval Types</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Golden path</h3>
+          <p>Representative cases that should pass when the system is working as intended.</p>
+        </article>
+        <article class="card">
+          <h3>Edge cases</h3>
+          <p>Ambiguous, incomplete, high-volume, or conflicting inputs that reveal workflow brittleness.</p>
+        </article>
+        <article class="card">
+          <h3>Adversarial cases</h3>
+          <p>Inputs that try to bypass tool boundaries, approvals, data limits, or output policy.</p>
+        </article>
+        <article class="card">
+          <h3>Regression checks</h3>
+          <p>Small repeatable tests that protect important behavior whenever prompts, tools, models, or retrieval change.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Exercise: Write the Eval Matrix</h2>
+      <div class="band">
+        <p>Write at least eight cases. Each case needs an input, expected behavior, grader/check, and guardrail relevance.</p>
+        <textarea id="draft">Case 1:
+Input:
+Expected behavior:
+Tool behavior:
+Guardrail:
+Grader/check:
+
+Case 2:
+Input:
+Expected behavior:
+Tool behavior:
+Guardrail:
+Grader/check:
+
+Cases still missing:
+- Golden path:
+- Edge:
+- Adversarial:
+- Tool misuse:
+- Human review:
+- Fallback:</textarea>
+        <div class="actions">
+          <button type="button" id="score">Score eval matrix</button>
+        </div>
+        <div class="result" id="result" aria-live="polite">A strong eval matrix names expected behavior and failure behavior.</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Portfolio Translation</h2>
+      <div class="band">
+        <p>Weak: <code>I improved the prompt until it worked.</code></p>
+        <p>Strong: <code>I built a regression suite covering golden paths, adversarial tool-use attempts, approval gates, and fallback behavior, then used it to compare prompt and model changes.</code></p>
+      </div>
+    </section>
+
+    <p class="footer">Bring back the eval matrix. The next lesson adds traces, metrics, latency, cost, and fallback decisions.</p>
+  </main>
+  <script>
+    document.getElementById("score").addEventListener("click", () => {
+      const value = document.getElementById("draft").value.toLowerCase();
+      const terms = ["input", "expected", "tool", "guardrail", "grader", "golden", "edge", "adversarial", "fallback", "human"];
+      const hits = terms.filter((term) => value.includes(term)).length;
+      const result = document.getElementById("result");
+      result.className = "result";
+      if (hits >= 8) {
+        result.textContent = `${hits}/10 eval concerns present. Now turn these into runnable checks or a table in your project README.`;
+        result.classList.add("good");
+      } else if (hits >= 5) {
+        result.textContent = `${hits}/10 eval concerns present. Add adversarial, human review, and fallback cases.`;
+        result.classList.add("warn");
+      } else {
+        result.textContent = `${hits}/10 eval concerns present. This is not enough evidence to market production reliability.`;
+        result.classList.add("bad");
+      }
+    });
+  </script>
+</body>
+</html>

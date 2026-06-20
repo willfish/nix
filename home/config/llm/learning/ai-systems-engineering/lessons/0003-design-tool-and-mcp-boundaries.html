@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0003: Design Tool and MCP Boundaries</title>
+  <style>
+    :root { --ink: #172033; --muted: #5c667a; --line: #d9dee8; --panel: #f7f9fc; --blue: #165dff; --green: #147d64; --red: #b42318; --amber: #9a6700; --white: #fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--white); line-height: 1.55; }
+    main { width: min(1040px, calc(100vw - 32px)); margin: 0 auto; padding: 34px 0 56px; }
+    h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: 0; }
+    h1 { font-size: clamp(2rem, 5vw, 3.7rem); max-width: 900px; }
+    h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); margin-top: 34px; }
+    h3 { font-size: 1rem; }
+    p { margin: 12px 0 0; color: var(--muted); }
+    a { color: var(--blue); text-underline-offset: 0.18em; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    code { background: #eef2ff; border-radius: 4px; padding: 0.1em 0.32em; }
+    pre { overflow: auto; padding: 14px; background: #111827; color: #f8fafc; border-radius: 8px; font-size: 0.9rem; }
+    .hero { padding: 22px 0 20px; border-bottom: 1px solid var(--line); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .pill { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 0.82rem; font-weight: 700; }
+    .lede { font-size: 1.15rem; max-width: 780px; }
+    .band { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fff; min-height: 150px; }
+    textarea { width: 100%; min-height: 220px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; resize: vertical; }
+    button { min-height: 38px; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; font: inherit; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .result { margin-top: 14px; padding: 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; min-height: 56px; }
+    .good { border-color: #82c7ad; background: #eefaf5; }
+    .warn { border-color: #efc56b; background: #fff8e7; }
+    .bad { border-color: #ee9b94; background: #fff1f0; }
+    .source-list { padding-left: 20px; color: var(--muted); }
+    .source-list li { margin-top: 8px; }
+    .footer { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="meta">
+        <span class="pill">Lesson 0003</span>
+        <span class="pill">Artifact: tool contract</span>
+        <span class="pill">Focus: boundaries</span>
+      </div>
+      <h1>Design Tool and MCP Boundaries</h1>
+      <p class="lede">A model should not "do" business actions. It should request well-defined operations through contracts that application code owns, validates, observes, and can deny.</p>
+    </section>
+
+    <section>
+      <h2>The Win</h2>
+      <div class="band">
+        <p>You will define one safe read tool, one risky write tool, and decide whether either belongs behind an MCP server.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Primary Sources</h2>
+      <ul class="source-list">
+        <li><a href="https://developers.openai.com/api/docs/guides/function-calling">OpenAI Function calling</a> for tool schema design and strict structured arguments.</li>
+        <li><a href="https://modelcontextprotocol.io/docs/getting-started/intro">MCP introduction</a> for connecting AI applications to tools, data, and workflows through a shared protocol.</li>
+        <li><a href="https://modelcontextprotocol.io/specification/2025-11-25">MCP specification</a> for authoritative client/server concepts.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Boundary Rules</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Arguments are contracts</h3>
+          <p>Use precise schemas, enums, required fields, and narrow types. The model chooses arguments; application code validates them.</p>
+        </article>
+        <article class="card">
+          <h3>Effects are explicit</h3>
+          <p>Separate read-only tools from tools that mutate, spend money, expose data, notify users, or change external state.</p>
+        </article>
+        <article class="card">
+          <h3>MCP is a boundary</h3>
+          <p>Use MCP when the same data or tool surface should be reusable across AI clients, agents, editors, or workflows.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Example Contract</h2>
+      <pre>{
+  "name": "create_refund_case",
+  "description": "Create a pending refund case for human review.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "required": ["order_id", "reason", "risk_level"],
+    "properties": {
+      "order_id": { "type": "string" },
+      "reason": { "type": "string", "maxLength": 500 },
+      "risk_level": { "type": "string", "enum": ["low", "medium", "high"] }
+    },
+    "additionalProperties": false
+  }
+}</pre>
+    </section>
+
+    <section>
+      <h2>Exercise: Write Two Tool Contracts</h2>
+      <div class="band">
+        <p>Use your workflow from Lesson 0002. Define one read-only tool and one risky tool.</p>
+        <textarea id="draft">Read tool name:
+Purpose:
+Input schema:
+Output shape:
+Auth/data limits:
+Trace fields:
+
+Risky tool name:
+Purpose:
+Input schema:
+Effect:
+Approval required before execution:
+Failure modes:
+Trace fields:
+
+MCP decision:
+Why this should or should not be exposed through MCP:</textarea>
+        <div class="actions">
+          <button type="button" id="score">Score contracts</button>
+        </div>
+        <div class="result" id="result" aria-live="polite">A strong contract separates model choice from application execution.</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Portfolio Translation</h2>
+      <div class="band">
+        <p>Weak: <code>The agent can use tools.</code></p>
+        <p>Strong: <code>I defined strict tool contracts, separated read and write effects, required approval before risky execution, and evaluated whether the integration belonged behind MCP.</code></p>
+      </div>
+    </section>
+
+    <p class="footer">Bring back the contracts. The next lesson turns them into eval and guardrail cases.</p>
+  </main>
+  <script>
+    document.getElementById("score").addEventListener("click", () => {
+      const value = document.getElementById("draft").value.toLowerCase();
+      const terms = ["schema", "output", "auth", "trace", "approval", "failure", "mcp", "effect"];
+      const hits = terms.filter((term) => value.includes(term)).length;
+      const result = document.getElementById("result");
+      result.className = "result";
+      if (hits >= 7) {
+        result.textContent = `${hits}/8 boundary concerns present. Next, write evals that prove the model uses these tools correctly.`;
+        result.classList.add("good");
+      } else if (hits >= 4) {
+        result.textContent = `${hits}/8 boundary concerns present. Add stricter schemas, risk handling, and trace fields.`;
+        result.classList.add("warn");
+      } else {
+        result.textContent = `${hits}/8 boundary concerns present. This is still too loose to operate safely.`;
+        result.classList.add("bad");
+      }
+    });
+  </script>
+</body>
+</html>

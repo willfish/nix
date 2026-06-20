@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0002: Design a Resumable Agent Workflow</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #5c667a;
+      --line: #d9dee8;
+      --panel: #f7f9fc;
+      --blue: #165dff;
+      --green: #147d64;
+      --red: #b42318;
+      --amber: #9a6700;
+      --white: #fff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--white); line-height: 1.55; }
+    main { width: min(1040px, calc(100vw - 32px)); margin: 0 auto; padding: 34px 0 56px; }
+    h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: 0; }
+    h1 { font-size: clamp(2rem, 5vw, 3.7rem); max-width: 900px; }
+    h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); margin-top: 34px; }
+    h3 { font-size: 1rem; }
+    p { margin: 12px 0 0; color: var(--muted); }
+    a { color: var(--blue); text-underline-offset: 0.18em; }
+    code { background: #eef2ff; border-radius: 4px; padding: 0.1em 0.32em; }
+    .hero { padding: 22px 0 20px; border-bottom: 1px solid var(--line); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .pill { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 0.82rem; font-weight: 700; }
+    .lede { font-size: 1.15rem; max-width: 780px; }
+    .band { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fff; min-height: 150px; }
+    .step { border-top: 5px solid var(--blue); }
+    .step:nth-child(2) { border-top-color: var(--green); }
+    .step:nth-child(3) { border-top-color: var(--amber); }
+    textarea { width: 100%; min-height: 220px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; resize: vertical; }
+    button { min-height: 38px; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; font: inherit; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .result { margin-top: 14px; padding: 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; min-height: 56px; }
+    .good { border-color: #82c7ad; background: #eefaf5; }
+    .warn { border-color: #efc56b; background: #fff8e7; }
+    .bad { border-color: #ee9b94; background: #fff1f0; }
+    .source-list { padding-left: 20px; color: var(--muted); }
+    .source-list li { margin-top: 8px; }
+    .footer { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="meta">
+        <span class="pill">Lesson 0002</span>
+        <span class="pill">Artifact: workflow spec</span>
+        <span class="pill">Focus: state and review</span>
+      </div>
+      <h1>Design a Resumable Agent Workflow</h1>
+      <p class="lede">An agentic system is not just a loop around a model. It is a workflow that can carry state, call tools, pause for judgment, recover from failure, and explain what happened.</p>
+    </section>
+
+    <section>
+      <h2>The Win</h2>
+      <div class="band">
+        <p>You will convert the one-pager from Lesson 0001 into a workflow spec with nodes, state, tool calls, interrupt points, and resume behavior.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Primary Sources</h2>
+      <ul class="source-list">
+        <li><a href="https://docs.langchain.com/oss/python/langgraph/overview">LangGraph overview</a> for durable execution, human-in-the-loop, persistence, streaming, and memory.</li>
+        <li><a href="https://docs.langchain.com/oss/python/langgraph/persistence">LangGraph persistence</a> for checkpointing, threads, short-term memory, and long-term memory.</li>
+        <li><a href="https://docs.langchain.com/oss/python/langchain/human-in-the-loop">LangChain human-in-the-loop</a> for interrupting before risky tool execution.</li>
+        <li><a href="../reference/source-map.html">Source map</a> for the broader production concerns.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>The Workflow Shape</h2>
+      <div class="grid">
+        <article class="card step">
+          <h3>Nodes</h3>
+          <p>Name the stable steps: classify, retrieve, plan, call tool, wait for approval, execute, summarize, escalate.</p>
+        </article>
+        <article class="card step">
+          <h3>State</h3>
+          <p>Define what must survive each step: user goal, tool results, risk classification, approvals, errors, budget spent, and final decision.</p>
+        </article>
+        <article class="card step">
+          <h3>Interrupts</h3>
+          <p>Pause before irreversible, costly, security-sensitive, or externally visible actions. Resume with the approval decision recorded.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Exercise: Write the Workflow Spec</h2>
+      <div class="band">
+        <p>Choose one system from Lesson 0001. Fill this in as if another engineer had to implement it.</p>
+        <textarea id="draft">Workflow name:
+User trigger:
+Node 1:
+Node 2:
+Node 3:
+State carried between nodes:
+Tool calls:
+Interrupt before:
+Resume after:
+Failure states:
+Final output:
+What this proves for my portfolio:</textarea>
+        <div class="actions">
+          <button type="button" id="score">Score workflow</button>
+        </div>
+        <div class="result" id="result" aria-live="polite">Score after drafting. A strong workflow names state, tools, interrupts, resume behavior, and failure states.</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Portfolio Translation</h2>
+      <div class="band">
+        <p>Weak: <code>I built an agent.</code></p>
+        <p>Strong: <code>I designed a resumable agent workflow with explicit state, approval gates for risky actions, and failure handling for tool and model errors.</code></p>
+      </div>
+    </section>
+
+    <p class="footer">Bring the completed workflow spec back to the teaching session. The next lesson turns its tools into contracts.</p>
+  </main>
+  <script>
+    document.getElementById("score").addEventListener("click", () => {
+      const value = document.getElementById("draft").value.toLowerCase();
+      const terms = ["node", "state", "tool", "interrupt", "resume", "failure", "approval", "output"];
+      const hits = terms.filter((term) => value.includes(term)).length;
+      const result = document.getElementById("result");
+      result.className = "result";
+      if (hits >= 7) {
+        result.textContent = `${hits}/8 workflow concerns present. Now make each line specific enough to implement.`;
+        result.classList.add("good");
+      } else if (hits >= 4) {
+        result.textContent = `${hits}/8 workflow concerns present. Add the missing production behavior before coding.`;
+        result.classList.add("warn");
+      } else {
+        result.textContent = `${hits}/8 workflow concerns present. This still reads like an idea, not a workflow spec.`;
+        result.classList.add("bad");
+      }
+    });
+  </script>
+</body>
+</html>

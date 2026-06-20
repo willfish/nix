@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0006: Package Proof and Market Yourself</title>
+  <style>
+    :root { --ink: #172033; --muted: #5c667a; --line: #d9dee8; --panel: #f7f9fc; --blue: #165dff; --green: #147d64; --red: #b42318; --amber: #9a6700; --white: #fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--white); line-height: 1.55; }
+    main { width: min(1040px, calc(100vw - 32px)); margin: 0 auto; padding: 34px 0 56px; }
+    h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: 0; }
+    h1 { font-size: clamp(2rem, 5vw, 3.7rem); max-width: 900px; }
+    h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); margin-top: 34px; }
+    h3 { font-size: 1rem; }
+    p { margin: 12px 0 0; color: var(--muted); }
+    a { color: var(--blue); text-underline-offset: 0.18em; }
+    code { background: #eef2ff; border-radius: 4px; padding: 0.1em 0.32em; }
+    .hero { padding: 22px 0 20px; border-bottom: 1px solid var(--line); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .pill { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 0.82rem; font-weight: 700; }
+    .lede { font-size: 1.15rem; max-width: 780px; }
+    .band { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fff; min-height: 150px; }
+    textarea { width: 100%; min-height: 290px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; resize: vertical; }
+    button { min-height: 38px; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; font: inherit; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .result { margin-top: 14px; padding: 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; min-height: 56px; }
+    .good { border-color: #82c7ad; background: #eefaf5; }
+    .warn { border-color: #efc56b; background: #fff8e7; }
+    .bad { border-color: #ee9b94; background: #fff1f0; }
+    .footer { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="meta">
+        <span class="pill">Lesson 0006</span>
+        <span class="pill">Artifact: case study</span>
+        <span class="pill">Focus: positioning</span>
+      </div>
+      <h1>Package Proof and Market Yourself</h1>
+      <p class="lede">You do not market the transition by saying you are an AI Systems Engineer. You market it by showing production decisions that a backend engineer, platform engineer, or staff engineer would respect.</p>
+    </section>
+
+    <section>
+      <h2>The Win</h2>
+      <div class="band">
+        <p>You will turn the lesson artifacts into a public-facing case study outline and a concise positioning statement.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>The Proof Stack</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Architecture</h3>
+          <p>Workflow graph, tool contracts, state model, MCP decision, approval points, and fallback paths.</p>
+        </article>
+        <article class="card">
+          <h3>Reliability</h3>
+          <p>Eval matrix, regression checks, guardrails, failure modes, and examples that demonstrate restraint.</p>
+        </article>
+        <article class="card">
+          <h3>Operations</h3>
+          <p>Trace examples, metrics, cost and latency budgets, error handling, and what you would alert on.</p>
+        </article>
+        <article class="card">
+          <h3>Positioning</h3>
+          <p>A clear sentence connecting your backend background to production AI systems ownership.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Exercise: Draft the Case Study</h2>
+      <div class="band">
+        <p>Write this as if it will become the README or blog post for your first portfolio project.</p>
+        <textarea id="draft">Title:
+One-line positioning:
+
+Problem:
+
+Why a normal backend feature was not enough:
+
+System architecture:
+- workflow:
+- tools:
+- state/memory:
+- MCP decision:
+
+Reliability:
+- evals:
+- guardrails:
+- human review:
+- fallbacks:
+
+Operations:
+- traces:
+- metrics:
+- cost/latency budget:
+
+Tradeoffs:
+
+What I would improve next:
+
+Profile/CV bullet:
+</textarea>
+        <div class="actions">
+          <button type="button" id="score">Score case study</button>
+        </div>
+        <div class="result" id="result" aria-live="polite">A strong case study shows constraints, decisions, evidence, and tradeoffs.</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Positioning Template</h2>
+      <div class="band">
+        <p><code>Backend engineer specializing in production AI systems: agent workflows, tool orchestration, evals, observability, guardrails, human review, and reliable integration with existing software systems.</code></p>
+        <p>Use that as the working headline until your first case study gives you sharper language.</p>
+      </div>
+    </section>
+
+    <p class="footer">When this draft is complete, paste it back into the teaching session. It should create the next learning record and drive the next project lesson.</p>
+  </main>
+  <script>
+    document.getElementById("score").addEventListener("click", () => {
+      const value = document.getElementById("draft").value.toLowerCase();
+      const terms = ["problem", "architecture", "workflow", "tools", "state", "eval", "guardrail", "human", "fallback", "trace", "metric", "cost", "tradeoff", "cv"];
+      const hits = terms.filter((term) => value.includes(term)).length;
+      const result = document.getElementById("result");
+      result.className = "result";
+      if (hits >= 11) {
+        result.textContent = `${hits}/14 proof elements present. This can become a credible public case study after you replace placeholders with implementation evidence.`;
+        result.classList.add("good");
+      } else if (hits >= 7) {
+        result.textContent = `${hits}/14 proof elements present. Add operational evidence and tradeoffs before publishing.`;
+        result.classList.add("warn");
+      } else {
+        result.textContent = `${hits}/14 proof elements present. This still reads like a claim rather than evidence.`;
+        result.classList.add("bad");
+      }
+    });
+  </script>
+</body>
+</html>

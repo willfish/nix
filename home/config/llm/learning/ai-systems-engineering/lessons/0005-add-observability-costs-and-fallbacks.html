@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0005: Add Observability, Costs, and Fallbacks</title>
+  <style>
+    :root { --ink: #172033; --muted: #5c667a; --line: #d9dee8; --panel: #f7f9fc; --blue: #165dff; --green: #147d64; --red: #b42318; --amber: #9a6700; --white: #fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--white); line-height: 1.55; }
+    main { width: min(1040px, calc(100vw - 32px)); margin: 0 auto; padding: 34px 0 56px; }
+    h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: 0; }
+    h1 { font-size: clamp(2rem, 5vw, 3.7rem); max-width: 900px; }
+    h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); margin-top: 34px; }
+    h3 { font-size: 1rem; }
+    p { margin: 12px 0 0; color: var(--muted); }
+    a { color: var(--blue); text-underline-offset: 0.18em; }
+    code { background: #eef2ff; border-radius: 4px; padding: 0.1em 0.32em; }
+    .hero { padding: 22px 0 20px; border-bottom: 1px solid var(--line); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .pill { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 0.82rem; font-weight: 700; }
+    .lede { font-size: 1.15rem; max-width: 780px; }
+    .band { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fff; min-height: 150px; }
+    textarea { width: 100%; min-height: 260px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; resize: vertical; }
+    button { min-height: 38px; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; font: inherit; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .result { margin-top: 14px; padding: 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; min-height: 56px; }
+    .good { border-color: #82c7ad; background: #eefaf5; }
+    .warn { border-color: #efc56b; background: #fff8e7; }
+    .bad { border-color: #ee9b94; background: #fff1f0; }
+    .source-list { padding-left: 20px; color: var(--muted); }
+    .source-list li { margin-top: 8px; }
+    .footer { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="meta">
+        <span class="pill">Lesson 0005</span>
+        <span class="pill">Artifact: ops sheet</span>
+        <span class="pill">Focus: running it</span>
+      </div>
+      <h1>Add Observability, Costs, and Fallbacks</h1>
+      <p class="lede">A system you cannot inspect is a system you cannot own. AI systems need traces across model calls, tool calls, retrieval, approval pauses, retries, failures, latency, and cost.</p>
+    </section>
+
+    <section>
+      <h2>The Win</h2>
+      <div class="band">
+        <p>You will define the operational sheet for your system: traces, metrics, logs, cost and latency budgets, alert conditions, and fallback behavior.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Primary Sources</h2>
+      <ul class="source-list">
+        <li><a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/">OpenTelemetry GenAI semantic conventions pointer</a> for the current canonical location.</li>
+        <li><a href="https://github.com/open-telemetry/semantic-conventions/tree/main/docs/gen-ai">OpenTelemetry GenAI docs directory</a> for spans, metrics, events, exceptions, agent spans, and MCP vocabulary.</li>
+        <li><a href="https://developers.openai.com/api/docs/guides/agents">OpenAI Agents SDK guide</a> for tracing and observability concepts around agents.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Operational Questions</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Trace</h3>
+          <p>Can you reconstruct the run across model choice, prompt/context, retrieval, tool calls, approval pauses, retries, and final output?</p>
+        </article>
+        <article class="card">
+          <h3>Measure</h3>
+          <p>Can you see success rate, eval pass rate, tool error rate, token use, latency, cost, and human review volume?</p>
+        </article>
+        <article class="card">
+          <h3>Fallback</h3>
+          <p>Can the system degrade: smaller model, cached answer, search-only response, human queue, or explicit failure?</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Exercise: Write the Ops Sheet</h2>
+      <div class="band">
+        <p>Fill this in for your workflow. Keep it specific enough to implement in logs, traces, metrics, and alerts.</p>
+        <textarea id="draft">Trace spans:
+- workflow:
+- model call:
+- retrieval:
+- tool call:
+- human review:
+
+Metrics:
+- success rate:
+- eval pass rate:
+- latency:
+- token/cost:
+- tool error rate:
+
+Budgets:
+- max latency:
+- max cost per run:
+- retry limit:
+
+Fallbacks:
+- model failure:
+- tool failure:
+- retrieval failure:
+- budget exceeded:
+- low confidence:
+
+Portfolio proof:
+- screenshot/table/trace I will show:</textarea>
+        <div class="actions">
+          <button type="button" id="score">Score ops sheet</button>
+        </div>
+        <div class="result" id="result" aria-live="polite">A strong ops sheet makes the harness visible, not just the answer.</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Portfolio Translation</h2>
+      <div class="band">
+        <p>Weak: <code>The agent has observability.</code></p>
+        <p>Strong: <code>I instrumented workflow, model, retrieval, tool, and approval spans; tracked cost and latency budgets; and implemented fallbacks for model, tool, retrieval, and confidence failures.</code></p>
+      </div>
+    </section>
+
+    <p class="footer">Bring back the ops sheet. The final lesson packages the project into marketable proof.</p>
+  </main>
+  <script>
+    document.getElementById("score").addEventListener("click", () => {
+      const value = document.getElementById("draft").value.toLowerCase();
+      const terms = ["span", "metric", "latency", "cost", "token", "error", "fallback", "budget", "review", "confidence"];
+      const hits = terms.filter((term) => value.includes(term)).length;
+      const result = document.getElementById("result");
+      result.className = "result";
+      if (hits >= 8) {
+        result.textContent = `${hits}/10 ops concerns present. This is ready to become a README operations section.`;
+        result.classList.add("good");
+      } else if (hits >= 5) {
+        result.textContent = `${hits}/10 ops concerns present. Add budget thresholds and failure-specific fallbacks.`;
+        result.classList.add("warn");
+      } else {
+        result.textContent = `${hits}/10 ops concerns present. The system is not yet observable enough to own.`;
+        result.classList.add("bad");
+      }
+    });
+  </script>
+</body>
+</html>
