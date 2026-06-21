@@ -26,7 +26,7 @@ let
     }
   '';
 in
-lib.mkIf pkgs.stdenv.isLinux {
+{
   home.file.".local/bin/hindsight-mcp-start" = {
     executable = true;
     text = ''
@@ -153,7 +153,7 @@ lib.mkIf pkgs.stdenv.isLinux {
     };
   };
 
-  systemd.user.services.hindsight-mcp = {
+  systemd.user.services.hindsight-mcp = lib.mkIf pkgs.stdenv.isLinux {
     Unit = {
       Description = "Hindsight local MCP/API service";
       After = [ "network-online.target" ];
@@ -169,6 +169,19 @@ lib.mkIf pkgs.stdenv.isLinux {
 
     Install = {
       WantedBy = [ "default.target" ];
+    };
+  };
+
+  launchd.agents.hindsight-mcp = lib.mkIf pkgs.stdenv.isDarwin {
+    enable = true;
+    config = {
+      ProgramArguments = [ "${config.home.homeDirectory}/.local/bin/hindsight-mcp-start" ];
+      RunAtLoad = true;
+      KeepAlive = {
+        SuccessfulExit = false;
+      };
+      StandardOutPath = "/tmp/hindsight-mcp.out.log";
+      StandardErrorPath = "/tmp/hindsight-mcp.err.log";
     };
   };
 }
