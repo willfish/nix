@@ -93,11 +93,13 @@ in
       hindsightApiUrl = "http://127.0.0.1:8888";
       bankId = "william-codex";
       bankMission = "You are a coding assistant for William. Retain durable technical decisions, project context, debugging outcomes, repository conventions, and user preferences that help future sessions continue without re-explanation.";
-      retainMission = "Extract durable technical decisions, code patterns, debugging solutions, repository context, architecture choices, and stable user preferences. Ignore transient shell output, routine status chatter, raw secrets, tokens, credentials, and sensitive personal data.";
+      retainMission = "Extract durable technical decisions, code patterns, debugging solutions, repository context, architecture choices, and stable user preferences. Ignore transient shell output, raw tool traces, routine status chatter, file search/list/read activity, facts that only say the user is working in a repository, secrets, tokens, credentials, and sensitive personal data. Do not retain commodity rates, duty rates, legal tariff values, or other time-sensitive public data unless the user explicitly asks to remember a classification outcome.";
       autoRecall = true;
       autoRetain = true;
-      retainMode = "full-session";
+      retainMode = "chunked";
       retainEveryNTurns = 10;
+      retainOverlapTurns = 1;
+      retainToolCalls = false;
       recallBudget = "mid";
       recallMaxTokens = 1200;
       recallTimeout = 10;
