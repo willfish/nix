@@ -1,6 +1,5 @@
 {
   config,
-  lib,
   pkgs,
   ...
 }:
@@ -13,7 +12,6 @@ let
     rev = "e1014cc";
     sha256 = "1lfmbzy8jgyys5n7g3s70zygybh9rkpzsdljgf9szqm42ydg690g";
   };
-  codexScriptsDir = "${config.home.homeDirectory}/.hindsight/codex/scripts";
   secretDir = "${config.home.homeDirectory}/.config/sops-nix/secrets";
   sopsSecretHelpers = ''
     secret_dir="${secretDir}"
@@ -94,8 +92,8 @@ in
       bankId = "william-codex";
       bankMission = "You are a coding assistant for William. Retain durable technical decisions, project context, debugging outcomes, repository conventions, and user preferences that help future sessions continue without re-explanation.";
       retainMission = "Extract durable technical decisions, code patterns, debugging solutions, repository context, architecture choices, and stable user preferences. Ignore transient shell output, raw tool traces, routine status chatter, file search/list/read activity, facts that only say the user is working in a repository, secrets, tokens, credentials, and sensitive personal data. Do not retain commodity rates, duty rates, legal tariff values, or other time-sensitive public data unless the user explicitly asks to remember a classification outcome.";
-      autoRecall = true;
-      autoRetain = true;
+      autoRecall = false;
+      autoRetain = false;
       retainMode = "chunked";
       retainEveryNTurns = 10;
       retainOverlapTurns = 1;
@@ -117,73 +115,7 @@ in
   home.file.".codex/hooks.json" = {
     force = true;
     text = builtins.toJSON {
-      hooks = {
-        SessionStart = [
-          {
-            hooks = [
-              {
-                type = "command";
-                command = "${pkgs.python3}/bin/python3 \"${codexScriptsDir}/session_start.py\"";
-                timeout = 5;
-              }
-            ];
-          }
-        ];
-        UserPromptSubmit = [
-          {
-            hooks = [
-              {
-                type = "command";
-                command = "${pkgs.python3}/bin/python3 \"${codexScriptsDir}/recall.py\"";
-                timeout = 12;
-              }
-            ];
-          }
-        ];
-        Stop = [
-          {
-            hooks = [
-              {
-                type = "command";
-                command = "${pkgs.python3}/bin/python3 \"${codexScriptsDir}/retain.py\"";
-                timeout = 30;
-              }
-            ];
-          }
-        ];
-      };
-    };
-  };
-
-  systemd.user.services.hindsight-mcp = lib.mkIf pkgs.stdenv.isLinux {
-    Unit = {
-      Description = "Hindsight local MCP/API service";
-      After = [ "network-online.target" ];
-    };
-
-    Service = {
-      ExecStart = "${config.home.homeDirectory}/.local/bin/hindsight-mcp-start";
-      ExecStop = "${config.home.homeDirectory}/.local/bin/hindsight-mcp-stop";
-      Restart = "on-failure";
-      RestartSec = 10;
-      TimeoutStopSec = 30;
-    };
-
-    Install = {
-      WantedBy = [ "default.target" ];
-    };
-  };
-
-  launchd.agents.hindsight-mcp = lib.mkIf pkgs.stdenv.isDarwin {
-    enable = true;
-    config = {
-      ProgramArguments = [ "${config.home.homeDirectory}/.local/bin/hindsight-mcp-start" ];
-      RunAtLoad = true;
-      KeepAlive = {
-        SuccessfulExit = false;
-      };
-      StandardOutPath = "/tmp/hindsight-mcp.out.log";
-      StandardErrorPath = "/tmp/hindsight-mcp.err.log";
+      hooks = { };
     };
   };
 }
