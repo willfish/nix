@@ -325,7 +325,8 @@ let
     fi
 
     if [ "$#" -gt "$subcommand_index" ] \
-      && [ "''${args[$subcommand_index]}" = "push" ]; then
+      && { [ "''${args[$subcommand_index]}" = "commit" ] \
+        || [ "''${args[$subcommand_index]}" = "push" ]; }; then
       repo_root="$(current_repo_root)"
       if [ -n "$repo_root" ]; then
         bootstrap_worktree_direnv "$repo_root"
