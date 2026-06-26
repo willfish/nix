@@ -18,6 +18,28 @@ let
         (cd "$worktree_path" && direnv allow)
       else
         echo "direnv not found; created $worktree_path/.envrc but did not allow it" >&2
+        return 1
+      fi
+
+      bootstrap_worktree_direnv "$worktree_path"
+    }
+
+    bootstrap_worktree_direnv() {
+      worktree_path="$1"
+
+      [ -f "$worktree_path/flake.nix" ] || return 0
+      [ -f "$worktree_path/.envrc" ] || return 0
+      [ ! -e "$worktree_path/.pre-commit-config-nix.yaml" ] || return 0
+
+      if ! command -v direnv >/dev/null 2>&1; then
+        echo "direnv not found; cannot bootstrap $worktree_path" >&2
+        return 1
+      fi
+
+      echo "Bootstrapping direnv for $worktree_path" >&2
+      if ! (cd "$worktree_path" && direnv allow && direnv exec . true); then
+        echo "direnv bootstrap failed for $worktree_path" >&2
+        return 1
       fi
     }
 
@@ -79,6 +101,11 @@ let
       done
 
       (cd "$dir" && pwd -P)
+    }
+
+    current_repo_root() {
+      dir="$(command_working_dir)"
+      "$real_git" -c core.fsmonitor=false -C "$dir" rev-parse --show-toplevel 2>/dev/null || true
     }
 
     worktree_path_for_remove_target() {
@@ -295,6 +322,14 @@ let
       done
 
       exit "$git_status"
+    fi
+
+    if [ "$#" -gt "$subcommand_index" ] \
+      && [ "''${args[$subcommand_index]}" = "push" ]; then
+      repo_root="$(current_repo_root)"
+      if [ -n "$repo_root" ]; then
+        bootstrap_worktree_direnv "$repo_root"
+      fi
     fi
 
     exec "$real_git" "$@"
