@@ -61,7 +61,7 @@ edit_scrollback = "prefix+e"
 copy_mode = "prefix+["
 
 focus_pane_left = "prefix+h"
-focus_pane_down = "prefix+j"
+focus_pane_down = "prefix+down"
 focus_pane_up = "prefix+k"
 focus_pane_right = "prefix+l"
 
@@ -87,6 +87,13 @@ command = "herdr-zoxide-workspace"
 
 [[keys.command]]
 key = "prefix+space"
+type = "pane"
+command = "herdr-thumbs"
+
+# Herdr does not expose tmux-jump's copy-mode cursor movement. Use the
+# token picker on the original tmux-jump key as the closest available flow.
+[[keys.command]]
+key = "prefix+j"
 type = "pane"
 command = "herdr-thumbs"
 

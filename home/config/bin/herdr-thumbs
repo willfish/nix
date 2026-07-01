@@ -22,10 +22,14 @@ pane_text() {
     return
   fi
 
-  pane_id="$(
-    herdr pane current |
-      jq -r '.result.pane.pane_id'
-  )"
+  if [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
+    pane_id="$HERDR_ACTIVE_PANE_ID"
+  else
+    pane_id="$(
+      herdr pane current |
+        jq -r '.result.pane.pane_id'
+    )"
+  fi
 
   herdr pane read "$pane_id" --source visible --lines "${HERDR_THUMBS_LINES:-400}" --format text
 }
@@ -41,12 +45,23 @@ candidates() {
 }
 
 copy_to_clipboard() {
+  if [ -n "${HERDR_THUMBS_DEBUG_LOG:-}" ]; then
+    printf 'copy:%s\n' "$1" >> "$HERDR_THUMBS_DEBUG_LOG"
+  fi
+
   if [ -n "${HERDR_THUMBS_COPY_COMMAND:-}" ]; then
     printf '%s' "$1" | sh -c "$HERDR_THUMBS_COPY_COMMAND"
   elif command -v pbcopy >/dev/null 2>&1; then
     printf '%s' "$1" | pbcopy
   elif command -v xclip >/dev/null 2>&1; then
-    printf '%s' "$1" | xclip -selection clipboard
+    xclip_path="$(command -v xclip)"
+    if [ -n "${TMUX:-}" ] && command -v tmux >/dev/null 2>&1; then
+      tmpfile="$(mktemp)"
+      printf '%s' "$1" > "$tmpfile"
+      tmux run-shell -b "cat '$tmpfile' | '$xclip_path' -selection clipboard; rm -f '$tmpfile'"
+    else
+      setsid sh -c "printf '%s' \"\$1\" | \"\$2\" -selection clipboard" sh "$1" "$xclip_path" >/dev/null 2>&1 &
+    fi
   else
     printf 'no clipboard command found\n' >&2
     exit 1
@@ -77,7 +92,14 @@ else
 fi
 
 if [ -z "$selection" ]; then
+  if [ -n "${HERDR_THUMBS_DEBUG_LOG:-}" ]; then
+    printf 'empty-selection\n' >> "$HERDR_THUMBS_DEBUG_LOG"
+  fi
   exit 0
+fi
+
+if [ -n "${HERDR_THUMBS_DEBUG_LOG:-}" ]; then
+  printf 'selection:%s\n' "$selection" >> "$HERDR_THUMBS_DEBUG_LOG"
 fi
 
 copy_to_clipboard "$selection"
