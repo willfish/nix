@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v herdr >/dev/null 2>&1; then
+  printf 'herdr is not available on PATH\n' >&2
+  exit 1
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+  printf 'jq is not available on PATH\n' >&2
+  exit 1
+fi
+
+if ! command -v fzf >/dev/null 2>&1; then
+  printf 'fzf is not available on PATH\n' >&2
+  exit 1
+fi
+
+pane_text() {
+  if [ -n "${HERDR_THUMBS_TEXT:-}" ]; then
+    printf '%s\n' "$HERDR_THUMBS_TEXT"
+    return
+  fi
+
+  pane_id="$(
+    herdr pane current |
+      jq -r '.result.pane.pane_id'
+  )"
+
+  herdr pane read "$pane_id" --source visible --lines "${HERDR_THUMBS_LINES:-400}" --format text
+}
+
+candidates() {
+  pane_text |
+    tr -cs '[:alnum:]_@%+=:./?&$#~,-' '\n' |
+    awk '{
+      gsub(/^[.,:;!?()[\]{}<>"]+/, "")
+      gsub(/[.,:;!?()[\]{}<>"]+$/, "")
+      if (length($0) >= 3 && !seen[$0]++) print
+    }'
+}
+
+copy_to_clipboard() {
+  if [ -n "${HERDR_THUMBS_COPY_COMMAND:-}" ]; then
+    printf '%s' "$1" | sh -c "$HERDR_THUMBS_COPY_COMMAND"
+  elif command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "$1" | pbcopy
+  elif command -v xclip >/dev/null 2>&1; then
+    printf '%s' "$1" | xclip -selection clipboard
+  else
+    printf 'no clipboard command found\n' >&2
+    exit 1
+  fi
+}
+
+if [ "${1:-}" = "--print-candidates" ]; then
+  candidates
+  exit 0
+fi
+
+if [ -n "${HERDR_THUMBS_SELECTION:-}" ]; then
+  selection="$HERDR_THUMBS_SELECTION"
+elif [ -t 0 ]; then
+  selection="$(
+    candidates |
+      fzf \
+        --prompt='copy> ' \
+        --height="${HERDR_THUMBS_FZF_HEIGHT:-100%}" \
+        --border \
+        --no-sort \
+        --tac \
+        --header='enter: copy selection to clipboard'
+  )"
+else
+  printf 'herdr-thumbs requires an interactive terminal\n' >&2
+  exit 2
+fi
+
+if [ -z "$selection" ]; then
+  exit 0
+fi
+
+copy_to_clipboard "$selection"

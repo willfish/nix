@@ -58,7 +58,7 @@ rename_tab = "prefix+comma"
 close_tab = "prefix+shift+x"
 
 edit_scrollback = "prefix+e"
-copy_mode = ["prefix+[", "prefix+space"]
+copy_mode = "prefix+["
 
 focus_pane_left = "prefix+h"
 focus_pane_down = "prefix+j"
@@ -84,6 +84,11 @@ focus_agent = "prefix+alt+1..9"
 key = "prefix+o"
 type = "pane"
 command = "herdr-zoxide-workspace"
+
+[[keys.command]]
+key = "prefix+space"
+type = "pane"
+command = "herdr-thumbs"
 
 navigate_workspace_up = "up"
 navigate_workspace_down = "down"
