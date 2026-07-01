@@ -90,6 +90,16 @@ key = "prefix+space"
 type = "pane"
 command = "herdr-thumbs"
 
+[[keys.command]]
+key = "prefix+y"
+type = "shell"
+command = "herdr-yank line"
+
+[[keys.command]]
+key = "prefix+shift+y"
+type = "shell"
+command = "herdr-yank cwd"
+
 navigate_workspace_up = "up"
 navigate_workspace_down = "down"
 navigate_pane_left = "h"

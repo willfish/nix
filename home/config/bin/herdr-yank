@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v herdr >/dev/null 2>&1; then
+  printf 'herdr is not available on PATH\n' >&2
+  exit 1
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+  printf 'jq is not available on PATH\n' >&2
+  exit 1
+fi
+
+clipboard_copy() {
+  if [ -n "${HERDR_YANK_COPY_COMMAND:-}" ]; then
+    printf '%s' "$1" | sh -c "$HERDR_YANK_COPY_COMMAND"
+  elif command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "$1" | pbcopy
+  elif command -v wl-copy >/dev/null 2>&1; then
+    printf '%s' "$1" | wl-copy
+  elif command -v xclip >/dev/null 2>&1; then
+    printf '%s' "$1" | xclip -selection clipboard
+  else
+    printf 'no clipboard command found\n' >&2
+    exit 1
+  fi
+}
+
+current_pane() {
+  herdr pane current
+}
+
+current_pane_id() {
+  current_pane | jq -r '.result.pane.pane_id'
+}
+
+current_pane_cwd() {
+  if [ -n "${HERDR_YANK_CWD:-}" ]; then
+    printf '%s\n' "$HERDR_YANK_CWD"
+    return
+  fi
+
+  current_pane |
+    jq -r '.result.pane.foreground_cwd // .result.pane.cwd // empty'
+}
+
+visible_text() {
+  if [ -n "${HERDR_YANK_TEXT:-}" ]; then
+    printf '%s\n' "$HERDR_YANK_TEXT"
+    return
+  fi
+
+  pane_id="$1"
+  herdr pane read "$pane_id" --source visible --lines "${HERDR_YANK_LINES:-8}" --format text
+}
+
+command_line_from_visible() {
+  awk '
+    NF { last = $0 }
+    {
+      prompt_start = 0
+      for (i = 1; i < length($0); i++) {
+        marker = substr($0, i, 1)
+        next_char = substr($0, i + 1, 1)
+        if ((marker == "$" || marker == "#" || marker == "%" || marker == ">") && next_char == " ") {
+          prompt_start = i + 2
+        }
+      }
+
+      if (prompt_start > 0) {
+        command = substr($0, prompt_start)
+        in_command = 1
+        next
+      }
+
+      if (in_command && NF) {
+        command = command $0
+      }
+    }
+    END {
+      if (command != "") {
+        print command
+      } else {
+        print last
+      }
+    }
+  '
+}
+
+current_command_line() {
+  if [ -n "${HERDR_YANK_LINE:-}" ]; then
+    printf '%s\n' "$HERDR_YANK_LINE"
+    return
+  fi
+
+  pane_id="$(current_pane_id)"
+  herdr pane send-keys "$pane_id" ctrl+a
+  sleep "${HERDR_YANK_KEY_DELAY:-0.05}"
+  visible_text "$pane_id" | command_line_from_visible
+  herdr pane send-keys "$pane_id" ctrl+e
+}
+
+mode="${1:-}"
+case "$mode" in
+  cwd)
+    payload="$(current_pane_cwd | tr -d '\n')"
+    ;;
+  line)
+    payload="$(current_command_line | tr -d '\n')"
+    ;;
+  --print-cwd)
+    current_pane_cwd
+    exit 0
+    ;;
+  --print-line)
+    current_command_line
+    exit 0
+    ;;
+  *)
+    printf 'usage: herdr-yank line|cwd|--print-line|--print-cwd\n' >&2
+    exit 2
+    ;;
+esac
+
+if [ -z "$payload" ]; then
+  exit 0
+fi
+
+clipboard_copy "$payload"
