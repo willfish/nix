@@ -31,6 +31,7 @@ in
     GIT_SSH_COMMAND = "ssh -F /dev/null";
     LESS = "-R";
     MANPAGER = "nvim +Man!";
+    MUX_BACKEND = "herdr";
     NH_HOME_FLAKE = "${config.home.homeDirectory}/.dotfiles";
     NIXPKGS_ALLOW_UNFREE = 1;
     PAGER = "less --raw-control-chars -F -X";
