@@ -1,0 +1,88 @@
+onboarding = false
+
+[update]
+channel = "stable"
+
+[terminal]
+shell_mode = "auto"
+new_cwd = "follow"
+
+[theme]
+name = "rose-pine"
+auto_switch = true
+light_name = "rose-pine-dawn"
+dark_name = "rose-pine"
+
+[ui]
+mouse_capture = true
+confirm_close = true
+prompt_new_tab_name = false
+pane_borders = true
+pane_gaps = false
+show_agent_labels_on_pane_borders = true
+agent_panel_sort = "priority"
+
+[ui.toast]
+delivery = "terminal"
+delay_seconds = 1
+
+[ui.toast.clipboard]
+enabled = true
+position = "bottom-center"
+
+[ui.sound]
+enabled = false
+
+[keys]
+prefix = "ctrl+b"
+
+detach = "prefix+q"
+open_notification_target = "prefix+alt+o"
+workspace_picker = ["prefix+w", "prefix+o"]
+goto = "prefix+g"
+
+new_workspace = "prefix+shift+n"
+new_worktree = "prefix+shift+g"
+open_worktree = "prefix+shift+o"
+rename_workspace = "prefix+shift+w"
+close_workspace = "prefix+shift+d"
+switch_workspace = "prefix+shift+1..9"
+previous_workspace = "prefix+shift+left"
+next_workspace = "prefix+shift+right"
+
+new_tab = "prefix+c"
+previous_tab = "prefix+p"
+next_tab = "prefix+n"
+switch_tab = "prefix+1..9"
+rename_tab = "prefix+comma"
+close_tab = "prefix+shift+x"
+
+edit_scrollback = "prefix+e"
+copy_mode = ["prefix+[", "prefix+space"]
+
+focus_pane_left = ["prefix+h", "alt+h"]
+focus_pane_down = ["prefix+j", "alt+j"]
+focus_pane_up = ["prefix+k", "alt+k"]
+focus_pane_right = ["prefix+l", "alt+l"]
+
+swap_pane_left = "prefix+shift+h"
+swap_pane_down = "prefix+shift+j"
+swap_pane_up = "prefix+shift+k"
+swap_pane_right = "prefix+shift+l"
+cycle_pane_next = "prefix+tab"
+cycle_pane_previous = "prefix+shift+tab"
+
+split_vertical = ["prefix+v", "prefix+percent"]
+split_horizontal = ["prefix+minus", "prefix+double_quote"]
+close_pane = "prefix+x"
+zoom = "prefix+z"
+resize_mode = "prefix+r"
+toggle_sidebar = "prefix+b"
+focus_agent = "prefix+alt+1..9"
+
+navigate_workspace_up = "up"
+navigate_workspace_down = "down"
+navigate_pane_left = "h"
+navigate_pane_down = "j"
+navigate_pane_up = "k"
+navigate_pane_right = "l"
