@@ -46,7 +46,7 @@ new_worktree = "prefix+shift+g"
 open_worktree = "prefix+shift+o"
 rename_workspace = "prefix+shift+w"
 close_workspace = "prefix+shift+d"
-switch_workspace = "prefix+shift+1..9"
+switch_workspace = ""
 previous_workspace = "prefix+shift+left"
 next_workspace = "prefix+shift+right"
 
@@ -60,10 +60,10 @@ close_tab = "prefix+shift+x"
 edit_scrollback = "prefix+e"
 copy_mode = ["prefix+[", "prefix+space"]
 
-focus_pane_left = ["prefix+h", "alt+h"]
-focus_pane_down = ["prefix+j", "alt+j"]
-focus_pane_up = ["prefix+k", "alt+k"]
-focus_pane_right = ["prefix+l", "alt+l"]
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
 
 swap_pane_left = "prefix+shift+h"
 swap_pane_down = "prefix+shift+j"
