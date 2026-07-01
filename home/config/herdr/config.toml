@@ -38,7 +38,7 @@ prefix = "ctrl+b"
 
 detach = "prefix+q"
 open_notification_target = "prefix+alt+o"
-workspace_picker = ["prefix+w", "prefix+o"]
+workspace_picker = "prefix+w"
 goto = "prefix+g"
 
 new_workspace = "prefix+shift+n"
@@ -79,6 +79,11 @@ zoom = "prefix+z"
 resize_mode = "prefix+r"
 toggle_sidebar = "prefix+b"
 focus_agent = "prefix+alt+1..9"
+
+[[keys.command]]
+key = "prefix+o"
+type = "pane"
+command = "herdr-zoxide-workspace"
 
 navigate_workspace_up = "up"
 navigate_workspace_down = "down"
