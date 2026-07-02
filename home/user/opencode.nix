@@ -123,7 +123,7 @@ in
       set -euo pipefail
 
       if [ -z "''${OPENROUTER_API_KEY:-}" ]; then
-        openrouter_key_file="$HOME/.config/sops-nix/secrets/OPENROUTER_API_KEY"
+        openrouter_key_file="${config.sops.secrets.OPENROUTER_API_KEY.path}"
         if [ -r "$openrouter_key_file" ]; then
           OPENROUTER_API_KEY="$(<"$openrouter_key_file")"
           OPENROUTER_API_KEY="''${OPENROUTER_API_KEY%\"}"
@@ -133,7 +133,7 @@ in
       fi
 
       if [ -z "''${OPENCODE_API_KEY:-}" ]; then
-        opencode_key_file="$HOME/.config/sops-nix/secrets/OPENCODE_API_KEY"
+        opencode_key_file="${config.sops.secrets.OPENCODE_API_KEY.path}"
         if [ -r "$opencode_key_file" ]; then
           OPENCODE_API_KEY="$(<"$opencode_key_file")"
           OPENCODE_API_KEY="''${OPENCODE_API_KEY%\"}"
