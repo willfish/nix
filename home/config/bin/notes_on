@@ -1,24 +1,89 @@
 #! /usr/bin/env fish
 
-if not test -e "$HOME/Notes/"
-  git clone git@github.com:willfish/notes.git "$HOME/Notes"
+function usage
+  echo "usage: notes_on <YYYY-MM-DD> <template-file>" >&2
+end
+
+function fail
+  echo "notes_on: $argv" >&2
+  exit 1
+end
+
+function valid_date
+  set -l candidate $argv[1]
+
+  if not string match -qr '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' -- "$candidate"
+    return 1
+  end
+
+  set -l year (string sub -s 1 -l 4 -- "$candidate")
+  set -l month (string sub -s 6 -l 2 -- "$candidate")
+  set -l day (string sub -s 9 -l 2 -- "$candidate")
+
+  set year (math "$year")
+  set month (math "$month")
+  set day (math "$day")
+
+  if test "$year" -lt 1; or test "$month" -lt 1; or test "$month" -gt 12; or test "$day" -lt 1
+    return 1
+  end
+
+  set -l days_in_month 31 28 31 30 31 30 31 31 30 31 30 31
+
+  if test "$month" -eq 2
+    if test (math "$year % 400") -eq 0; or begin; test (math "$year % 4") -eq 0; and test (math "$year % 100") -ne 0; end
+      set days_in_month[2] 29
+    end
+  end
+
+  test "$day" -le "$days_in_month[$month]"
+end
+
+if test (count $argv) -ne 2
+  usage
+  exit 2
 end
 
 set -l on_date $argv[1]
 set -l notes_file $argv[2]
-set -l notes_directory "$HOME/Notes/$on_date"
-set -l fully_qualified_notes_file "$notes_directory/$notes_file"
-set -l template_file "$HOME/Notes/templates/$notes_file"
 
-if not test -e "$fully_qualified_notes_file"
-  mkdir -p "$notes_directory"
-  cp "$template_file" "$fully_qualified_notes_file"
-
-  set -l tmp_file (mktemp)
-  string replace -a "TodaysDate" "$on_date" < "$fully_qualified_notes_file" > "$tmp_file"
-  mv "$tmp_file" "$fully_qualified_notes_file"
+if not valid_date "$on_date"
+  fail "invalid date: $on_date"
 end
 
-pushd "$notes_directory"
+if not string match -qr '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$' -- "$notes_file"
+  fail "invalid template file: $notes_file"
+end
+
+set -l notes_root "$HOME/Notes"
+set -l notes_directory "$notes_root/$on_date"
+set -l fully_qualified_notes_file "$notes_directory/$notes_file"
+set -l template_file "$notes_root/templates/$notes_file"
+
+if not test -e "$notes_root"
+  git clone git@github.com:willfish/notes.git "$notes_root"; or fail "failed to clone notes repository"
+end
+
+if not test -f "$template_file"
+  fail "template file not found: $template_file"
+end
+
+if not test -e "$fully_qualified_notes_file"
+  mkdir -p "$notes_directory"; or fail "failed to create notes directory: $notes_directory"
+
+  set -l tmp_file (mktemp "$notes_directory/.notes_on.XXXXXX"); or fail "failed to create temporary note"
+
+  function cleanup_tmp_file --on-event fish_exit --inherit-variable tmp_file
+    if test -n "$tmp_file"; and test -e "$tmp_file"
+      rm -f -- "$tmp_file"
+    end
+  end
+
+  string replace -a "TodaysDate" "$on_date" < "$template_file" > "$tmp_file"; or fail "failed to render note from template"
+  ln "$tmp_file" "$fully_qualified_notes_file"; or fail "note already exists: $fully_qualified_notes_file"
+  rm -f -- "$tmp_file"
+end
+
+pushd "$notes_directory" >/dev/null; or fail "failed to enter notes directory: $notes_directory"
 nvim "$fully_qualified_notes_file"
-popd
+popd >/dev/null
