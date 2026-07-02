@@ -2,6 +2,9 @@
 .nix
 .claude/
 
+__pycache__/
+*.pyc
+
 plans/
 .worktrees
 .worktrees/

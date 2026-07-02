@@ -4,6 +4,7 @@
 /dump.rdb
 /plans/
 
+__pycache__/
 *.pyc
 result
 .antigravity
