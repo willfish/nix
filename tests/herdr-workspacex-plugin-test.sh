@@ -30,15 +30,17 @@ assert_contains 'type = "shell"' \
   "$repo_root/home/config/herdr/config.toml" \
   "prefix+o runs the Herdr plugin control command as a shell command"
 
-# shellcheck disable=SC2016
-assert_contains 'herdrWorkspacexRoot="$HOME/Repositories/herdr-workspacex"' \
+assert_contains 'plugin install willfish/herdr-workspacex --yes' \
   "$repo_root/home/user/config.nix" \
-  "Home Manager knows the local herdr-workspacex plugin root"
+  "Home Manager installs the GitHub herdr-workspacex plugin"
 
-# shellcheck disable=SC2016
-assert_contains 'plugin link "$herdrWorkspacexRoot"' \
+assert_contains 'nix shell nixpkgs#cargo nixpkgs#rustc' \
   "$repo_root/home/user/config.nix" \
-  "Home Manager links the local herdr-workspacex plugin"
+  "Home Manager can build the GitHub plugin without persistent cargo on PATH"
+
+assert_contains '"kind":"github"' \
+  "$repo_root/home/user/config.nix" \
+  "Home Manager only reinstalls when the plugin is not GitHub-backed"
 
 assert_contains 'plugin unlink fish.herdr-workspacex' \
   "$repo_root/home/user/config.nix" \
