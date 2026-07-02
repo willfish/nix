@@ -5,41 +5,21 @@ let
 
     real_git="${pkgs.git}/bin/git"
 
-    allow_worktree_direnv() {
+    bootstrap_tracked_worktree_direnv() {
       worktree_path="$1"
 
       [ -f "$worktree_path/flake.nix" ] || return 0
-
-      if ! "$real_git" -C "$worktree_path" ls-files --error-unmatch .envrc >/dev/null 2>&1; then
-        printf 'use flake . --impure\n' > "$worktree_path/.envrc"
-      fi
-
-      if command -v direnv >/dev/null 2>&1; then
-        (cd "$worktree_path" && direnv allow)
-      else
-        echo "direnv not found; created $worktree_path/.envrc but did not allow it" >&2
-        return 1
-      fi
-
-      bootstrap_worktree_direnv "$worktree_path"
-    }
-
-    bootstrap_worktree_direnv() {
-      worktree_path="$1"
-
-      [ -f "$worktree_path/flake.nix" ] || return 0
-      [ -f "$worktree_path/.envrc" ] || return 0
+      # Trust belongs to direnv. The git wrapper only warms tracked .envrc files
+      # that the user has already allowed; it never creates or allows one.
+      "$real_git" -C "$worktree_path" ls-files --error-unmatch .envrc >/dev/null 2>&1 || return 0
       [ ! -e "$worktree_path/.pre-commit-config-nix.yaml" ] || return 0
 
-      if ! command -v direnv >/dev/null 2>&1; then
-        echo "direnv not found; cannot bootstrap $worktree_path" >&2
-        return 1
-      fi
-
-      echo "Bootstrapping direnv for $worktree_path" >&2
-      if ! (cd "$worktree_path" && direnv allow && direnv exec . true); then
-        echo "direnv bootstrap failed for $worktree_path" >&2
-        return 1
+      if command -v direnv >/dev/null 2>&1; then
+        if ! (cd "$worktree_path" && direnv exec . true); then
+          echo "direnv is not allowed for $worktree_path; inspect .envrc and run direnv allow if desired" >&2
+        fi
+      else
+        echo "direnv not found; skipping bootstrap for $worktree_path" >&2
       fi
     }
 
@@ -317,7 +297,7 @@ let
         [ -n "$worktree_path" ] || continue
 
         if ! printf '%s\n' "$before" | grep -Fxq "$worktree_path"; then
-          allow_worktree_direnv "$worktree_path"
+          bootstrap_tracked_worktree_direnv "$worktree_path"
         fi
       done
 
@@ -329,7 +309,7 @@ let
         || [ "''${args[$subcommand_index]}" = "push" ]; }; then
       repo_root="$(current_repo_root)"
       if [ -n "$repo_root" ]; then
-        bootstrap_worktree_direnv "$repo_root"
+        bootstrap_tracked_worktree_direnv "$repo_root"
       fi
     fi
 
