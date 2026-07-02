@@ -1,19 +1,24 @@
 #! /usr/bin/env fish
 
-set -l notes_file (find "$HOME/Notes" -type f -name "*.md" | sed "s#^$HOME/Notes/##" | grep -v "templates" | grep -v "today.md" | grep -v "standup.md" | grep -v "README.md" | fzf --print-query | tail -1)
-set -l tailed_notes_file (echo $notes_file | tail -1)
-
-echo "Notes file: $notes_file"
-echo "Tailed notes file: $tailed_notes_file"
-
-# Handle exiting if no notes file is selected - technically not possible
-if test -z "$notes_file"
-    echo "No notes file selected"
-    exit 1
+function fail
+  echo "notes: $argv" >&2
+  exit 1
 end
 
-set -l fully_qualified_notes_file "$HOME/Notes/$notes_file"
+set -l notes_root "$HOME/Notes"
 
-echo "Opening $fully_qualified_notes_file"
+if not test -e "$notes_root"
+  git clone git@github.com:willfish/notes.git "$notes_root"; or fail "failed to clone notes repository"
+else if not test -d "$notes_root"
+  fail "notes path exists but is not a directory: $notes_root"
+end
+
+set -l notes_file (find "$notes_root" -type f -name "*.md" | sed "s#^$notes_root/##" | grep -v "templates" | grep -v "today.md" | grep -v "standup.md" | grep -v "README.md" | fzf --print-query | tail -1)
+
+if test -z "$notes_file"
+  fail "no notes file selected"
+end
+
+set -l fully_qualified_notes_file "$notes_root/$notes_file"
 
 nvim "$fully_qualified_notes_file"
