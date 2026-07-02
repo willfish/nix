@@ -1,5 +1,4 @@
 # Qdrant vector database for Mem0 semantic memory
-version: "3.9"
 
 services:
   qdrant:
