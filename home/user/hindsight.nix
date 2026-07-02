@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -12,10 +13,7 @@ let
     rev = "e1014cc";
     sha256 = "1lfmbzy8jgyys5n7g3s70zygybh9rkpzsdljgf9szqm42ydg690g";
   };
-  secretDir = "${config.home.homeDirectory}/.config/sops-nix/secrets";
   sopsSecretHelpers = ''
-    secret_dir="${secretDir}"
-
     read_secret() {
       value="$(<"$1")"
       value="''${value%\"}"
@@ -33,8 +31,8 @@ in
 
       ${sopsSecretHelpers}
 
-      HINDSIGHT_API_DATABASE_URL="$(read_secret "$secret_dir/HINDSIGHT_API_DATABASE_URL")"
-      HINDSIGHT_API_LLM_API_KEY="$(read_secret "$secret_dir/OPENROUTER_API_KEY")"
+      HINDSIGHT_API_DATABASE_URL="$(read_secret ${lib.escapeShellArg config.sops.secrets.HINDSIGHT_API_DATABASE_URL.path})"
+      HINDSIGHT_API_LLM_API_KEY="$(read_secret ${lib.escapeShellArg config.sops.secrets.OPENROUTER_API_KEY.path})"
 
       : "''${HINDSIGHT_API_DATABASE_URL:?HINDSIGHT_API_DATABASE_URL must be set in sops-nix secrets}"
       : "''${HINDSIGHT_API_LLM_API_KEY:?OPENROUTER_API_KEY must be set in sops-nix secrets}"
