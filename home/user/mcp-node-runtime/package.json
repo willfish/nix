@@ -1,0 +1,14 @@
+{
+  "name": "dotfiles-mcp-node-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned Node MCP runtime dependencies for dotfiles Home Manager wrappers.",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@modelcontextprotocol/server-slack": "2025.4.25",
+    "mcp-remote": "0.1.38"
+  },
+  "overrides": {
+    "@modelcontextprotocol/sdk": "1.29.0"
+  }
+}
