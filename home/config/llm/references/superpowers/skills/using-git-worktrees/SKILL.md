@@ -113,22 +113,21 @@ cd "$path"
 
 ## Step 3: Project Setup
 
-Auto-detect and run appropriate setup:
+Use the repository's reproducible setup first. Prefer checked-in Nix/devcontainer/toolchain entry points over package-manager installs, and run later commands through the same environment.
 
 ```bash
-# Node.js
-if [ -f package.json ]; then npm install; fi
+# Nix flakes
+if [ -f flake.nix ]; then nix develop -c true; fi
 
-# Rust
-if [ -f Cargo.toml ]; then cargo build; fi
-
-# Python
-if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-if [ -f pyproject.toml ]; then poetry install; fi
-
-# Go
-if [ -f go.mod ]; then go mod download; fi
+# direnv, only when this directory is already trusted
+if [ -f .envrc ]; then direnv exec . true; fi
 ```
+
+If `direnv exec . true` reports that `.envrc` is blocked, inspect the `.envrc` and ask before running `direnv allow`.
+
+Use the established environment for verification commands, for example `nix develop -c <command>` or `direnv exec . <command>`. If neither applies, run commands directly only when the required tools are already available.
+
+Only run package-manager setup commands such as `npm install`, `pip install`, `poetry install`, or `go mod download` when the repository explicitly documents that workflow or the user approves it for this task. Inspect manifest and lockfile diffs after any command that can mutate dependencies.
 
 ## Step 4: Verify Clean Baseline
 
@@ -136,7 +135,9 @@ Run tests to ensure workspace starts clean:
 
 ```bash
 # Use project-appropriate command
-npm test / cargo test / pytest / go test ./...
+nix develop -c <test-command>
+direnv exec . <test-command>
+<test-command>
 ```
 
 **If tests fail:** Report failures, ask whether to proceed or investigate.
@@ -167,7 +168,8 @@ Ready to implement <feature-name>
 | Directory not ignored | Add to .gitignore + commit |
 | Permission error on create | Sandbox fallback, work in place |
 | Tests fail during baseline | Report failures + ask |
-| No package.json/Cargo.toml | Skip dependency install |
+| Reproducible shell exists | Run setup/tests through it |
+| Package-manager setup needed | Run only when documented or approved |
 
 ## Common Mistakes
 
@@ -211,5 +213,5 @@ Ready to implement <feature-name>
 - Prefer native tools over git fallback
 - Follow directory priority: existing > global legacy > instruction file > default
 - Verify directory is ignored for project-local
-- Auto-detect and run project setup
+- Establish the reproducible project environment
 - Verify clean test baseline

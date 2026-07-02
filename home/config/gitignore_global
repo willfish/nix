@@ -2,6 +2,7 @@
 .nix
 .claude/
 
+plans/
 .worktrees
 .worktrees/
 docs/superpowers/plans/
