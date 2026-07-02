@@ -12,23 +12,18 @@ This guide explains how to turn Mermaid (or D2) source into actual image files f
 
 ## Mermaid CLI (Recommended for README diagrams)
 
-The best tool for rendering Mermaid is the official CLI: `@mermaid-js/mermaid-cli`
+The best tool for rendering Mermaid is the official CLI, provided here by the Nix dev shell as `mmdc`.
 
 ### In this repo's dev shell (`nix develop`)
 
 - `d2` is always available (excellent for architecture diagrams)
 - `nodejs` is available
-- On Linux: `mmdc` command is provided (wrapped with Chromium)
-- On macOS (Apple Silicon): use `npx @mermaid-js/mermaid-cli`
+- `mmdc` is available through Nix on Linux and macOS
 
 Example usage after `nix develop`:
 
 ```bash
-# Linux
-mmdc -i diagram.mmd -o diagram.png --scale 2
-
-# macOS / general
-npx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.png --scale 2 --backgroundColor "#ffffff"
+mmdc -i diagram.mmd -o diagram.png --scale 2 --backgroundColor "#ffffff"
 ```
 
 The repo includes a helper script for the README diagrams:
