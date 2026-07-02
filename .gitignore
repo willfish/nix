@@ -2,6 +2,7 @@
 /.pre-commit-config.yaml
 /.pre-commit-config-nix.yaml
 /dump.rdb
+/plans/
 
 *.pyc
 result
