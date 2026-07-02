@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  readSopsSecret,
   ...
 }:
 let
@@ -125,9 +126,7 @@ in
       if [ -z "''${OPENROUTER_API_KEY:-}" ]; then
         openrouter_key_file="${config.sops.secrets.OPENROUTER_API_KEY.path}"
         if [ -r "$openrouter_key_file" ]; then
-          OPENROUTER_API_KEY="$(<"$openrouter_key_file")"
-          OPENROUTER_API_KEY="''${OPENROUTER_API_KEY%\"}"
-          OPENROUTER_API_KEY="''${OPENROUTER_API_KEY#\"}"
+          OPENROUTER_API_KEY="$(${readSopsSecret}/bin/read-sops-secret "$openrouter_key_file")"
           export OPENROUTER_API_KEY
         fi
       fi
@@ -135,9 +134,7 @@ in
       if [ -z "''${OPENCODE_API_KEY:-}" ]; then
         opencode_key_file="${config.sops.secrets.OPENCODE_API_KEY.path}"
         if [ -r "$opencode_key_file" ]; then
-          OPENCODE_API_KEY="$(<"$opencode_key_file")"
-          OPENCODE_API_KEY="''${OPENCODE_API_KEY%\"}"
-          OPENCODE_API_KEY="''${OPENCODE_API_KEY#\"}"
+          OPENCODE_API_KEY="$(${readSopsSecret}/bin/read-sops-secret "$opencode_key_file")"
           if [ -n "$OPENCODE_API_KEY" ] && [ "$OPENCODE_API_KEY" != "__UNSET__" ]; then
             export OPENCODE_API_KEY
           fi

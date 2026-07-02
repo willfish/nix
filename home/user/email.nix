@@ -1,11 +1,16 @@
-{ config, ... }:
+{
+  config,
+  lib,
+  readSopsSecret,
+  ...
+}:
 {
   accounts.email.accounts.gmail = {
     primary = true;
     address = "william.michael.fish@gmail.com";
     realName = "William Fish";
     userName = "william.michael.fish@gmail.com";
-    passwordCommand = "cat ${config.sops.secrets.GMAIL_APP_PASSWORD.path}";
+    passwordCommand = "${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.GMAIL_APP_PASSWORD.path}";
 
     imap = {
       host = "imap.gmail.com";

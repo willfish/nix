@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  readSopsSecret,
   ...
 }:
 let
@@ -13,14 +14,6 @@ let
     rev = "e1014cc";
     sha256 = "1lfmbzy8jgyys5n7g3s70zygybh9rkpzsdljgf9szqm42ydg690g";
   };
-  sopsSecretHelpers = ''
-    read_secret() {
-      value="$(<"$1")"
-      value="''${value%\"}"
-      value="''${value#\"}"
-      printf '%s' "$value"
-    }
-  '';
 in
 {
   home.file.".local/bin/hindsight-mcp-start" = {
@@ -29,10 +22,8 @@ in
       #!${pkgs.bash}/bin/bash
       set -euo pipefail
 
-      ${sopsSecretHelpers}
-
-      HINDSIGHT_API_DATABASE_URL="$(read_secret ${lib.escapeShellArg config.sops.secrets.HINDSIGHT_API_DATABASE_URL.path})"
-      HINDSIGHT_API_LLM_API_KEY="$(read_secret ${lib.escapeShellArg config.sops.secrets.OPENROUTER_API_KEY.path})"
+      HINDSIGHT_API_DATABASE_URL="$(${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.HINDSIGHT_API_DATABASE_URL.path})"
+      HINDSIGHT_API_LLM_API_KEY="$(${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.OPENROUTER_API_KEY.path})"
 
       : "''${HINDSIGHT_API_DATABASE_URL:?HINDSIGHT_API_DATABASE_URL must be set in sops-nix secrets}"
       : "''${HINDSIGHT_API_LLM_API_KEY:?OPENROUTER_API_KEY must be set in sops-nix secrets}"
