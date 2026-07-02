@@ -6,7 +6,10 @@
   ...
 }:
 let
-  image = "ghcr.io/vectorize-io/hindsight:0.8.3-slim";
+  imageRepo = "ghcr.io/vectorize-io/hindsight";
+  imageTag = "0.8.3-slim";
+  imageDigest = "sha256:21532405da3e974a878335bd5734008f93c6066ac99dddda47e474cdc67a6351";
+  image = "${imageRepo}:${imageTag}@${imageDigest}";
   containerName = "hindsight-mcp";
   hindsightSource = pkgs.fetchFromGitHub {
     owner = "vectorize-io";
