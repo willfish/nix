@@ -52,7 +52,7 @@ elif [ -t 0 ]; then
 				--height="${HERDR_ZOXIDE_FZF_HEIGHT:-100%}" \
 				--border \
 				--delimiter='\t' \
-				--with-nth=3,2 \
+				--with-nth=3 \
 				--preview='herdr workspace get {2} | jq .' \
 				--preview-window='right,60%,border-left' \
 				--bind='ctrl-r:reload(herdr-zoxide-workspace --print-candidates)' \
