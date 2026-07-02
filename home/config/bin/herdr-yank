@@ -17,7 +17,16 @@ clipboard_copy() {
   elif command -v pbcopy >/dev/null 2>&1; then
     printf '%s' "$1" | pbcopy
   elif command -v wl-copy >/dev/null 2>&1; then
-    printf '%s' "$1" | wl-copy
+    if printf '%s' "$1" | wl-copy; then
+      return
+    fi
+
+    if command -v xclip >/dev/null 2>&1; then
+      printf '%s' "$1" | xclip -selection clipboard
+    else
+      printf 'no clipboard command found\n' >&2
+      exit 1
+    fi
   elif command -v xclip >/dev/null 2>&1; then
     printf '%s' "$1" | xclip -selection clipboard
   else
