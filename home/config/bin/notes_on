@@ -62,6 +62,8 @@ set -l template_file "$notes_root/templates/$notes_file"
 
 if not test -e "$notes_root"
   git clone git@github.com:willfish/notes.git "$notes_root"; or fail "failed to clone notes repository"
+else if not test -d "$notes_root"
+  fail "notes path exists but is not a directory: $notes_root"
 end
 
 if not test -f "$template_file"
