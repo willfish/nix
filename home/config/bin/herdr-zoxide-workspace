@@ -2,89 +2,73 @@
 set -euo pipefail
 
 if ! command -v zoxide >/dev/null 2>&1; then
-  printf 'zoxide is not available on PATH\n' >&2
-  exit 1
+	printf 'zoxide is not available on PATH\n' >&2
+	exit 1
 fi
 
 if ! command -v fzf >/dev/null 2>&1; then
-  printf 'fzf is not available on PATH\n' >&2
-  exit 1
+	printf 'fzf is not available on PATH\n' >&2
+	exit 1
 fi
 
 if ! command -v herdr >/dev/null 2>&1; then
-  printf 'herdr is not available on PATH\n' >&2
-  exit 1
+	printf 'herdr is not available on PATH\n' >&2
+	exit 1
 fi
 
 if ! command -v jq >/dev/null 2>&1; then
-  printf 'jq is not available on PATH\n' >&2
-  exit 1
+	printf 'jq is not available on PATH\n' >&2
+	exit 1
 fi
 
 workspace_entries() {
-  herdr workspace list 2>/dev/null |
-    jq -r '.result.workspaces[] | ["workspace", .workspace_id, .label] | @tsv' 2>/dev/null ||
-    true
-}
-
-zoxide_entries() {
-  workspace_labels="$(
-    herdr workspace list 2>/dev/null |
-      jq -r '.result.workspaces[].label' 2>/dev/null ||
-      true
-  )"
-  zoxide query --list |
-    while IFS= read -r path; do
-      label="$(basename "$path")"
-      if ! printf '%s\n' "$workspace_labels" | grep -Fxq "$label"; then
-        printf 'directory\t%s\t%s\n' "$path" "$label"
-      fi
-    done
+	herdr workspace list 2>/dev/null |
+		jq -r '.result.workspaces[] | select(.focused != true) | ["workspace", .workspace_id, .label] | @tsv' 2>/dev/null ||
+		true
 }
 
 candidate_entries() {
-  workspace_entries
-  zoxide_entries
+	workspace_entries
 }
 
 if [ "${1:-}" = "--print-candidates" ]; then
-  candidate_entries
-  exit 0
+	candidate_entries
+	exit 0
 fi
 
 if [ -n "${HERDR_ZOXIDE_SELECTION:-}" ] || [ -n "${HERDR_ZOXIDE_QUERY:-}" ]; then
-  selection="$HERDR_ZOXIDE_SELECTION"
-  query="${HERDR_ZOXIDE_QUERY:-}"
+	selection="${HERDR_ZOXIDE_SELECTION:-}"
+	query="${HERDR_ZOXIDE_QUERY:-}"
 elif [ -t 0 ]; then
-  extra_fzf_opts=()
-  if [ -n "${HERDR_ZOXIDE_FZF_OPTS:-}" ]; then
-    read -r -a extra_fzf_opts <<< "$HERDR_ZOXIDE_FZF_OPTS"
-  fi
+	extra_fzf_opts=()
+	if [ -n "${HERDR_ZOXIDE_FZF_OPTS:-}" ]; then
+		read -r -a extra_fzf_opts <<<"$HERDR_ZOXIDE_FZF_OPTS"
+	fi
 
-  result="$(
-    candidate_entries |
-      fzf \
-        --prompt='workspace> ' \
-        --height="${HERDR_ZOXIDE_FZF_HEIGHT:-100%}" \
-        --border \
-        --delimiter='\t' \
-        --with-nth=3,2 \
-        --preview='case {1} in workspace) herdr workspace get {2} | jq . ;; directory) ls -la {2} 2>/dev/null ;; esac' \
-        --preview-window='right,60%,border-left' \
-        --bind='ctrl-r:reload(herdr-zoxide-workspace --print-candidates)' \
-        --header='enter: open/focus | ctrl-r: reload | type a zoxide query and press enter' \
-        --print-query \
-        "${extra_fzf_opts[@]}"
-  )"
-  query="$(printf '%s\n' "$result" | sed -n '1p')"
-  selection="$(printf '%s\n' "$result" | sed -n '2p')"
+	result="$(
+		candidate_entries |
+			fzf \
+				--prompt='workspace> ' \
+				--height="${HERDR_ZOXIDE_FZF_HEIGHT:-100%}" \
+				--border \
+				--delimiter='\t' \
+				--with-nth=3,2 \
+				--preview='herdr workspace get {2} | jq .' \
+				--preview-window='right,60%,border-left' \
+				--bind='ctrl-r:reload(herdr-zoxide-workspace --print-candidates)' \
+				--header='enter: open/focus | ctrl-r: reload | type a workspace name or zoxide query' \
+				--print-query \
+				"${extra_fzf_opts[@]}"
+	)"
+	query="$(printf '%s\n' "$result" | sed -n '1p')"
+	selection="$(printf '%s\n' "$result" | sed -n '2p')"
 else
-  printf 'herdr-zoxide-workspace requires an interactive terminal\n' >&2
-  exit 2
+	printf 'herdr-zoxide-workspace requires an interactive terminal\n' >&2
+	exit 2
 fi
 
 if [ -z "$selection" ] && [ -z "${query:-}" ]; then
-  exit 0
+	exit 0
 fi
 
 kind="$(printf '%s' "$selection" | cut -f1)"
@@ -92,36 +76,30 @@ target="$(printf '%s' "$selection" | cut -f2)"
 label="$(printf '%s' "$selection" | cut -f3-)"
 
 if [ "$kind" = "workspace" ] && [ -n "$target" ]; then
-  herdr workspace focus "$target" >/dev/null
-  exit 0
+	herdr workspace focus "$target" >/dev/null
+	exit 0
 fi
 
-if [ "$kind" = "directory" ] && [ -n "$target" ]; then
-  cwd="$target"
-elif [ -n "${query:-}" ]; then
-  cwd="$(zoxide query "$query")"
-  label="$query"
-else
-  exit 0
+if [ -z "${query:-}" ]; then
+	exit 0
 fi
 
-if [ -z "${label:-}" ]; then
-  label="$(basename "$cwd")"
-fi
-
-if [ -z "$label" ] || [ "$label" = "/" ]; then
-  label="$cwd"
-fi
+label="$query"
 
 existing_workspace_id="$(
-  herdr workspace list |
-    jq -r --arg label "$label" '.result.workspaces[] | select(.label == $label) | .workspace_id' |
-    sed -n '1p'
+	herdr workspace list |
+		jq -r --arg label "$label" '.result.workspaces[] | select(.label == $label) | .workspace_id' |
+		sed -n '1p'
 )"
 
 if [ -n "$existing_workspace_id" ]; then
-  herdr workspace focus "$existing_workspace_id" >/dev/null
-  exit 0
+	herdr workspace focus "$existing_workspace_id" >/dev/null
+	exit 0
+fi
+
+cwd="$(zoxide query "$query" 2>/dev/null || true)"
+if [ -z "$cwd" ]; then
+	cwd="$HOME/$query"
 fi
 
 herdr workspace create --cwd "$cwd" --label "$label" --focus >/dev/null
