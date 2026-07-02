@@ -87,23 +87,23 @@ command = "herdr plugin pane open --plugin willfish.herdr-workspacex --entrypoin
 
 [[keys.command]]
 key = "alt+h"
-type = "shell"
-command = "herdr-navigate left alt+h"
+type = "plugin_action"
+command = "willfish.herdr-navigator.left"
 
 [[keys.command]]
 key = "alt+j"
-type = "shell"
-command = "herdr-navigate down alt+j"
+type = "plugin_action"
+command = "willfish.herdr-navigator.down"
 
 [[keys.command]]
 key = "alt+k"
-type = "shell"
-command = "herdr-navigate up alt+k"
+type = "plugin_action"
+command = "willfish.herdr-navigator.up"
 
 [[keys.command]]
 key = "alt+l"
-type = "shell"
-command = "herdr-navigate right alt+l"
+type = "plugin_action"
+command = "willfish.herdr-navigator.right"
 
 [[keys.command]]
 key = "prefix+space"
