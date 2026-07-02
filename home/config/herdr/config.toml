@@ -86,6 +86,26 @@ type = "pane"
 command = "herdr-zoxide-workspace"
 
 [[keys.command]]
+key = "alt+h"
+type = "shell"
+command = "herdr-navigate left alt+h"
+
+[[keys.command]]
+key = "alt+j"
+type = "shell"
+command = "herdr-navigate down alt+j"
+
+[[keys.command]]
+key = "alt+k"
+type = "shell"
+command = "herdr-navigate up alt+k"
+
+[[keys.command]]
+key = "alt+l"
+type = "shell"
+command = "herdr-navigate right alt+l"
+
+[[keys.command]]
 key = "prefix+space"
 type = "pane"
 command = "herdr-thumbs"

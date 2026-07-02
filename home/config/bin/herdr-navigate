@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+direction=${1:?usage: herdr-navigate <left|down|up|right> <alt-key>}
+key=${2:?usage: herdr-navigate <left|down|up|right> <alt-key>}
+
+pane_id=${HERDR_ACTIVE_PANE_ID:-}
+if [ -z "$pane_id" ]; then
+  pane_id=$(herdr pane current | jq -r '.result.pane.pane_id')
+fi
+
+process_name=$(
+  {
+    herdr pane process-info --pane "$pane_id" 2>/dev/null |
+      jq -r '.result.process_info.foreground_processes[0].name // ""'
+  } || true
+)
+
+case "$process_name" in
+  nvim|vim|view|lvim|nvim-*)
+    herdr pane send-keys "$pane_id" "$key"
+    ;;
+  *)
+    herdr pane focus --direction "$direction" --pane "$pane_id"
+    ;;
+esac
