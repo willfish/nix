@@ -75,7 +75,7 @@ kind="$(printf '%s' "$selection" | cut -f1)"
 target="$(printf '%s' "$selection" | cut -f2)"
 label="$(printf '%s' "$selection" | cut -f3-)"
 
-if [ "$kind" = "workspace" ] && [ -n "$target" ]; then
+if [ "$kind" = "workspace" ] && [ -n "$target" ] && { [ -z "${query:-}" ] || [ "$query" = "$label" ]; }; then
 	herdr workspace focus "$target" >/dev/null
 	exit 0
 fi
