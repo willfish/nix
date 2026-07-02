@@ -11,7 +11,7 @@ The founding rule survives unchanged: **the advisor never edits source code.** I
 ### Preconditions (check all before dispatching)
 
 - The repo is a git repository (worktree isolation requires it). If not: stop and say so.
-- The plan file exists and its dependencies show DONE in `plans/README.md`. If not: stop, name the missing dependency.
+- The plan file exists locally or the user has pasted it into the session, and its dependencies show DONE in `plans/README.md` when a local index is being maintained. If a required dependency is missing or not done: stop, name it.
 - Run the plan's drift check yourself. If in-scope files changed since `Planned at`, reconcile the plan first (see below) — don't hand a stale plan to an executor.
 
 ### Dispatch
@@ -20,7 +20,7 @@ If the host exposes isolated executor/subagent tooling, spawn **one** executor i
 
 The subagent prompt must contain:
 
-1. **The full plan file text, inlined.** The worktree contains only committed files — if `plans/` is uncommitted, the executor can't read it. Never assume; always inline.
+1. **The full plan file text, inlined.** `plans/` is usually gitignored local scratch state, and an isolated worktree or subagent may not be able to read it. Never assume; always inline.
 2. The executor preamble:
 
 > You are the executor for the implementation plan below. Follow it step by
@@ -74,7 +74,7 @@ Running verification commands inside the executor's worktree is fine — it's is
 
 Process what happened since the last session. Read `plans/README.md` and every plan file, then per status:
 
-- **DONE** — spot-check that the done criteria still hold on the current HEAD (cheap ones only). Mark verified in the index. Don't delete plan files — they're the record.
+- **DONE** — spot-check that the done criteria still hold on the current HEAD (cheap ones only). Mark verified in the local index. Don't delete plan files during the session — they're the working record.
 - **BLOCKED** — read the reason. Investigate the underlying obstacle in the codebase. Either rewrite the plan around it (new number if the approach changed fundamentally, in-place refresh otherwise) or mark REJECTED with one line of rationale.
 - **IN PROGRESS** (stale) — flag it to the user; an executor probably died mid-run. Check the worktree if one exists.
 - **TODO** — run the drift check. If drifted: re-verify the finding still exists (it may have been fixed in passing), then refresh the "Current state" excerpts and `Planned at` SHA. If the finding is gone, mark REJECTED ("fixed independently").

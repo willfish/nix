@@ -45,7 +45,7 @@ Review only what is directly supported by code evidence. Keep findings framed as
 
 **By-design is not a finding:** standard platform conventions are intentional behavior — honoring `https_proxy`/`NO_PROXY`, reading `~/.netrc`, an explicitly local dev tool shelling out to configured package managers. A tradeoff explicitly recorded in an ADR or decision doc is likewise settled, not a finding. Flag these only when the *implementation* adds risk beyond the convention or the documented decision itself.
 
-- Credential hygiene: hardcoded keys/tokens/passwords, credentials in committed `.env` files, credentials logged or persisted in event/history stores. Findings should name only the credential type and location, then recommend removal, rotation, and a safer configuration path.
+- Credential hygiene: hardcoded keys/tokens/passwords, credentials in committed local configuration files, credentials logged or persisted in event/history stores. Findings should name only the credential type and location, then recommend removal, rotation, and a safer configuration path such as sops-nix or the project's configured secret manager.
 - Data crossing into interpreters or privileged APIs: SQL or shell operations assembled from request data (SQL/command injection), HTML sinks fed by user-controlled content (XSS), dynamic execution APIs used with runtime input, or filesystem paths derived from request data (path traversal). Describe the safer API or validation boundary; do not provide runnable examples.
 - Access control: endpoints/server actions that lack server-side identity checks, authorization enforced only in the client, object access by ID without ownership or tenant checks (IDOR), or missing request authenticity checks (CSRF) on state-changing routes.
 - Input contracts: API boundaries that trust request bodies without schema validation, file upload handling without clear type/size/storage constraints, or broad object assignment from request data into persistence models (mass assignment).
@@ -97,7 +97,7 @@ The goal is not a percentage — it's *which untested code is dangerous*.
 
 - Missing or broken: typecheck script, lint config, formatter, pre-commit hooks, editorconfig.
 - Slow feedback loops: dev-server or test startup measured in minutes, no watch mode, CI without caching.
-- Onboarding friction: README setup steps that are wrong/incomplete, undocumented required env vars, no `.env.example`.
+- Onboarding friction: README setup steps that are wrong/incomplete, undocumented required configuration or secret names, missing safe examples for non-secret local settings.
 - Missing `CLAUDE.md`/`AGENTS.md` — for repos where agents will execute the plans, this is high-leverage: recommend one and include its outline as a plan.
 - Error messages/logging: unstructured logs on services, missing request IDs/correlation, debugging requiring code changes.
 

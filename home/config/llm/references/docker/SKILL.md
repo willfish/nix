@@ -133,10 +133,11 @@ docker compose run --rm web bundle exec rake db:migrate
 - Use `bin/rails s` with `listen` gem for file change detection.
 - For Stimulus / JS, make sure `node_modules` is properly handled (either mounted or installed inside the container).
 
-### 6. Environment Variables
+### 6. Configuration And Secrets
 
-- Use `.env` files (never commit secrets).
-- Keep `DATABASE_URL` and `REDIS_URL` consistent between docker-compose and your local `.env`.
+- Prefer the project's configured secret manager or the user's sops-nix secret files for credentials.
+- If a project requires local environment files, keep them untracked and use them only for non-secret defaults or throwaway development values.
+- Keep `DATABASE_URL` and `REDIS_URL` consistent between docker-compose and the local runtime configuration.
 
 ### 7. Healthchecks (Optional but Nice)
 
