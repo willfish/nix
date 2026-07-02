@@ -82,8 +82,8 @@ focus_agent = "prefix+alt+1..9"
 
 [[keys.command]]
 key = "prefix+o"
-type = "pane"
-command = "herdr-zoxide-workspace"
+type = "shell"
+command = "herdr plugin pane open --plugin willfish.herdr-workspacex --entrypoint picker --placement overlay --focus"
 
 [[keys.command]]
 key = "alt+h"
