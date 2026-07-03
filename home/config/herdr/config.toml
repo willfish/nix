@@ -112,12 +112,6 @@ command = "rmarganti.herdr-pluck.pluck"
 description = "pluck visible token"
 
 [[keys.command]]
-key = "alt+f"
-type = "plugin_action"
-command = "herdr-fingers.finger"
-description = "Fingers"
-
-[[keys.command]]
 key = "prefix+y"
 type = "shell"
 command = "herdr-yank line"
