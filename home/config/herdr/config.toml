@@ -107,15 +107,15 @@ command = "willfish.herdr-navigator.right"
 
 [[keys.command]]
 key = "prefix+space"
-type = "pane"
-command = "herdr-thumbs"
+type = "plugin_action"
+command = "rmarganti.herdr-pluck.pluck"
+description = "pluck visible token"
 
-# Herdr does not expose tmux-jump's copy-mode cursor movement. Use the
-# token picker on the original tmux-jump key as the closest available flow.
 [[keys.command]]
-key = "prefix+j"
-type = "pane"
-command = "herdr-thumbs"
+key = "alt+f"
+type = "plugin_action"
+command = "herdr-fingers.finger"
+description = "Fingers"
 
 [[keys.command]]
 key = "prefix+y"
