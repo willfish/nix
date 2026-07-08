@@ -52,14 +52,22 @@ in
 
   home.activation.importGraphicalSessionEnvironment = lib.mkIf pkgs.stdenv.isLinux (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${pkgs.systemd}/bin/systemctl --user set-environment \
-        PATH=${lib.escapeShellArg graphicalSessionPath} \
-        SHELL=/run/current-system/sw/bin/fish
+      systemdStatus=$(${pkgs.systemd}/bin/systemctl --user is-system-running 2>&1 || true)
 
-      env \
-        PATH=${lib.escapeShellArg graphicalSessionPath} \
-        SHELL=/run/current-system/sw/bin/fish \
-        ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd PATH SHELL
+      if [[ $systemdStatus == 'running' || $systemdStatus == 'degraded' ]]; then
+        ${pkgs.systemd}/bin/systemctl --user set-environment \
+          PATH=${lib.escapeShellArg graphicalSessionPath} \
+          SHELL=/run/current-system/sw/bin/fish
+
+        env \
+          PATH=${lib.escapeShellArg graphicalSessionPath} \
+          SHELL=/run/current-system/sw/bin/fish \
+          ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd PATH SHELL
+      else
+        echo "Skipping graphical session env import: user systemd not running ($systemdStatus)."
+      fi
+
+      unset systemdStatus
     ''
   );
 }
