@@ -1,0 +1,419 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+flake="."
+host="$(hostname)"
+home_config=""
+out_dir=""
+summary=0
+limit=15
+color="auto"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: scripts/nix-storage-costs [--flake PATH] [--host HOST] [--home HOME_CONFIG] [--out-dir DIR] [--summary] [--limit N] [--color auto|always|never]
+
+Builds the selected NixOS and Home Manager outputs, then reports closure costs
+for the package/program roots defined by those configurations.
+
+Defaults:
+  --flake   .
+  --host    $(hostname)
+  --home    william@HOST, falling back to william-linux
+  --out-dir ${XDG_STATE_HOME:-$HOME/.local/state}/nix-storage-costs
+  --limit   15
+USAGE
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --flake)
+      flake="$2"
+      shift 2
+      ;;
+    --host)
+      host="$2"
+      shift 2
+      ;;
+    --home)
+      home_config="$2"
+      shift 2
+      ;;
+    --out-dir)
+      out_dir="$2"
+      shift 2
+      ;;
+    --summary)
+      summary=1
+      shift
+      ;;
+    --limit)
+      limit="$2"
+      shift 2
+      ;;
+    --color)
+      color="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage
+      exit 64
+      ;;
+  esac
+done
+
+if [ -z "$out_dir" ]; then
+  state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+  out_dir="$state_home/nix-storage-costs"
+fi
+
+flake_path="$(realpath "$flake")"
+export NIX_STORAGE_COST_FLAKE="$flake_path"
+export NIX_STORAGE_COST_HOST="$host"
+
+if [ -z "$home_config" ]; then
+  # shellcheck disable=SC2016
+  if nix eval --impure --raw --expr '
+    let
+      f = builtins.getFlake (builtins.getEnv "NIX_STORAGE_COST_FLAKE");
+      host = builtins.getEnv "NIX_STORAGE_COST_HOST";
+    in
+      if builtins.hasAttr "william@${host}" f.homeConfigurations then "yes" else "no"
+  ' | grep -qx yes; then
+    home_config="william@${host}"
+  else
+    home_config="william-linux"
+  fi
+fi
+
+case "$limit" in
+  ''|*[!0-9]*)
+    echo "--limit must be a positive integer" >&2
+    exit 64
+    ;;
+esac
+
+if [ "$limit" -lt 1 ]; then
+  echo "--limit must be a positive integer" >&2
+  exit 64
+fi
+
+case "$color" in
+  auto|always|never) ;;
+  *)
+    echo "--color must be one of: auto, always, never" >&2
+    exit 64
+    ;;
+esac
+
+mkdir -p "$out_dir"
+
+echo "Building NixOS system for ${host}..."
+system_path="$(
+  nix build --no-link --print-out-paths \
+    "${flake_path}#nixosConfigurations.${host}.config.system.build.toplevel"
+)"
+
+echo "Building Home Manager activation package for ${home_config}..."
+home_path="$(
+  nix build --no-link --print-out-paths \
+    "${flake_path}#homeConfigurations.\"${home_config}\".activationPackage"
+)"
+
+inventory_json="$(mktemp)"
+trap 'rm -f "$inventory_json"' EXIT
+
+export NIX_STORAGE_COST_HOME="$home_config"
+
+# shellcheck disable=SC2016
+nix eval --impure --json --expr '
+let
+  flake = builtins.getFlake (builtins.getEnv "NIX_STORAGE_COST_FLAKE");
+  host = builtins.getEnv "NIX_STORAGE_COST_HOST";
+  homeName = builtins.getEnv "NIX_STORAGE_COST_HOME";
+  lib = flake.inputs.nixpkgs.lib;
+  nixos = flake.nixosConfigurations.${host}.config;
+  home = flake.homeConfigurations.${homeName}.config;
+
+  item = source: label: p: {
+    inherit source label;
+    pname = p.pname or (p.name or label);
+    name = p.name or (p.pname or label);
+    storePath = builtins.toString p;
+  };
+
+  items = source: label: ps: builtins.map (p: item source label p) ps;
+
+  optionalItem = source: label: value:
+    let result = builtins.tryEval value;
+    in if result.success && result.value != null then [ (item source label result.value) ] else [ ];
+
+  optionalPath = source: path: root:
+    optionalItem source (lib.concatStringsSep "." path) (lib.attrByPath path null root);
+in
+  (items "nixos" "environment.systemPackages" nixos.environment.systemPackages)
+  ++ (items "nixos" "users.users.william.packages" nixos.users.users.william.packages)
+  ++ (items "nixos" "fonts.packages" nixos.fonts.packages)
+  ++ (items "nixos" "environment.shells" nixos.environment.shells)
+  ++ (optionalItem "nixos" "users.defaultUserShell" nixos.users.defaultUserShell)
+  ++ (optionalItem "nixos" "programs.fish.package" nixos.programs.fish.package)
+  ++ (optionalItem "nixos" "virtualisation.docker.package" nixos.virtualisation.docker.package)
+  ++ (optionalItem "nixos" "services.mullvad-vpn.package" nixos.services.mullvad-vpn.package)
+  ++ (optionalItem "nixos" "boot.kernelPackages.kernel" nixos.boot.kernelPackages.kernel)
+  ++ (optionalPath "nixos" [ "services" "pipewire" "package" ] nixos)
+  ++ (optionalPath "nixos" [ "services" "openssh" "package" ] nixos)
+  ++ (optionalPath "nixos" [ "services" "avahi" "package" ] nixos)
+  ++ (optionalPath "nixos" [ "services" "printing" "package" ] nixos)
+  ++ (items "home-manager" "home.packages/evaluated" home.home.packages)
+  ++ (optionalItem "home-manager" "programs.git.package" home.programs.git.package)
+  ++ (optionalItem "home-manager" "programs.fish.package" home.programs.fish.package)
+  ++ (optionalItem "home-manager" "programs.tmux.package" home.programs.tmux.package)
+  ++ (optionalItem "home-manager" "programs.zoxide.package" home.programs.zoxide.package)
+  ++ (optionalItem "home-manager" "programs.direnv.package" home.programs.direnv.package)
+  ++ lib.optionals (home.programs ? brave) (optionalItem "home-manager" "programs.brave.package" home.programs.brave.package)
+  ++ lib.optionals (home.programs ? google-chrome) (optionalItem "home-manager" "programs.google-chrome.package" home.programs.google-chrome.package)
+' > "$inventory_json"
+
+python3 - "$inventory_json" "$system_path" "$home_path" "$host" "$home_config" "$out_dir" "$summary" "$limit" "$color" <<'PY'
+import csv
+import json
+import subprocess
+import sys
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+from pathlib import Path
+
+inventory_file, system_path, home_path, host, home_config, out_dir, summary, limit, color = sys.argv[1:]
+out_dir = Path(out_dir)
+summary = summary == "1"
+limit = int(limit)
+use_color = color == "always" or (color == "auto" and sys.stdout.isatty())
+
+with open(inventory_file) as f:
+    entries = json.load(f)
+
+by_path = {}
+for entry in entries:
+    path = entry["storePath"]
+    current = by_path.setdefault(
+        path,
+        {
+            "storePath": path,
+            "name": entry["name"],
+            "pname": entry["pname"],
+            "sources": set(),
+            "labels": set(),
+        },
+    )
+    current["sources"].add(entry["source"])
+    current["labels"].add(entry["label"])
+
+roots = sorted(by_path)
+
+def run_lines(args):
+    return subprocess.check_output(args, text=True).splitlines()
+
+closures = {}
+all_paths = set()
+for root in roots:
+    paths = run_lines(["nix-store", "-qR", root])
+    closures[root] = paths
+    all_paths.update(paths)
+
+def chunks(values, size):
+    values = list(values)
+    for index in range(0, len(values), size):
+        yield values[index:index + size]
+
+sizes = {}
+for chunk in chunks(sorted(all_paths | {system_path, home_path}), 400):
+    info = json.loads(subprocess.check_output(["nix", "path-info", "--json", *chunk], text=True))
+    for path, metadata in info.items():
+        sizes[path] = int(metadata.get("narSize") or 0)
+
+def closure_size(path):
+    info = json.loads(subprocess.check_output(["nix", "path-info", "--json", "-S", path], text=True))
+    return int(info[path]["closureSize"])
+
+ref_counts = Counter()
+for paths in closures.values():
+    ref_counts.update(paths)
+
+rows = []
+for root in roots:
+    data = by_path[root]
+    paths = closures[root]
+    rows.append(
+        {
+            "name": data["name"],
+            "pname": data["pname"],
+            "sources": ",".join(sorted(data["sources"])),
+            "labels": ",".join(sorted(data["labels"])),
+            "store_path": root,
+            "direct_bytes": sizes.get(root, 0),
+            "closure_bytes": sum(sizes[p] for p in paths),
+            "unique_inventory_bytes": sum(sizes[p] for p in paths if ref_counts[p] == 1),
+            "closure_paths": len(paths),
+            "unique_inventory_paths": sum(1 for p in paths if ref_counts[p] == 1),
+        }
+    )
+
+rows.sort(key=lambda row: (row["unique_inventory_bytes"], row["closure_bytes"]), reverse=True)
+
+total_inventory_closure = sum(sizes[p] for p in all_paths)
+system_closure = closure_size(system_path)
+home_closure = closure_size(home_path)
+
+groups = {}
+for row in rows:
+    group = groups.setdefault(
+        row["name"],
+        {
+            "name": row["name"],
+            "sources": set(),
+            "labels": set(),
+            "store_paths": [],
+            "closure_paths_set": set(),
+            "direct_bytes": 0,
+        },
+    )
+    group["sources"].update(row["sources"].split(","))
+    group["labels"].update(row["labels"].split(","))
+    group["store_paths"].append(row["store_path"])
+    group["closure_paths_set"].update(closures[row["store_path"]])
+    group["direct_bytes"] += row["direct_bytes"]
+
+grouped_rows = []
+for group in groups.values():
+    closure_paths = group["closure_paths_set"]
+    grouped_rows.append(
+        {
+            "name": group["name"],
+            "sources": ",".join(sorted(group["sources"])),
+            "labels": ",".join(sorted(group["labels"])),
+            "root_count": len(group["store_paths"]),
+            "direct_bytes": group["direct_bytes"],
+            "closure_bytes": sum(sizes[p] for p in closure_paths),
+            "unique_inventory_bytes": sum(sizes[p] for p in closure_paths if ref_counts[p] == 1),
+        }
+    )
+
+grouped_rows.sort(key=lambda row: (row["unique_inventory_bytes"], row["closure_bytes"]), reverse=True)
+
+def human(bytes_value):
+    value = float(bytes_value)
+    for unit in ["B", "KiB", "MiB", "GiB", "TiB"]:
+        if value < 1024 or unit == "TiB":
+            return f"{value:.1f} {unit}" if unit != "B" else f"{int(value)} B"
+        value /= 1024
+    return f"{value:.1f} TiB"
+
+def paint(text, code):
+    if not use_color:
+        return text
+    return f"\033[{code}m{text}\033[0m"
+
+def trunc(text, width):
+    if len(text) <= width:
+        return text
+    if width <= 3:
+        return text[:width]
+    return text[: max(0, width - 3)] + "..."
+
+def display_sources(sources):
+    return sources.replace("home-manager", "home")
+
+def table_line(columns, widths):
+    return "  ".join(str(value).ljust(width) for value, width in zip(columns, widths))
+
+safe_home = home_config.replace("@", "_").replace("/", "_")
+prefix = out_dir / f"{host}-{safe_home}-storage-costs"
+csv_path = prefix.with_suffix(".csv")
+md_path = prefix.with_suffix(".md")
+
+with csv_path.open("w", newline="") as f:
+    writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+    writer.writeheader()
+    writer.writerows(rows)
+
+top_rows = grouped_rows[:40]
+source_totals = defaultdict(int)
+for row in rows:
+    for source in row["sources"].split(","):
+        source_totals[source] += row["unique_inventory_bytes"]
+
+generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+with md_path.open("w") as f:
+    f.write(f"# Storage Costs for {host}\n\n")
+    f.write(f"Generated: {generated}\n\n")
+    f.write("## Scope\n\n")
+    f.write(f"- NixOS system: `{system_path}`\n")
+    f.write(f"- Home Manager: `{home_config}` -> `{home_path}`\n")
+    f.write(f"- Inventory roots: {len(rows)} de-duplicated store paths\n")
+    f.write(f"- Inventory closure: {human(total_inventory_closure)}\n")
+    f.write(f"- NixOS system closure: {human(system_closure)}\n")
+    f.write(f"- Home Manager activation closure: {human(home_closure)}\n\n")
+    f.write("`closure` is the full dependency closure for that root. `unique` is the subset of that closure referenced by only one root in this inventory; it is the better first-pass signal for storage you might save by removing one item from these package/program roots.\n\n")
+    f.write("## Unique Storage by Source\n\n")
+    f.write("| Source | Unique |\n")
+    f.write("| --- | ---: |\n")
+    for source, bytes_value in sorted(source_totals.items(), key=lambda item: item[1], reverse=True):
+        f.write(f"| `{source}` | {human(bytes_value)} |\n")
+    f.write("\n## Top Packages by Unique Inventory Size\n\n")
+    f.write("| Package | Roots | Source | Unique | Closure | Direct | Labels |\n")
+    f.write("| --- | ---: | --- | ---: | ---: | ---: | --- |\n")
+    for row in top_rows:
+        f.write(
+            f"| `{row['name']}` | {row['root_count']} | `{row['sources']}` | {human(row['unique_inventory_bytes'])} | "
+            f"{human(row['closure_bytes'])} | {human(row['direct_bytes'])} | `{row['labels']}` |\n"
+        )
+    f.write(f"\nFull CSV: `{csv_path}`\n")
+
+print(md_path)
+print(csv_path)
+print(f"inventory_roots={len(rows)}")
+print(f"inventory_closure={human(total_inventory_closure)}")
+print(f"system_closure={human(system_closure)}")
+print(f"home_closure={human(home_closure)}")
+
+if summary:
+    visible_rows = grouped_rows[:limit]
+    name_width = min(36, max([len("Package")] + [len(row["name"]) for row in visible_rows]))
+    source_width = min(14, max([len("Source")] + [len(display_sources(row["sources"])) for row in visible_rows]))
+    widths = [name_width, 5, source_width, 11, 11, 11]
+
+    print()
+    print(paint(f"Storage costs for {host} ({home_config})", "1;36"))
+    print(
+        f"Inventory {paint(human(total_inventory_closure), '1;33')}  "
+        f"NixOS {paint(human(system_closure), '1;32')}  "
+        f"Home {paint(human(home_closure), '1;32')}  "
+        f"Roots {paint(str(len(rows)), '1;34')}"
+    )
+    print()
+    print(paint(table_line(["Package", "Roots", "Source", "Unique", "Closure", "Direct"], widths), "1"))
+    print(paint(table_line(["-" * width for width in widths], widths), "2"))
+    for row in visible_rows:
+        unique = row["unique_inventory_bytes"]
+        unique_color = "31" if unique >= 1024**3 else "33" if unique >= 512 * 1024**2 else "0"
+        print(
+            table_line(
+                [
+                    trunc(row["name"], name_width),
+                    row["root_count"],
+                    trunc(display_sources(row["sources"]), source_width),
+                    paint(human(unique), unique_color),
+                    human(row["closure_bytes"]),
+                    human(row["direct_bytes"]),
+                ],
+                widths,
+            )
+        )
+    print()
+    print(f"Full report: {paint(str(md_path), '36')}")
+    print(f"CSV:         {paint(str(csv_path), '36')}")
+PY
