@@ -35,8 +35,19 @@ jobs:
       - name: Check formatting
         run: nix fmt -- --ci
 
+      - name: Audit LLM skill harness
+        run: python3 home/config/llm/scripts/audit-skills
+
       - name: Check Linux Home Manager activation package closure
         run: nix build .#homeConfigurations.william-linux.activationPackage --dry-run
+
+      - name: Dry-run NixOS host configurations
+        run: |
+          set -euo pipefail
+          for host in andromeda starfish foundation terminus; do
+            echo "=== nixosConfigurations.${host} (dry-run) ==="
+            nix build ".#nixosConfigurations.${host}.config.system.build.toplevel" --dry-run
+          done
 
   nix-darwin:
     name: Nix Darwin
