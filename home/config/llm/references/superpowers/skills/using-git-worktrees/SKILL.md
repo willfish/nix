@@ -100,12 +100,20 @@ Global directories (`~/.config/superpowers/worktrees/`) need no verification.
 
 ```bash
 project=$(basename "$(git rev-parse --show-toplevel)")
+source_root=$(git rev-parse --show-toplevel)
 
 # Determine path based on chosen location
 # For project-local: path="$LOCATION/$BRANCH_NAME"
 # For global: path="~/.config/superpowers/worktrees/$project/$BRANCH_NAME"
 
 git worktree add "$path" -b "$BRANCH_NAME"
+
+# Git worktrees do not copy untracked environment files. Preserve the source
+# checkout's direnv entry point before running any setup command.
+if [ -f "$source_root/.envrc" ] && [ ! -e "$path/.envrc" ]; then
+  cp "$source_root/.envrc" "$path/.envrc"
+fi
+
 cd "$path"
 ```
 
@@ -114,6 +122,8 @@ cd "$path"
 ## Step 3: Project Setup
 
 Use the repository's reproducible setup first. Prefer checked-in Nix/devcontainer/toolchain entry points over package-manager installs, and run later commands through the same environment.
+
+**Direnv rule:** If any `.envrc` exists for the checkout, use `direnv exec . <command>` for all setup, tests, linters, builds, and verification commands unless the shell is already confirmed to be activated for this exact checkout. If a normal checkout had `.envrc` but a newly-created worktree does not, stop and copy or symlink the source checkout's `.envrc` into the worktree before continuing. Never run `bundle install`, `npm install`, `pip install`, or similar commands directly as a workaround for missing direnv activation.
 
 ```bash
 # Nix flakes
