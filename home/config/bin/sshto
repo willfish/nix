@@ -152,15 +152,43 @@ list_remote_hosts() {
   list_hosts | awk -v current="$current" 'NF && (current == "" || $0 != current)'
 }
 
+host_target() {
+  local name
+  name="$1"
+
+  if [ "$use_domain" -eq 1 ] && [ -n "$domain" ] && [[ "$name" != *.* ]]; then
+    printf '%s\n' "${name}.${domain}"
+  else
+    printf '%s\n' "$name"
+  fi
+}
+
+resolves() {
+  local target
+  target="$(host_target "$1")"
+
+  getent hosts "$target" >/dev/null 2>&1
+}
+
+list_resolvable_remote_hosts() {
+  local name
+
+  while IFS= read -r name; do
+    if resolves "$name"; then
+      printf '%s\n' "$name"
+    fi
+  done < <(list_remote_hosts)
+}
+
 if [ "$use_domain" -eq 1 ] && [ -z "$domain" ]; then
   domain="$(detect_domain 2>/dev/null | sed '/^[[:space:]]*$/d' | head -n 1 || true)"
 fi
 
 if [ -z "$host" ]; then
-  hosts="$(list_remote_hosts | sort -u)"
+  hosts="$(list_resolvable_remote_hosts | sort -u)"
 
   if [ -z "$hosts" ]; then
-    echo "sshto: no remote hosts available after excluding current host '$(current_host)'" >&2
+    echo "sshto: no remote hosts resolve on this network after excluding current host '$(current_host)'" >&2
     exit 69
   fi
 
@@ -193,10 +221,7 @@ if [ -z "$host" ]; then
   fi
 fi
 
-target="$host"
-if [ "$use_domain" -eq 1 ] && [ -n "$domain" ] && [[ "$host" != *.* ]]; then
-  target="${host}.${domain}"
-fi
+target="$(host_target "$host")"
 
 remote_target="${user}@${target}"
 command=(herdr --remote "$remote_target")
