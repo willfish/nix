@@ -8,6 +8,39 @@
   ];
 
   networking.hostName = "terminus";
+  networking.hostId = "bd2a3a9a";
 
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackages;
+  boot.supportedFilesystems = [ "zfs" ];
+  boot.zfs.extraPools = [ "tank" ];
+
+  services.zfs.autoScrub = {
+    enable = true;
+    pools = [ "tank" ];
+  };
+
+  fileSystems."/srv/media" = {
+    device = "tank/media";
+    fsType = "zfs";
+    options = [ "nofail" ];
+  };
+
+  fileSystems."/srv/media/photos" = {
+    device = "tank/media/photos";
+    fsType = "zfs";
+    options = [ "nofail" ];
+  };
+
+  fileSystems."/srv/media/videos" = {
+    device = "tank/media/videos";
+    fsType = "zfs";
+    options = [ "nofail" ];
+  };
+
+  systemd.tmpfiles.rules = [
+    "d /srv 0755 root root -"
+    "d /srv/media 0755 william users -"
+    "d /srv/media/photos 0755 william users -"
+    "d /srv/media/videos 0755 william users -"
+  ];
 }
