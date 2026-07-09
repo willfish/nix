@@ -139,7 +139,7 @@ list_hosts() {
 }
 
 if [ "$use_domain" -eq 1 ] && [ -z "$domain" ]; then
-  domain="$(detect_domain | sed '/^[[:space:]]*$/d' | head -n 1)"
+  domain="$(detect_domain 2>/dev/null | sed '/^[[:space:]]*$/d' | head -n 1 || true)"
 fi
 
 if [ -z "$host" ]; then
@@ -148,8 +148,28 @@ if [ -z "$host" ]; then
     exit 69
   fi
 
+  if ! { : < /dev/tty > /dev/tty; } 2>/dev/null; then
+    echo "sshto: HOST is required when no interactive terminal is available" >&2
+    echo "sshto: available hosts:" >&2
+    list_hosts | sort -u >&2
+    exit 64
+  fi
+
   prompt_domain="${domain:-no domain}"
-  host="$(list_hosts | sort -u | fzf --prompt="herdr ${prompt_domain}> ")"
+  set +e
+  host="$(fzf --prompt="herdr ${prompt_domain}> " < <(list_hosts | sort -u))"
+  fzf_status=$?
+  set -e
+
+  if [ "$fzf_status" -ne 0 ]; then
+    echo "sshto: no host selected" >&2
+    exit "$fzf_status"
+  fi
+
+  if [ -z "$host" ]; then
+    echo "sshto: no host selected" >&2
+    exit 1
+  fi
 fi
 
 target="$host"
