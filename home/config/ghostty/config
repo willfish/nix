@@ -18,5 +18,6 @@ background-opacity = 0.8
 background-blur-radius = 20
 
 keybind = super+i=inspector:toggle
+keybind = ctrl+enter=unbind
 
 # custom-shader = ghostty-shaders/cursor_trail.glsl

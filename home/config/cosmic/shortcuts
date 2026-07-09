@@ -390,12 +390,6 @@
     (
         modifiers: [
             Ctrl,
-        ],
-        key: "Return",
-    ): Disable,
-    (
-        modifiers: [
-            Ctrl,
             Shift,
         ],
         key: "s",
