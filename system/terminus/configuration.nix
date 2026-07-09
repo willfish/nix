@@ -13,10 +13,21 @@
   boot.kernelPackages = pkgs.linuxPackages;
   boot.supportedFilesystems = [ "zfs" ];
 
+  services.zfs.autoScrub = {
+    enable = true;
+    pools = [ "tank" ];
+  };
+
+  fileSystems."/srv/media" = {
+    device = "tank/media";
+    fsType = "zfs";
+  };
+
   systemd.tmpfiles.rules = [
     "d /srv 0755 root root -"
     "d /srv/media 0755 william users -"
     "d /srv/media/photos 0755 william users -"
     "d /srv/media/videos 0755 william users -"
+    "d /srv/media/phone-backups 0755 william users -"
   ];
 }
