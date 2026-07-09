@@ -12,7 +12,6 @@
 
   boot.kernelPackages = pkgs.linuxPackages;
   boot.supportedFilesystems = [ "zfs" ];
-  boot.zfs.extraPools = [ "tank" ];
 
   services.zfs.autoScrub = {
     enable = true;
