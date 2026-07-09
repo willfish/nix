@@ -138,11 +138,32 @@ list_hosts() {
   printf '%s\n' andromeda foundation starfish terminus
 }
 
+current_host() {
+  local name
+
+  name="$(hostname -s 2>/dev/null || hostname 2>/dev/null || true)"
+  printf '%s\n' "${name%%.*}"
+}
+
+list_remote_hosts() {
+  local current
+  current="$(current_host)"
+
+  list_hosts | awk -v current="$current" 'NF && (current == "" || $0 != current)'
+}
+
 if [ "$use_domain" -eq 1 ] && [ -z "$domain" ]; then
   domain="$(detect_domain 2>/dev/null | sed '/^[[:space:]]*$/d' | head -n 1 || true)"
 fi
 
 if [ -z "$host" ]; then
+  hosts="$(list_remote_hosts | sort -u)"
+
+  if [ -z "$hosts" ]; then
+    echo "sshto: no remote hosts available after excluding current host '$(current_host)'" >&2
+    exit 69
+  fi
+
   if ! command -v fzf >/dev/null 2>&1; then
     echo "sshto: fzf is required when HOST is not supplied" >&2
     exit 69
@@ -151,13 +172,13 @@ if [ -z "$host" ]; then
   if ! { : < /dev/tty > /dev/tty; } 2>/dev/null; then
     echo "sshto: HOST is required when no interactive terminal is available" >&2
     echo "sshto: available hosts:" >&2
-    list_hosts | sort -u >&2
+    printf '%s\n' "$hosts" >&2
     exit 64
   fi
 
   prompt_domain="${domain:-no domain}"
   set +e
-  host="$(fzf --prompt="herdr ${prompt_domain}> " < <(list_hosts | sort -u))"
+  host="$(fzf --prompt="herdr ${prompt_domain}> " < <(printf '%s\n' "$hosts"))"
   fzf_status=$?
   set -e
 
