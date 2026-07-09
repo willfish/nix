@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: sshto [HOST] [--user USER] [--domain DOMAIN|--no-domain] [--session NAME] [--keybindings local|server] [--handoff] [--print] [-- HERDR_ARGS...]
+
+Pick one of the NixOS hosts with fzf and attach to it through Herdr remote mode.
+HOST may be supplied directly to skip fzf.
+
+Environment:
+  SSHTO_USER      SSH username, default: william
+  SSHTO_DOMAIN    Override detected network domain
+  SSHTO_FLAKE     Dotfiles flake path, default: ~/.dotfiles
+USAGE
+}
+
+user="${SSHTO_USER:-william}"
+domain="${SSHTO_DOMAIN:-}"
+use_domain=1
+print_only=0
+host=""
+session=""
+keybindings=""
+handoff=0
+herdr_args=()
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --user|-l)
+      [ "$#" -ge 2 ] || {
+        usage
+        exit 64
+      }
+      user="$2"
+      shift 2
+      ;;
+    --domain)
+      [ "$#" -ge 2 ] || {
+        usage
+        exit 64
+      }
+      domain="$2"
+      use_domain=1
+      shift 2
+      ;;
+    --no-domain)
+      use_domain=0
+      shift
+      ;;
+    --print)
+      print_only=1
+      shift
+      ;;
+    --session)
+      [ "$#" -ge 2 ] || {
+        usage
+        exit 64
+      }
+      session="$2"
+      shift 2
+      ;;
+    --keybindings|--remote-keybindings)
+      [ "$#" -ge 2 ] || {
+        usage
+        exit 64
+      }
+      keybindings="$2"
+      shift 2
+      ;;
+    --handoff)
+      handoff=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      herdr_args=("$@")
+      break
+      ;;
+    -*)
+      herdr_args+=("$1")
+      shift
+      ;;
+    *)
+      if [ -z "$host" ]; then
+        host="$1"
+      else
+        herdr_args+=("$1")
+      fi
+      shift
+      ;;
+  esac
+done
+
+detect_domain() {
+  if command -v resolvectl >/dev/null 2>&1; then
+    resolvectl domain 2>/dev/null \
+      | awk -F': ' '
+          NF > 1 {
+            count = split($2, domains, " ")
+            for (i = 1; i <= count; i++) {
+              domain = domains[i]
+              sub(/^~/, "", domain)
+              if (domain != "" && domain != ".") {
+                print domain
+                exit
+              }
+            }
+          }
+        '
+    return
+  fi
+
+  if command -v hostname >/dev/null 2>&1; then
+    hostname -d 2>/dev/null || true
+  fi
+
+  awk '/^search[[:space:]]+/ { print $2; exit }' /etc/resolv.conf 2>/dev/null || true
+}
+
+list_hosts() {
+  local flake
+  flake="${SSHTO_FLAKE:-$HOME/.dotfiles}"
+
+  if [ -f "$flake/flake.nix" ] && command -v nix >/dev/null 2>&1; then
+    SSHTO_FLAKE="$(realpath "$flake")" nix eval --impure --raw --expr '
+      let
+        flake = builtins.getFlake (builtins.getEnv "SSHTO_FLAKE");
+      in
+        builtins.concatStringsSep "\n" (builtins.attrNames flake.nixosConfigurations)
+    ' 2>/dev/null && return
+  fi
+
+  printf '%s\n' andromeda foundation starfish terminus
+}
+
+if [ "$use_domain" -eq 1 ] && [ -z "$domain" ]; then
+  domain="$(detect_domain | sed '/^[[:space:]]*$/d' | head -n 1)"
+fi
+
+if [ -z "$host" ]; then
+  if ! command -v fzf >/dev/null 2>&1; then
+    echo "sshto: fzf is required when HOST is not supplied" >&2
+    exit 69
+  fi
+
+  prompt_domain="${domain:-no domain}"
+  host="$(list_hosts | sort -u | fzf --prompt="herdr ${prompt_domain}> ")"
+fi
+
+target="$host"
+if [ "$use_domain" -eq 1 ] && [ -n "$domain" ] && [[ "$host" != *.* ]]; then
+  target="${host}.${domain}"
+fi
+
+remote_target="${user}@${target}"
+command=(herdr --remote "$remote_target")
+
+if [ -n "$session" ]; then
+  command+=(--session "$session")
+fi
+
+case "$keybindings" in
+  ""|local|server) ;;
+  *)
+    echo "sshto: --keybindings must be local or server" >&2
+    exit 64
+    ;;
+esac
+
+if [ -n "$keybindings" ]; then
+  command+=(--remote-keybindings "$keybindings")
+fi
+
+if [ "$handoff" -eq 1 ]; then
+  command+=(--handoff)
+fi
+
+command+=("${herdr_args[@]}")
+
+if [ "$print_only" -eq 1 ]; then
+  printf '%q' "${command[@]:0:1}"
+  printf ' %q' "${command[@]:1}"
+  printf '\n'
+  exit 0
+fi
+
+exec "${command[@]}"

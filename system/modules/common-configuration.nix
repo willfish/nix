@@ -75,9 +75,6 @@
       docker-compose
     ];
 
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEodOKhGXEeHpinEPh5po/D+RTmLXPoMbdjtR2ESxGVi william@andromeda"
-    ];
   };
 
   hardware.bluetooth = {
@@ -123,6 +120,10 @@
   services = {
     openssh = {
       enable = true;
+      authorizedKeysFiles = [
+        ".ssh/authorized_keys"
+        "/run/secrets/ssh/authorized_keys.d/%u"
+      ];
       settings.PasswordAuthentication = false;
       settings.KbdInteractiveAuthentication = false;
     };
