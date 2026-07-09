@@ -391,7 +391,7 @@
         modifiers: [
             Ctrl,
         ],
-        key: "Enter",
+        key: "Return",
     ): Disable,
     (
         modifiers: [
