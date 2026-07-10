@@ -217,6 +217,54 @@ roots = sorted(by_path)
 def run_lines(args):
     return subprocess.check_output(args, text=True).splitlines()
 
+def is_valid_store_path(path):
+    """True when path is registered and present in the local store.
+
+    Evaluated package attrs (e.g. programs.brave.package) can point at a
+    base derivation that was never realized, while home.packages installs an
+    overridden variant. nix-store -qR fails hard on unrealized paths.
+    """
+    try:
+        subprocess.run(
+            ["nix-store", "--query", "--hash", path],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+skipped = []
+valid_roots = []
+for root in roots:
+    if is_valid_store_path(root):
+        valid_roots.append(root)
+    else:
+        data = by_path[root]
+        skipped.append(
+            {
+                "store_path": root,
+                "name": data["name"],
+                "labels": ",".join(sorted(data["labels"])),
+                "sources": ",".join(sorted(data["sources"])),
+            }
+        )
+
+if skipped:
+    print(
+        f"warning: skipping {len(skipped)} unrealized inventory root(s) "
+        f"(evaluated package path not present in local store):",
+        file=sys.stderr,
+    )
+    for item in skipped:
+        print(
+            f"  - {item['name']} ({item['labels']}) -> {item['store_path']}",
+            file=sys.stderr,
+        )
+
+roots = valid_roots
+
 closures = {}
 all_paths = set()
 for root in roots:
@@ -233,6 +281,10 @@ sizes = {}
 for chunk in chunks(sorted(all_paths | {system_path, home_path}), 400):
     info = json.loads(subprocess.check_output(["nix", "path-info", "--json", *chunk], text=True))
     for path, metadata in info.items():
+        if not metadata:
+            # Unrealized or unknown to the daemon; treat as zero rather than crash.
+            sizes[path] = 0
+            continue
         sizes[path] = int(metadata.get("narSize") or 0)
 
 def closure_size(path):
@@ -335,8 +387,20 @@ prefix = out_dir / f"{host}-{safe_home}-storage-costs"
 csv_path = prefix.with_suffix(".csv")
 md_path = prefix.with_suffix(".md")
 
+row_fields = [
+    "name",
+    "pname",
+    "sources",
+    "labels",
+    "store_path",
+    "direct_bytes",
+    "closure_bytes",
+    "unique_inventory_bytes",
+    "closure_paths",
+    "unique_inventory_paths",
+]
 with csv_path.open("w", newline="") as f:
-    writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+    writer = csv.DictWriter(f, fieldnames=row_fields)
     writer.writeheader()
     writer.writerows(rows)
 
@@ -354,10 +418,30 @@ with md_path.open("w") as f:
     f.write(f"- NixOS system: `{system_path}`\n")
     f.write(f"- Home Manager: `{home_config}` -> `{home_path}`\n")
     f.write(f"- Inventory roots: {len(rows)} de-duplicated store paths\n")
+    if skipped:
+        f.write(
+            f"- Skipped unrealized roots: {len(skipped)} "
+            f"(evaluated package paths not present in the local store)\n"
+        )
     f.write(f"- Inventory closure: {human(total_inventory_closure)}\n")
     f.write(f"- NixOS system closure: {human(system_closure)}\n")
     f.write(f"- Home Manager activation closure: {human(home_closure)}\n\n")
     f.write("`closure` is the full dependency closure for that root. `unique` is the subset of that closure referenced by only one root in this inventory; it is the better first-pass signal for storage you might save by removing one item from these package/program roots.\n\n")
+    if skipped:
+        f.write("## Skipped Unrealized Roots\n\n")
+        f.write(
+            "These package attribute paths were evaluated from the flake but are not "
+            "realized locally (common when Home Manager installs an overridden variant "
+            "of `programs.<name>.package`). They are omitted from size accounting.\n\n"
+        )
+        f.write("| Package | Source | Labels | Store path |\n")
+        f.write("| --- | --- | --- | --- |\n")
+        for item in skipped:
+            f.write(
+                f"| `{item['name']}` | `{item['sources']}` | `{item['labels']}` | "
+                f"`{item['store_path']}` |\n"
+            )
+        f.write("\n")
     f.write("## Unique Storage by Source\n\n")
     f.write("| Source | Unique |\n")
     f.write("| --- | ---: |\n")
@@ -376,14 +460,25 @@ with md_path.open("w") as f:
 print(md_path)
 print(csv_path)
 print(f"inventory_roots={len(rows)}")
+print(f"skipped_unrealized_roots={len(skipped)}")
 print(f"inventory_closure={human(total_inventory_closure)}")
 print(f"system_closure={human(system_closure)}")
 print(f"home_closure={human(home_closure)}")
 
 if summary:
     visible_rows = grouped_rows[:limit]
-    name_width = min(36, max([len("Package")] + [len(row["name"]) for row in visible_rows]))
-    source_width = min(14, max([len("Source")] + [len(display_sources(row["sources"])) for row in visible_rows]))
+    name_width = min(
+        36,
+        max([len("Package")] + [len(row["name"]) for row in visible_rows] or [len("Package")]),
+    )
+    source_width = min(
+        14,
+        max(
+            [len("Source")]
+            + [len(display_sources(row["sources"])) for row in visible_rows]
+            or [len("Source")]
+        ),
+    )
     widths = [name_width, 5, source_width, 11, 11, 11]
 
     print()
@@ -393,26 +488,34 @@ if summary:
         f"NixOS {paint(human(system_closure), '1;32')}  "
         f"Home {paint(human(home_closure), '1;32')}  "
         f"Roots {paint(str(len(rows)), '1;34')}"
+        + (
+            f"  Skipped {paint(str(len(skipped)), '1;33')}"
+            if skipped
+            else ""
+        )
     )
     print()
-    print(paint(table_line(["Package", "Roots", "Source", "Unique", "Closure", "Direct"], widths), "1"))
-    print(paint(table_line(["-" * width for width in widths], widths), "2"))
-    for row in visible_rows:
-        unique = row["unique_inventory_bytes"]
-        unique_color = "31" if unique >= 1024**3 else "33" if unique >= 512 * 1024**2 else "0"
-        print(
-            table_line(
-                [
-                    trunc(row["name"], name_width),
-                    row["root_count"],
-                    trunc(display_sources(row["sources"]), source_width),
-                    paint(human(unique), unique_color),
-                    human(row["closure_bytes"]),
-                    human(row["direct_bytes"]),
-                ],
-                widths,
+    if visible_rows:
+        print(paint(table_line(["Package", "Roots", "Source", "Unique", "Closure", "Direct"], widths), "1"))
+        print(paint(table_line(["-" * width for width in widths], widths), "2"))
+        for row in visible_rows:
+            unique = row["unique_inventory_bytes"]
+            unique_color = "31" if unique >= 1024**3 else "33" if unique >= 512 * 1024**2 else "0"
+            print(
+                table_line(
+                    [
+                        trunc(row["name"], name_width),
+                        row["root_count"],
+                        trunc(display_sources(row["sources"]), source_width),
+                        paint(human(unique), unique_color),
+                        human(row["closure_bytes"]),
+                        human(row["direct_bytes"]),
+                    ],
+                    widths,
+                )
             )
-        )
+    else:
+        print(paint("No realized inventory roots to report.", "33"))
     print()
     print(f"Full report: {paint(str(md_path), '36')}")
     print(f"CSV:         {paint(str(csv_path), '36')}")
