@@ -31,10 +31,23 @@
     mediaLocation = "/srv/media/immich";
   };
 
+  # Self-hosted audiobook/podcast server (iOS app + LAN/Tailscale).
+  # Library lives on tank/media; point the first web-UI library at /srv/media/audiobooks.
+  services.audiobookshelf = {
+    enable = true;
+    host = "0.0.0.0";
+    port = 13378; # official ABS default; LAN + Tailscale clients
+    openFirewall = true;
+  };
+
+  # Allow the service user to read the shared media tree (mode 0755, group users).
+  users.users.audiobookshelf.extraGroups = [ "users" ];
+
   systemd.tmpfiles.rules = [
     "d /srv 0755 root root -"
     "d /srv/media 0755 william users -"
     "d /srv/media/immich 0700 immich immich -"
+    "d /srv/media/audiobooks 0755 william users -"
     "d /srv/media/imports 0755 william users -"
     "d /srv/media/photos 0755 william users -"
     "d /srv/media/videos 0755 william users -"
