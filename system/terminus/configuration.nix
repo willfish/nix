@@ -49,6 +49,7 @@
     "d /srv/media/immich 0700 immich immich -"
     "d /srv/media/audiobooks 0755 william users -"
     "d /srv/media/audiobooks-celine 0755 william users -"
+    "d /srv/media/audiobooks-children 0755 william users -"
     "d /srv/media/phone-audiobooks 0755 william users -"
     "d /srv/media/imports 0755 william users -"
     "d /srv/media/photos 0755 william users -"
