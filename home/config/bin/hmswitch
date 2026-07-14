@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: hmswitch [NH_HOME_SWITCH_ARGS...]
+
+Switch this machine to the matching Home Manager configuration.
+
+Environment:
+  HMSWITCH_FLAKE  Dotfiles flake path, default: ~/.dotfiles
+USAGE
+}
+
+flake="${HMSWITCH_FLAKE:-$HOME/.dotfiles}"
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+short_hostname() {
+  hostname -s 2>/dev/null || hostname 2>/dev/null | cut -d. -f1
+}
+
+case "$(uname -s)" in
+  Darwin)
+    configuration="william-darwin"
+    ;;
+  Linux)
+    host="$(short_hostname | tr '[:upper:]' '[:lower:]')"
+    case "$host" in
+      andromeda|foundation|starfish|terminus)
+        configuration="william@$host"
+        ;;
+      *)
+        configuration="william-linux"
+        ;;
+    esac
+    ;;
+  *)
+    echo "hmswitch: unsupported system: $(uname -s)" >&2
+    exit 1
+    ;;
+esac
+
+exec nh home switch "$flake" --configuration "$configuration" "$@"
