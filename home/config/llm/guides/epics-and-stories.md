@@ -51,7 +51,41 @@ Stories describe a deliverable unit of work. Use this structure:
 - Avoid: API, endpoint, database, model (as in ORM), serializer, controller, migration, spec
 - These terms are fine in the collapsible implementation details section
 
-## ADF component reference for stories
+## Description write path
+
+Prefer Jira MCP Markdown for the business narrative and panels
+(`mcp-atlassian` ≥ 0.22). Use raw API v3 ADF when you need a collapsible
+**Implementation details** expand. Full rules: `jira-adf.md`.
+
+### MCP Markdown panels (preferred for info/note/warning/success)
+
+```markdown
+:::info
+**In short:** Plain language summary.
+:::
+
+## Why this matters
+
+…
+
+:::note
+**Graceful fallback:** What happens if things go wrong.
+:::
+
+:::warning
+**Access:** Who can do this and constraints.
+:::
+
+:::success
+**What operators gain:** The positive outcome.
+:::
+
+## Acceptance criteria
+
+1. …
+```
+
+### ADF expand (raw API v3 — required for collapsible Implementation details)
 
 ```python
 # Info panel at top
@@ -62,7 +96,7 @@ panel("note", para(bold("Graceful fallback: "), t("What happens if things go wro
 panel("warning", para(bold("Access: "), t("Who can do this and constraints.")))
 panel("success", para(bold("What operators gain: "), t("The positive outcome.")))
 
-# Collapsible implementation details
+# Collapsible implementation details (MCP Markdown cannot emit expand)
 expand("Implementation details",
     h(3, "Technical approach"),
     bullet(...),
