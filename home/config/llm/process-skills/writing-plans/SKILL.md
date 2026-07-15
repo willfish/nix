@@ -28,7 +28,9 @@ metadata:
 1. If the work is large or architectural, first use `enter_plan_mode` to explore and think.
 2. Use this skill to produce the actual plan document.
 3. (Optional but recommended) Use `todo_write` while creating the plan to track your own decomposition.
-4. Save the plan to the project's preferred planning location. In this dotfiles harness, default to local gitignored `plans/YYYY-MM-DD-<short-name>.md`; do not create tracked plan files unless the user or repo explicitly asks for committed planning artifacts.
+4. Save the plan to the project's preferred local gitignored planning
+   location. In this dotfiles harness, default to
+   `plans/YYYY-MM-DD-<short-name>.md`. Do not add or commit plan/spec files.
 5. Offer the user two execution modes:
    - **Subagent-driven** (recommended for complex work): One fresh subagent per task with review between tasks.
    - **Inline**: Execute the plan yourself in this session using checkpoints.

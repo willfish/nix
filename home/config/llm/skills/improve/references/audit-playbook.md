@@ -41,7 +41,11 @@ The highest-trust category — real bugs found by reading, not speculation.
 
 Review only what is directly supported by code evidence. Keep findings framed as defensive maintenance: identify the code pattern, explain the production impact, and describe the remediation. Keep plans at the level of code changes, configuration changes, and tests; do not include runnable demonstration strings or step-by-step misuse details.
 
-**Handling rule:** never copy a secret value into a finding or plan — those files get committed. Reference the `file:line` and credential type only ("Stripe live key at `config.ts:12`"), and the fix sketch always includes rotation, not just removal (a committed secret is burned even after deletion).
+**Handling rule:** never copy a secret value into a finding or plan — local
+planning artifacts can still be retained or shared. Reference the `file:line`
+and credential type only ("Stripe live key at `config.ts:12`"), and the fix
+sketch always includes rotation, not just removal (a committed secret is burned
+even after deletion).
 
 **By-design is not a finding:** standard platform conventions are intentional behavior — honoring `https_proxy`/`NO_PROXY`, reading `~/.netrc`, an explicitly local dev tool shelling out to configured package managers. A tradeoff explicitly recorded in an ADR or decision doc is likewise settled, not a finding. Flag these only when the *implementation* adds risk beyond the convention or the documented decision itself.
 
