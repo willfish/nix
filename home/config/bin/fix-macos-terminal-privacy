@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  echo "fix-macos-terminal-privacy only applies on macOS." >&2
+  exit 1
+fi
+
+terminal_bundle_ids=(
+  "com.mitchellh.ghostty"
+  "com.apple.Terminal"
+  "com.googlecode.iterm2"
+)
+
+services=(
+  "SystemPolicyAllFiles"
+  "SystemPolicyDesktopFolder"
+  "SystemPolicyDocumentsFolder"
+  "SystemPolicyDownloadsFolder"
+  "SystemPolicyNetworkVolumes"
+  "SystemPolicyRemovableVolumes"
+)
+
+echo "Resetting stale macOS privacy decisions for common terminal apps..."
+for bundle_id in "${terminal_bundle_ids[@]}"; do
+  for service in "${services[@]}"; do
+    /usr/bin/tccutil reset "$service" "$bundle_id" >/dev/null 2>&1 || true
+  done
+done
+
+cat <<'EOF'
+
+macOS does not offer a supported "never ask for any permission, for anything"
+switch. Privacy access is granted to apps, not to every script on the machine.
+
+The closest practical setup for scripts is:
+  System Settings -> Privacy & Security -> Full Disk Access
+
+Enable Full Disk Access for your terminal app, especially:
+  - Ghostty
+  - Terminal
+  - iTerm2, if you use it
+
+Also enable it for any editor or agent app that launches scripts directly.
+
+macOS requires these clicks manually. Once the parent app has Full Disk Access,
+shell and Python scripts launched from it inherit that access and should stop
+triggering repeated Desktop/Documents/Downloads access prompts.
+EOF
+
+/usr/bin/open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles" || true

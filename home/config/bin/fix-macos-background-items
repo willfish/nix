@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  echo "fix-macos-background-items only applies on macOS." >&2
+  exit 1
+fi
+
+echo "Current Background Task Management records for this user:"
+uid="$(id -u)"
+/usr/bin/sfltool dumpbtm 2>/dev/null | /usr/bin/awk -v uid="$uid" '
+  index($0, "Records for UID " uid) { show = 1 }
+  show { print }
+' || true
+
+cat <<'EOF'
+
+This resets macOS Background Task Management data. It is the common fix for
+repeated "Background Items Added" / Login Items notifications.
+
+After reset:
+  1. Reboot.
+  2. Let legitimate login/background items register once.
+  3. Re-enable any item you intentionally keep disabled in:
+     System Settings -> General -> Login Items & Extensions
+
+Apple does not expose a supported global "never notify me about background
+items" switch for unmanaged Macs. If a tool keeps rewriting LaunchAgents or
+uses unsigned shell/python wrappers as login items, macOS may treat them as new
+items and notify again.
+EOF
+
+printf "\nRun 'sudo sfltool resetbtm' now? [y/N] "
+read -r answer
+case "$answer" in
+  [yY]|[yY][eE][sS])
+    /usr/bin/sudo /usr/bin/sfltool resetbtm
+    /usr/bin/open "x-apple.systempreferences:com.apple.LoginItems-Settings.extension" || true
+    ;;
+  *)
+    echo "Skipped reset."
+    ;;
+esac
