@@ -1,9 +1,8 @@
 { ... }:
 {
-  # Terminus-only: private remote access to this server (no port-forwarding).
-  # Clients are just the Tailscale app on phone/laptop — they do not need this module.
+  # Private remote access to NixOS hosts without port-forwarding.
   #
-  # After the first `nh os switch` on terminus, enrol it once with
+  # After the first `nh os switch` on each host, enrol it once with
   # `sudo tailscale up`, then log the same account into personal devices.
   services.tailscale = {
     enable = true;
