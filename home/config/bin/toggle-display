@@ -10,4 +10,5 @@ fail() {
   exit 1
 }
 
-wlopm --toggle "$output_name" || fail "could not toggle $output_name"
+sleep 1
+wlopm --off "$output_name" || fail "could not power off $output_name"
