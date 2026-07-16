@@ -7,6 +7,7 @@ usage: sshto [HOST] [--user USER] [--domain DOMAIN|--no-domain] [--session NAME]
 
 Pick one of the known hosts with fzf and attach to it through Herdr remote mode.
 HOST may be supplied directly to skip fzf.
+Remote sessions use server keybindings by default; pass --keybindings local to override.
 
 Environment:
   SSHTO_USER      SSH username, default: william
@@ -26,7 +27,7 @@ use_domain=1
 print_only=0
 host=""
 session=""
-keybindings=""
+keybindings="server"
 handoff=0
 herdr_args=()
 
@@ -101,7 +102,7 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-detect_domain() {
+list_resolver_domains() {
   if command -v resolvectl >/dev/null 2>&1; then
     resolvectl domain 2>/dev/null \
       | awk -F': ' '
@@ -112,19 +113,34 @@ detect_domain() {
               sub(/^~/, "", domain)
               if (domain != "" && domain != ".") {
                 print domain
-                exit
               }
             }
           }
         '
-    return
   fi
 
   if command -v hostname >/dev/null 2>&1; then
     hostname -d 2>/dev/null || true
   fi
 
-  awk '/^search[[:space:]]+/ { print $2; exit }' /etc/resolv.conf 2>/dev/null || true
+  awk '
+    /^search[[:space:]]+/ {
+      for (i = 2; i <= NF; i++) {
+        print $i
+      }
+    }
+  ' "${SSHTO_RESOLV_CONF:-/etc/resolv.conf}" 2>/dev/null || true
+}
+
+detect_lan_domain() {
+  list_resolver_domains \
+    | sed -e 's/^~//' -e '/^[[:space:]]*$/d' \
+    | awk '
+        !seen[$0]++ && $0 != "." && $0 != "(none)" && $0 !~ /\.ts\.net$/ {
+          print
+          exit
+        }
+      '
 }
 
 list_hosts() {
@@ -236,24 +252,84 @@ resolves() {
   return 1
 }
 
-list_resolvable_remote_hosts() {
+tailscale_status=""
+
+load_tailscale_status() {
+  local status
+
+  if ! command -v tailscale >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    return
+  fi
+
+  if status="$(tailscale status --json 2>/dev/null)" \
+    && printf '%s\n' "$status" | jq -e . >/dev/null 2>&1; then
+    tailscale_status="$status"
+  fi
+}
+
+tailscale_target() {
+  local name target
+  name="$1"
+
+  [ -n "$tailscale_status" ] || return 1
+
+  target="$(
+    printf '%s\n' "$tailscale_status" \
+      | jq -r --arg host "$name" '
+          [
+            (.Peer // {})[]
+            | select(.Online == true)
+            | (.DNSName // "" | sub("\\.$"; "")) as $dns
+            | select($dns != "")
+            | select(
+                ((.HostName // "") | ascii_downcase) == ($host | ascii_downcase)
+                or (($dns | split(".")[0] | ascii_downcase) == ($host | ascii_downcase))
+              )
+            | $dns
+          ][0] // empty
+        '
+  )"
+
+  [ -n "$target" ] || return 1
+  printf '%s\n' "$target"
+}
+
+route_host() {
+  local name lan_target tail_target
+  name="$1"
+  lan_target="$(host_target "$name")"
+
+  if resolves "$name"; then
+    printf '%s  [LAN]\t%s\t%s\n' "$name" "$name" "$lan_target"
+    return
+  fi
+
+  if tail_target="$(tailscale_target "$name")"; then
+    printf '%s  [Tailscale]\t%s\t%s\n' "$name" "$name" "$tail_target"
+    return
+  fi
+
+  return 1
+}
+
+list_routable_remote_hosts() {
   local name
 
   while IFS= read -r name; do
-    if resolves "$name"; then
-      printf '%s\n' "$name"
-    fi
+    route_host "$name" || true
   done < <(list_remote_hosts)
 }
 
 if [ "$use_domain" -eq 1 ] && [ -z "$domain" ]; then
-  domain="$(detect_domain 2>/dev/null | sed '/^[[:space:]]*$/d' | head -n 1 || true)"
+  domain="$(detect_lan_domain 2>/dev/null || true)"
 fi
 
-if [ -z "$host" ]; then
-  hosts="$(list_resolvable_remote_hosts | sort -u)"
+load_tailscale_status
 
-  if [ -z "$hosts" ]; then
+if [ -z "$host" ]; then
+  routes="$(list_routable_remote_hosts | sort -u)"
+
+  if [ -z "$routes" ]; then
     echo "sshto: no remote hosts resolve on this network after excluding current host '$(current_host)'" >&2
     exit 69
   fi
@@ -266,13 +342,16 @@ if [ -z "$host" ]; then
   if [ "${SSHTO_ASSUME_TTY:-0}" != 1 ] && ! { : < /dev/tty > /dev/tty; } 2>/dev/null; then
     echo "sshto: HOST is required when no interactive terminal is available" >&2
     echo "sshto: available hosts:" >&2
-    printf '%s\n' "$hosts" >&2
+    printf '%s\n' "$routes" | cut -f1 >&2
     exit 64
   fi
 
   prompt_domain="${domain:-no domain}"
   set +e
-  host="$(fzf --prompt="herdr ${prompt_domain}> " < <(printf '%s\n' "$hosts"))"
+  selected_route="$(
+    fzf --delimiter=$'\t' --with-nth=1 --prompt="herdr ${prompt_domain}> " \
+      < <(printf '%s\n' "$routes")
+  )"
   fzf_status=$?
   set -e
 
@@ -281,13 +360,19 @@ if [ -z "$host" ]; then
     exit "$fzf_status"
   fi
 
-  if [ -z "$host" ]; then
+  if [ -z "$selected_route" ]; then
     echo "sshto: no host selected" >&2
     exit 1
   fi
-fi
 
-target="$(host_target "$host")"
+  IFS=$'\t' read -r _ host target <<< "$selected_route"
+else
+  if selected_route="$(route_host "$host")"; then
+    IFS=$'\t' read -r _ host target <<< "$selected_route"
+  else
+    target="$(host_target "$host")"
+  fi
+fi
 
 remote_target="${user}@${target}"
 command=(herdr --remote "$remote_target")
@@ -297,16 +382,14 @@ if [ -n "$session" ]; then
 fi
 
 case "$keybindings" in
-  ""|local|server) ;;
+  local|server) ;;
   *)
     echo "sshto: --keybindings must be local or server" >&2
     exit 64
     ;;
 esac
 
-if [ -n "$keybindings" ]; then
-  command+=(--remote-keybindings "$keybindings")
-fi
+command+=(--remote-keybindings "$keybindings")
 
 if [ "$handoff" -eq 1 ]; then
   command+=(--handoff)
