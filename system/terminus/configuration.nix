@@ -4,6 +4,7 @@
   system.stateVersion = "26.05";
   imports = [
     ../modules/common-configuration.nix
+    ../modules/tailscale.nix
     ./hardware-configuration.nix
   ];
 
