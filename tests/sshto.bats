@@ -2,7 +2,7 @@
 
 setup() {
   export TEST_TMPDIR="$BATS_TEST_TMPDIR"
-  export PATH="$TEST_TMPDIR/bin:/usr/bin:/bin"
+  export PATH="$TEST_TMPDIR/bin:$PATH"
   mkdir -p "$TEST_TMPDIR/bin"
 }
 
@@ -76,9 +76,9 @@ terminus"'
   [ "$output" = "herdr --remote william@relay.local" ]
 }
 
-@test "keeps mac as a compatibility alias for relay" {
+@test "treats mac as a regular host name" {
   run bash home/config/bin/sshto mac --domain local --print
 
   [ "$status" -eq 0 ]
-  [ "$output" = "herdr --remote william@relay.local" ]
+  [ "$output" = "herdr --remote william@mac.local" ]
 }

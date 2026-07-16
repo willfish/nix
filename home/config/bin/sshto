@@ -16,8 +16,7 @@ Environment:
                   Space/newline separated extra host names, useful for Macs
                   that are not yet represented as flake host attrs
   SSHTO_HOST_ALIASES
-                  Space/newline separated alias=target entries, default includes
-                  mac=relay.local for compatibility with older Mac naming
+                  Space/newline separated alias=target entries
 USAGE
 }
 
@@ -166,8 +165,6 @@ list_host_aliases() {
   if [ -n "${SSHTO_HOST_ALIASES:-}" ]; then
     printf '%s\n' "$SSHTO_HOST_ALIASES" | tr '[:space:]' '\n'
   fi
-
-  printf '%s\n' mac=relay.local
 }
 
 list_alias_hosts() {
