@@ -40,6 +40,27 @@ write_tool() {
   [ "$output" = "herdr --remote william@starfish.local" ]
 }
 
+@test "does not concatenate aliases onto a flake host without trailing newline" {
+  # shellcheck disable=SC2016
+  write_tool realpath '#!/usr/bin/env bash' 'printf "%s\n" "$1"'
+  write_tool nix '#!/usr/bin/env bash' 'printf "%s" "andromeda
+foundation
+starfish
+terminus
+relay
+andromeda
+foundation
+starfish
+terminus"'
+  write_tool dscacheutil '#!/usr/bin/env bash' 'exit 0'
+  write_tool fzf '#!/usr/bin/env bash' 'if grep -q terminusmac; then exit 42; fi; printf "%s\n" terminus'
+
+  run env SSHTO_FLAKE="$PWD" SSHTO_DOMAIN=local SSHTO_ASSUME_TTY=1 bash home/config/bin/sshto --print
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "herdr --remote william@terminus.local" ]
+}
+
 @test "maps host aliases to explicit targets before adding a domain" {
   run env SSHTO_HOST_ALIASES='mac=Williams-Mac-mini.local' \
     bash home/config/bin/sshto mac --domain local --print

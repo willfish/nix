@@ -129,11 +129,11 @@ detect_domain() {
 }
 
 list_hosts() {
-  local flake
+  local flake hosts
   flake="${SSHTO_FLAKE:-$HOME/.dotfiles}"
 
   if [ -f "$flake/flake.nix" ] && command -v nix >/dev/null 2>&1; then
-    SSHTO_FLAKE="$(realpath "$flake")" nix eval --impure --raw --expr '
+    hosts="$(SSHTO_FLAKE="$(realpath "$flake")" nix eval --impure --raw --expr '
       let
         flake = builtins.getFlake (builtins.getEnv "SSHTO_FLAKE");
         homeNames = builtins.attrNames (flake.homeConfigurations or {});
@@ -147,7 +147,10 @@ list_hosts() {
         homeHosts = builtins.filter (host: host != null) (map homeHostName homeNames);
       in
         builtins.concatStringsSep "\n" ((builtins.attrNames flake.nixosConfigurations) ++ homeHosts)
-    ' 2>/dev/null && return
+    ' 2>/dev/null)" && {
+      printf '%s\n' "$hosts"
+      return
+    }
   fi
 
   printf '%s\n' andromeda foundation starfish terminus relay
