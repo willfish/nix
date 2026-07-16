@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -u
+
+output_name="eDP-1"
+
+fail() {
+  message="toggle-display: $*"
+  printf '%s\n' "$message" >&2
+  logger -t toggle-display -- "$message"
+  exit 1
+}
+
+if ! outputs="$(cosmic-randr list)"; then
+  fail "could not query COSMIC display state"
+fi
+
+outputs="$(printf '%s\n' "$outputs" | sed -E $'s/\x1B\\[[0-9;]*[[:alpha:]]//g')"
+output_line="$(printf '%s\n' "$outputs" | awk -v output="$output_name" '$1 == output { print; exit }')"
+
+case "$output_line" in
+  "$output_name (enabled)")
+    cosmic-randr disable "$output_name" || fail "could not disable $output_name"
+    ;;
+  "$output_name (disabled)")
+    cosmic-randr enable "$output_name" || fail "could not enable $output_name"
+    ;;
+  *)
+    fail "could not determine state for $output_name"
+    ;;
+esac

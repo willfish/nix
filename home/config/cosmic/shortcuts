@@ -200,6 +200,13 @@
     (
         modifiers: [
             Super,
+            Shift,
+        ],
+        key: "b",
+    ): Spawn("toggle-display"),
+    (
+        modifiers: [
+            Super,
         ],
         key: "h",
     ): Disable,
