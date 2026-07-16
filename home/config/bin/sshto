@@ -5,13 +5,19 @@ usage() {
   cat >&2 <<'USAGE'
 usage: sshto [HOST] [--user USER] [--domain DOMAIN|--no-domain] [--session NAME] [--keybindings local|server] [--handoff] [--print] [-- HERDR_ARGS...]
 
-Pick one of the NixOS hosts with fzf and attach to it through Herdr remote mode.
+Pick one of the known hosts with fzf and attach to it through Herdr remote mode.
 HOST may be supplied directly to skip fzf.
 
 Environment:
   SSHTO_USER      SSH username, default: william
   SSHTO_DOMAIN    Override detected network domain
   SSHTO_FLAKE     Dotfiles flake path, default: ~/.dotfiles
+  SSHTO_EXTRA_HOSTS
+                  Space/newline separated extra host names, useful for Macs
+                  that are not yet represented as flake host attrs
+  SSHTO_HOST_ALIASES
+                  Space/newline separated alias=target entries, default includes
+                  mac=relay.local for compatibility with older Mac naming
 USAGE
 }
 
@@ -130,12 +136,51 @@ list_hosts() {
     SSHTO_FLAKE="$(realpath "$flake")" nix eval --impure --raw --expr '
       let
         flake = builtins.getFlake (builtins.getEnv "SSHTO_FLAKE");
+        homeNames = builtins.attrNames (flake.homeConfigurations or {});
+        homeHostName = name:
+          if builtins.match ".*@.*" name != null then
+            builtins.elemAt (builtins.split "@" name) 2
+          else if name == "william-darwin" then
+            "relay"
+          else
+            null;
+        homeHosts = builtins.filter (host: host != null) (map homeHostName homeNames);
       in
-        builtins.concatStringsSep "\n" (builtins.attrNames flake.nixosConfigurations)
+        builtins.concatStringsSep "\n" ((builtins.attrNames flake.nixosConfigurations) ++ homeHosts)
     ' 2>/dev/null && return
   fi
 
-  printf '%s\n' andromeda foundation starfish terminus
+  printf '%s\n' andromeda foundation starfish terminus relay
+}
+
+list_extra_hosts() {
+  if [ -n "${SSHTO_EXTRA_HOSTS:-}" ]; then
+    printf '%s\n' "$SSHTO_EXTRA_HOSTS" | tr '[:space:]' '\n'
+  fi
+}
+
+list_host_aliases() {
+  if [ -n "${SSHTO_HOST_ALIASES:-}" ]; then
+    printf '%s\n' "$SSHTO_HOST_ALIASES" | tr '[:space:]' '\n'
+  fi
+
+  printf '%s\n' mac=relay.local
+}
+
+list_alias_hosts() {
+  list_host_aliases | awk -F= 'NF >= 2 && $1 != "" && $2 != "" { print $1 }'
+}
+
+alias_target() {
+  local name
+  name="$1"
+
+  list_host_aliases | awk -F= -v name="$name" '
+    NF >= 2 && $1 == name && $2 != "" {
+      print substr($0, length($1) + 2)
+      exit
+    }
+  '
 }
 
 current_host() {
@@ -145,21 +190,34 @@ current_host() {
   printf '%s\n' "${name%%.*}"
 }
 
+list_known_hosts() {
+  {
+    list_hosts
+    list_extra_hosts
+    list_alias_hosts
+  } | sed '/^[[:space:]]*$/d' | sort -u
+}
+
 list_remote_hosts() {
   local current
   current="$(current_host)"
 
-  list_hosts | awk -v current="$current" 'NF && (current == "" || $0 != current)'
+  list_known_hosts | awk -v current="$current" 'NF && (current == "" || $0 != current)'
 }
 
 host_target() {
-  local name
+  local name target
   name="$1"
 
-  if [ "$use_domain" -eq 1 ] && [ -n "$domain" ] && [[ "$name" != *.* ]]; then
-    printf '%s\n' "${name}.${domain}"
+  target="$(alias_target "$name")"
+  if [ -z "$target" ]; then
+    target="$name"
+  fi
+
+  if [ "$use_domain" -eq 1 ] && [ -n "$domain" ] && [[ "$target" != *.* ]]; then
+    printf '%s\n' "${target}.${domain}"
   else
-    printf '%s\n' "$name"
+    printf '%s\n' "$target"
   fi
 }
 
@@ -167,7 +225,15 @@ resolves() {
   local target
   target="$(host_target "$1")"
 
-  getent hosts "$target" >/dev/null 2>&1
+  if command -v getent >/dev/null 2>&1 && getent hosts "$target" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v dscacheutil >/dev/null 2>&1 && dscacheutil -q host -a name "$target" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  return 1
 }
 
 list_resolvable_remote_hosts() {
@@ -197,7 +263,7 @@ if [ -z "$host" ]; then
     exit 69
   fi
 
-  if ! { : < /dev/tty > /dev/tty; } 2>/dev/null; then
+  if [ "${SSHTO_ASSUME_TTY:-0}" != 1 ] && ! { : < /dev/tty > /dev/tty; } 2>/dev/null; then
     echo "sshto: HOST is required when no interactive terminal is available" >&2
     echo "sshto: available hosts:" >&2
     printf '%s\n' "$hosts" >&2
@@ -246,7 +312,9 @@ if [ "$handoff" -eq 1 ]; then
   command+=(--handoff)
 fi
 
-command+=("${herdr_args[@]}")
+if [ "${#herdr_args[@]}" -gt 0 ]; then
+  command+=("${herdr_args[@]}")
+fi
 
 if [ "$print_only" -eq 1 ]; then
   printf '%q' "${command[@]:0:1}"
