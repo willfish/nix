@@ -252,6 +252,14 @@ resolves() {
   return 1
 }
 
+port_22_reachable() {
+  local target
+  target="$1"
+
+  command -v nc >/dev/null 2>&1 || return 1
+  nc -z -w 1 "$target" 22 </dev/null >/dev/null 2>&1
+}
+
 tailscale_status=""
 
 load_tailscale_status() {
@@ -299,7 +307,7 @@ route_host() {
   name="$1"
   lan_target="$(host_target "$name")"
 
-  if resolves "$name"; then
+  if resolves "$name" && port_22_reachable "$lan_target"; then
     printf '%s  [LAN]\t%s\t%s\n' "$name" "$name" "$lan_target"
     return
   fi

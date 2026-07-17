@@ -5,6 +5,9 @@ setup() {
   export TEST_TMPDIR="$BATS_TEST_TMPDIR"
   export PATH="$TEST_TMPDIR/bin:$PATH"
   mkdir -p "$TEST_TMPDIR/bin"
+  write_tool getent '#!/usr/bin/env bash' 'exit 1'
+  write_tool nc '#!/usr/bin/env bash' 'exit 1'
+  write_tool tailscale '#!/usr/bin/env bash' 'exit 1'
 }
 
 write_tool() {
@@ -19,6 +22,7 @@ write_tool() {
   write_tool realpath '#!/usr/bin/env bash' 'printf "%s\n" "$1"'
   write_tool nix '#!/usr/bin/env bash' 'printf "%s\n" andromeda foundation starfish terminus'
   write_tool dscacheutil '#!/usr/bin/env bash' 'case "$*" in *mac-mini*) exit 0 ;; *) exit 1 ;; esac'
+  write_tool nc '#!/usr/bin/env bash' 'exit 0'
   write_tool fzf '#!/usr/bin/env bash' 'awk -F "\t" '\''$2 == "mac-mini" { print; exit }'\'''
 
   run env SSHTO_FLAKE="$PWD" SSHTO_EXTRA_HOSTS=mac-mini SSHTO_DOMAIN=local SSHTO_ASSUME_TTY=1 \
@@ -33,6 +37,7 @@ write_tool() {
   write_tool realpath '#!/usr/bin/env bash' 'printf "%s\n" "$1"'
   write_tool nix '#!/usr/bin/env bash' 'printf "%s\n" andromeda foundation starfish terminus mac'
   write_tool dscacheutil '#!/usr/bin/env bash' 'case "$*" in *starfish.local*) exit 0 ;; *) exit 1 ;; esac'
+  write_tool nc '#!/usr/bin/env bash' 'exit 0'
   write_tool fzf '#!/usr/bin/env bash' 'awk -F "\t" '\''$2 == "starfish" { print; exit }'\'''
 
   run env SSHTO_FLAKE="$PWD" SSHTO_DOMAIN=local SSHTO_ASSUME_TTY=1 bash home/config/bin/sshto --print
@@ -54,6 +59,7 @@ foundation
 starfish
 terminus"'
   write_tool dscacheutil '#!/usr/bin/env bash' 'exit 0'
+  write_tool nc '#!/usr/bin/env bash' 'exit 0'
   write_tool fzf '#!/usr/bin/env bash' 'awk -F "\t" '\''$2 == "terminus" { row = $0 } /terminusmac/ { bad = 1 } END { if (bad) exit 42; if (row != "") print row }'\'''
 
   run env SSHTO_FLAKE="$PWD" SSHTO_DOMAIN=local SSHTO_ASSUME_TTY=1 bash home/config/bin/sshto --print
@@ -103,6 +109,7 @@ terminus"'
   write_tool realpath '#!/usr/bin/env bash' 'printf "%s\n" "$1"'
   write_tool nix '#!/usr/bin/env bash' 'printf "%s\n" andromeda foundation'
   write_tool getent '#!/usr/bin/env bash' 'case "$*" in *andromeda.local*) exit 0 ;; *) exit 1 ;; esac'
+  write_tool nc '#!/usr/bin/env bash' 'case "$*" in *andromeda.local*22*) exit 0 ;; *) exit 1 ;; esac'
   write_tool tailscale '#!/usr/bin/env bash' 'printf "%s\n" '\''{"Peer":{"peer":{"HostName":"andromeda","DNSName":"andromeda.example.ts.net.","Online":true}}}'\'''
   write_tool fzf '#!/usr/bin/env bash' 'tee "$TEST_TMPDIR/fzf-input" | awk -F "\t" '\''$2 == "andromeda" { print; exit }'\'''
 
@@ -112,6 +119,22 @@ terminus"'
   [ "$status" -eq 0 ]
   [ "$output" = "herdr --remote william@andromeda.local --remote-keybindings server" ]
   grep -F $'andromeda  [LAN]\tandromeda\tandromeda.local' "$TEST_TMPDIR/fzf-input"
+}
+
+@test "falls back to Tailscale when LAN DNS resolves but port 22 is unreachable" {
+  # shellcheck disable=SC2016
+  write_tool realpath '#!/usr/bin/env bash' 'printf "%s\n" "$1"'
+  write_tool nix '#!/usr/bin/env bash' 'printf "%s\n" andromeda foundation'
+  write_tool getent '#!/usr/bin/env bash' 'case "$*" in *andromeda.local*) exit 0 ;; *) exit 1 ;; esac'
+  write_tool nc '#!/usr/bin/env bash' 'exit 1'
+  write_tool tailscale '#!/usr/bin/env bash' 'printf "%s\n" '\''{"Peer":{"peer":{"HostName":"andromeda","DNSName":"andromeda.example.ts.net.","Online":true}}}'\'''
+  write_tool fzf '#!/usr/bin/env bash' 'awk -F "\t" '\''$2 == "andromeda" { print; exit }'\'''
+
+  run env SSHTO_FLAKE="$PWD" SSHTO_DOMAIN=local SSHTO_ASSUME_TTY=1 \
+    bash home/config/bin/sshto --print
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "herdr --remote william@andromeda.example.ts.net --remote-keybindings server" ]
 }
 
 @test "falls back to and labels an online Tailscale peer" {
@@ -134,7 +157,8 @@ terminus"'
   # shellcheck disable=SC2016
   write_tool realpath '#!/usr/bin/env bash' 'printf "%s\n" "$1"'
   write_tool nix '#!/usr/bin/env bash' 'printf "%s\n" andromeda foundation terminus'
-  write_tool getent '#!/usr/bin/env bash' 'exit 1'
+  write_tool getent '#!/usr/bin/env bash' 'case "$*" in *andromeda.local*) exit 0 ;; *) exit 1 ;; esac'
+  write_tool nc '#!/usr/bin/env bash' 'exit 1'
   write_tool tailscale '#!/usr/bin/env bash' 'printf "%s\n" '\''{"Peer":{"offline":{"HostName":"andromeda","DNSName":"andromeda.example.ts.net.","Online":false},"online":{"HostName":"terminus","DNSName":"terminus.example.ts.net.","Online":true}}}'\'''
   write_tool fzf '#!/usr/bin/env bash' 'tee "$TEST_TMPDIR/fzf-input" | awk -F "\t" '\''$2 == "terminus" { print; exit }'\'''
 
@@ -153,6 +177,7 @@ terminus"'
   write_tool realpath '#!/usr/bin/env bash' 'printf "%s\n" "$1"'
   write_tool nix '#!/usr/bin/env bash' 'printf "%s\n" andromeda foundation'
   write_tool getent '#!/usr/bin/env bash' 'case "$*" in *andromeda.local*) exit 0 ;; *) exit 1 ;; esac'
+  write_tool nc '#!/usr/bin/env bash' 'exit 0'
   write_tool tailscale '#!/usr/bin/env bash' 'exit 1'
   write_tool fzf '#!/usr/bin/env bash' 'awk -F "\t" '\''$2 == "andromeda" { print; exit }'\'''
 
@@ -167,6 +192,7 @@ terminus"'
   write_tool resolvectl '#!/usr/bin/env bash' 'exit 1'
   write_tool hostname '#!/usr/bin/env bash' 'printf "%s\n" "(none)"'
   write_tool getent '#!/usr/bin/env bash' 'case "$*" in *andromeda.lan.example*) exit 0 ;; *) exit 1 ;; esac'
+  write_tool nc '#!/usr/bin/env bash' 'exit 0'
   write_tool tailscale '#!/usr/bin/env bash' 'exit 1'
   printf '%s\n' 'search taile09696.ts.net lan.example' > "$TEST_TMPDIR/resolv.conf"
 
