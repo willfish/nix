@@ -80,6 +80,14 @@ resize_mode = "prefix+r"
 toggle_sidebar = "prefix+b"
 focus_agent = "prefix+alt+1..9"
 
+# Navigate-mode only (must live under [keys], not after [[keys.command]])
+navigate_workspace_up = "up"
+navigate_workspace_down = "down"
+navigate_pane_left = "h"
+navigate_pane_down = "j"
+navigate_pane_up = "k"
+navigate_pane_right = "l"
+
 [[keys.command]]
 key = "prefix+o"
 type = "shell"
@@ -120,10 +128,3 @@ command = "herdr-yank line"
 key = "prefix+shift+y"
 type = "shell"
 command = "herdr-yank cwd"
-
-navigate_workspace_up = "up"
-navigate_workspace_down = "down"
-navigate_pane_left = "h"
-navigate_pane_down = "j"
-navigate_pane_up = "k"
-navigate_pane_right = "l"
