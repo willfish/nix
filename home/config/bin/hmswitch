@@ -14,6 +14,56 @@ USAGE
 
 flake="${HMSWITCH_FLAKE:-$HOME/.dotfiles}"
 
+sync_darwin_nix_config() {
+  local source target
+  source="$flake/home/config/nix/nix.custom.conf"
+  target="/etc/nix/nix.custom.conf"
+
+  if [ ! -f "$source" ]; then
+    echo "hmswitch: missing managed Nix config: $source" >&2
+    return 1
+  fi
+
+  if ! cmp -s "$source" "$target"; then
+    echo "hmswitch: updating trusted Nix caches"
+    sudo install -o root -g wheel -m 0644 "$source" "$target"
+    sudo launchctl kickstart -k system/systems.determinate.nix-daemon
+  fi
+}
+
+sync_darwin_tailscale_service() {
+  local source target label changed
+  source="$HOME/.local/share/dotfiles-system/io.tailscale.tailscaled.plist"
+  target="/Library/LaunchDaemons/io.tailscale.tailscaled.plist"
+  label="system/io.tailscale.tailscaled"
+  changed=0
+
+  if [ ! -f "$source" ]; then
+    echo "hmswitch: missing managed Tailscale service: $source" >&2
+    return 1
+  fi
+
+  if ! cmp -s "$source" "$target"; then
+    echo "hmswitch: updating the Tailscale launch daemon"
+    sudo install -d -o root -g wheel -m 0755 /var/lib/tailscale
+    sudo install -o root -g wheel -m 0644 "$source" "$target"
+    changed=1
+  fi
+
+  # Homebrew previously left a user agent pointing at an uninstalled formula.
+  if launchctl print "gui/$(id -u)/homebrew.mxcl.tailscale" >/dev/null 2>&1; then
+    launchctl bootout "gui/$(id -u)/homebrew.mxcl.tailscale" >/dev/null 2>&1 || true
+    launchctl disable "gui/$(id -u)/homebrew.mxcl.tailscale" >/dev/null 2>&1 || true
+  fi
+
+  if [ "$changed" -eq 1 ]; then
+    sudo launchctl bootout "$label" >/dev/null 2>&1 || true
+    sudo launchctl bootstrap system "$target"
+  elif ! launchctl print "$label" >/dev/null 2>&1; then
+    sudo launchctl bootstrap system "$target"
+  fi
+}
+
 case "${1:-}" in
   -h|--help)
     usage
@@ -28,6 +78,7 @@ short_hostname() {
 case "$(uname -s)" in
   Darwin)
     configuration="william-darwin"
+    sync_darwin_nix_config
     ;;
   Linux)
     host="$(short_hostname | tr '[:upper:]' '[:lower:]')"
@@ -46,4 +97,8 @@ case "$(uname -s)" in
     ;;
 esac
 
-exec nh home switch "$flake" --configuration "$configuration" "$@"
+nh home switch "$flake" --configuration "$configuration" "$@"
+
+if [ "$(uname -s)" = Darwin ]; then
+  sync_darwin_tailscale_service
+fi
