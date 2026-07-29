@@ -118,3 +118,9 @@ key = "prefix+space"
 type = "plugin_action"
 command = "hotchpotch.herdr-tiny-fingers.open"
 description = "fingers mode"
+
+[[keys.command]]
+key = "prefix+d"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"
+description = "toggle reviewr sidebar"
