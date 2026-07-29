@@ -116,15 +116,5 @@ command = "willfish.herdr-navigator.right"
 [[keys.command]]
 key = "prefix+space"
 type = "plugin_action"
-command = "rmarganti.herdr-pluck.pluck"
-description = "pluck visible token"
-
-[[keys.command]]
-key = "prefix+y"
-type = "shell"
-command = "herdr-yank line"
-
-[[keys.command]]
-key = "prefix+shift+y"
-type = "shell"
-command = "herdr-yank cwd"
+command = "hotchpotch.herdr-tiny-fingers.open"
+description = "fingers mode"
