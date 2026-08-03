@@ -162,7 +162,6 @@ in
   ++ (optionalItem "nixos" "users.defaultUserShell" nixos.users.defaultUserShell)
   ++ (optionalItem "nixos" "programs.fish.package" nixos.programs.fish.package)
   ++ (optionalItem "nixos" "virtualisation.docker.package" nixos.virtualisation.docker.package)
-  ++ (optionalItem "nixos" "services.mullvad-vpn.package" nixos.services.mullvad-vpn.package)
   ++ (optionalItem "nixos" "boot.kernelPackages.kernel" nixos.boot.kernelPackages.kernel)
   ++ (optionalPath "nixos" [ "services" "pipewire" "package" ] nixos)
   ++ (optionalPath "nixos" [ "services" "openssh" "package" ] nixos)
