@@ -114,6 +114,12 @@ type = "plugin_action"
 command = "willfish.herdr-navigator.right"
 
 [[keys.command]]
+key = "prefix+E"
+type = "plugin_action"
+command = "willfish.herdr-balance-panes.even"
+description = "evenly size panes"
+
+[[keys.command]]
 key = "prefix+space"
 type = "plugin_action"
 command = "hotchpotch.herdr-tiny-fingers.open"
