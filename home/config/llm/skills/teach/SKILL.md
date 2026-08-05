@@ -112,7 +112,7 @@ Capture user preferences about *how* they want to be taught ("I like concrete ex
 - **Workspace creation**: The user (or you via tools) creates a fresh directory per major topic. One mission per workspace. Unrelated topics get separate workspaces.
 - **Composition**: When the topic touches Nix, Home Manager, shells, editors, or this machine, also consult the `local-dev-environment` skill. For diagrams or visuals inside lessons, the `diagramming` skill provides guidance and can generate Mermaid/D2/etc. that you embed.
 - **File operations**: Use the available file tools (`write`, `search_replace`, `read_file`) and `run_terminal_command` (for mkdir, xdg-open, ls of records, etc.) to manage the workspace state exactly as a human tutor would update a student's notebook and handouts.
-- **Multi-TUI**: Because this skill lives in the dotfiles source (`home/config/llm/skills/teach/`), Home Manager deploys it to `~/.grok/skills/`, `~/.claude/skills/`, etc. The workspace files themselves are portable.
+- **Multi-TUI**: Because this skill lives in the dotfiles source (`home/config/llm/skills/teach/`), Home Manager deploys it to `~/.grok/skills/`, `~/.codex/skills/`, and `~/.agents/skills/`. The workspace files themselves are portable.
 - **Quality bar**: Follow the formats strictly. They exist so outputs stay consistent and reviewable even when switching models or TUIs.
 
 Start every new teaching engagement by ensuring `MISSION.md` exists and is concrete, then curating `RESOURCES.md` before generating the first lesson.
