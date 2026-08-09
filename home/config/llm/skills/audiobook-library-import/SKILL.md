@@ -89,15 +89,23 @@ Both sources land in staging, then share review → prepare → import → metad
    source→target check on staged paths if anything was copied before the
    first preflight.
 7. Apply the per-book acceptance criteria from the import guide. Bitrate alone
-   is not quality.
+   is not quality. Treat criteria as **hard** vs **soft** (see guide): hard
+   fails block accept; soft presentation checks are **attempted and reported**,
+   never a reason to freeze, invent data, or refuse to hand off.
 8. Prepare one-book-per-folder layout outside watched roots. Compare staged and
    prepared checksums before an atomic move into the chosen library root.
 9. Let exactly one ingestion mechanism run: watcher **or** explicit scan.
 10. Resolve Audiobookshelf item IDs from the **exact path** immediately before
     each API mutation; verify returned path and title. No direct SQLite writes
     for mutations.
-11. Finish with checksum, database, metadata, duplicate-path, and payload
-    accounting before deleting source or staging data.
+11. **Catalogue presentation QA (attempt).** For each accepted/imported item,
+    walk quality, naming, language, and cover/image checks (AC9 / Phase 5c in
+    the guide). Fix what you can with evidence via the API. For anything you
+    cannot resolve (no reliable language signal, ambiguous cover, uncertain
+    spelling), record a **residual** and continue — do not invent metadata or
+    block the whole batch.
+12. Finish with checksum, database, metadata, duplicate-path, presentation
+    residuals, and payload accounting before deleting source or staging data.
 
 ## New library setup (Terminus / ABS)
 
@@ -120,20 +128,33 @@ When creating or pointing a library:
 When the user asks about broken or wrong metadata:
 
 1. **Discover** — list library items with missing title/author/narrator/cover,
-   zero duration, invalid/missing flags, or wrong audience library. When the
-   request is about “is this already in the library?”, run the same
-   **source → target** duplicate check against library roots first.
+   zero duration, invalid/missing flags, wrong audience library, bad display
+   names, language gaps, or wrong/weak cover art. When the request is about
+   “is this already in the library?”, run the same **source → target**
+   duplicate check against library roots first.
 2. **Explain** — for each item: path, current fields, evidence from tags,
    filenames, spoken credits, or catalogue IDs; state the intended correction.
    For duplicates: name the source path, the target path(s), and match type
    (exact checksum / ASIN / work-level).
 3. **Fix** — resolve item ID by exact path; PATCH/update via ABS API only;
    never write SQLite; never bulk-apply IDs from a stale table. Do not delete
-   a progressed library item to “make room” for a source duplicate.
-4. **Verify** — re-fetch by ID; assert path unchanged and metadata matches
-   intent. Report residual uncertainties.
+   a progressed library item to “make room” for a source duplicate. Prefer
+   leaving a field empty over guessing language, narrator, or cover.
+4. **Verify** — re-fetch by ID; assert path unchanged and changed fields match
+   intent. List residuals you could not close.
 
-Details and API shapes: import guide Phase 5 + best-practices guide.
+Details: import guide Phase 5, 5b, 5c + best-practices guide.
+
+## Hard vs soft criteria (do not corner yourself)
+
+| Tier | Examples | If you cannot fully pass |
+|------|----------|---------------------------|
+| **Hard** | Incomplete tracks (AC2), decode failures (AC3), exact path collisions, API write without path re-verify | **Reject** or stop that item; do not import corrupt/incomplete media |
+| **Soft** | Language tag, perfect cover choice, title capitalisation, narrator spelling without a source, full start/mid/end listen when samples already sound fine | **Attempt**, fix when evidence exists, else **residual in handoff** and continue |
+
+Never invent ASIN/language/narrator/cover to clear a soft check. Never loop
+endlessly on presentation polish. Never refuse to report progress because a
+soft AC is open.
 
 ## Safety boundaries
 
@@ -149,6 +170,7 @@ Details and API shapes: import guide Phase 5 + best-practices guide.
 - Use the documented Audiobookshelf API for metadata and item deletion.
   Deleting a database item is not permission to delete media files.
 - Report uncertainties; default ambiguous adult/child classification to William.
+- Soft presentation gaps are residuals, not silent passes and not hard stops.
 
 ## Required handoff
 
@@ -161,8 +183,10 @@ Report:
 - imported books, files, and bytes per library;
 - whether source→staging and staging→library checksums matched;
 - metadata fixes applied and re-verified;
+- presentation QA notes (naming, language, cover/image, listen quality) per
+  book or as a residual list;
 - whether ABS has exactly one valid item per imported path;
-- residual uncertainties.
+- residual uncertainties (explicitly mark soft ACs left open).
 
 ## Related
 

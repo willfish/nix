@@ -200,32 +200,43 @@ Always distinguish **duplicate media on disk** from **duplicate database rows**.
 
 ## Metadata quality
 
-Good metadata for this household:
+Good metadata for this household (import guide AC1/AC8/AC9 + Phase 5c):
 
 - Correct **title** and **author** as listeners will search.
 - **Narrator** / cast / production type when editions could collide (e.g. Fry
   vs full-cast Harry Potter — never cross-label).
-- **Cover** present and appropriate.
+- **Language** set when known; assumed English only with an explicit residual
+  if unconfirmed; never invent a language code.
+- **Cover** present and appropriate to the edition (see below).
 - **Duration** positive and plausible vs files.
-- **Series** + sequence when it helps browsing.
+- **Series** + sequence when it helps browsing and is known.
 - ASIN/ISBN stored when reliable (Libation rips often carry ASIN in folder
   names).
 - No torrent-site, encoder, or random tag leakage in author/title fields.
+- Display names free of release-group noise when easy to clean at prepare time.
 
 Broken metadata workflow: review → explain with evidence → API fix → re-verify
-(import guide Phase 5b).
+(import guide Phase 5b). Presentation pass: Phase 5c / AC9.
+
+**Soft vs hard:** missing polish (language tag, perfect cover, capitalisation)
+is a **residual**, not a reason to block import or invent data. Incomplete or
+corrupt audio remains a hard reject.
 
 ## Covers, chapters, and matching
 
-- Embedded covers in `.m4b` are good; a `cover.jpg` in the leaf folder is a
-  reliable fallback for ABS.
+- Embedded covers in `.m4b` are good; a `cover.jpg` / `cover.png` in the leaf
+  folder is a reliable fallback for ABS.
+- Prefer real book/Audible art over frames, screenshots, or blank placeholders.
+- Cover should match the **edition** when distinguishable; if only a generic
+  same-work image exists, residual “cover edition uncertain” is fine.
 - Chapter data: prefer embedded chapters in m4b; cue sheets are supporting
   evidence, not a substitute for a clean single-file book when available.
 - Provider matching (Audible/etc. in ABS UI): useful for fills; still verify
   narrator and edition before accepting a match that could overwrite a correct
-  manual label.
+  manual label. Skip or undo matches that pull wrong-edition art.
 - After provider match, re-check path binding — matching must not attach the
   wrong edition to a folder.
+- Do not loop on cover providers; one good attempt + residual beats thrashing.
 
 ## Backups and data loss boundaries
 

@@ -24,6 +24,7 @@ library layout, and mutation safety.
 - [Phase 4: prepare and import](#phase-4-prepare-and-import)
 - [Phase 5: Audiobookshelf verification and metadata](#phase-5-audiobookshelf-verification-and-metadata)
 - [Phase 5b: review, explain, and fix broken metadata](#phase-5b-review-explain-and-fix-broken-metadata)
+- [Phase 5c: catalogue presentation QA](#phase-5c-catalogue-presentation-qa)
 - [Phase 6: final accounting](#phase-6-final-accounting)
 - [Worked examples from the July 2026 import](#worked-examples-from-the-july-2026-import)
 - [Operational pitfalls](#operational-pitfalls)
@@ -129,16 +130,21 @@ An import is complete only when:
 
 - every selected source payload is classified as accepted, duplicate, or
   rejected;
-- every accepted book passes all applicable per-book criteria;
+- every accepted book passes all **hard** per-book criteria (or is rejected);
+- **soft** presentation criteria (naming, language, cover choice, polish) have
+  been **attempted**; open items are listed as residuals — they do not block
+  done if hard checks and accounting pass;
 - source-to-staging and prepared-to-live checksums agree;
 - duplicates and rejects are absent from the live library;
 - Audiobookshelf has exactly one valid item for every imported path;
-- titles, authors, narrators, covers, durations, and audience placement have
-  been checked;
+- titles, authors, narrators, covers, durations, language (when known), and
+  audience placement have been checked or residualled;
 - no pre-existing listening history or unrelated files were removed;
-- the final report reconciles payload, book, file, and byte totals.
+- the final report reconciles payload, book, file, and byte totals and names
+  every residual soft gap.
 
-Do not delete source or staging data until all these conditions pass.
+Do not delete source or staging data until hard checks and accounting pass.
+Soft residuals may remain with the user's awareness.
 
 ## Phase 0: qBittorrent download status
 
@@ -432,23 +438,42 @@ Review payload structure and supporting material:
 
 ## Per-book acceptance criteria
 
-Apply every applicable criterion to each book. A book passes only when all
-required rows pass or a deviation is documented and approved.
+Apply every applicable criterion to each book.
 
-### AC1: identity and edition
+### Hard vs soft
 
-- The spoken title and author agree with the proposed metadata.
-- The narrator or cast is identified when available.
-- The edition is distinguishable from existing alternatives: unabridged,
-  abridged, dramatisation, radio adaptation, language, or narrator.
-- An ASIN/ISBN/product identifier is recorded when reliable.
-- Metadata does not claim a different narrator or production.
+| Tier | Criteria | Agent behaviour |
+|---|---|---|
+| **Hard** | AC2 completeness, AC3 technical integrity, AC5 exact-checksum duplicate (skip), AC8 “exactly one valid item / positive duration / path bind”, corrupt or truncated audio | Fail → **reject** or fix before accept. Do not import broken media. |
+| **Soft** | AC1 narrator/ASIN when sources are thin, AC4 full multi-point listen when a shorter sample already sounds clean, AC6 edge-case audience, AC7 cosmetic folder renames, **AC9** language/naming/cover polish | **Attempt** with evidence. If stuck: leave field empty or keep best known value, **residual in report**, continue. Never invent. Never freeze the batch. |
+
+A book may be **accepted with residuals** when all hard rows pass and soft rows
+are either passed or explicitly residualled. Document deviations; do not wait
+for user approval on every soft gap unless the user asked for interactive
+sign-off.
+
+### AC1: identity and edition (mixed)
+
+**Hard enough to block wrong identity:**
+
+- The spoken title and author agree with the proposed metadata when samples
+  are available; do not ship metadata that contradicts clear spoken credits.
+- Metadata does not claim a different narrator or production when the audio
+  clearly disagrees (e.g. full-cast vs Fry).
+
+**Soft (residual OK):**
+
+- Narrator or cast filled when a reliable source exists; otherwise residual
+  “narrator unknown”.
+- Edition labels (unabridged / abridged / dramatisation / radio / **language**)
+  when evidence exists; otherwise residual.
+- ASIN/ISBN recorded when reliable; do not invent identifiers.
 
 For Harry Potter specifically, a full-cast dramatisation must never carry
 Stephen Fry edition metadata. Include the production type or cast in the title
 or subtitle when that is needed to make the children's-library picker clear.
 
-### AC2: completeness
+### AC2: completeness (**hard**)
 
 - Every expected audio file is present.
 - Numbered tracks or chapters form a contiguous sequence unless the source
@@ -480,24 +505,26 @@ ffmpeg -v error -xerror -i "/path/to/file" -map 0:a:0 -f null -
 All files must decode successfully. A tag parser succeeding is not evidence
 that the complete audio stream is healthy.
 
-### AC4: listening quality
+### AC4: listening quality (hard core, soft depth)
 
-- Sample the beginning, middle, and end of the book.
-- For multi-file books, sample multiple files including the first and last.
-- Speech is intelligible at normal playback speed.
-- There is no severe clipping, persistent corruption, excessive noise, long
-  unintended silence, inserted advertising, piracy-channel branding, or
-  unrelated content.
-- Loudness is usable without extreme gain changes between files.
-- The narrator and content heard match AC1.
+**Hard (reject or hold):**
+
+- Severe clipping, persistent corruption, long unintended silence, inserted
+  advertising, piracy-channel branding, or unrelated content in sampled audio.
+- Speech unintelligible at normal playback speed in the samples taken.
+- Narrator/content in samples clearly contradicts claimed identity (AC1).
+
+**Soft (attempt; residual OK):**
+
+- Ideal coverage is beginning, middle, and end; multi-file books sample first
+  and last plus at least one middle file. If time-constrained, document which
+  offsets were sampled and residual “full book not listened”.
+- Loudness consistency across files — note extremes; do not block solely on
+  mild level differences.
+- Optional local speech-to-text for sparse tags — helpful, not mandatory.
 
 Bitrate is evidence, not a pass/fail threshold. A low-bitrate Opus speech
-encoding can be better than a higher-bitrate damaged MP3. Consider codec,
-sample rate, source age, speech clarity, and the availability of alternatives.
-
-Speech recognition can help identify lightly tagged recordings, but it does
-not replace listening. Transcribe short samples locally and verify uncertain
-names against reliable catalogue or publisher evidence.
+encoding can be better than a higher-bitrate damaged MP3.
 
 ### AC5: duplicate status
 
@@ -536,33 +563,103 @@ copies. It does not permit deleting an existing library copy.
 - Preserve Celine and Phone as separate scopes; do not import into them without
   an explicit reason.
 
-### AC7: filesystem layout
+### AC7: filesystem layout and naming (mixed)
 
-- Store one Audiobookshelf book per leaf folder.
-- Prefer `{Author}/{Series}/{Book}` when series information is useful.
-- Keep all tracks, cover art, chapters, and book-level metadata inside that
-  book's folder.
-- Do not leave nested unrelated books beneath one parent item.
-- Prepare the full structure outside the watched roots.
-- Compare prepared files to staging, then atomically rename or move the
-  completed leaf/directories into the live root.
+**Hard:**
 
-### AC8: Audiobookshelf record
+- One Audiobookshelf book per leaf folder.
+- No nested unrelated books under one parent item.
+- Prepare outside watched roots; checksum then atomic move into live root.
+- Keep all tracks for that book inside its leaf.
+
+**Soft (prefer; residual OK):**
+
+- Prefer `{Author}/{Series}/{Book}` when series info is useful and known.
+- Display-friendly folder and file names: no torrent-site noise
+  (`[TGx]`, `WEBRip`, `x264`), no encoder spam in the leaf name used for
+  browsing when easy to strip at prepare time.
+- Consistent track numbering (`01`, `02`, …) without cryptic dumps.
+- If renaming is risky (unclear author/series) or would break a careful
+  Libation ASIN folder the user likes, keep the name and residual
+  “naming not polished”.
+
+### AC8: Audiobookshelf record (mixed)
 
 After ingestion:
+
+**Hard:**
 
 - exactly one library item resolves to the exact live path;
 - the item is not missing or invalid;
 - duration is positive and consistent with the files;
-- title and author are correct;
-- narrator/cast and edition type are present when needed to distinguish copies;
-- a suitable cover is displayed;
-- series and sequence are correct when applicable;
 - no new duplicate-path record exists;
 - metadata edits are reflected both in the API response and a fresh read.
 
+**Soft (attempt; residual OK):**
+
+- title and author correct and free of tag leakage (`Plan B`, site names);
+- narrator/cast and edition type when needed to distinguish copies;
+- a **suitable** cover is displayed (see AC9);
+- series and sequence when applicable and known.
+
 Resolve an item ID by exact path immediately before each mutation. Never copy a
 batch of IDs from a report and assume row order remains stable.
+
+### AC9: catalogue presentation QA (soft — attempt and residual)
+
+Run after ingest (and during Phase 5c). **None of these alone block accept**
+when hard ACs pass; all should be **tried** and either fixed or residualled.
+
+#### Naming (display title and folder)
+
+- Display title matches the work listeners will search (not a dump filename).
+- No leftover torrent/release tokens in title or author fields.
+- Spelling matches a reliable source when one is easy to check; if not, residual
+  “spelling unverified”.
+- Subtitle carries edition/cast when needed for picker clarity (soft).
+
+#### Language
+
+- Prefer an explicit language on the ABS item when the edition language is
+  clear (tags, publisher page, spoken credits, Libation locale, filename).
+- Default assumption for this household is **English** only when nothing
+  contradicts it — still note “language assumed en” as a residual if never
+  confirmed.
+- Do **not** invent non-English language codes without evidence.
+- If audio is clearly not English but you cannot identify the language,
+  residual “language unknown (not English)” and avoid wrong codes.
+
+#### Cover / image
+
+- Prefer a real book/audible cover over random frames, screenshots, or blank.
+- Embedded m4b art is fine; else `cover.jpg` / `cover.png` in the leaf folder.
+- Cover should match the **edition** (same work wrong-edition art is a residual
+  or fix when the right file is available).
+- Wrong provider match art: revert or replace when obvious; if unsure, residual
+  “cover uncertain” rather than endless rematching.
+- Children’s library: avoid clearly adult-only or unrelated promotional art
+  when a better file is already in the payload.
+
+#### Quality (presentation, not re-AC3)
+
+- Duration in ABS looks plausible vs files.
+- Chapter list present when the container has chapters (soft if ABS cannot
+  show them).
+- No obvious placeholder title like `Unknown` or the raw torrent folder name
+  left as the only display string when a better title is known.
+
+#### Recording the outcome
+
+Per book (or batch table):
+
+| Field | Status | Notes |
+|---|---|---|
+| naming | pass / residual | … |
+| language | pass / assumed / residual | … |
+| cover | pass / residual | … |
+| listen QA | pass / partial / residual | offsets sampled |
+
+Incomplete soft rows are success-with-residuals, not failure.
 
 ## Collections and multi-story payloads
 
@@ -749,23 +846,57 @@ Assert:
 
 Report every change and every residual uncertainty in the handoff.
 
+## Phase 5c: catalogue presentation QA
+
+After items exist in ABS (watcher settled or scan finished), run **AC9** on each
+newly imported path. This is the explicit verification pass for **quality
+presentation, naming, language, and image/cover**.
+
+### Procedure
+
+1. List new items by exact path (API or read-only DB).
+2. For each item, fill the AC9 outcome table (naming / language / cover /
+   listen QA).
+3. Fix soft gaps that have clear evidence (strip tag leakage, set title, attach
+   cover file, set language when known) via API — path-resolve → mutate →
+   re-fetch.
+4. Stop polishing when evidence runs out. Write residuals; move on.
+5. Do not re-open hard AC2/AC3 here; if you discover corruption late, reclassify
+   that book as reject and keep media out of “accepted” accounting.
+
+### Anti-cornering rules
+
+- No mandatory external web research if offline or results conflict.
+- No mandatory full-book listen.
+- No mandatory perfect series/sequence graph.
+- No mandatory provider match if it risks wrong edition art.
+- A batch handoff with a residual list is valid completion for soft checks.
+
 ## Phase 6: final accounting
 
 Run fresh checks after Audiobookshelf has settled:
+
+**Hard accounting (must pass):**
 
 1. source payload rows equal accepted + duplicate + rejected payloads;
 2. every accepted source file has an identical live checksum;
 3. duplicate and rejected payloads have no live destination;
 4. live file and byte totals match the prepared manifest;
 5. every imported path maps to exactly one Audiobookshelf item;
-6. no imported item is missing, invalid, zero-duration, authorless, or
-   coverless;
-7. narrator/edition distinctions are clear in library browsing;
-8. no new duplicate path exists;
-9. pre-existing progress and sessions remain attached to their original item.
+6. no imported item is missing, invalid, or zero-duration;
+7. no new duplicate path exists;
+8. pre-existing progress and sessions remain attached to their original item.
 
-The completion report should state all counts and name every exception. Keep
-staging until the user accepts the report or explicitly asks for cleanup.
+**Soft accounting (attempt; residual list OK):**
+
+9. no authorless or coverless items when a fix was possible; otherwise residual;
+10. narrator/edition distinctions clear in library browsing when editions collide;
+11. AC9 presentation table complete for every accepted import (pass or residual);
+12. language noted (confirmed, assumed en, or residual unknown).
+
+The completion report should state all counts, name every hard exception, and
+list soft residuals without treating them as batch failure. Keep staging until
+hard accounting passes and the user accepts the report or asks for cleanup.
 
 ## Worked examples from the July 2026 import
 
@@ -827,6 +958,8 @@ and verify after every write.
 - Do not copy all of `~/Downloads`; derive scope from qBittorrent state.
 - Do not copy incomplete torrents; check status (Phase 0) first.
 - Do not skip Phase 1c source→target duplicate preflight before copy or import.
+- Do not skip Phase 5c / AC9 presentation QA; do not treat soft residuals as
+  hard failures or invent fields to clear them.
 - Do not assume the remote source is static during a long transfer.
 - Do not use filename, bitrate, tags, or `ffprobe` alone as acceptance evidence.
 - Do not import into a watched root before the book layout is complete.
