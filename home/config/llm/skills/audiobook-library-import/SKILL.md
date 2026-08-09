@@ -25,6 +25,7 @@ import into Audiobookshelf libraries on Terminus, and metadata repair.
 | Any inventory, copy, import, or metadata mutation | `references/audiobook-library-import.md` completely |
 | Watcher vs scan, library roots, API discipline, layout, safety | `references/audiobookshelf-best-practices.md` completely |
 | Deterministic qBittorrent inventory (NUL list / status report) | `scripts/qbittorrent_inventory.py` |
+| Source → target duplicate preflight (names/ASIN vs library roots) | `scripts/source_target_duplicate_check.py` |
 
 Do not invent paths or skip safety rules when in a hurry.
 
@@ -71,21 +72,31 @@ Both sources land in staging, then share review → prepare → import → metad
    that still exist on disk.
 2. Do not copy incomplete torrents. Prefer completed + path-present payloads;
    note seeding-but-complete as transfer-ready if files are complete.
-3. Copy selected payloads into a dated directory under `/srv/media/imports/`,
-   never directly into an Audiobookshelf-watched root.
-4. Re-run the transfer incrementally, then require a full checksum dry-run
+3. **Source → target duplicate preflight (required).** Before copying (and
+   again before live import), compare each candidate payload against **all**
+   relevant Terminus library roots and ABS items:
+   - targets: William, Children, Celine, Phone (and any named destination);
+   - match on folder/name, ASIN/ISBN, size, then checksum for same-size hits;
+   - mark exact/work-level hits as `duplicate` with evidence; do not stage or
+     import them unless the user wants a second edition and it is labelled.
+   Use `scripts/source_target_duplicate_check.py` plus AC5 in the import guide.
+4. Copy only non-duplicate selected payloads into a dated directory under
+   `/srv/media/imports/`, never directly into an Audiobookshelf-watched root.
+5. Re-run the transfer incrementally, then require a full checksum dry-run
    before treating Andromeda as safe to suspend.
-5. Account for every payload as `accept`, `duplicate`, or `reject`, with
-   evidence and a destination library (default William).
-6. Apply the per-book acceptance criteria from the import guide. Bitrate alone
+6. Account for every payload as `accept`, `duplicate`, or `reject`, with
+   evidence and a destination library (default William). Re-run the
+   source→target check on staged paths if anything was copied before the
+   first preflight.
+7. Apply the per-book acceptance criteria from the import guide. Bitrate alone
    is not quality.
-7. Prepare one-book-per-folder layout outside watched roots. Compare staged and
+8. Prepare one-book-per-folder layout outside watched roots. Compare staged and
    prepared checksums before an atomic move into the chosen library root.
-8. Let exactly one ingestion mechanism run: watcher **or** explicit scan.
-9. Resolve Audiobookshelf item IDs from the **exact path** immediately before
-   each API mutation; verify returned path and title. No direct SQLite writes
-   for mutations.
-10. Finish with checksum, database, metadata, duplicate-path, and payload
+9. Let exactly one ingestion mechanism run: watcher **or** explicit scan.
+10. Resolve Audiobookshelf item IDs from the **exact path** immediately before
+    each API mutation; verify returned path and title. No direct SQLite writes
+    for mutations.
+11. Finish with checksum, database, metadata, duplicate-path, and payload
     accounting before deleting source or staging data.
 
 ## New library setup (Terminus / ABS)
@@ -109,11 +120,16 @@ When creating or pointing a library:
 When the user asks about broken or wrong metadata:
 
 1. **Discover** — list library items with missing title/author/narrator/cover,
-   zero duration, invalid/missing flags, or wrong audience library.
+   zero duration, invalid/missing flags, or wrong audience library. When the
+   request is about “is this already in the library?”, run the same
+   **source → target** duplicate check against library roots first.
 2. **Explain** — for each item: path, current fields, evidence from tags,
    filenames, spoken credits, or catalogue IDs; state the intended correction.
+   For duplicates: name the source path, the target path(s), and match type
+   (exact checksum / ASIN / work-level).
 3. **Fix** — resolve item ID by exact path; PATCH/update via ABS API only;
-   never write SQLite; never bulk-apply IDs from a stale table.
+   never write SQLite; never bulk-apply IDs from a stale table. Do not delete
+   a progressed library item to “make room” for a source duplicate.
 4. **Verify** — re-fetch by ID; assert path unchanged and metadata matches
    intent. Report residual uncertainties.
 
@@ -124,7 +140,8 @@ Details and API shapes: import guide Phase 5 + best-practices guide.
 - Preserve unrelated downloads, existing library files, listening progress,
   sessions, and alternate editions unless the user explicitly puts them in
   scope.
-- Skip exact duplicates. Treat work-level duplicates as a judgement call based
+- Skip exact duplicates. Always run source→target preflight before copy and
+  before live import. Treat work-level duplicates as a judgement call based
   on narrator, edition, duration, and stated preference.
 - Reject incomplete or corrupt payloads instead of silently importing them.
 - Never print Audiobookshelf tokens or Libation identity tokens. SQLite is
@@ -138,6 +155,7 @@ Details and API shapes: import guide Phase 5 + best-practices guide.
 Report:
 
 - source arm(s) and payload statuses (complete / incomplete / missing / Libation present);
+- source→target duplicate preflight results (matches, match type, target paths);
 - accepted, duplicate, and reject counts with reasons;
 - destination library (default William if unspecified);
 - imported books, files, and bytes per library;

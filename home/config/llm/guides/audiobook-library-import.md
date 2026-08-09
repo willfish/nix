@@ -16,6 +16,7 @@ library layout, and mutation safety.
 - [Phase 0: qBittorrent download status](#phase-0-qbittorrent-download-status)
 - [Phase 1: inventory the source](#phase-1-inventory-the-source)
 - [Phase 1b: Libation source (Andromeda)](#phase-1b-libation-source-andromeda)
+- [Phase 1c: source → target duplicate preflight](#phase-1c-source--target-duplicate-preflight)
 - [Phase 2: copy to staging](#phase-2-copy-to-staging)
 - [Phase 3: review every payload](#phase-3-review-every-payload)
 - [Per-book acceptance criteria](#per-book-acceptance-criteria)
@@ -292,6 +293,85 @@ rsync -a --info=progress2 \
 Prefer an explicit include list when only a subset is new. Then the same
 incremental rsync + checksum dry-run rules as Phase 2.
 
+## Phase 1c: source → target duplicate preflight
+
+**Required** for every source arm (qBittorrent and Libation), before the first
+copy and again before any atomic move into a live library root. Skipping this
+step wastes transfer bandwidth and risks double catalogue entries.
+
+### What to compare
+
+| Source | Target |
+|---|---|
+| Transfer-ready qBittorrent names under `~/Downloads` | All live roots: `/srv/media/audiobooks`, `audiobooks-children`, `audiobooks-celine`, `phone-audiobooks` |
+| Libation book folders / ASINs under `Music/Libation/Books` | Same live roots |
+| Staged payloads under `/srv/media/imports/...` (second pass) | Same live roots + ABS items |
+
+Also scan recent staging trees under `/srv/media/imports/` when deciding
+whether a payload was already reviewed/rejected (e.g. prior incomplete course).
+
+### Match signals (cheap → expensive)
+
+1. **Folder / payload name** — exact basename or leaf folder.
+2. **Normalized title** — lowercase, strip `[ASIN]`, quality tags, punctuation.
+3. **ASIN / ISBN** — from Libation folder names, tags, or `FileLocationsV2`.
+4. **Size** — same total bytes → candidate for checksum.
+5. **SHA-256** (or strong checksum) — exact file duplicate when sizes match.
+6. **Work-level** — same title+author+narrator/edition without byte identity
+   (AC5 judgement; still report as duplicate candidate).
+
+### Helper script
+
+On Terminus (or any host that can see the library roots), with a list of source
+names:
+
+```bash
+# From Andromeda inventory names:
+python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+  --transfer-ready-only --format names \
+  > /tmp/source-names.txt
+
+# On Terminus — check those names against all library roots:
+python3 ~/.grok/skills/audiobook-library-import/scripts/source_target_duplicate_check.py \
+  --sources-file /tmp/source-names.txt \
+  --targets /srv/media/audiobooks \
+            /srv/media/audiobooks-children \
+            /srv/media/audiobooks-celine \
+            /srv/media/phone-audiobooks \
+  --format markdown -o /tmp/source-target-dupes.md
+```
+
+Cross-host one-liner (run from a machine with SSH to both):
+
+```bash
+ssh andromeda \
+  'python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+     --transfer-ready-only --format names' \
+  | ssh terminus \
+  'python3 ~/.grok/skills/audiobook-library-import/scripts/source_target_duplicate_check.py \
+     --sources-file - \
+     --targets /srv/media/audiobooks /srv/media/audiobooks-children \
+               /srv/media/audiobooks-celine /srv/media/phone-audiobooks \
+     --format markdown'
+```
+
+For Libation, feed folder basenames under `Music/Libation/Books` (or ASINs)
+as the sources list.
+
+### Disposition
+
+| Preflight result | Action |
+|---|---|
+| Exact name or ASIN hit on a live path | Default **`duplicate`** — do not copy unless user wants a labelled alternate edition |
+| Same-size + matching checksum | **`duplicate`** — skip; never delete the live copy |
+| Normalized title hit only | **Investigate** (narrator/edition) before accept |
+| No hit | Eligible for Phase 2 staging (still run full AC5 after review) |
+| Hit only under `/srv/media/imports/...` | Read prior review notes; may be prior reject — do not auto-import |
+
+Record every match in the accounting table (Phase 3) even when the payload is
+never staged. Re-run preflight after staging if the first pass was name-only
+and you now have local files for size/checksum comparison.
+
 ## Phase 2: copy to staging
 
 Create a dated staging directory outside every Audiobookshelf-watched root:
@@ -421,8 +501,11 @@ names against reliable catalogue or publisher evidence.
 
 ### AC5: duplicate status
 
-Search all relevant live library roots and Audiobookshelf before importing:
+This criterion is the deep review for what Phase 1c preflight already started.
+Search all relevant live library roots and Audiobookshelf before importing
+(and before treating a staged payload as accepted):
 
+- Phase 1c source→target report (name / ASIN / size hits);
 - normalized title and author;
 - ASIN/ISBN where present;
 - narrator, cast, production type, duration, and chapter count;
@@ -743,6 +826,7 @@ and verify after every write.
 
 - Do not copy all of `~/Downloads`; derive scope from qBittorrent state.
 - Do not copy incomplete torrents; check status (Phase 0) first.
+- Do not skip Phase 1c source→target duplicate preflight before copy or import.
 - Do not assume the remote source is static during a long transfer.
 - Do not use filename, bitrate, tags, or `ffprobe` alone as acceptance evidence.
 - Do not import into a watched root before the book layout is complete.

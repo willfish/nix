@@ -178,8 +178,18 @@ SQLite is **not** allowed for:
 
 ## Duplicates and item safety
 
+### Source → target preflight (import pipeline)
+
+Before copying from Andromeda (qBittorrent or Libation) and before moving from
+staging into a live root, compare **source payload names/ASINs** to **all**
+library targets (`/srv/media/audiobooks*`, phone library). Use the skill
+helper `source_target_duplicate_check.py` and the full procedure in the import
+guide **Phase 1c**. Name/ASIN hits are enough to skip most wasted transfers;
+confirm same-size candidates with checksums before final accept/reject.
+
 | Situation | Action |
 |---|---|
+| Source name/ASIN already under a live root | Mark source **duplicate**; do not stage/import unless a labelled alternate edition is intentional |
 | Same path, two DB items | Scanner race — delete the **extra DB item** via API after confirming zero progress; keep media once |
 | Same checksum, second copy incoming | Skip import; do not delete the existing library file |
 | Same work, different narrator | Keep both only if labelled and intentional |
