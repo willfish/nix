@@ -1,37 +1,123 @@
 ---
 name: audiobook-library-import
-description: Audiobook acquisition review and safe library import workflow for William's Andromeda and Terminus setup. Use for qBittorrent audiobook transfers, NAS audiobook staging, Audiobookshelf metadata or duplicate cleanup, William/Children library classification, per-book acceptance checks, or when the user runs /audiobook-library-import.
+description: >
+  Audiobook acquisition, library setup, import, and Audiobookshelf metadata
+  workflow for William's Andromeda → Terminus setup. Use for qBittorrent
+  download status and Transfers from Andromeda Downloads, Libation Audible
+  rips under Music/Libation, NAS staging under /srv/media/imports, creating or
+  configuring a new Audiobookshelf library (default Audiobooks William at
+  /srv/media/audiobooks), importing into a designated or default library,
+  reviewing/explaining/fixing broken metadata via API, duplicate cleanup,
+  William/Children classification, per-book acceptance checks, Audiobookshelf
+  best practices, or when the user runs /audiobook-library-import.
 ---
 
 # Audiobook Library Import
 
-Use this skill for moving and reviewing audiobook payloads from Andromeda into
-the Audiobookshelf libraries on Terminus.
+Use this skill for the full Andromeda → Terminus audiobook pipeline: source
+inventory (qBittorrent and Libation), transfer readiness, staging, review,
+import into Audiobookshelf libraries on Terminus, and metadata repair.
 
-Read `references/audiobook-library-import.md` completely before inventorying,
-copying, deleting, importing, or changing Audiobookshelf metadata.
+## Load references before acting
+
+| When | Read |
+|------|------|
+| Any inventory, copy, import, or metadata mutation | `references/audiobook-library-import.md` completely |
+| Watcher vs scan, library roots, API discipline, layout, safety | `references/audiobookshelf-best-practices.md` completely |
+| Deterministic qBittorrent inventory (NUL list / status report) | `scripts/qbittorrent_inventory.py` |
+
+Do not invent paths or skip safety rules when in a hurry.
+
+## Hosts, roots, defaults
+
+| Role | Host / path |
+|------|-------------|
+| Source machine (downloads + Libation) | **Andromeda** |
+| Library + ABS host | **Terminus** (`services.audiobookshelf`, port **13378**) |
+| qBittorrent download root | `/home/william/Downloads` |
+| qBittorrent fast-resume | `~/.local/share/qBittorrent/BT_backup/*.fastresume` |
+| Libation books (rips) | `/home/william/Music/Libation/Books` |
+| Libation state/db | `~/.local/share/Libation/` (`Settings.json`, `FileLocationsV2.json`, `LibationContext.db`) |
+| Staging (never a watched root) | `/srv/media/imports/<descriptive-date>` |
+| **Default library** | **Audiobooks William** → `/srv/media/audiobooks` |
+| Children | `/srv/media/audiobooks-children` |
+| Celine | `/srv/media/audiobooks-celine` |
+| Phone | `/srv/media/phone-audiobooks` |
+| ABS (on Terminus) | `http://127.0.0.1:13378` |
+| ABS SQLite (read-only / token only) | `/var/lib/audiobookshelf/config/absdatabase.sqlite` |
+
+Default destination for imports and new-library setup is **William** unless the
+user names another library. Do not put new books into Celine or Phone without
+an explicit reason.
+
+## Source arms (same later phases)
+
+Both sources land in staging, then share review → prepare → import → metadata:
+
+1. **qBittorrent (Andromeda)** — inventory from fast-resume (not a blind
+   `~/Downloads` dump). Check torrent **status** (complete / incomplete /
+   seeding / missing path) before rsync. Use
+   `scripts/qbittorrent_inventory.py` for status + NUL path lists.
+2. **Libation (Andromeda)** — Audible liberations under
+   `Music/Libation/Books` (one book folder, typically `.m4b` + sidecar).
+   Inventory existing folders and/or `FileLocationsV2.json` paths that still
+   exist. Same staging discipline as torrents; never copy secrets or the
+   Libation account database to Terminus.
 
 ## Non-negotiable workflow
 
-1. Inventory qBittorrent payloads from its fast-resume records. Do not assume
-   every directory in `~/Downloads` is in scope.
-2. Copy selected payloads into a dated directory below
-   `/srv/media/imports/`, never directly into an Audiobookshelf-watched root.
-3. Re-run the transfer incrementally, then require a full checksum dry-run
-   before treating the source machine as safe to suspend.
-4. Account for every payload as `accept`, `duplicate`, or `reject`, with
-   evidence and a destination library for accepted books.
-5. Apply the per-book acceptance criteria from the guide. Do not equate bitrate
-   alone with quality.
-6. Prepare the final one-book-per-folder layout outside watched roots. Compare
-   staged and prepared checksums before an atomic move into the library.
-7. Let exactly one ingestion mechanism run: the watcher or an explicit scan.
-   Never deliberately race both.
-8. Resolve Audiobookshelf item IDs from the exact path immediately before each
-   API mutation, then verify the returned path and title. Do not write directly
-   to the SQLite database.
-9. Finish with checksum, database, metadata, duplicate-path, and payload
-   accounting checks before deleting any source or staging data.
+1. Choose source arm(s). For qBittorrent: inventory from fast-resume and
+   record download **status**. For Libation: inventory liberated book folders
+   that still exist on disk.
+2. Do not copy incomplete torrents. Prefer completed + path-present payloads;
+   note seeding-but-complete as transfer-ready if files are complete.
+3. Copy selected payloads into a dated directory under `/srv/media/imports/`,
+   never directly into an Audiobookshelf-watched root.
+4. Re-run the transfer incrementally, then require a full checksum dry-run
+   before treating Andromeda as safe to suspend.
+5. Account for every payload as `accept`, `duplicate`, or `reject`, with
+   evidence and a destination library (default William).
+6. Apply the per-book acceptance criteria from the import guide. Bitrate alone
+   is not quality.
+7. Prepare one-book-per-folder layout outside watched roots. Compare staged and
+   prepared checksums before an atomic move into the chosen library root.
+8. Let exactly one ingestion mechanism run: watcher **or** explicit scan.
+9. Resolve Audiobookshelf item IDs from the **exact path** immediately before
+   each API mutation; verify returned path and title. No direct SQLite writes
+   for mutations.
+10. Finish with checksum, database, metadata, duplicate-path, and payload
+    accounting before deleting source or staging data.
+
+## New library setup (Terminus / ABS)
+
+When creating or pointing a library:
+
+1. Ensure the filesystem root exists with correct ownership (NixOS tmpfiles
+   already create William / Children / Celine / Phone under `/srv/media/`).
+2. In Audiobookshelf UI or API: create library type **book**, name it clearly
+   (e.g. `Audiobooks William`), folder path = the intended root
+   (`/srv/media/audiobooks` for default).
+3. Prefer one media folder per library; do not point two libraries at the same
+   path.
+4. After create: resolve library ID by name via API; store only as discoverable
+   state, not a hard-coded constant for later mutations.
+5. Confirm watcher settings and do a controlled scan only when the tree is
+   stable. See best-practices guide.
+
+## Metadata review → explain → fix
+
+When the user asks about broken or wrong metadata:
+
+1. **Discover** — list library items with missing title/author/narrator/cover,
+   zero duration, invalid/missing flags, or wrong audience library.
+2. **Explain** — for each item: path, current fields, evidence from tags,
+   filenames, spoken credits, or catalogue IDs; state the intended correction.
+3. **Fix** — resolve item ID by exact path; PATCH/update via ABS API only;
+   never write SQLite; never bulk-apply IDs from a stale table.
+4. **Verify** — re-fetch by ID; assert path unchanged and metadata matches
+   intent. Report residual uncertainties.
+
+Details and API shapes: import guide Phase 5 + best-practices guide.
 
 ## Safety boundaries
 
@@ -39,23 +125,29 @@ copying, deleting, importing, or changing Audiobookshelf metadata.
   sessions, and alternate editions unless the user explicitly puts them in
   scope.
 - Skip exact duplicates. Treat work-level duplicates as a judgement call based
-  on narrator, edition, duration, and the user's stated preference.
-- Reject incomplete or corrupt payloads instead of repairing or silently
-  importing them unless the user asks for recovery work.
-- Never print Audiobookshelf tokens. Read the local database only to discover
-  state or obtain a token for an API call.
+  on narrator, edition, duration, and stated preference.
+- Reject incomplete or corrupt payloads instead of silently importing them.
+- Never print Audiobookshelf tokens or Libation identity tokens. SQLite is
+  read-only for state/token discovery.
 - Use the documented Audiobookshelf API for metadata and item deletion.
-  Deleting a database item is not permission to delete its media files.
-- Report uncertainties explicitly; default ambiguous adult/child classification
-  to William's library pending evidence.
+  Deleting a database item is not permission to delete media files.
+- Report uncertainties; default ambiguous adult/child classification to William.
 
 ## Required handoff
 
 Report:
 
-- source payloads, accepted payloads, duplicates, and rejects;
+- source arm(s) and payload statuses (complete / incomplete / missing / Libation present);
+- accepted, duplicate, and reject counts with reasons;
+- destination library (default William if unspecified);
 - imported books, files, and bytes per library;
-- duplicate/reject reasons;
-- validation failures or metadata uncertainties;
-- whether the source-to-staging and staging-to-library checksums matched;
-- whether Audiobookshelf contains exactly one valid item per imported path.
+- whether source→staging and staging→library checksums matched;
+- metadata fixes applied and re-verified;
+- whether ABS has exactly one valid item per imported path;
+- residual uncertainties.
+
+## Related
+
+- Slash: `/audiobook-library-import`
+- Dotfiles / hosts: `local-dev-environment`
+- Catalog: `skill-router`
