@@ -5,6 +5,7 @@
   imports = [
     ../modules/server.nix
     ./hardware-configuration.nix
+    ./storage.nix
   ];
 
   networking.hostName = "terminus";
@@ -12,16 +13,6 @@
 
   boot.kernelPackages = pkgs.linuxPackages;
   boot.supportedFilesystems = [ "zfs" ];
-
-  services.zfs.autoScrub = {
-    enable = true;
-    pools = [ "tank" ];
-  };
-
-  fileSystems."/srv/media" = {
-    device = "tank/media";
-    fsType = "zfs";
-  };
 
   services.immich = {
     enable = true;
@@ -43,17 +34,4 @@
   # Allow the service user to read the shared media tree (mode 0755, group users).
   users.users.audiobookshelf.extraGroups = [ "users" ];
 
-  systemd.tmpfiles.rules = [
-    "d /srv 0755 root root -"
-    "d /srv/media 0755 william users -"
-    "d /srv/media/immich 0700 immich immich -"
-    "d /srv/media/audiobooks 0755 william users -"
-    "d /srv/media/audiobooks-celine 0755 william users -"
-    "d /srv/media/audiobooks-children 0755 william users -"
-    "d /srv/media/phone-audiobooks 0755 william users -"
-    "d /srv/media/imports 0755 william users -"
-    "d /srv/media/photos 0755 william users -"
-    "d /srv/media/videos 0755 william users -"
-    "d /srv/media/phone-backups 0755 william users -"
-  ];
 }
