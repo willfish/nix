@@ -95,11 +95,20 @@ health host="":
 # Run detailed Terminus ZFS and physical-disk checks (prompts for remote sudo).
 terminus-health:
     #!/usr/bin/env bash
-    target="terminus"
-    if nc -z -w 1 terminus.local 22 </dev/null >/dev/null 2>&1; then
+    local_host="$(hostname -s | tr '[:upper:]' '[:lower:]')"
+    if [ "$local_host" = "terminus" ]; then
+      target="local"
+    elif nc -z -w 1 terminus.local 22 </dev/null >/dev/null 2>&1; then
       target="terminus.local"
+    else
+      target="terminus"
     fi
-    ssh -t -o ConnectTimeout=5 -o HostKeyAlias=terminus "$target" '
+    if [ "$target" = "local" ]; then
+      runner=(bash -c)
+    else
+      runner=(ssh -t -o ConnectTimeout=5 -o HostKeyAlias=terminus "$target")
+    fi
+    "${runner[@]}" '
       duf --only local --output mountpoint,size,used,avail,usage
       systemctl list-timers --all --no-pager zfs-scrub.timer
       systemctl is-active smartd.service
