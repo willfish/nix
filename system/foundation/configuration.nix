@@ -20,7 +20,7 @@
 
   boot.extraModulePackages = [
     (pkgs.callPackage ./mt7925-patched-driver.nix {
-      kernel = config.boot.kernelPackages.kernel;
+      inherit (config.boot.kernelPackages) kernel;
     })
   ];
 

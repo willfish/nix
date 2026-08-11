@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   # Private remote access to NixOS hosts without port-forwarding.
   #
   # After the first `nh os switch` on each host, enrol it once with

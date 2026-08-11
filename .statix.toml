@@ -1,0 +1,4 @@
+# Repeated keys are commonly used for readable nested Nix options in this repo.
+disabled = [
+  "repeated_keys"
+]
