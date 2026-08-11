@@ -14,7 +14,8 @@ health host="":
     local_host="$(hostname -s | tr '[:upper:]' '[:lower:]')"
     for host_name in "${hosts[@]}"; do
       target=""
-      if [ "${host_name,,}" = "$local_host" ]; then
+      normalized_host="$(printf '%s' "$host_name" | tr '[:upper:]' '[:lower:]')"
+      if [ "$normalized_host" = "$local_host" ]; then
         target="local"
       else
         for candidate in "$host_name.local" "$host_name"; do
