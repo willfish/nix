@@ -38,16 +38,33 @@ jobs:
       - name: Audit LLM skill harness
         run: python3 home/config/llm/scripts/audit-skills
 
-      - name: Check Linux Home Manager activation package closure
-        run: nix build .#homeConfigurations.william-linux.activationPackage --dry-run
+      - name: Build Linux Home Manager activation package
+        run: nix build .#homeConfigurations.william-linux.activationPackage --no-link
 
-      - name: Dry-run NixOS host configurations
-        run: |
-          set -euo pipefail
-          for host in andromeda starfish foundation terminus; do
-            echo "=== nixosConfigurations.${host} (dry-run) ==="
-            nix build ".#nixosConfigurations.${host}.config.system.build.toplevel" --dry-run
-          done
+  nixos-hosts:
+    name: NixOS ${{ matrix.host }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        host:
+          - andromeda
+          - starfish
+          - foundation
+          - terminus
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@1d87d45818068401a10cf16bdc5f00b24994a83f # v3.21.0
+        with:
+          determinate: false
+          extra-conf: |
+            eval-cores = 1
+
+      - name: Build host
+        run: nix build -L ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --no-link
 
   nix-darwin:
     name: Nix Darwin
@@ -61,5 +78,5 @@ jobs:
         with:
           determinate: false
 
-      - name: Check Darwin Home Manager activation package closure
-        run: nix build .#homeConfigurations.william-darwin.activationPackage --dry-run
+      - name: Build Darwin Home Manager activation package
+        run: nix build .#homeConfigurations.william-darwin.activationPackage --no-link
