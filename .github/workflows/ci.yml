@@ -28,6 +28,8 @@ jobs:
           determinate: false
           extra-conf: |
             eval-cores = 1
+            extra-substituters = https://cache.numtide.com
+            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=
 
       - name: Run flake checks
         run: nix flake check -L
@@ -60,6 +62,8 @@ jobs:
           determinate: false
           extra-conf: |
             eval-cores = 1
+            extra-substituters = https://cache.numtide.com
+            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=
 
       - name: Build Linux Home Manager activation package
         run: nix build .#homeConfigurations.william-linux.activationPackage --no-link
@@ -85,6 +89,8 @@ jobs:
           determinate: false
           extra-conf: |
             eval-cores = 1
+            extra-substituters = https://cache.numtide.com
+            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=
 
       - name: Build host
         run: nix build -L ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --no-link
@@ -100,6 +106,9 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@1d87d45818068401a10cf16bdc5f00b24994a83f # v3.21.0
         with:
           determinate: false
+          extra-conf: |
+            extra-substituters = https://cache.numtide.com
+            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=
 
       - name: Build Darwin Home Manager activation package
         run: nix build .#homeConfigurations.william-darwin.activationPackage --no-link
