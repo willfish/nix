@@ -6,7 +6,7 @@
 {
   system.stateVersion = "24.11";
   imports = [
-    ../modules/common-configuration.nix
+    ../modules/workstation.nix
     ./hardware-configuration.nix
   ];
   nixpkgs.config.allowUnfree = true;

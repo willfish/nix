@@ -9,13 +9,8 @@
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.kernelParams = [ "btiso.enable=1" ];
-
-  networking.extraHosts = ''
-    127.0.0.1 host.docker.internal
-  '';
-
   networking.networkmanager.enable = true;
+  networking.firewall.trustedInterfaces = [ "lo" ];
 
   time.timeZone = "Europe/London";
 
@@ -32,59 +27,10 @@
     LC_TIME = "en_GB.UTF-8";
   };
 
-  # Enable CUPS to print documents.
-  services.printing.enable = true;
-
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-  };
-
-  networking.firewall.trustedInterfaces = [ "lo" ];
-
-  # Enable sound with pipewire.
-  services.pulseaudio.enable = false;
-
-  security.rtkit.enable = true;
-
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    wireplumber.enable = true;
-  };
-
   users.users.william = {
     isNormalUser = true;
     description = "William Fish";
-    extraGroups = [
-      "audio"
-      "bluetooth"
-      "docker"
-      "input"
-      "libvirt"
-      "networkmanager"
-      "video"
-      "wheel"
-    ];
-
-    packages = with pkgs; [
-      docker_29
-      docker-compose
-    ];
-
-  };
-
-  hardware.bluetooth = {
-    enable = true;
-    powerOnBoot = true;
-    settings = {
-      General = {
-        Experimental = true;
-      };
-    };
+    extraGroups = [ "wheel" ];
   };
 
   programs.gnupg.agent = {
@@ -96,11 +42,7 @@
     neovim
     curl
     git
-    ghostty
-
-    home-manager # Nix-based user environment manager
-
-    xclip
+    home-manager
   ];
   environment.shells = with pkgs; [
     bash
@@ -112,41 +54,14 @@
     package = pkgs.fish;
   };
 
-  virtualisation.docker = {
+  services.openssh = {
     enable = true;
-    package = pkgs.docker_29;
-  };
-
-  services = {
-    openssh = {
-      enable = true;
-      authorizedKeysFiles = [
-        ".ssh/authorized_keys"
-        "/run/secrets/ssh/authorized_keys.d/%u"
-      ];
-      settings.PasswordAuthentication = false;
-      settings.KbdInteractiveAuthentication = false;
-    };
-
-    spice-vdagentd.enable = true;
-
-    displayManager.cosmic-greeter.enable = true;
-    desktopManager.cosmic.enable = true;
-    xserver = {
-      xkb.layout = "us";
-      xkb.variant = "";
-      enable = true;
-    };
-  };
-
-  fonts = {
-    packages = with pkgs; [
-      adwaita-icon-theme
-      jetbrains-mono
-      nerd-fonts.jetbrains-mono
-      nerd-fonts.ubuntu
-      nerd-fonts.ubuntu-mono
+    authorizedKeysFiles = [
+      ".ssh/authorized_keys"
+      "/run/secrets/ssh/authorized_keys.d/%u"
     ];
+    settings.PasswordAuthentication = false;
+    settings.KbdInteractiveAuthentication = false;
   };
 
   documentation.nixos.enable = false;
