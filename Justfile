@@ -11,38 +11,50 @@ health host="":
     fi
 
     found=0
+    local_host="$(hostname -s | tr '[:upper:]' '[:lower:]')"
     for host_name in "${hosts[@]}"; do
       target=""
-      for candidate in "$host_name.local" "$host_name"; do
-        if nc -z -w 1 "$candidate" 22 </dev/null >/dev/null 2>&1; then
-          target="$candidate"
-          break
-        fi
-      done
-      if [ -z "$target" ]; then
-        continue
-      fi
-
-      ssh -o BatchMode=yes -o ConnectTimeout=3 -o HostKeyAlias="$host_name" \
-        "$target" true </dev/null >/dev/null 2>&1 &
-      probe_pid=$!
-      (sleep 5; kill "$probe_pid" 2>/dev/null || true) &
-      timer_pid=$!
-      if wait "$probe_pid"; then
-        probe_status=0
+      if [ "${host_name,,}" = "$local_host" ]; then
+        target="local"
       else
-        probe_status=$?
-      fi
-      kill "$timer_pid" 2>/dev/null || true
-      wait "$timer_pid" 2>/dev/null || true
-      if [ "$probe_status" -ne 0 ]; then
-        continue
+        for candidate in "$host_name.local" "$host_name"; do
+          if nc -z -w 1 "$candidate" 22 </dev/null >/dev/null 2>&1; then
+            target="$candidate"
+            break
+          fi
+        done
+        if [ -z "$target" ]; then
+          continue
+        fi
+
+        ssh -o BatchMode=yes -o ConnectTimeout=3 -o HostKeyAlias="$host_name" \
+          "$target" true </dev/null >/dev/null 2>&1 &
+        probe_pid=$!
+        (sleep 5; kill "$probe_pid" 2>/dev/null || true) &
+        timer_pid=$!
+        if wait "$probe_pid"; then
+          probe_status=0
+        else
+          probe_status=$?
+        fi
+        kill "$timer_pid" 2>/dev/null || true
+        wait "$timer_pid" 2>/dev/null || true
+        if [ "$probe_status" -ne 0 ]; then
+          continue
+        fi
       fi
 
       found=1
       printf '\n== %s ==\n' "$host_name"
-      ssh -o BatchMode=yes -o ConnectTimeout=3 -o HostKeyAlias="$host_name" \
-        "$target" bash -s <<'REMOTE'
+      if [ "$target" = "local" ]; then
+        runner=(bash -s)
+      else
+        runner=(
+          ssh -o BatchMode=yes -o ConnectTimeout=3 -o HostKeyAlias="$host_name"
+          "$target" bash -s
+        )
+      fi
+      "${runner[@]}" <<'REMOTE'
         uptime
         if command -v duf >/dev/null 2>&1; then
           duf --only local --output mountpoint,size,used,avail,usage
