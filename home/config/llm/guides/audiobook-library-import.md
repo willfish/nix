@@ -485,7 +485,7 @@ or subtitle when that is needed to make the children's-library picker clear.
 Missing numbered lectures, chapters, or stories fail this criterion even when
 the remaining files play.
 
-### AC3: technical integrity
+### AC3: technical integrity (**hard**)
 
 Probe every audio file:
 
