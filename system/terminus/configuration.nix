@@ -22,7 +22,9 @@
     mediaLocation = "/srv/media/immich";
   };
 
-  # Self-hosted audiobook/podcast server (iOS app + LAN/Tailscale).
+  # Self-hosted audiobook/podcast server (ShelfPlayer + LAN/Tailscale).
+  # Package is overlaid from nixpkgs-unstable (2.36.0) in flake.nix so iOS
+  # JWT refresh sessions survive app suspend / network handoff.
   # Library lives on tank/media; point the first web-UI library at /srv/media/audiobooks.
   services.audiobookshelf = {
     enable = true;
