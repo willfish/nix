@@ -27,7 +27,7 @@
     himalaya = {
       enable = true;
       settings = {
-        folder.alias = {
+        folder.aliases = {
           inbox = "INBOX";
           sent = "[Gmail]/Sent Mail";
           drafts = "[Gmail]/Drafts";
