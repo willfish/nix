@@ -32,15 +32,37 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
 
-          changed_files="$(gh pr view "$PR_NUMBER" --json files --jq '.files[].path')"
-          if [ "$changed_files" != "flake.lock" ]; then
-            printf 'Unexpected files changed:\n%s\n' "$changed_files" >&2
+          comparison="$(gh api --method GET "repos/$GH_REPO/compare/$BASE_SHA...$HEAD_SHA")"
+          # The compare API caps commits at 250 and files at 300. Require all
+          # commits and exactly one file, so truncated results cannot pass.
+          if ! jq -e --arg base "$BASE_SHA" --arg head "$HEAD_SHA" '
+            .base_commit.sha == $base and
+            .merge_base_commit.sha == $base and
+            .status == "ahead" and
+            (.commits | type) == "array" and
+            .total_commits > 0 and .total_commits <= 250 and
+            .total_commits == (.commits | length) and
+            .commits[-1].sha == $head and
+            (.files | type) == "array" and (.files | length) == 1 and
+            .files[0].filename == "flake.lock" and
+            .files[0].status == "modified" and
+            (.files[0] | has("previous_filename") | not)
+          ' <<< "$comparison" >/dev/null; then
+            echo "Immutable comparison is not a complete lock-only update; manual review required." >&2
             exit 1
           fi
+
+      # Only base-branch code runs with the pull_request_target token.
+      - name: Check out trusted lock policy
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
 
       - name: Verify changed flake inputs are auto-mergeable
         env:
@@ -61,53 +83,7 @@ jobs:
             -f ref="$HEAD_SHA" \
             --jq '.content' | base64 --decode > "$tmpdir/head.lock"
 
-          jq -S '.nodes.root.inputs' "$tmpdir/base.lock" > "$tmpdir/base-inputs.json"
-          jq -S '.nodes.root.inputs' "$tmpdir/head.lock" > "$tmpdir/head-inputs.json"
-          if ! cmp -s "$tmpdir/base-inputs.json" "$tmpdir/head-inputs.json"; then
-            echo "flake.lock changes the root input graph; manual review required." >&2
-            exit 1
-          fi
-
-          jq -r '.nodes.root.inputs | to_entries[] | [.key, .value] | @tsv' "$tmpdir/head.lock" |
-            while IFS=$'\t' read -r input node; do
-              jq -S --arg node "$node" '.nodes[$node].locked // null' "$tmpdir/base.lock" > "$tmpdir/base-$input.json"
-              jq -S --arg node "$node" '.nodes[$node].locked // null' "$tmpdir/head.lock" > "$tmpdir/head-$input.json"
-
-              if ! cmp -s "$tmpdir/base-$input.json" "$tmpdir/head-$input.json"; then
-                printf '%s\n' "$input"
-              fi
-            done > "$tmpdir/changed-inputs"
-
-          if [ ! -s "$tmpdir/changed-inputs" ]; then
-            echo "No changed top-level flake inputs found."
-            exit 0
-          fi
-
-          printf '%s\n' "$AUTO_MERGE_GITHUB_OWNERS" |
-            sed '/^[[:space:]]*$/d' |
-            sort > "$tmpdir/allowed-owners.sorted"
-
-          while IFS= read -r input; do
-            node="$(jq -r --arg input "$input" '.nodes.root.inputs[$input]' "$tmpdir/head.lock")"
-            base_identity="$(jq -r --arg node "$node" '.nodes[$node].locked | [.type, .owner, .repo] | @tsv' "$tmpdir/base.lock")"
-            head_identity="$(jq -r --arg node "$node" '.nodes[$node].locked | [.type, .owner, .repo] | @tsv' "$tmpdir/head.lock")"
-
-            if [ "$base_identity" != "$head_identity" ]; then
-              printf 'Manual review required for %s: locked source changed from %s to %s.\n' \
-                "$input" "$base_identity" "$head_identity" >&2
-              exit 1
-            fi
-
-            owner="$(printf '%s\n' "$head_identity" | cut -f2)"
-            if ! grep -Fxq "$owner" "$tmpdir/allowed-owners.sorted"; then
-              printf 'Manual review required for %s: GitHub owner %s is not auto-mergeable.\n' \
-                "$input" "$owner" >&2
-              exit 1
-            fi
-          done < "$tmpdir/changed-inputs"
-
-          printf 'Auto-merge allowed for changed flake input(s):\n'
-          sort "$tmpdir/changed-inputs"
+          python3 -I scripts/check-flake-lock-update.py "$tmpdir/base.lock" "$tmpdir/head.lock"
 
       - name: Approve CI workflow run
         env:
@@ -144,8 +120,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          set -euo pipefail
+
+          current_commits="$(gh pr view "$PR_URL" --json baseRefOid,headRefOid \
+            --jq '.baseRefOid + " " + .headRefOid')"
+          if [ "$current_commits" != "$BASE_SHA $HEAD_SHA" ]; then
+            echo "PR base or head changed since lock verification; manual review required." >&2
+            exit 1
+          fi
+
           gh pr merge "$PR_URL" \
             --auto \
+            --match-head-commit "$HEAD_SHA" \
             --rebase \
             --delete-branch
