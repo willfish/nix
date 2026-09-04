@@ -86,6 +86,12 @@ jobs:
             '.#homeConfigurations."william@starfish".activationPackage' \
             '.#homeConfigurations."william@terminus".activationPackage'
 
+      - name: Run Slack MCP transport regression
+        run: |
+          slack_test_home="$(nix eval --raw .#homeConfigurations.william-linux.activationPackage.outPath)"
+          SLACK_MCP_WRAPPER="$slack_test_home/home-files/.local/bin/mcp-slack" \
+            "$slack_test_home/home-path/bin/node" --test tests/slack-session-fetch.test.mjs
+
   nixos-hosts:
     name: NixOS ${{ matrix.host }}
     runs-on: ubuntu-latest
