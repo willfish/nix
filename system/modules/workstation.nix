@@ -9,6 +9,10 @@
   '';
 
   services.printing.enable = true;
+  services.mullvad-vpn = {
+    enable = true;
+    package = pkgs.mullvad-vpn;
+  };
   services.avahi = {
     enable = true;
     nssmdns4 = true;
