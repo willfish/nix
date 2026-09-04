@@ -1,4 +1,6 @@
-"""Check cleanup policy with local origins and the actual installed Git wrapper."""
+"""Check cleanup policy with local origins and the actual installed Git
+wrapper.
+"""
 
 from pathlib import Path
 import re
@@ -26,13 +28,21 @@ class GitCleanupTest(unittest.TestCase):
         self.real("init", "--bare", "--initial-branch=main", str(origin))
         self.real("remote", "add", "origin", str(origin))
         self.real("push", "-u", "origin", "main")
-        self.real("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+        self.real(
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/main",
+        )
         source = (ROOT / "home/user/shells.nix").read_text()
         matches = re.findall(
-            r'git-cleanup = pkgs.writeShellScriptBin "git-cleanup" \'\'\n(.*?)\n  \'\';',
-            source, re.S,
+            r'git-cleanup = pkgs.writeShellScriptBin "git-cleanup" '
+            r"\'\'\n(.*?)\n  \'\';",
+            source,
+            re.S,
         )
-        self.assertEqual(len(matches), 1, "extract exactly the shipped cleanup command")
+        self.assertEqual(
+            len(matches), 1, "extract exactly the shipped cleanup command"
+        )
         script = textwrap.dedent(matches[0]).replace("''${", "${")
         script = script.replace("${pkgs.git}/bin/git", str(self.fixture.git))
         self.cleanup = self.root / "git-cleanup"
@@ -42,8 +52,12 @@ class GitCleanupTest(unittest.TestCase):
 
     def run_cleanup(self, cwd=None):
         return subprocess.run(
-            [str(self.cleanup)], cwd=cwd or self.repo, env=self.env,
-            capture_output=True, text=True, timeout=15,
+            [str(self.cleanup)],
+            cwd=cwd or self.repo,
+            env=self.env,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
 
     def tracked_tree(self, name="feature", merged=True, gone=True):
@@ -62,7 +76,9 @@ class GitCleanupTest(unittest.TestCase):
         self.assertTrue(path.is_dir(), f"worktree removed: {path}")
         self.assertTrue((state / "sentinel").is_file())
         self.real("show-ref", "--verify", "refs/heads/" + branch)
-        self.assertFalse(self.fixture.log.exists(), "protected tree reached service cleanup")
+        self.assertFalse(
+            self.fixture.log.exists(), "protected tree reached service cleanup"
+        )
 
     def test_unpublished_merged_worktree_is_retained(self):
         path, state = self.fixture.worktree()
@@ -103,7 +119,9 @@ class GitCleanupTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(path.exists())
         self.assertFalse(state.exists())
-        branches = self.real("for-each-ref", "--format=%(refname)", "refs/heads").stdout
+        branches = self.real(
+            "for-each-ref", "--format=%(refname)", "refs/heads"
+        ).stdout
         self.assertNotIn("refs/heads/" + branch, branches)
 
     def test_dirty_tracked_worktree_is_retained(self):
@@ -151,7 +169,11 @@ class GitCleanupTest(unittest.TestCase):
 
     def test_missing_origin_default_stops_before_cleanup(self):
         path, state, branch = self.tracked_tree()
-        self.real("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/unknown")
+        self.real(
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/unknown",
+        )
         result = self.run_cleanup()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("default", result.stderr.lower())
@@ -161,12 +183,15 @@ class GitCleanupTest(unittest.TestCase):
         path, state, branch = self.tracked_tree()
         # Pull must remain possible without recreating the gone origin ref.
         (self.fixture.tools / "bin" / "git").unlink()
-        self.fixture.write_tool("git", '''
+        self.fixture.write_tool(
+            "git",
+            """
             case "$*" in
               'pull --ff-only') exit 0 ;;
             esac
             exec "$WRAPPED_GIT" "$@"
-        ''')
+        """,
+        )
         self.env["WRAPPED_GIT"] = str(self.fixture.wrapper)
         result = self.run_cleanup(cwd=path)
         self.assertEqual(result.returncode, 0, result.stderr)

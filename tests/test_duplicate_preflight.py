@@ -12,7 +12,10 @@ from unittest.mock import patch
 
 SCRIPT = (
     Path(__file__).resolve().parents[1]
-    / "home/config/llm/skills/audiobook-library-import/scripts/source_target_duplicate_check.py"
+    / (
+        "home/config/llm/skills/audiobook-library-import/scripts/"
+        "source_target_duplicate_check.py"
+    )
 )
 SPEC = importlib.util.spec_from_file_location("duplicate_preflight", SCRIPT)
 duplicate = importlib.util.module_from_spec(SPEC)

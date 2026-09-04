@@ -45,7 +45,8 @@ class FakeBrowser:
             value = {"webSocketDebuggerUrl": "ws://fixture/browser"}
         elif url.endswith("/json/list"):
             value = [
-                item for item in self.tabs
+                item
+                for item in self.tabs
                 if self.publish_target or item["id"] != "refresh-owned"
             ]
         elif url == "https://slack.com/api/auth.test":
@@ -71,9 +72,15 @@ class FakeBrowser:
                 params = request.get("params", {})
                 result = {}
                 if method == "Storage.getCookies":
-                    result = {"cookies": [
-                        {"name": "d", "domain": ".slack.com", "value": COOKIE}
-                    ]}
+                    result = {
+                        "cookies": [
+                            {
+                                "name": "d",
+                                "domain": ".slack.com",
+                                "value": COOKIE,
+                            }
+                        ]
+                    }
                 elif method == "Target.createTarget":
                     browser.created.append(params)
                     browser.tabs.append(tab("refresh-owned", params["url"]))
@@ -81,20 +88,34 @@ class FakeBrowser:
                 elif method == "Target.closeTarget":
                     browser.closed.append(params["targetId"])
                     browser.tabs = [
-                        item for item in browser.tabs
+                        item
+                        for item in browser.tabs
                         if item["id"] != params["targetId"]
                     ]
                     result = {"success": True}
                 elif method == "Page.navigate":
                     browser.navigations.append((target_id, params["url"]))
-                    next(item for item in browser.tabs if item["id"] == target_id)["url"] = params["url"]
+                    next(
+                        item for item in browser.tabs if item["id"] == target_id
+                    )["url"] = params["url"]
                 elif method == "Runtime.evaluate":
                     browser.evaluated.append(target_id)
                     if browser.evaluate_error:
-                        self.reply = {"id": request["id"], "error": {"message": "fixture evaluation failure"}}
+                        self.reply = {
+                            "id": request["id"],
+                            "error": {"message": "fixture evaluation failure"},
+                        }
                         return
-                    page = next(item for item in browser.tabs if item["id"] == target_id)
-                    result = {"result": {"value": json.dumps({"url": page["url"], "tokens": [TOKEN]})}}
+                    page = next(
+                        item for item in browser.tabs if item["id"] == target_id
+                    )
+                    result = {
+                        "result": {
+                            "value": json.dumps(
+                                {"url": page["url"], "tokens": [TOKEN]}
+                            )
+                        }
+                    }
                 elif method not in {"Page.enable", "Runtime.enable"}:
                     raise AssertionError(f"Unexpected CDP method: {method}")
                 self.reply = {"id": request["id"], "result": result}
@@ -107,7 +128,11 @@ class FakeBrowser:
 
 class SlackRefreshSessionTest(unittest.TestCase):
     def run_refresh(self, browser, *, workspace=None):
-        source = SCRIPT.read_text().split('"$PYTHON_BIN" - <<\'PY\'\n', 1)[1].split("\nPY\n", 1)[0]
+        source = (
+            SCRIPT.read_text()
+            .split("\"$PYTHON_BIN\" - <<'PY'\n", 1)[1]
+            .split("\nPY\n", 1)[0]
+        )
         tree = ast.parse(source)
         self.assertEqual(ast.unparse(tree.body.pop()), "asyncio.run(main())")
         output = io.StringIO()
@@ -120,7 +145,14 @@ class SlackRefreshSessionTest(unittest.TestCase):
                 env["SLACK_TEAM_ID"] = workspace
             with (
                 patch.dict(os.environ, env, clear=True),
-                patch.dict(sys.modules, {"websockets": types.SimpleNamespace(connect=browser.connect)}),
+                patch.dict(
+                    sys.modules,
+                    {
+                        "websockets": types.SimpleNamespace(
+                            connect=browser.connect
+                        )
+                    },
+                ),
                 patch("urllib.request.urlopen", side_effect=browser.urlopen),
                 patch("asyncio.sleep", new=AsyncMock()),
                 contextlib.redirect_stdout(output),
@@ -138,15 +170,21 @@ class SlackRefreshSessionTest(unittest.TestCase):
         return failure
 
     def assert_unrelated_preserved(self, browser):
-        unrelated = next(item for item in browser.tabs if item["id"] == "unrelated")
+        unrelated = next(
+            item for item in browser.tabs if item["id"] == "unrelated"
+        )
         self.assertEqual(unrelated["url"], "https://example.invalid/editor")
         self.assertEqual(browser.navigations, [])
 
     def test_reuses_matching_slack_tab_without_touching_other_pages(self):
-        browser = FakeBrowser([
-            tab("unrelated", "https://example.invalid/editor"),
-            tab("existing", "https://app.slack.com/client/TEXISTING/channel"),
-        ])
+        browser = FakeBrowser(
+            [
+                tab("unrelated", "https://example.invalid/editor"),
+                tab(
+                    "existing", "https://app.slack.com/client/TEXISTING/channel"
+                ),
+            ]
+        )
         self.assertIsNone(self.run_refresh(browser))
         self.assert_unrelated_preserved(browser)
         self.assertEqual(browser.evaluated, ["existing"])
@@ -154,35 +192,54 @@ class SlackRefreshSessionTest(unittest.TestCase):
         self.assertEqual(browser.closed, [])
 
     def test_creates_and_closes_only_its_own_tab(self):
-        browser = FakeBrowser([tab("unrelated", "https://example.invalid/editor")])
+        browser = FakeBrowser(
+            [tab("unrelated", "https://example.invalid/editor")]
+        )
         self.assertIsNone(self.run_refresh(browser))
         self.assert_unrelated_preserved(browser)
         self.assertEqual(browser.closed, ["refresh-owned"])
-        self.assertEqual(browser.created, [{"url": "https://app.slack.com/client", "background": True}])
+        self.assertEqual(
+            browser.created,
+            [{"url": "https://app.slack.com/client", "background": True}],
+        )
 
     def test_new_tab_is_closed_when_token_extraction_fails(self):
-        browser = FakeBrowser([tab("unrelated", "https://example.invalid/editor")], evaluate_error=True)
+        browser = FakeBrowser(
+            [tab("unrelated", "https://example.invalid/editor")],
+            evaluate_error=True,
+        )
         self.assertIsNotNone(self.run_refresh(browser))
         self.assert_unrelated_preserved(browser)
         self.assertEqual(browser.closed, ["refresh-owned"])
 
     def test_new_tab_is_closed_when_target_discovery_fails(self):
-        browser = FakeBrowser([tab("unrelated", "https://example.invalid/editor")], publish_target=False)
+        browser = FakeBrowser(
+            [tab("unrelated", "https://example.invalid/editor")],
+            publish_target=False,
+        )
         self.assertIsNotNone(self.run_refresh(browser))
         self.assert_unrelated_preserved(browser)
         self.assertEqual(browser.closed, ["refresh-owned"])
 
     def test_existing_slack_tab_is_never_closed_on_failure(self):
-        browser = FakeBrowser([tab("existing", "https://app.slack.com/client/TEXISTING")], evaluate_error=True)
+        browser = FakeBrowser(
+            [tab("existing", "https://app.slack.com/client/TEXISTING")],
+            evaluate_error=True,
+        )
         self.assertIsNotNone(self.run_refresh(browser))
         self.assertEqual(browser.closed, [])
         self.assertEqual(browser.navigations, [])
 
     def test_configured_workspace_selects_its_tab(self):
-        browser = FakeBrowser([
-            tab("other-workspace", "https://app.slack.com/client/TOTHER"),
-            tab("expected-workspace", "https://app.slack.com/client/TEXPECTED/channel"),
-        ])
+        browser = FakeBrowser(
+            [
+                tab("other-workspace", "https://app.slack.com/client/TOTHER"),
+                tab(
+                    "expected-workspace",
+                    "https://app.slack.com/client/TEXPECTED/channel",
+                ),
+            ]
+        )
         self.assertIsNone(self.run_refresh(browser, workspace="TEXPECTED"))
         self.assertEqual(browser.evaluated, ["expected-workspace"])
         self.assertEqual(browser.navigations, [])

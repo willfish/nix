@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# eclint checks only its first positional argument.
+result=0
+for file in "$@"; do
+  eclint -- "$file" || result=1
+done
+exit "$result"
