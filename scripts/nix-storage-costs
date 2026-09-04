@@ -8,27 +8,100 @@ out_dir=""
 summary=0
 limit=15
 color="auto"
+scope="auto"
+from_nh=0
+nix_args=(--no-write-lock-file)
 
 usage() {
   cat >&2 <<'USAGE'
-usage: scripts/nix-storage-costs [--flake PATH] [--host HOST] [--home HOME_CONFIG] [--out-dir DIR] [--summary] [--limit N] [--color auto|always|never]
+usage: scripts/nix-storage-costs [--flake REF] [--scope auto|system|home|both] [--host HOST] [--home HOME_CONFIG] [--out-dir DIR] [--summary] [--limit N] [--color auto|always|never]
 
-Builds the selected NixOS and Home Manager outputs, then reports closure costs
+Builds the selected outputs, then reports closure costs
 for the package/program roots defined by those configurations.
 
 Defaults:
   --flake   .
   --host    $(hostname)
-  --home    william@HOST, falling back to william-linux
+  --scope   both on Linux, home on Darwin
+  --home    william@HOST or william-linux on Linux; william-darwin on Darwin
   --out-dir ${XDG_STATE_HOME:-$HOME/.local/state}/nix-storage-costs
   --limit   15
 USAGE
 }
 
+skip_nh_report() {
+  echo "Storage-cost callback skipped: $*" >&2
+  return 1
+}
+
+parse_nh_switch() {
+  [ "$#" -ge 2 ] && [ "$2" = switch ] || return 1
+  case "$1" in
+    os) scope=system; flake="${NH_OS_FLAKE:-${NH_FLAKE:-}}" ;;
+    home) scope=home; flake="${NH_HOME_FLAKE:-${NH_FLAKE:-}}" ;;
+    *) return 1 ;;
+  esac
+  shift 2
+  from_nh=1
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -n|--dry|-h|--help) return 1 ;;
+      -H|--hostname) host="$2"; shift 2 ;;
+      --hostname=*) host="${1#*=}"; shift ;;
+      -H?*) host="${1#-H}"; shift ;;
+      -c|--configuration) home_config="$2"; shift 2 ;;
+      --configuration=*) home_config="${1#*=}"; shift ;;
+      -c?*) home_config="${1#-c}"; shift ;;
+      --override-input|--override-input=*)
+        skip_nh_report "input overrides require an explicit report"; return 1 ;;
+      --option)
+        nix_args+=("$1" "$2" "$3"); shift 3 ;;
+      -I|--include)
+        nix_args+=("$1" "$2"); shift 2 ;;
+      --impure|--offline|--accept-flake-config|--show-trace|--no-update-lock-file|--no-write-lock-file|--no-use-registries|--no-registries)
+        nix_args+=("$1"); shift ;;
+      --no-net) nix_args+=(--offline); shift ;;
+      -o|--out-link|-d|--diff|-j|--max-jobs|--cores|--log-format|--builders|-e|--elevation-strategy|-b|--backup-extension|-U|--update-input)
+        shift 2 ;;
+      --out-link=*|--diff=*|--max-jobs=*|--cores=*|--log-format=*|--builders=*|--elevation-strategy=*|--backup-extension=*|--update-input=*)
+        shift ;;
+      -v|-vv|-vvv|--verbose|-q|-qq|-qqq|--quiet|-a|--ask|--no-nom|-k|--keep-going|-K|--keep-failed|--fallback|--repair|-L|--print-build-logs|-t|-Q|--no-build-output|--use-substitutes|--json|-u|--update|-S|--no-specialisation|--show-activation-logs|--install-bootloader|-R|--bypass-root-check|--no-validate)
+        shift ;;
+      --)
+        shift
+        if [ "$#" -gt 0 ]; then
+          skip_nh_report "extra Nix arguments require an explicit report"
+          return 1
+        fi ;;
+      -*) skip_nh_report "unsupported nh option $1"; return 1 ;;
+      *) flake="$1"; shift ;;
+    esac
+  done
+  if [ -z "$flake" ]; then
+    skip_nh_report "no explicit flake or NH flake environment variable"
+    return 1
+  fi
+  case "$flake" in
+    *'#'*|/nix/store/*) skip_nh_report "attribute/store installables require an explicit report"; return 1 ;;
+  esac
+}
+
+# Both shells forward the successful nh invocation intact. Keep its argument
+# selection here so option values cannot accidentally become a flake path.
+if [ "${1:-}" = --after-nh-switch ]; then
+  shift
+  parse_nh_switch "$@" || exit 0
+  set -- --summary --limit 12
+fi
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --flake)
       flake="$2"
+      shift 2
+      ;;
+    --scope)
+      scope="$2"
       shift 2
       ;;
     --host)
@@ -71,23 +144,52 @@ if [ -z "$out_dir" ]; then
   out_dir="$state_home/nix-storage-costs"
 fi
 
-flake_path="$(realpath "$flake")"
+platform="$(uname -s)"
+if [ "$scope" = auto ]; then
+  if [ "$platform" = Darwin ]; then scope=home; else scope=both; fi
+fi
+case "$scope" in
+  system|home|both) ;;
+  *) echo "--scope must be auto, system, home or both" >&2; exit 64 ;;
+esac
+if [ -d "$flake" ]; then
+  flake_path="$(realpath "$flake")"
+else
+  flake_path="$flake"
+fi
+if [ "$from_nh" -eq 1 ]; then
+  case "$flake_path" in
+    /nix/store/*)
+      skip_nh_report "resolved store installables require an explicit report" || exit 0
+      ;;
+  esac
+fi
 export NIX_STORAGE_COST_FLAKE="$flake_path"
 export NIX_STORAGE_COST_HOST="$host"
+export NIX_STORAGE_COST_SCOPE="$scope"
+export NIX_STORAGE_COST_PLATFORM="$platform"
+export NIX_STORAGE_COST_FROM_NH="$from_nh"
+export NIX_STORAGE_COST_USER
+NIX_STORAGE_COST_USER="$(whoami)"
 
-if [ -z "$home_config" ]; then
+if [ "$scope" != system ] && [ -z "$home_config" ]; then
+  # Match nh's username@hostname / username fallback for an implicit selection.
+  # Direct reports retain the dotfiles platform defaults.
   # shellcheck disable=SC2016
-  if nix eval --impure --raw --expr '
+  home_config="$(nix eval "${nix_args[@]}" --impure --raw --expr '
     let
       f = builtins.getFlake (builtins.getEnv "NIX_STORAGE_COST_FLAKE");
       host = builtins.getEnv "NIX_STORAGE_COST_HOST";
+      user = builtins.getEnv "NIX_STORAGE_COST_USER";
+      candidates =
+        if builtins.getEnv "NIX_STORAGE_COST_FROM_NH" == "1" then [ "${user}@${host}" user ]
+        else if builtins.getEnv "NIX_STORAGE_COST_PLATFORM" == "Darwin" then [ "william-darwin" ]
+        else [ "william@${host}" "william-linux" ];
+      matching = builtins.filter (name: builtins.hasAttr name f.homeConfigurations) candidates;
     in
-      if builtins.hasAttr "william@${host}" f.homeConfigurations then "yes" else "no"
-  ' | grep -qx yes; then
-    home_config="william@${host}"
-  else
-    home_config="william-linux"
-  fi
+      if matching == [] then throw "No matching Home Manager configuration; pass --home"
+      else builtins.head matching
+  ')"
 fi
 
 case "$limit" in
@@ -112,17 +214,22 @@ esac
 
 mkdir -p "$out_dir"
 
-echo "Building NixOS system for ${host}..."
-system_path="$(
-  nix build --no-link --print-out-paths \
-    "${flake_path}#nixosConfigurations.${host}.config.system.build.toplevel"
-)"
-
-echo "Building Home Manager activation package for ${home_config}..."
-home_path="$(
-  nix build --no-link --print-out-paths \
-    "${flake_path}#homeConfigurations.\"${home_config}\".activationPackage"
-)"
+system_path=""
+home_path=""
+if [ "$scope" != home ]; then
+  echo "Building NixOS system for ${host}..."
+  system_path="$(
+    nix build "${nix_args[@]}" --no-link --print-out-paths \
+      "${flake_path}#nixosConfigurations.\"${host}\".config.system.build.toplevel"
+  )"
+fi
+if [ "$scope" != system ]; then
+  echo "Building Home Manager activation package for ${home_config}..."
+  home_path="$(
+    nix build "${nix_args[@]}" --no-link --print-out-paths \
+      "${flake_path}#homeConfigurations.\"${home_config}\".activationPackage"
+  )"
+fi
 
 inventory_json="$(mktemp)"
 trap 'rm -f "$inventory_json"' EXIT
@@ -130,11 +237,12 @@ trap 'rm -f "$inventory_json"' EXIT
 export NIX_STORAGE_COST_HOME="$home_config"
 
 # shellcheck disable=SC2016
-nix eval --impure --json --expr '
+nix eval "${nix_args[@]}" --impure --json --expr '
 let
   flake = builtins.getFlake (builtins.getEnv "NIX_STORAGE_COST_FLAKE");
   host = builtins.getEnv "NIX_STORAGE_COST_HOST";
   homeName = builtins.getEnv "NIX_STORAGE_COST_HOME";
+  scope = builtins.getEnv "NIX_STORAGE_COST_SCOPE";
   lib = flake.inputs.nixpkgs.lib;
   nixos = flake.nixosConfigurations.${host}.config;
   home = flake.homeConfigurations.${homeName}.config;
@@ -155,26 +263,29 @@ let
   optionalPath = source: path: root:
     optionalItem source (lib.concatStringsSep "." path) (lib.attrByPath path null root);
 in
-  (items "nixos" "environment.systemPackages" nixos.environment.systemPackages)
-  ++ (items "nixos" "users.users.william.packages" nixos.users.users.william.packages)
-  ++ (items "nixos" "fonts.packages" nixos.fonts.packages)
-  ++ (items "nixos" "environment.shells" nixos.environment.shells)
-  ++ (optionalItem "nixos" "users.defaultUserShell" nixos.users.defaultUserShell)
-  ++ (optionalItem "nixos" "programs.fish.package" nixos.programs.fish.package)
-  ++ (optionalItem "nixos" "virtualisation.docker.package" nixos.virtualisation.docker.package)
-  ++ (optionalItem "nixos" "boot.kernelPackages.kernel" nixos.boot.kernelPackages.kernel)
-  ++ (optionalPath "nixos" [ "services" "pipewire" "package" ] nixos)
-  ++ (optionalPath "nixos" [ "services" "openssh" "package" ] nixos)
-  ++ (optionalPath "nixos" [ "services" "avahi" "package" ] nixos)
-  ++ (optionalPath "nixos" [ "services" "printing" "package" ] nixos)
-  ++ (items "home-manager" "home.packages/evaluated" home.home.packages)
-  ++ (optionalItem "home-manager" "programs.git.package" home.programs.git.package)
-  ++ (optionalItem "home-manager" "programs.fish.package" home.programs.fish.package)
-  ++ (optionalItem "home-manager" "programs.tmux.package" home.programs.tmux.package)
-  ++ (optionalItem "home-manager" "programs.zoxide.package" home.programs.zoxide.package)
-  ++ (optionalItem "home-manager" "programs.direnv.package" home.programs.direnv.package)
-  ++ lib.optionals (home.programs ? brave) (optionalItem "home-manager" "programs.brave.package" home.programs.brave.package)
-  ++ lib.optionals (home.programs ? google-chrome) (optionalItem "home-manager" "programs.google-chrome.package" home.programs.google-chrome.package)
+  (lib.optionals (scope != "home") (
+    (items "nixos" "environment.systemPackages" nixos.environment.systemPackages)
+    ++ (items "nixos" "users.users.william.packages" nixos.users.users.william.packages)
+    ++ (items "nixos" "fonts.packages" nixos.fonts.packages)
+    ++ (items "nixos" "environment.shells" nixos.environment.shells)
+    ++ (optionalItem "nixos" "users.defaultUserShell" nixos.users.defaultUserShell)
+    ++ (optionalItem "nixos" "programs.fish.package" nixos.programs.fish.package)
+    ++ (optionalItem "nixos" "virtualisation.docker.package" nixos.virtualisation.docker.package)
+    ++ (optionalItem "nixos" "boot.kernelPackages.kernel" nixos.boot.kernelPackages.kernel)
+    ++ (optionalPath "nixos" [ "services" "pipewire" "package" ] nixos)
+    ++ (optionalPath "nixos" [ "services" "openssh" "package" ] nixos)
+    ++ (optionalPath "nixos" [ "services" "avahi" "package" ] nixos)
+    ++ (optionalPath "nixos" [ "services" "printing" "package" ] nixos)
+  )) ++ (lib.optionals (scope != "system") (
+    (items "home-manager" "home.packages/evaluated" home.home.packages)
+    ++ (optionalItem "home-manager" "programs.git.package" home.programs.git.package)
+    ++ (optionalItem "home-manager" "programs.fish.package" home.programs.fish.package)
+    ++ (optionalItem "home-manager" "programs.tmux.package" home.programs.tmux.package)
+    ++ (optionalItem "home-manager" "programs.zoxide.package" home.programs.zoxide.package)
+    ++ (optionalItem "home-manager" "programs.direnv.package" home.programs.direnv.package)
+    ++ lib.optionals (home.programs ? brave) (optionalItem "home-manager" "programs.brave.package" home.programs.brave.package)
+    ++ lib.optionals (home.programs ? google-chrome) (optionalItem "home-manager" "programs.google-chrome.package" home.programs.google-chrome.package)
+  ))
 ' > "$inventory_json"
 
 python3 - "$inventory_json" "$system_path" "$home_path" "$host" "$home_config" "$out_dir" "$summary" "$limit" "$color" <<'PY'
@@ -277,7 +388,7 @@ def chunks(values, size):
         yield values[index:index + size]
 
 sizes = {}
-for chunk in chunks(sorted(all_paths | {system_path, home_path}), 400):
+for chunk in chunks(sorted(all_paths | {path for path in (system_path, home_path) if path}), 400):
     info = json.loads(subprocess.check_output(["nix", "path-info", "--json", *chunk], text=True))
     for path, metadata in info.items():
         if not metadata:
@@ -316,8 +427,8 @@ for root in roots:
 rows.sort(key=lambda row: (row["unique_inventory_bytes"], row["closure_bytes"]), reverse=True)
 
 total_inventory_closure = sum(sizes[p] for p in all_paths)
-system_closure = closure_size(system_path)
-home_closure = closure_size(home_path)
+system_closure = closure_size(system_path) if system_path else 0
+home_closure = closure_size(home_path) if home_path else 0
 
 groups = {}
 for row in rows:
@@ -381,7 +492,7 @@ def display_sources(sources):
 def table_line(columns, widths):
     return "  ".join(str(value).ljust(width) for value, width in zip(columns, widths))
 
-safe_home = home_config.replace("@", "_").replace("/", "_")
+safe_home = home_config.replace("@", "_").replace("/", "_") or "system"
 prefix = out_dir / f"{host}-{safe_home}-storage-costs"
 csv_path = prefix.with_suffix(".csv")
 md_path = prefix.with_suffix(".md")
@@ -414,8 +525,10 @@ with md_path.open("w") as f:
     f.write(f"# Storage Costs for {host}\n\n")
     f.write(f"Generated: {generated}\n\n")
     f.write("## Scope\n\n")
-    f.write(f"- NixOS system: `{system_path}`\n")
-    f.write(f"- Home Manager: `{home_config}` -> `{home_path}`\n")
+    if system_path:
+        f.write(f"- NixOS system: `{system_path}`\n")
+    if home_path:
+        f.write(f"- Home Manager: `{home_config}` -> `{home_path}`\n")
     f.write(f"- Inventory roots: {len(rows)} de-duplicated store paths\n")
     if skipped:
         f.write(
@@ -423,8 +536,11 @@ with md_path.open("w") as f:
             f"(evaluated package paths not present in the local store)\n"
         )
     f.write(f"- Inventory closure: {human(total_inventory_closure)}\n")
-    f.write(f"- NixOS system closure: {human(system_closure)}\n")
-    f.write(f"- Home Manager activation closure: {human(home_closure)}\n\n")
+    if system_path:
+        f.write(f"- NixOS system closure: {human(system_closure)}\n")
+    if home_path:
+        f.write(f"- Home Manager activation closure: {human(home_closure)}\n")
+    f.write("\n")
     f.write("`closure` is the full dependency closure for that root. `unique` is the subset of that closure referenced by only one root in this inventory; it is the better first-pass signal for storage you might save by removing one item from these package/program roots.\n\n")
     if skipped:
         f.write("## Skipped Unrealized Roots\n\n")
@@ -481,12 +597,12 @@ if summary:
     widths = [name_width, 5, source_width, 11, 11, 11]
 
     print()
-    print(paint(f"Storage costs for {host} ({home_config})", "1;36"))
+    print(paint(f"Storage costs for {host} ({home_config or 'NixOS'})", "1;36"))
     print(
         f"Inventory {paint(human(total_inventory_closure), '1;33')}  "
-        f"NixOS {paint(human(system_closure), '1;32')}  "
-        f"Home {paint(human(home_closure), '1;32')}  "
-        f"Roots {paint(str(len(rows)), '1;34')}"
+        + (f"NixOS {paint(human(system_closure), '1;32')}  " if system_path else "")
+        + (f"Home {paint(human(home_closure), '1;32')}  " if home_path else "")
+        + f"Roots {paint(str(len(rows)), '1;34')}"
         + (
             f"  Skipped {paint(str(len(skipped)), '1;33')}"
             if skipped
