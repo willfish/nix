@@ -23,36 +23,6 @@ let
       fi
     }
 
-    worktree_remove_target() {
-      remove_index="$1"
-      target=""
-      target_index=$((remove_index + 2))
-      arg_count="''${#args[@]}"
-
-      while [ "$target_index" -lt "$arg_count" ]; do
-        arg="''${args[$target_index]}"
-
-        case "$arg" in
-          --)
-            target_index=$((target_index + 1))
-            if [ "$target_index" -lt "$arg_count" ]; then
-              target="''${args[$target_index]}"
-            fi
-            break
-            ;;
-          -*)
-            target_index=$((target_index + 1))
-            ;;
-          *)
-            target="$arg"
-            break
-            ;;
-        esac
-      done
-
-      printf '%s\n' "$target"
-    }
-
     command_working_dir() {
       dir="$PWD"
       global_index=0
@@ -86,39 +56,6 @@ let
     current_repo_root() {
       dir="$(command_working_dir)"
       "$real_git" -c core.fsmonitor=false -C "$dir" rev-parse --show-toplevel 2>/dev/null || true
-    }
-
-    worktree_path_for_remove_target() {
-      target="$1"
-
-      [ -n "$target" ] || return 0
-
-      case "$target" in
-        /*)
-          printf '%s\n' "$target"
-          ;;
-        *)
-          printf '%s/%s\n' "$(command_working_dir)" "$target"
-          ;;
-      esac
-    }
-
-    worktree_id_for_path() {
-      worktree_path="$1"
-      worktree_root="$(
-        "$real_git" -c core.fsmonitor=false -C "$worktree_path" \
-          rev-parse --show-toplevel 2>/dev/null || true
-      )"
-
-      [ -n "$worktree_root" ] || return 1
-
-      if command -v md5sum >/dev/null 2>&1; then
-        printf '%s\n' "$worktree_root" | md5sum | cut -c1-8
-      elif command -v md5 >/dev/null 2>&1; then
-        printf '%s\n' "$worktree_root" | md5 | cut -c1-8
-      else
-        return 1
-      fi
     }
 
     worktree_id_for_path_string() {
@@ -160,7 +97,10 @@ let
       echo "Cleaning stale worktree state $worktree_id" >&2
 
       if [ -d "$pgdata" ] && { [ -f "$pgdata/postmaster.pid" ] || [ -f "$pidfile" ]; }; then
-        ${pkgs.postgresql}/bin/pg_ctl stop -D "$pgdata" -s -m fast || true
+        if ! ${pkgs.postgresql}/bin/pg_ctl stop -D "$pgdata" -s -m fast; then
+          echo "Git completed, but PostgreSQL did not stop; retaining state in $pgdata" >&2
+          return 1
+        fi
       fi
 
       rm -f "$pidfile"
@@ -170,69 +110,31 @@ let
         "$HOME/.cache/bundle/worktrees/$worktree_id"
     }
 
-    worktree_has_cleanup_state() {
-      worktree_id="$1"
+    cleanup_removed_worktree_state() {
+      local before_file="$1" after_file="$2"
+      local field remaining_field worktree_path worktree_id registered
 
-      cleanup_state_exists_for_worktree_id "$worktree_id"
-    }
-
-    cleanup_worktree_before_remove() {
-      worktree_path="$1"
-
-      [ -n "$worktree_path" ] || return 0
-      [ -d "$worktree_path" ] || return 0
-      [ -f "$worktree_path/flake.nix" ] || return 0
-
-      if ! command -v direnv >/dev/null 2>&1; then
-        echo "direnv not found; skipping worktree-clean for $worktree_path" >&2
-        return 0
-      fi
-
-      worktree_id="$(worktree_id_for_path "$worktree_path" || true)"
-      if [ -z "$worktree_id" ]; then
-        echo "Could not determine worktree id; skipping worktree-clean for $worktree_path" >&2
-        return 0
-      fi
-
-      # Only enter direnv when this worktree has already been initialised. Without
-      # this guard, cleanup could accidentally trigger first-time setup.
-      worktree_has_cleanup_state "$worktree_id" || return 0
-
-      echo "Running worktree-clean before removing $worktree_path" >&2
-      if ! (cd "$worktree_path" && direnv exec . worktree-clean); then
-        echo "worktree-clean failed for $worktree_path; not removing worktree" >&2
-        return 1
-      fi
-    }
-
-    worktree_prune_is_dry_run() {
-      prune_index="$1"
-      target_index=$((prune_index + 2))
-      arg_count="''${#args[@]}"
-
-      while [ "$target_index" -lt "$arg_count" ]; do
-        case "''${args[$target_index]}" in
-          -n|--dry-run)
-            return 0
-            ;;
+      while IFS= read -r -d "" field; do
+        case "$field" in
+          worktree\ *) worktree_path="''${field#worktree }" ;;
+          *) continue ;;
         esac
 
-        target_index=$((target_index + 1))
-      done
-
-      return 1
-    }
-
-    cleanup_missing_worktrees_before_prune() {
-      "$real_git" "''${global_args[@]}" worktree list --porcelain | sed -n 's/^worktree //p' | while IFS= read -r worktree_path; do
-        [ -n "$worktree_path" ] || continue
-        [ -d "$worktree_path" ] && continue
+        registered=0
+        while IFS= read -r -d "" remaining_field; do
+          if [ "$remaining_field" = "worktree $worktree_path" ]; then
+            registered=1
+            break
+          fi
+        done < "$after_file"
+        [ "$registered" -eq 0 ] || continue
+        # Retain state if the path was recreated while Git was running.
+        [ ! -e "$worktree_path" ] && [ ! -L "$worktree_path" ] || continue
 
         worktree_id="$(worktree_id_for_path_string "$worktree_path" || true)"
         [ -n "$worktree_id" ] || continue
-
-        cleanup_worktree_state_by_id "$worktree_id"
-      done
+        cleanup_worktree_state_by_id "$worktree_id" || return 1
+      done < "$before_file"
     }
 
     args=("$@")
@@ -263,20 +165,23 @@ let
 
     if [ "$#" -gt "$((subcommand_index + 1))" ] \
       && [ "''${args[$subcommand_index]}" = "worktree" ] \
-      && [ "''${args[$((subcommand_index + 1))]}" = "remove" ]; then
-      remove_target="$(worktree_remove_target "$subcommand_index")"
-      cleanup_worktree_before_remove "$(worktree_path_for_remove_target "$remove_target")"
-      exec "$real_git" "$@"
-    fi
+      && { [ "''${args[$((subcommand_index + 1))]}" = "remove" ] \
+        || [ "''${args[$((subcommand_index + 1))]}" = "prune" ]; }; then
+      snapshot_dir="$(mktemp -d)"
+      trap 'rm -rf -- "$snapshot_dir"' EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+      "$real_git" "''${global_args[@]}" worktree list --porcelain -z > "$snapshot_dir/before"
 
-    if [ "$#" -gt "$((subcommand_index + 1))" ] \
-      && [ "''${args[$subcommand_index]}" = "worktree" ] \
-      && [ "''${args[$((subcommand_index + 1))]}" = "prune" ]; then
-      if ! worktree_prune_is_dry_run "$subcommand_index"; then
-        cleanup_missing_worktrees_before_prune
+      # Let Git validate flags, dirty/locked worktrees, expiry and dry runs.
+      # No service state is touched until Git has actually removed a record.
+      if "$real_git" "$@"; then
+        "$real_git" "''${global_args[@]}" worktree list --porcelain -z > "$snapshot_dir/after"
+        cleanup_removed_worktree_state "$snapshot_dir/before" "$snapshot_dir/after"
+        exit 0
+      else
+        exit "$?"
       fi
-
-      exec "$real_git" "$@"
     fi
 
     if [ "$#" -gt "$((subcommand_index + 1))" ] \
