@@ -120,7 +120,8 @@ original_bssid="$(nmcli -g 802-11-wireless.bssid connection show "$connection" |
 restored=0
 
 restore() {
-  trap - INT TERM
+  # Finish the single restoration even if another interrupt arrives during it.
+  trap '' INT TERM
 
   if ((restored)); then
     return
@@ -203,7 +204,9 @@ if ((diagnose_only)); then
   exit 0
 fi
 
-trap restore EXIT INT TERM
+trap restore EXIT
+trap 'keep_last=0; exit 130' INT
+trap 'keep_last=0; exit 143' TERM
 
 bssids=("$@")
 if ((${#bssids[@]} == 0)); then
