@@ -59,12 +59,13 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Reclaim runner disk space
+        if: runner.environment == 'github-hosted'
         run: |
+          # Nix provides build toolchains; these preinstalled SDKs are unused.
+          # Paths: https://github.com/actions/runner-images/tree/main/images/ubuntu
           df -h /
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf -- /usr/local/lib/android /usr/share/dotnet \
+            /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
           df -h /
 
       - name: Install Nix
@@ -99,6 +100,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Reclaim runner disk space
+        if: runner.environment == 'github-hosted'
+        run: |
+          # NixOS closures and kernel builds need the SDK space on hosted Ubuntu.
+          # Paths: https://github.com/actions/runner-images/tree/main/images/ubuntu
+          df -h /
+          sudo rm -rf -- /usr/local/lib/android /usr/share/dotnet \
+            /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          df -h /
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@1d87d45818068401a10cf16bdc5f00b24994a83f # v3.21.0
