@@ -23,8 +23,8 @@
   };
 
   # Self-hosted audiobook/podcast server (ShelfPlayer + LAN/Tailscale).
-  # Package is overlaid from nixpkgs-unstable (2.36.0) in flake.nix so iOS
-  # JWT refresh sessions survive app suspend / network handoff.
+  # NixOS 26.05 provides 2.36.0, whose JWT refresh grace window keeps iOS
+  # sessions alive through app suspend and network handoff.
   # Library lives on tank/media; point the first web-UI library at /srv/media/audiobooks.
   services.audiobookshelf = {
     enable = true;
