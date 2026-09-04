@@ -40,6 +40,17 @@ jobs:
       - name: Audit LLM skill harness
         run: python3 home/config/llm/scripts/audit-skills
 
+      - name: Run Python behavioral tests
+        run: nix develop --command python3 -m unittest discover -s tests -v
+
+      - name: Run shell behavioral tests
+        run: nix develop --command bash -c 'bats tests/*.bats'
+
+      - name: Evaluate every Home Manager configuration
+        run: >-
+          nix eval --json .#homeConfigurations
+          --apply 'homes: builtins.mapAttrs (_: home: home.activationPackage.drvPath) homes'
+
   home-manager-linux:
     name: Home Manager Linux
     runs-on: ubuntu-latest
@@ -65,8 +76,14 @@ jobs:
             extra-substituters = https://cache.numtide.com
             extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=
 
-      - name: Build Linux Home Manager activation package
-        run: nix build .#homeConfigurations.william-linux.activationPackage --no-link
+      - name: Build Linux Home Manager activation packages
+        run: |
+          nix build --no-link \
+            .#homeConfigurations.william-linux.activationPackage \
+            '.#homeConfigurations."william@andromeda".activationPackage' \
+            '.#homeConfigurations."william@foundation".activationPackage' \
+            '.#homeConfigurations."william@starfish".activationPackage' \
+            '.#homeConfigurations."william@terminus".activationPackage'
 
   nixos-hosts:
     name: NixOS ${{ matrix.host }}
