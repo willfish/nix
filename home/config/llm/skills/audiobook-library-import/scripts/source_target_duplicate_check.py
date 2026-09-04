@@ -5,6 +5,9 @@ Used in Phase 1c (source → target duplicate preflight) for Andromeda → Termi
 imports. Matches on basename, normalized title, and ASIN-like tokens found in
 folder names. Optional size hints when --source-paths and files exist.
 
+Scan failures return an incomplete report and exit 1, never staging eligibility.
+Successful scans cover the configured maximum depth beneath each target root.
+
 No third-party dependencies.
 """
 
@@ -12,7 +15,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import stat
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -97,6 +102,22 @@ class Match:
     detail: str
 
 
+class TargetScanError(RuntimeError):
+    def __init__(self, errors: list[dict[str, str]]):
+        super().__init__("Target library scan incomplete")
+        self.errors = errors
+
+
+def walk_target(root: Path, max_depth: int, depth: int = 1):
+    """Walk the configured depth without suppressing filesystem errors."""
+    with os.scandir(root) as scan:
+        children = sorted(scan, key=lambda entry: entry.name)
+    for entry in children:
+        yield Path(entry.path), entry.stat()
+        if depth < max_depth and entry.is_dir(follow_symlinks=False):
+            yield from walk_target(Path(entry.path), max_depth, depth + 1)
+
+
 def iter_target_entries(
     roots: Iterable[Path],
     *,
@@ -104,53 +125,38 @@ def iter_target_entries(
 ) -> list[TargetEntry]:
     entries: list[TargetEntry] = []
     seen: set[str] = set()
+    errors: list[dict[str, str]] = []
     for root in roots:
         root = root.expanduser()
-        if not root.is_dir():
-            continue
-        root_resolved = str(root.resolve())
-        # Include the root's immediate children and limited depth folders.
-        for path in root.rglob("*"):
-            try:
-                rel = path.relative_to(root)
-            except ValueError:
-                continue
-            if len(rel.parts) > max_depth:
-                continue
-            if not path.is_dir() and not path.is_file():
-                continue
-            # Prefer leaf-ish folders and audio files as catalogue units.
-            if path.is_file() and path.suffix.lower() not in {
-                ".m4b",
-                ".m4a",
-                ".mp3",
-                ".flac",
-                ".ogg",
-                ".opus",
-            }:
-                continue
-            key = str(path.resolve())
-            if key in seen:
-                continue
-            seen.add(key)
-            name = path.name
-            size = None
-            try:
-                if path.is_file():
-                    size = path.stat().st_size
-            except OSError:
-                size = None
-            entries.append(
-                TargetEntry(
-                    path=key,
-                    name=name,
-                    normalized=normalize_title(name),
-                    asins=extract_asins(name) | extract_asins(str(path)),
-                    size_bytes=size,
+        try:
+            if not stat.S_ISDIR(root.stat().st_mode):
+                raise NotADirectoryError(f"Not a library directory: {root}")
+            for path, info in walk_target(root, max_depth):
+                is_file = stat.S_ISREG(info.st_mode)
+                if not stat.S_ISDIR(info.st_mode) and not is_file:
+                    continue
+                if is_file and path.suffix.lower() not in {
+                    ".m4b", ".m4a", ".mp3", ".flac", ".ogg", ".opus",
+                }:
+                    continue
+                key = str(path.resolve(strict=True))
+                if key in seen:
+                    continue
+                seen.add(key)
+                entries.append(
+                    TargetEntry(
+                        path=key,
+                        name=path.name,
+                        normalized=normalize_title(path.name),
+                        asins=extract_asins(path.name)
+                        | extract_asins(str(path)),
+                        size_bytes=info.st_size if is_file else None,
+                    )
                 )
-            )
-        # Always index the root path itself for empty-name safety
-        _ = root_resolved
+        except OSError as exc:
+            errors.append({"root": str(root), "error": str(exc)})
+    if errors:
+        raise TargetScanError(errors)
     return entries
 
 
@@ -343,7 +349,10 @@ def read_sources_file(path: Path) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_arg_parser().parse_args(argv)
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    if args.max_depth < 1:
+        parser.error("--max-depth must be at least 1")
     names = read_sources_file(args.sources_file)
     source_paths: dict[str, Path] = {}
     if args.source_root and args.source_root.is_dir():
@@ -356,18 +365,36 @@ def main(argv: list[str] | None = None) -> int:
                 source_paths[name] = candidate
 
     sources = load_sources(names, source_paths=source_paths or None)
-    targets = iter_target_entries(args.targets, max_depth=args.max_depth)
-    matches = find_matches(sources, targets)
+    scan_errors: list[dict[str, str]] = []
+    try:
+        targets = iter_target_entries(args.targets, max_depth=args.max_depth)
+        matches = find_matches(sources, targets)
+    except TargetScanError as exc:
+        scan_errors = exc.errors
+        matches = []
 
     if args.format == "json":
         payload: str = json.dumps(
             {
+                "status": "incomplete" if scan_errors else "complete",
+                "scan_errors": scan_errors,
+                "max_depth": args.max_depth,
                 "sources": [asdict(s) for s in sources],
-                "match_count": len(matches),
+                "match_count": None if scan_errors else len(matches),
                 "matches": [asdict(m) for m in matches],
             },
             indent=2,
         ) + "\n"
+    elif scan_errors:
+        lines = [
+            "# Source to target duplicate preflight incomplete", "",
+            "No staging decision is available until every target is scanned.",
+            "",
+        ]
+        lines.extend(
+            f"- `{error['root']}`: {error['error']}" for error in scan_errors
+        )
+        payload = "\n".join(lines) + "\n"
     else:
         payload = format_markdown(sources, matches)
 
@@ -375,7 +402,7 @@ def main(argv: list[str] | None = None) -> int:
         args.output.write_text(payload, encoding="utf-8")
     else:
         sys.stdout.write(payload)
-    return 0
+    return 1 if scan_errors else 0
 
 
 if __name__ == "__main__":
