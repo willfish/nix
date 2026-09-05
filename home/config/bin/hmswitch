@@ -31,6 +31,48 @@ sync_darwin_nix_config() {
   fi
 }
 
+wait_for_launchd_service_removal() {
+  local label attempts
+  label="$1"
+  attempts=0
+
+  while launchctl print "$label" >/dev/null 2>&1; do
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge 100 ]; then
+      echo "hmswitch: timed out waiting for $label to stop" >&2
+      return 1
+    fi
+    sleep 0.1
+  done
+}
+
+sync_darwin_file_limits() {
+  local source target label changed
+  source="$HOME/.local/share/dotfiles-system/limit.maxfiles.plist"
+  target="/Library/LaunchDaemons/limit.maxfiles.plist"
+  label="system/limit.maxfiles"
+  changed=0
+
+  if [ ! -f "$source" ]; then
+    echo "hmswitch: missing managed file-limit service: $source" >&2
+    return 1
+  fi
+
+  if ! cmp -s "$source" "$target"; then
+    echo "hmswitch: updating the macOS open-file limit"
+    sudo install -o root -g wheel -m 0644 "$source" "$target"
+    changed=1
+  fi
+
+  if [ "$changed" -eq 1 ]; then
+    sudo launchctl bootout "$label" >/dev/null 2>&1 || true
+    wait_for_launchd_service_removal "$label"
+    sudo launchctl bootstrap system "$target"
+  elif ! launchctl print "$label" >/dev/null 2>&1; then
+    sudo launchctl bootstrap system "$target"
+  fi
+}
+
 sync_darwin_tailscale_service() {
   local source target label changed
   source="$HOME/.local/share/dotfiles-system/io.tailscale.tailscaled.plist"
@@ -58,6 +100,7 @@ sync_darwin_tailscale_service() {
 
   if [ "$changed" -eq 1 ]; then
     sudo launchctl bootout "$label" >/dev/null 2>&1 || true
+    wait_for_launchd_service_removal "$label"
     sudo launchctl bootstrap system "$target"
   elif ! launchctl print "$label" >/dev/null 2>&1; then
     sudo launchctl bootstrap system "$target"
@@ -77,6 +120,8 @@ short_hostname() {
 
 case "$(uname -s)" in
   Darwin)
+    # Bootstrap Home Manager before the system launchd limit is installed.
+    ulimit -n 65536
     configuration="william-darwin"
     sync_darwin_nix_config
     ;;
@@ -100,5 +145,6 @@ esac
 nh home switch "$flake" --configuration "$configuration" "$@"
 
 if [ "$(uname -s)" = Darwin ]; then
+  sync_darwin_file_limits
   sync_darwin_tailscale_service
 fi
