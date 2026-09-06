@@ -36,7 +36,9 @@ class DarwinFileLimitsTest(unittest.TestCase):
 
         bootout = tailscale_sync.index('sudo launchctl bootout "$label"')
         wait = tailscale_sync.index('wait_for_launchd_service_removal "$label"')
-        bootstrap = tailscale_sync.index('sudo launchctl bootstrap system "$target"')
+        bootstrap = tailscale_sync.index(
+            'sudo launchctl bootstrap system "$target"'
+        )
 
         self.assertLess(bootout, wait)
         self.assertLess(wait, bootstrap)

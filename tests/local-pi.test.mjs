@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import test from 'node:test';
+
+const extensionPath = new URL('../home/config/local-llm/pi-qwen.js', import.meta.url);
+test('local Qwen request adapter is available', () => {
+  assert.ok(existsSync(extensionPath), 'missing local Qwen request adapter');
+});
+
+if (existsSync(extensionPath)) {
+  const { default: extension } = await import(extensionPath);
+  function adapt(payload, level = 'medium', provider = 'relay') {
+    let handler;
+    extension({
+      on(name, callback) {
+        assert.equal(name, 'before_provider_request');
+        handler = callback;
+      },
+      getThinkingLevel: () => level,
+    });
+    return handler({ payload }, { model: { provider } });
+  }
+  test('medium thinking preserves the cache and uses Qwen thinking sampling', () => {
+    const original = { model: 'qwen3.8-27b', chat_template_kwargs: { enable_thinking: true } };
+    const result = adapt(original);
+    assert.deepEqual(result.chat_template_kwargs, {
+      enable_thinking: true, preserve_thinking: true, reasoning_effort: 'medium',
+    });
+    assert.equal(result.temperature, 1);
+    assert.equal(result.top_p, 0.95);
+    assert.equal(result.presence_penalty, 0);
+    assert.equal(result.repeat_penalty, 1);
+    assert.equal(original.temperature, undefined);
+  });
+  test('off stays off, including summary requests while the UI is on medium', () => {
+    const result = adapt({ chat_template_kwargs: { enable_thinking: false } });
+    assert.equal(result.chat_template_kwargs.enable_thinking, false);
+    assert.equal(result.chat_template_kwargs.reasoning_effort, undefined);
+    assert.equal(result.temperature, 0.7);
+    assert.equal(result.top_p, 0.8);
+    assert.equal(result.presence_penalty, 1.5);
+  });
+  test('Pi levels map to supported Qwen template levels', () => {
+    for (const [level, expected] of [['minimal', 'low'], ['low', 'low'], ['medium', 'medium'], ['high', 'xhigh'], ['xhigh', 'xhigh']]) {
+      assert.equal(adapt({ chat_template_kwargs: { enable_thinking: true } }, level).chat_template_kwargs.reasoning_effort, expected);
+    }
+  });
+  test('other providers are untouched', () => {
+    assert.equal(adapt({ model: 'other' }, 'medium', 'other'), undefined);
+  });
+}
+
+test('Home Manager launcher is isolated, lean and offline at startup', () => {
+  const source = readFileSync(new URL('../home/user/local-llm.nix', import.meta.url), 'utf8');
+  assert.match(source, /name = "qwen-pi"/);
+  for (const flag of ['--offline', '--no-context-files', '--no-skills', '--no-extensions', '--no-prompt-templates']) {
+    assert.ok(source.includes(flag), `missing ${flag}`);
+  }
+  assert.match(source, /PI_CODING_AGENT_DIR/);
+  assert.match(source, /thinkingFormat = "qwen-chat-template"/);
+});
