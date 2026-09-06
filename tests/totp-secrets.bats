@@ -8,6 +8,7 @@ setup() {
   export PATH="$TOTP_TEST_DIR/bin:$PATH"
   mkdir -p "$TOTP_TEST_DIR/bin" "$SOPS_NIX_SECRETS_DIR"
   printf '%s\n' "$TOTP_TEST_SEED" > "$SOPS_NIX_SECRETS_DIR/TOTP_FIXTURE_SECRET"
+  printf '%s\n' "$TOTP_TEST_SEED" > "$SOPS_NIX_SECRETS_DIR/TOTP_OTHER_ACCOUNT_SECRET"
   printf '{}\n' > "$DOTFILES_SECRETS_ENV"
 
   # Extract exactly the production helpers, decoding only their Nix escapes.
@@ -51,11 +52,25 @@ elif name == "jq":
     # Support the old argv interface too, so regressions fail on the leak.
     value = sys.argv[sys.argv.index("--arg") + 2] if "--arg" in sys.argv else content
     print(json.dumps(value))
+elif name == "fzf":
+    selection = os.environ.get("TOTP_TEST_FZF_SELECTION")
+    if selection:
+        print(selection)
+    else:
+        sys.exit(130)
 PY
   chmod +x "$TOTP_TEST_DIR/bin/fake-tool"
-  for tool in oathtool jq sops; do
+  for tool in oathtool jq sops fzf; do
     ln -s fake-tool "$TOTP_TEST_DIR/bin/$tool"
   done
+}
+
+@test "generation without a target fuzzy-selects an available TOTP account" {
+  run env TOTP_TEST_FZF_SELECTION=OTHER_ACCOUNT bash "$TOTP_TEST_DIR/totp-from-sops"
+  [ "$status" -eq 0 ]
+  [ "$output" = "123456" ]
+  [ "$(cat "$TOTP_TEST_DIR/fzf.stdin")" = $'FIXTURE\nOTHER_ACCOUNT' ]
+  [ "$(cat "$TOTP_TEST_DIR/oathtool.stdin")" = "$TOTP_TEST_SEED" ]
 }
 
 assert_no_seed_in_arguments() {
