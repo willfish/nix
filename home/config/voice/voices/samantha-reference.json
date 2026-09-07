@@ -1,0 +1,37 @@
+{
+  "source_url": "https://github.com/adrianwedd/afterwords/blob/0614d4516f3f3d875ece88387aeb19f41e5cf367/voices/samantha-ref.wav",
+  "source_commit": "0614d4516f3f3d875ece88387aeb19f41e5cf367",
+  "speaker": "Scarlett Johansson as Samantha in Her",
+  "retrieved": "2026-09-07",
+  "source_audio_sha256": "63d58a367abe2d96963160c2c25c913b8d8ce7711d14f71b5f96abf7957f4b08",
+  "reference_sha256": "f9e740ec200cd50ff8803f6dd144941a4b3cc918da76205eb69ca87d04c80e25",
+  "start_seconds": 0,
+  "end_seconds": 13.6,
+  "duration_seconds": 13.6,
+  "transcript": "And then, I had this terrible thought, like, are these feelings even real? Or are they just programming?",
+  "format": {
+    "sample_rate": 24000,
+    "channels": 1,
+    "sample_format": "pcm_s16le"
+  },
+  "processing": {
+    "filter": "loudnorm=I=-20:TP=-2:LRA=7:linear=true:measured_I=-35.51:measured_TP=-15.80:measured_LRA=7.90:measured_thresh=-48.99:offset=-0.46",
+    "first_pass": {
+      "input_i": "-35.51",
+      "input_tp": "-15.80",
+      "input_lra": "7.90",
+      "input_thresh": "-48.99",
+      "output_i": "-19.54",
+      "output_tp": "-2.00",
+      "output_lra": "6.50",
+      "output_thresh": "-31.96",
+      "normalization_type": "dynamic",
+      "target_offset": "-0.46"
+    },
+    "notes": "Trim trailing incomplete repetition; two-pass loudness normalization only. No denoising or pitch alteration."
+  },
+  "source_license": "Afterwords code is MIT. No separate reuse licence for the film recording was identified. Original recording rights remain with their respective holders.",
+  "history_note": "Current Afterwords website demo is stale: regenerated at b9aac4da from incorrect OS setup voice at 395d1cef. Voice reference corrected at 9a133cbc without demo update. User preferred recovered pre-replacement reference and April demo.",
+  "accepted_upstream_demo_commit": "f1b7c00e4168d648c20895c32747cb2b2c7a2bf5",
+  "ffmpeg_version": "8.1.2"
+}

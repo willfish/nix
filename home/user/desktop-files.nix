@@ -155,7 +155,35 @@ in
 
   xdg.configFile = {
     "cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom" = {
-      source = "${configDir}/cosmic/shortcuts";
+      source =
+        if
+          builtins.elem hostName [
+            "andromeda"
+            "foundation"
+          ]
+        then
+          pkgs.writeText "cosmic-shortcuts-with-voice" (
+            builtins.replaceStrings
+              [
+                ''
+                  key: "space",
+                      ): Disable,''
+                "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Disable,"
+              ]
+              [
+                ''
+                  key: "space",
+                      ): Spawn("codex-voice record"),
+                      (
+                          modifiers: [Super, Shift],
+                          key: "space",
+                      ): Spawn("codex-voice send"),''
+                "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"codex-voice read\"),"
+              ]
+              (builtins.readFile "${configDir}/cosmic/shortcuts")
+          )
+        else
+          "${configDir}/cosmic/shortcuts";
       force = true;
     };
     "cosmic/com.system76.CosmicComp/v1/autotile" = {

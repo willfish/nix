@@ -1,0 +1,119 @@
+{
+  config,
+  lib,
+  pkgs,
+  hostName,
+  ...
+}:
+let
+  enabled =
+    pkgs.stdenv.isLinux
+    && builtins.elem hostName [
+      "andromeda"
+      "foundation"
+    ];
+  dataDir = "${config.home.homeDirectory}/.local/share/codex-voice";
+  audio = pkgs.callPackage ./voice-audio-package.nix { };
+  whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
+  voice = pkgs.writeShellApplication {
+    name = "codex-voice";
+    runtimeInputs = [
+      pkgs.python3
+      pkgs.pipewire
+      pkgs.curl
+      pkgs.libnotify
+      pkgs.systemd
+      pkgs.herdr
+    ];
+    text = ''
+      export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
+      export CODEX_VOICE_COMMAND="$0"
+      exec python3 ${../config/voice/codex_voice.py} "$@"
+    '';
+  };
+  modelSetup = pkgs.writeShellApplication {
+    name = "codex-voice-models";
+    runtimeInputs = [ pkgs.python3 ];
+    text = ''
+      exec python3 ${../config/voice/voice-model-setup} "$@"
+    '';
+  };
+  ttsConfig = (pkgs.formats.json { }).generate "codex-voice-tts.json" {
+    host = "127.0.0.1";
+    port = 8179;
+    backend = "vulkan";
+    device = 0;
+    threads = 4;
+    lazy_load = false;
+    log_request_body = false;
+    max_request_body_bytes = 1048576;
+    busy_timeout_ms = 30000;
+    models = [
+      {
+        id = "codex-voice";
+        family = "qwen3_tts";
+        path = "${dataDir}/models/Qwen3-TTS-12Hz-0.6B-Base-GGUF/qwen3-tts-12hz-0.6b-base-q8_0.gguf";
+        task = "tts";
+        mode = "offline";
+        session_options."qwen3_tts.voice_prompt_cache_slots" = 1;
+        default_request_options.max_tokens = 256;
+        default_voice_preset = {
+          voice_ref = "${../config/voice/voices/samantha-reference.wav}";
+          reference_text = lib.removeSuffix "\n" (
+            builtins.readFile ../config/voice/voices/samantha-reference.txt
+          );
+        };
+      }
+    ];
+  };
+  common = {
+    Restart = "on-failure";
+    RestartSec = 3;
+    UMask = "0077";
+    NoNewPrivileges = true;
+    WorkingDirectory = dataDir;
+  };
+in
+{
+  config = lib.mkIf enabled {
+    home.packages = [
+      voice
+      modelSetup
+    ];
+    xdg.configFile."codex-voice/config.json".text = builtins.toJSON {
+      stt_url = "http://127.0.0.1:8178/inference";
+      tts_url = "http://127.0.0.1:8179/v1/audio/speech";
+      auto_speak = true;
+    };
+    xdg.configFile."codex-voice/tts.json".source = ttsConfig;
+
+    systemd.user.services.codex-voice = {
+      Unit.Description = "Codex voice hotkeys and selected session";
+      Service = common // {
+        ExecStart = "${voice}/bin/codex-voice serve";
+        RuntimeDirectory = "codex-voice";
+        RuntimeDirectoryMode = "0700";
+        # Home Manager upgrades may use separate stop/start jobs.
+        RuntimeDirectoryPreserve = "yes";
+        KillMode = "control-group";
+      };
+    };
+    systemd.user.services.codex-voice-stt = {
+      Unit.Description = "Local Whisper speech recognition on the AMD GPU";
+      Service = common // {
+        ExecStart = "${whisper}/bin/whisper-server --host 127.0.0.1 --port 8178 -m ${dataDir}/models/ggml-small.en.bin -t 4 -l en";
+        Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json" ];
+      };
+    };
+    systemd.user.services.codex-voice-tts = {
+      Unit.Description = "Local Samantha speech synthesis on the AMD GPU";
+      Service = common // {
+        ExecStart = "${audio}/bin/audiocpp_server --config ${config.home.homeDirectory}/.config/codex-voice/tts.json --no-ui";
+        Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json" ];
+      };
+    };
+    home.activation.codexVoiceDirectories = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      install -d -m 0700 "${dataDir}" "${dataDir}/models" "${dataDir}/voices"
+    '';
+  };
+}
