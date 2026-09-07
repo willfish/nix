@@ -86,11 +86,10 @@ jobs:
             '.#homeConfigurations."william@starfish".activationPackage' \
             '.#homeConfigurations."william@terminus".activationPackage'
 
-      - name: Run Slack MCP transport regression
+      - name: Run native MCP runtime regressions
         run: |
-          slack_test_home="$(nix eval --raw .#homeConfigurations.william-linux.activationPackage.outPath)"
-          SLACK_MCP_WRAPPER="$slack_test_home/home-files/.local/bin/mcp-slack" \
-            "$slack_test_home/home-path/bin/node" --test tests/slack-session-fetch.test.mjs
+          MCP_TEST_HOME="$(nix eval --raw .#homeConfigurations.william-linux.activationPackage.outPath)" \
+            nix develop --command python3 tests/native-mcp-runtime.py
 
   nixos-hosts:
     name: NixOS ${{ matrix.host }}
