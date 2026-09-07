@@ -1,9 +1,9 @@
 ---
 name: browser-automation
 description: >
-  Use when controlling Will's visible Brave browser, using browser or brave MCP
-  tools, attaching through CDP port 9222, or falling back to agent-browser CLI
-  or raw CDP.
+  Use when controlling Will's visible Brave browser, using browser or
+  browser-playwright MCP tools, attaching through CDP port 9222, or falling
+  back to agent-browser CLI or raw CDP.
 ---
 
 # Browser Automation
@@ -14,12 +14,16 @@ switch to an isolated profile.
 
 ## Choose the layer
 
-- Use the `browser` MCP for ordinary navigation, reading, semantic interaction,
-  screenshots, and tab work. It is the small Rust-native core profile.
-- Use the `brave` Playwright MCP immediately for nested or cross-origin iframe
-  interactions, complex reactive pages, repeated stale-reference failures, or
-  consequential mutations where Playwright's waiting and frame model reduce
-  risk.
+Always start with the `browser` MCP unless a Playwright condition listed below
+already applies.
+
+- Use the primary `browser` MCP for ordinary navigation, reading, semantic
+  interaction, screenshots, and tab work. It is the small Rust-native core
+  profile.
+- Use the specialist `browser-playwright` fallback immediately for nested or
+  cross-origin iframe interactions, complex reactive pages, repeated
+  stale-reference failures, or consequential mutations where Playwright's
+  waiting and frame model reduce risk.
 - Use `agent-browser --json` only when the Rust MCP lacks a required operation.
   Always pass `--cdp http://127.0.0.1:9222 --pin-tab`; never use auto-connect.
 - Use raw CDP only for diagnosis or as a final read-only fallback.
@@ -28,9 +32,9 @@ If neither MCP is available, check
 `curl -fsS http://127.0.0.1:9222/json/version`. If it fails, ask Will to start
 visible Brave. Do not start another browser.
 
-Use only the configured `browser` and `brave` wrappers. If their CDP endpoint
-cannot be verified as port 9222, stop rather than risk an invisible or isolated
-browser.
+Use only the configured `browser` and `browser-playwright` wrappers. If their
+CDP endpoint cannot be verified as port 9222, stop rather than risk an invisible
+or isolated browser.
 
 ## Interact safely
 
