@@ -12,6 +12,7 @@
 ## Audience
 
 Epics and stories are read by two audiences:
+
 1. **Business stakeholders** — product owners, delivery managers — who need to understand what's being delivered and why
 2. **Developers** — who need implementation specifics when they pick up the work
 
@@ -65,6 +66,13 @@ Stories describe a deliverable unit of work. Use this structure:
 Prefer Jira MCP Markdown for the business narrative and panels
 (`mcp-atlassian` ≥ 0.22). Use raw API v3 ADF when you need a collapsible
 **Implementation details** expand. Full rules: `jira-adf.md`.
+
+When the body of an epic, story, task, bug, or comment references another Jira
+issue, follow the initial MCP write with a raw ADF update that represents the
+issue browse URL as an `inlineCard`. Do not leave a plain issue key or Markdown
+hyperlink as the final representation. If the issues also have a meaningful
+workflow relationship, create the corresponding Jira issue link separately.
+See `jira-adf.md` for the required ADF and verification checks.
 
 ### MCP Markdown panels (preferred for info/note/warning/success)
 
