@@ -179,8 +179,11 @@ let
         --no-context-files --no-skills --no-extensions --no-prompt-templates --no-themes \
         --extension ${../config/local-llm/pi-qwen.js} \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/mcp/index.ts \
+        --extension ${config.home.homeDirectory}/.pi/agent/extensions/todo.ts \
+        --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/plan-work.md \
+        --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/review.md \
         --system-prompt "$(< ${piSystemPrompt})" \
-        --tools read,bash,edit,write,mcp "$@"
+        --tools read,bash,edit,write,mcp,todo "$@"
     '';
   };
   toolsPython = pkgs.python3.withPackages (ps: [
