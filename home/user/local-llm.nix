@@ -164,6 +164,8 @@ let
     and verify your changes. Never claim to have run a tool unless you did.
     Keep replies concise. Never print secrets. Ask before destructive or out-of-scope actions.
     Use existing tools or ephemeral Nix tooling; do not install global dependencies unasked.
+    Use the mcp tool for configured external services. Connect to a server before searching
+    its tools if the metadata cache is empty. Never send messages or publish changes unasked.
     Do not use em dashes. Internet access may be unavailable; use local evidence when offline.
   '';
   qwenPi = pkgs.writeShellApplication {
@@ -176,8 +178,9 @@ let
         --offline --provider ${hostName} --model ${modelAlias} \
         --no-context-files --no-skills --no-extensions --no-prompt-templates --no-themes \
         --extension ${../config/local-llm/pi-qwen.js} \
+        --extension ${config.home.homeDirectory}/.pi/agent/extensions/mcp/index.ts \
         --system-prompt "$(< ${piSystemPrompt})" \
-        --tools read,bash,edit,write "$@"
+        --tools read,bash,edit,write,mcp "$@"
     '';
   };
   toolsPython = pkgs.python3.withPackages (ps: [

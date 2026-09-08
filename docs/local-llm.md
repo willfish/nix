@@ -154,8 +154,9 @@ on Relay and Andromeda. Installing Pi elsewhere does not download Qwen or start
 a server.
 
 Run `qwen-pi` from the directory you want it to work in. It uses the local
-Qwen server with a short system prompt and four tools: `read`, `bash`, `edit`,
-and `write`. On Relay, it shares the server and API key with Hermes;
+Qwen server with a short system prompt, four local tools (`read`, `bash`, `edit`,
+and `write`) and an `mcp` proxy for the shared external servers described in
+[Pi MCP configuration](pi-mcp.md). On Relay, it shares the server and API key with Hermes;
 `qwen` still launches Hermes there.
 
 ```sh
@@ -175,13 +176,17 @@ existing key file at request time, not embedded in Git, process arguments or
 the Nix store. Model ID follows `modelAlias` in the Home Manager module.
 
 The lean launcher disables automatic context-file, skill, extension, prompt
-template and theme discovery. It explicitly loads only the local Qwen request
-adapter. Consequently it does not inherit the shared AGENTS.md/skills harness.
+template and theme discovery. It explicitly loads the local Qwen request
+adapter and the pinned MCP adapter. Consequently it does not inherit the shared
+AGENTS.md/skills harness.
 Pi's own startup network checks and telemetry are disabled. This is not a
 network sandbox: shell commands can still access the network, and tools run as
 William with his filesystem permissions and without per-command approval
 popups. The short prompt asks before destructive actions, but is not an
-enforced permission boundary. No web-search tool or MCP integration is added.
+enforced permission boundary. MCP servers use the existing credential wrappers
+and can access external services. After first-run metadata discovery they
+connect on demand. Their individual tool
+schemas are discovered through the proxy rather than all added to the prompt.
 
 Pi's native automatic compaction reserves 16,384 tokens for output and keeps
 an 8,192-token recent-history budget:
