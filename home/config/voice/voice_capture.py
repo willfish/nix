@@ -17,8 +17,9 @@ SAMPLE_LIMIT = 16000 * 180
 
 
 class PipeWireCapture:
-    def __init__(self, path, command=None):
+    def __init__(self, path, command=None, target=None):
         self.level = 0.0
+        self._clipped_until = 0.0
         self.started_at = None
         self.error = None
         self._ready = threading.Event()
@@ -38,7 +39,8 @@ class PipeWireCapture:
             self._process = subprocess.Popen(
                 command or [
                     "pw-record", "--raw", "--rate=16000", "--channels=1",
-                    "--format=s16", f"--sample-count={SAMPLE_LIMIT}", "-",
+                    "--format=s16", f"--sample-count={SAMPLE_LIMIT}",
+                    *(["--target", target] if target else []), "-",
                 ],
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
@@ -90,6 +92,8 @@ class PipeWireCapture:
                 self._wav.writeframesraw(data)
                 self._frames += len(data) // 2
                 samples = array.array("h", data)
+                if any(abs(sample) >= 32760 for sample in samples):
+                    self._clipped_until = time.monotonic() + 1.5
                 self.level = min(1.0, math.sqrt(
                     sum(sample * sample for sample in samples) / len(samples)
                 ) / 32768)
@@ -142,6 +146,10 @@ class PipeWireCapture:
                     self.error = "Microphone stopped before producing samples"
                 self._done.set()
                 self._ready.set()
+
+    @property
+    def clipping(self):
+        return time.monotonic() < self._clipped_until
 
     def wait_ready(self, timeout=5):
         if not self._ready.wait(timeout):

@@ -6,12 +6,20 @@ import threading
 import time
 
 
+def public_label(value, limit=120):
+    text = " ".join(str(value).split())
+    return "".join(char for char in text if char.isprintable())[:limit]
+
+
 def presentation(status):
     """Return only public state, never dictated text or assistant replies."""
     phase = status.get("phase", "idle")
     busy = phase in ("starting", "recording", "stopping", "transcribing")
     selected = bool(status.get("pane"))
     ready = bool(status.get("draft") or status.get("pending"))
+    pending = bool(status.get("pending"))
+    retry = bool(status.get("retry"))
+    harness = public_label(status.get("harness") or "Codex", 30)
     label, colour = {
         "idle": (
             "Ready to record" if selected else "No voice session selected",
@@ -30,14 +38,48 @@ def presentation(status):
         level = min(100, max(0, int(status.get("input_level", 0) * 100)))
         label += f" (input {level}%)"
     elif phase == "error" and status.get("error"):
-        detail = " ".join(str(status["error"]).split())
-        detail = "".join(char for char in detail if char.isprintable())[:120]
+        detail = public_label(status["error"])
         label = f"Voice error: {detail}"
-    elif not busy and status.get("pending"):
-        label, colour = "Dictation waiting for Codex", "green"
-    return {
+    elif not busy and pending:
+        label, colour = f"Dictation waiting for {harness}", "green"
+    context = []
+    if selected:
+        session = public_label(status.get("session_label") or status["pane"])
+        context.append(f"{harness}: {session}")
+    microphone = status.get("microphone") or {}
+    if microphone:
+        name = public_label(microphone.get("name") or "Unknown")
+        mic_label = f"Microphone: {name}"
+        for key, message in (
+            ("muted", "muted"), ("clipping", "clipping; lower input volume"),
+            ("missing", "preferred microphone unavailable; using default"),
+        ):
+            if microphone.get(key):
+                mic_label += f" ({message})"
+        context.append(mic_label)
+        if microphone.get("error"):
+            context.append(public_label(microphone["error"]))
+    models = status.get("models")
+    if models == "loading":
+        context.append("Speech models loading")
+        if phase == "idle":
+            colour = "amber"
+    elif models == "unavailable":
+        context.append("Speech models unavailable")
+        if status.get("model_error"):
+            context.append(public_label(status["model_error"]))
+        if phase == "idle":
+            colour = "orange"
+    if status.get("rebind_needed"):
+        context.append(
+            "Conversation changed; choose Bind to current conversation"
+        )
+        if phase == "idle" and colour == "grey":
+            colour = "amber"
+    view = {
         "label": label,
         "colour": colour,
+        "context": context,
         "actions": {
             "record": (
                 "Stop and transcribe"
@@ -48,14 +90,41 @@ def presentation(status):
             "send": ("Send dictation", selected and not busy and ready),
             "stop": (
                 "Cancel / stop speech",
-                busy or bool(status.get("pending") or status.get("speaking")),
+                busy or pending or retry or bool(status.get("speaking")),
             ),
             "read": (
                 "Read latest reply",
-                selected and not busy and bool(status.get("reply")),
+                selected and not busy and not pending
+                and bool(status.get("reply")),
+            ),
+            "rebind": ("Bind to current conversation", selected and not busy),
+            "retry": (
+                "Retry last transcription",
+                selected and not busy and retry,
+            ),
+            "discard": (
+                "Discard retained dictation" if pending
+                else "Discard retained recording",
+                (pending or retry) and not busy,
             ),
         },
     }
+    if pending:
+        view["actions"].update({
+            "append": ("Record and append dictation", selected and not busy),
+            "replace": ("Record replacement dictation", selected and not busy),
+        })
+    for session in status.get("sessions", []):
+        token = session.get("token")
+        if not isinstance(token, str) or not token:
+            continue
+        selected_session = bool(session.get("selected"))
+        prefix = "Selected: " if selected_session else "Select: "
+        view["actions"][f"select:{token}"] = (
+            prefix + public_label(session.get("label") or token),
+            not busy and not selected_session,
+        )
+    return view
 
 
 def icon_pixmap(colour, size=32):
@@ -119,7 +188,7 @@ def _interfaces(tray):
 
         @readonly()
         def Title(self) -> "s":
-            return "Codex Voice"
+            return "Agent Voice"
 
         @readonly()
         def Status(self) -> "s":
@@ -151,7 +220,8 @@ def _interfaces(tray):
 
         @readonly()
         def ToolTip(self) -> "(sa(iiay)ss)":
-            return ["", [], "Codex Voice", tray.view["label"]]
+            detail = "\n".join([tray.view["label"], *tray.view["context"]])
+            return ["", [], "Agent Voice", detail]
 
         @signal()
         def NewIcon(self):
@@ -189,10 +259,12 @@ def _interfaces(tray):
         def rows(self):
             rows = [(1, tray.view["label"], False)]
             rows += [
-                (i, label, enabled)
-                for i, (label, enabled) in enumerate(
-                    tray.view["actions"].values(), 2
-                )
+                (tray.action_id(action), label, enabled)
+                for action, (label, enabled) in tray.view["actions"].items()
+            ]
+            rows += [
+                (i, label, False)
+                for i, label in enumerate(tray.view["context"], 20)
             ]
             return [
                 [
@@ -228,9 +300,9 @@ def _interfaces(tray):
 
         @method()
         def Event(self, item: "i", event: "s", data: "v", timestamp: "u"):
-            actions = list(tray.view["actions"])
-            if event == "clicked" and 2 <= item < 2 + len(actions):
-                tray.action(actions[item - 2])
+            action = tray.actions_by_id.get(item)
+            if event == "clicked" and action:
+                tray.action(action)
 
         @method()
         def AboutToShow(self, item: "i") -> "b":
@@ -261,6 +333,23 @@ class VoiceTray:
         self.action_lock = threading.Lock()
         self.thread = None
         self.sampler = None
+        self.ids_by_action = {
+            action: i for i, action in enumerate((
+                "record", "send", "stop", "read", "rebind", "retry",
+                "discard", "append", "replace",
+            ), 2)
+        }
+        self.actions_by_id = {
+            i: action for action, i in self.ids_by_action.items()
+        }
+        self.next_action_id = 100
+
+    def action_id(self, action):
+        if action not in self.ids_by_action:
+            self.ids_by_action[action] = self.next_action_id
+            self.actions_by_id[self.next_action_id] = action
+            self.next_action_id += 1
+        return self.ids_by_action[action]
 
     def start(self):
         if self.thread and self.thread.is_alive():
@@ -306,6 +395,9 @@ class VoiceTray:
 
         def invoke():
             try:
+                if name == "stop":
+                    self.action_callback(name)
+                    return
                 # Recheck live state because the displayed menu may be stale.
                 view = presentation(self.status_callback())
                 if view["actions"].get(name, ("", False))[1]:
@@ -422,6 +514,10 @@ class VoiceTray:
                         await asyncio.wait_for(bus.wait_for_disconnect(), 0.5)
                     except Exception:
                         pass
+                    # Pinned dbus-next shuts down but leaves both owners open.
+                    # Close after its reader/writer callbacks are finalized.
+                    bus._stream.close()
+                    bus._sock.close()
             for _ in range(10):
                 if self.stopped.is_set():
                     break

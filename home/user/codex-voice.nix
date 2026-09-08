@@ -18,29 +18,69 @@ let
     cudaSupport = cudaTts;
   };
   whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
+  vadModel = pkgs.fetchurl {
+    url = "https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v6.2.0.bin";
+    sha256 = "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987";
+  };
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
   voicePython = pkgs.python3.withPackages (ps: [ ps.dbus-next ]);
   voiceScripts = pkgs.runCommand "codex-voice-scripts" { } ''
     mkdir -p "$out"
-    cp ${../config/voice/codex_voice.py} "$out/codex_voice.py"
-    cp ${../config/voice/voice_capture.py} "$out/voice_capture.py"
-    cp ${../config/voice/codex_voice_tray.py} "$out/codex_voice_tray.py"
+    cp ${../config/voice}/*.py ${../config/voice}/*.mjs "$out/"
   '';
-  voice = pkgs.writeShellApplication {
-    name = "codex-voice";
-    runtimeInputs = [
-      voicePython
-      pkgs.pipewire
-      pkgs.curl
-      pkgs.libnotify
-      pkgs.systemd
-      pkgs.herdr
-    ];
-    text = ''
-      export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
-      export CODEX_VOICE_COMMAND="$0"
-      exec python3 ${voiceScripts}/codex_voice.py "$@"
-    '';
+  makeVoice =
+    harness:
+    pkgs.writeShellApplication {
+      name = "${harness}-voice";
+      runtimeInputs = [
+        voicePython
+        pkgs.pipewire
+        pkgs.wireplumber
+        pkgs.curl
+        pkgs.libnotify
+        pkgs.systemd
+        pkgs.herdr
+      ];
+      text = ''
+        export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
+        export CODEX_VOICE_COMMAND="$0"
+        export AGENT_VOICE_LAUNCH_KIND=${lib.escapeShellArg harness}
+        exec python3 ${voiceScripts}/codex_voice.py "$@"
+      '';
+    };
+  voice = makeVoice "codex";
+  grokHooks = {
+    hooks = builtins.listToAttrs (
+      map
+        (event: {
+          name = event;
+          value = [
+            (
+              {
+                hooks = [
+                  {
+                    type = "command";
+                    command = "${voicePython}/bin/python3 ${voiceScripts}/grok_voice_hook.py";
+                    timeout = 3;
+                  }
+                ];
+              }
+              // lib.optionalAttrs (event == "Notification") {
+                matcher = "idle_prompt";
+              }
+            )
+          ];
+        })
+        [
+          "SessionStart"
+          "UserPromptSubmit"
+          "Stop"
+          "StopFailure"
+          "StopCancelled"
+          "Notification"
+          "SessionEnd"
+        ]
+    );
   };
   modelSetup = pkgs.writeShellApplication {
     name = "codex-voice-models";
@@ -89,18 +129,31 @@ in
   config = lib.mkIf enabled {
     home.packages = [
       voice
+      (makeVoice "grok")
+      (makeVoice "pi")
+      (makeVoice "qwen-pi")
       modelSetup
     ];
     xdg.configFile."codex-voice/config.json".text = builtins.toJSON {
       stt_url = "http://127.0.0.1:8178/inference";
+      stt_health_url = "http://127.0.0.1:8178/health";
       tts_url = "http://127.0.0.1:8179/v1/audio/speech";
+      tts_health_url = "http://127.0.0.1:8179/v1/models";
+      readiness_timeout = 60;
+      stt_prompt = "NixOS, Home Manager, Herdr, Codex, Grok, Qwen, Pi, Andromeda, Foundation, Terminus, Relay, dotfiles, GitHub, MCP.";
+      preferred_microphone =
+        if hostName == "andromeda" then
+          "alsa_input.usb-Razer_Inc_Razer_Kiyo_Pro_Ultra-02.analog-stereo"
+        else
+          null;
       auto_speak = true;
       playback_mode = if hostName == "andromeda" then "streaming" else "buffered";
     };
     xdg.configFile."codex-voice/tts.json".source = ttsConfig;
+    home.file.".grok/hooks/voice.json".text = builtins.toJSON grokHooks;
 
     systemd.user.services.codex-voice = {
-      Unit.Description = "Codex voice hotkeys and selected session";
+      Unit.Description = "Agent voice hotkeys, tray and selected session";
       Service = common // {
         ExecStart = "${voice}/bin/codex-voice serve";
         RuntimeDirectory = "codex-voice";
@@ -113,7 +166,7 @@ in
     systemd.user.services.codex-voice-stt = {
       Unit.Description = "Local Whisper speech recognition on the GPU";
       Service = common // {
-        ExecStart = "${whisper}/bin/whisper-server --host 127.0.0.1 --port 8178 -m ${dataDir}/models/ggml-small.en.bin -t 4 -l en";
+        ExecStart = "${whisper}/bin/whisper-server --host 127.0.0.1 --port 8178 -m ${dataDir}/models/ggml-small.en.bin -t 4 -l en --vad --vad-model ${vadModel} --suppress-nst";
         Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}" ];
       };
     };

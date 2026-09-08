@@ -33,6 +33,35 @@ class CaptureTests(unittest.TestCase):
         self.addCleanup(capture.close)
         return capture
 
+    def test_preferred_microphone_is_passed_as_a_stable_pipewire_target(self):
+        original = self.module.subprocess.Popen
+        commands = []
+
+        def producer(args, **kwargs):
+            commands.append(args)
+            return original([
+                sys.executable, "-c", "import os; os.write(1,b'\\0\\0'*160)"
+            ], **kwargs)
+
+        with patch.object(self.module.subprocess, "Popen", producer):
+            capture = self.module.PipeWireCapture(
+                self.path, target="alsa_input.usb-microphone"
+            )
+            self.addCleanup(capture.close)
+            self.assertTrue(capture.wait_ready(1))
+            self.assertEqual(capture.wait(1), 0)
+        target_at = commands[0].index("--target")
+        self.assertEqual(commands[0][target_at + 1],
+                         "alsa_input.usb-microphone")
+
+    def test_clipping_is_visible_for_saturated_audio(self):
+        capture = self.capture(
+            "import os; os.write(1, b'\\xff\\x7f' * 320)"
+        )
+        self.assertTrue(capture.wait_ready(1))
+        self.assertEqual(capture.wait(1), 0)
+        self.assertTrue(capture.clipping)
+
     def test_ready_means_pcm_arrived_and_wait_finalizes_wav(self):
         capture = self.capture(
             "import os, signal, sys, time\n"

@@ -6,8 +6,10 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tempfile
 import threading
 import time
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -122,6 +124,135 @@ class PresentationTests(unittest.TestCase):
             release.set()
             tray.stop()
 
+    def test_cancel_does_not_wait_for_status_or_check_stale_state(self):
+        status_called, cancelled = threading.Event(), threading.Event()
+
+        def status():
+            status_called.set()
+            return {"phase": "idle"}
+
+        tray = self.tray.VoiceTray(status, lambda _: cancelled.set())
+        tray.action("stop")
+        self.assertTrue(cancelled.wait(0.5))
+        self.assertFalse(status_called.is_set())
+        tray.stop()
+
+    def test_context_shows_harness_microphone_and_model_loading(self):
+        view = self.tray.presentation({
+            "pane": "p1", "harness": "Grok", "session_label": "dotfiles",
+            "models": "loading", "microphone": {
+                "name": "USB microphone", "muted": True,
+                "preferred": "headset", "missing": True,
+            },
+        })
+        context = " ".join(view["context"])
+        self.assertIn("Grok: dotfiles", context)
+        self.assertIn("USB microphone", context)
+        self.assertIn("muted", context)
+        self.assertIn("preferred microphone unavailable", context)
+        self.assertIn("Speech models loading", context)
+        self.assertEqual(view["colour"], "amber")
+
+    def test_retained_text_offers_append_replace_discard_and_retry(self):
+        view = self.tray.presentation({
+            "pane": "p1", "phase": "draft", "pending": True,
+            "harness": "Pi", "retry": True,
+        })
+        self.assertIn("Pi", view["label"])
+        for name in ("append", "replace", "discard", "retry"):
+            self.assertTrue(view["actions"][name][1])
+        fresh = self.tray.presentation({"pane": "p1"})
+        self.assertNotIn("append", fresh["actions"])
+        self.assertNotIn("replace", fresh["actions"])
+        self.assertFalse(fresh["actions"]["retry"][1])
+
+    def test_retained_dictation_disables_read_until_sent_or_discarded(self):
+        view = self.tray.presentation({
+            "pane": "p1", "phase": "draft", "pending": True,
+            "reply": "Latest reply",
+        })
+        self.assertFalse(view["actions"]["read"][1])
+
+    def test_retry_audio_can_be_cancelled_or_discarded_without_pending_text(
+        self,
+    ):
+        view = self.tray.presentation({
+            "pane": "p1", "phase": "error", "retry": True,
+        })
+        self.assertTrue(view["actions"]["stop"][1])
+        self.assertTrue(view["actions"]["discard"][1])
+        self.assertIn("recording", view["actions"]["discard"][0])
+
+    def test_changed_conversation_displays_explicit_rebind_guidance(self):
+        view = self.tray.presentation({
+            "pane": "p1", "harness": "Pi", "session_label": "old",
+            "rebind_needed": True,
+        })
+        self.assertIn("Bind to current conversation", " ".join(
+            view["context"]
+        ))
+        self.assertEqual(view["colour"], "amber")
+
+    def test_sessions_are_individually_selectable_and_rebind_is_available(self):
+        view = self.tray.presentation({
+            "pane": "p1", "sessions": [
+                {"token": "one", "label": "Codex: dotfiles",
+                 "selected": True},
+                {"token": "two", "label": "Pi: notes", "selected": False},
+            ],
+        })
+        self.assertTrue(view["actions"]["rebind"][1])
+        self.assertFalse(view["actions"]["select:one"][1])
+        self.assertTrue(view["actions"]["select:two"][1])
+
+    def test_recording_keeps_red_icon_and_reports_clipping(self):
+        view = self.tray.presentation({
+            "pane": "p1", "phase": "recording", "models": "loading",
+            "microphone": {"name": "Mic", "clipping": True},
+        })
+        self.assertEqual(view["colour"], "red")
+        self.assertIn("clipping", " ".join(view["context"]))
+
+    def test_cancel_reaches_real_controller_during_slow_terminal_paste(self):
+        source = MODULE.with_name("codex_voice.py")
+        spec = importlib.util.spec_from_file_location("codex_voice", source)
+        voice = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(voice)
+        entered, release, stopped = (threading.Event() for _ in range(3))
+
+        def insert(target, text):
+            entered.set()
+            release.wait(2)
+
+        terminal = SimpleNamespace(insert=insert)
+        audio = SimpleNamespace(stop=stopped.set)
+        with tempfile.TemporaryDirectory() as directory:
+            controller = voice.Controller(
+                Path(directory), terminal, audio, lambda *args: None
+            )
+            controller.register("one", {"pane": "pane-one"})
+            controller.phase = "transcribing"
+            stopped.clear()
+            tray = self.tray.VoiceTray(
+                controller.status, lambda _: controller.stop()
+            )
+            worker = threading.Thread(
+                target=controller.stage, args=("Pending words", "one"),
+                daemon=True,
+            )
+            try:
+                worker.start()
+                self.assertTrue(entered.wait(1))
+                tray.action("stop")
+                self.assertTrue(stopped.wait(0.2))
+                self.assertTrue(controller.input_cancelled.is_set())
+            finally:
+                release.set()
+                worker.join(1)
+                tray.stop()
+            self.assertFalse(controller.status()["draft"])
+            self.assertFalse(controller.status()["pending"])
+
 
 @unittest.skipUnless(
     importlib.util.find_spec("dbus_next") and shutil.which("dbus-daemon"),
@@ -151,7 +282,11 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
             text=True,
         )
         address = daemon.stdout.readline().strip()
-        state = {"pane": "p1", "phase": "idle"}
+        state = {
+            "pane": "p1", "phase": "idle", "harness": "Pi",
+            "session_label": "dotfiles", "models": "loading",
+            "microphone": {"name": "USB mic"},
+        }
         actions = []
         action_release = threading.Event()
         block_status = threading.Event()
@@ -190,8 +325,18 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
         watcher = Watcher()
         watcher_bus.export("/StatusNotifierWatcher", watcher)
         tray = module.VoiceTray(status, action)
+        tray_buses = []
+
+        class TrackedBus(MessageBus):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                tray_buses.append(self)
+
         try:
-            with patch.dict(os.environ, {"DBUS_SESSION_BUS_ADDRESS": address}):
+            with (
+                patch.dict(os.environ, {"DBUS_SESSION_BUS_ADDRESS": address}),
+                patch("dbus_next.aio.MessageBus", TrackedBus),
+            ):
                 tray.start()
                 # The desktop watcher can appear after the voice service starts.
                 await asyncio.sleep(0.3)
@@ -224,6 +369,10 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 _, layout = await menu.call_get_layout(0, -1, [])
                 rows = [child.value for child in layout[2]]
                 self.assertIn("00:12", rows[0][1]["label"].value)
+                labels = [row[1]["label"].value for row in rows]
+                self.assertIn("Pi: dotfiles", labels)
+                self.assertIn("Microphone: USB mic", labels)
+                self.assertIn("Speech models loading", labels)
                 send = next(
                     row
                     for row in rows
@@ -241,9 +390,33 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 await wait_until(lambda: actions == ["stop"])
                 # A slow controller action must not stall tray D-Bus replies.
                 self.assertEqual(
-                    await asyncio.wait_for(item.get_title(), 0.5), "Codex Voice"
+                    await asyncio.wait_for(item.get_title(), 0.5), "Agent Voice"
                 )
                 action_release.set()
+                state.update(phase="idle", sessions=[
+                    {"token": "second", "label": "Second session"},
+                ])
+                await wait_until(
+                    lambda: "select:second" in tray.view["actions"]
+                )
+                _, layout = await menu.call_get_layout(0, -1, [])
+                rows = [child.value for child in layout[2]]
+                old_session = next(
+                    row for row in rows
+                    if row[1]["label"].value == "Select: Second session"
+                )
+                state["sessions"] = [
+                    {"token": "third", "label": "Third session"},
+                ]
+                await wait_until(
+                    lambda: "select:third" in tray.view["actions"]
+                )
+                # A click from an old menu must never select a different pane.
+                await menu.call_event(
+                    old_session[0], "clicked", Variant("i", 0), 0
+                )
+                await asyncio.sleep(0.1)
+                self.assertEqual(actions, ["stop"])
                 await watcher_bus.release_name("org.kde.StatusNotifierWatcher")
                 replacement = Watcher()
                 client.export("/StatusNotifierWatcher", replacement)
@@ -260,13 +433,17 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                     ),
                     0.5,
                 )
-                self.assertEqual(values["Title"].value, "Codex Voice")
+                self.assertEqual(values["Title"].value, "Agent Voice")
                 self.assertTrue(layout[1][2])
                 await asyncio.sleep(0.3)
                 self.assertEqual(len(status_calls), calls_when_blocked)
                 tray.stop()
                 await wait_until(lambda: not tray.thread.is_alive(), 1)
                 self.assertFalse(status_release.is_set())
+                self.assertTrue(tray_buses)
+                for connection in tray_buses:
+                    self.assertEqual(connection._sock.fileno(), -1)
+                    self.assertTrue(connection._stream.closed)
         finally:
             action_release.set()
             status_release.set()
@@ -277,6 +454,10 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.gather(
                 watcher_bus.wait_for_disconnect(), client.wait_for_disconnect()
             )
+            # dbus-next disconnect shuts down but does not close these owners.
+            for connection in (watcher_bus, client, *tray_buses):
+                connection._stream.close()
+                connection._sock.close()
             daemon.terminate()
             daemon.wait(timeout=3)
             daemon.stdout.close()

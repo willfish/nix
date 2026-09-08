@@ -23,6 +23,12 @@ import urllib.request
 import uuid
 import wave
 
+# Also support direct loading by the isolated regression harness.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from voice_errors import DeliveryUncertain
+from voice_audio import LocalAudio
+from voice_harness import PiTerminal
+
 
 def dictation_text(text):
     """Whisper's non-speech markers are metadata, never prompt contents."""
@@ -107,8 +113,6 @@ def is_cli_thread(thread_id, codex_home=None):
         return False
 
 
-class DeliveryUncertain(RuntimeError):
-    """Input may already be pasted; retrying could duplicate it."""
 
 
 class Herdr:
@@ -160,27 +164,28 @@ class Herdr:
             raise RuntimeError("Invalid response from the Herdr pane") from exc
 
     def validate_target(self, target):
+        harness = target.get("harness", "codex")
         if (
             not target.get("start")
             or process_start(target["pid"]) != target["start"]
         ):
             raise RuntimeError(
-                "Selected Codex process has exited; start codex-voice again"
+                "Selected agent has exited; start its voice launcher again"
             )
         info = self.request(
             target, "pane", "process-info", "--pane", target["pane"]
         )["process_info"]
         procs = info.get("foreground_processes", [])
         if not any(
-            p["pid"] == target["pid"] and "codex" in p.get("name", "")
+            p["pid"] == target["pid"] and harness in p.get("name", "")
             for p in procs
         ):
             raise RuntimeError(
-                "The selected Codex process is no longer in the foreground"
+                "The selected agent process is no longer in the foreground"
             )
         agent = self.request(target, "agent", "get", target["pane"])["agent"]
-        if agent.get("agent") != "codex":
-            raise RuntimeError("The selected pane is not running Codex")
+        if agent.get("agent") != harness:
+            raise RuntimeError(f"The selected pane is not running {harness}")
         return agent
 
     def validate(self, target):
@@ -188,7 +193,7 @@ class Herdr:
         state = agent.get("agent_status")
         if state not in ("idle", "done"):
             raise RuntimeError(
-                f"Codex is {state or 'not ready'}; "
+                f"Selected agent is {state or 'not ready'}; "
                 "finish its current interaction first"
             )
 
@@ -201,14 +206,54 @@ class Herdr:
         # Herdr adds its own blocked-agent and foreground checks here.
         self.request(target, "agent", "prompt", target["pane"], " ")
 
+    def insert_guarded(self, target, text, cancelled):
+        self.validate(target)
+        if cancelled.is_set():
+            raise RuntimeError("Voice delivery was cancelled")
+        self.input_request(target, text)
+
+    def submit_guarded(self, target, cancelled):
+        self.validate(target)
+        if cancelled.is_set():
+            raise RuntimeError("Voice delivery was cancelled")
+        self.request(target, "agent", "prompt", target["pane"], " ")
+
+
+class AgentTerminal:
+    def __init__(self):
+        self.herdr, self.pi = Herdr(), PiTerminal()
+
+    def _adapter(self, target):
+        if (not target.get("start") or process_start(target["pid"])
+                != target["start"]):
+            raise RuntimeError("Selected voice process has exited")
+        return self.pi if target.get("harness") in ("pi", "qwen-pi") \
+            else self.herdr
+
+    def validate_target(self, target):
+        return self._adapter(target).validate_target(target)
+
+    def validate(self, target):
+        return self._adapter(target).validate(target)
+
+    def insert_guarded(self, target, text, cancelled):
+        return self._adapter(target).insert_guarded(target, text, cancelled)
+
+    def submit_guarded(self, target, cancelled):
+        return self._adapter(target).submit_guarded(target, cancelled)
+
 
 class Controller:
     def __init__(self, runtime, terminal, audio, notice):
         self.runtime = runtime
-        self.terminal, self.audio, self.notice = terminal, audio, notice
+        self.terminal, self.audio = terminal, audio
+        self._notice = notice
         self.lock = threading.RLock()
+        self.delivery_lock = threading.Lock()
+        self.input_cancelled = threading.Event()
         self.target = None
         self.token = None
+        self.sessions = {}
         self.draft = False
         self.cancelled = threading.Event()
         self.reply = None
@@ -223,10 +268,21 @@ class Controller:
         self.pending = None
         self.record_started = None
         self.worker = None
+        self.retry_audio = None
+        self.active_retry = None
 
     @property
     def transcribing(self):
         return self.phase == "transcribing"
+
+    def notice(self, title, detail=""):
+        def deliver():
+            try:
+                self._notice(title, detail)
+            except Exception:
+                pass
+
+        threading.Thread(target=deliver, daemon=True).start()
 
     def recording_active(self):
         return self.phase in (
@@ -251,16 +307,73 @@ class Controller:
 
     def register(self, token, target, thread=None, turns=()):
         with self.lock:
+            self._remember()
             self.stop()
+            target = dict(target, token=token)
+            target.setdefault("harness", "codex")
+            target["session"] = thread
+            self.sessions[token] = {
+                "target": target, "thread": thread, "turns": set(turns),
+                "candidate": thread, "pending": None, "draft": False,
+                "reply": None,
+            }
             self.token, self.target = token, target
             self.draft = False
             self.pending = None
             self.phase = "idle"
+            self.input_cancelled = threading.Event()
             self.reply, self.thread = None, thread
             self.turns = set(turns)
             self._save_selection()
 
+    def _remember(self):
+        if self.token in self.sessions:
+            self.sessions[self.token].update(
+                thread=self.thread, turns=self.turns, pending=self.pending,
+                draft=self.draft, reply=self.reply,
+            )
+
+    def select(self, token):
+        with self.lock:
+            if token not in self.sessions:
+                raise RuntimeError("That voice session is no longer available")
+            self._remember()
+            self.stop()
+            entry = self.sessions[token]
+            self.token, self.target = token, entry["target"]
+            self.thread, self.turns = entry["thread"], entry["turns"]
+            self.pending, self.draft = entry["pending"], entry["draft"]
+            self.reply = entry["reply"]
+            self.input_cancelled = threading.Event()
+            self.phase = "draft" if self.pending or self.draft else "idle"
+            self._save_selection()
+
+    def rebind(self):
+        with self.lock:
+            if not self.target:
+                raise RuntimeError("Select a voice session first")
+            self.stop()
+            candidate = self.sessions[self.token].get("candidate")
+            if self.target["harness"] == "codex" and candidate == self.thread:
+                excluded = self.sessions[self.token].setdefault("excluded", [])
+                if self.thread:
+                    excluded.append(self.thread)
+                candidate = None
+            self.thread = candidate
+            self.target = dict(self.target, session=candidate)
+            self.sessions[self.token]["target"] = self.target
+            self.turns = set()
+            self.draft = False
+            self.reply = None
+            self.phase = "idle"
+            self.input_cancelled = threading.Event()
+            self._save_selection()
+        self.notice(
+            "Voice rebound", "Using the selected session's conversation"
+        )
+
     def _save_selection(self):
+        self._remember()
         path = self.runtime / "selection.tmp"
         path.write_text(
             json.dumps(
@@ -269,6 +382,16 @@ class Controller:
                     "target": self.target,
                     "thread": self.thread,
                     "turns": sorted(self.turns),
+                    "sessions": {
+                        token: {
+                            "target": entry["target"],
+                            "thread": entry["thread"],
+                            "candidate": entry.get("candidate"),
+                            "excluded": entry.get("excluded", []),
+                            "turns": sorted(entry["turns"]),
+                        }
+                        for token, entry in self.sessions.items()
+                    },
                 }
             )
         )
@@ -283,23 +406,35 @@ class Controller:
                     (self.runtime / "selection.json").read_text()
                 )
                 target = saved["target"]
+                self.sessions = {}
+                for token, entry in saved.get("sessions", {}).items():
+                    existing = entry["target"]
+                    if (existing.get("start") and process_start(
+                        existing["pid"]
+                    ) == existing["start"]):
+                        self.sessions[token] = dict(
+                            entry, turns=set(entry.get("turns", [])),
+                            pending=None, draft=False, reply=None,
+                        )
                 if (
-                    not target.get("start")
+                    not target or not target.get("start")
                     or process_start(target["pid"]) != target["start"]
                 ):
                     return False
-                self.register(
-                    saved["token"],
-                    target,
-                    saved.get("thread"),
-                    saved.get("turns", []),
-                )
+                if saved["token"] in self.sessions:
+                    self.select(saved["token"])
+                else:
+                    self.register(
+                        saved["token"], target, saved.get("thread"),
+                        saved.get("turns", []),
+                    )
                 return True
             except (OSError, ValueError, KeyError):
                 return False
 
     def unregister(self, token):
         with self.lock:
+            self.sessions.pop(token, None)
             if token == self.token:
                 self.stop()
                 self.target, self.token = None, None
@@ -307,11 +442,49 @@ class Controller:
                 self.pending = None
                 self.phase = "idle"
                 (self.runtime / "selection.json").unlink(missing_ok=True)
+            if self.sessions:
+                self._save_selection()
 
     def status(self):
+        audio_status = getattr(self.audio, "status", lambda: {})()
         with self.lock:
+            self._expire_retry()
             return {
                 "pane": self.target["pane"] if self.target else None,
+                "harness": self.target.get("harness", "codex")
+                if self.target else None,
+                "session_label": (self.thread or "Awaiting conversation")[:48],
+                "rebind_needed": bool(self.token and self.sessions[
+                    self.token
+                ].get("candidate") not in (
+                    [self.thread]
+                    + self.sessions[self.token].get("excluded", [])
+                )),
+                "sessions": [
+                    {"token": token, "selected": token == self.token,
+                     "label": (
+                         entry["target"].get("harness", "codex") + " "
+                         + entry["target"]["pane"] + " "
+                         + (entry.get("thread") or "new")[:12]
+                     )}
+                    for token, entry in self.sessions.items()
+                ],
+                "microphone": {
+                    **audio_status.get("microphone", {}),
+                    "clipping": getattr(self.capture, "clipping", False),
+                },
+                "models": (
+                    None if not self.sessions else
+                    "unavailable" if "error" in audio_status.get(
+                        "backends", {}
+                    ).values() else "ready" if audio_status.get("backends")
+                    and all(v == "ready" for v in audio_status[
+                        "backends"
+                    ].values()) else "loading" if self.sessions else None
+                ),
+                "model_error": "; ".join(
+                    audio_status.get("backend_errors", {}).values()
+                ),
                 "draft": self.draft,
                 "reply": self.reply,
                 "auto": self.auto,
@@ -321,6 +494,7 @@ class Controller:
                 "phase": self.phase,
                 "error": self.error,
                 "pending": bool(self.pending),
+                "retry": self.retry_audio is not None,
                 "recording_seconds": (
                     max(0, time.monotonic() - self.record_started)
                     if self.record_started and self.phase == "recording"
@@ -331,6 +505,22 @@ class Controller:
 
     def notify(self, token, event):
         with self.lock:
+            entry = self.sessions.get(token)
+            if entry and event.get("type") == "agent-turn-complete":
+                if event.get("thread-id") in entry.get("excluded", []):
+                    return False
+                entry["candidate"] = event.get("thread-id")
+                if token != self.token:
+                    thread = event.get("thread-id")
+                    if not entry["thread"] or entry["thread"] == thread:
+                        entry["thread"] = thread
+                        entry["draft"] = False
+                        entry["reply"] = spoken_text(event.get(
+                            "last-assistant-message"
+                        ) or "")
+                        entry["turns"].add(event.get("turn-id", ""))
+                        self._save_selection()
+                    return False
             if (
                 not self.target
                 or token != self.token
@@ -362,6 +552,72 @@ class Controller:
                 self.read(replace=True)
             return True
 
+    def harness_event(self, token, event):
+        with self.lock:
+            entry = self.sessions.get(token)
+            if (not entry or event.get("harness") != entry["target"].get(
+                "harness"
+            ) or not event.get("session")):
+                return False
+            if event.get("pid") and event["pid"] != entry["target"]["pid"]:
+                return False
+            session, kind = event["session"], event.get("type")
+            if kind == "session":
+                entry["candidate"] = session
+                if not entry["thread"]:
+                    entry["thread"] = session
+                    entry["target"]["session"] = session
+                    if token == self.token:
+                        self.thread = session
+                self._save_selection()
+                return True
+            if entry["thread"] != session:
+                return False
+            if kind == "busy":
+                entry["draft"] = False
+                entry["active_turn"] = event.get("turn")
+                if token == self.token:
+                    self.draft = False
+                    if self.phase == "draft" and not self.pending:
+                        self.phase = "idle"
+                return True
+            if kind in ("settled", "shutdown"):
+                return True
+            if kind != "reply" or not event.get("turn"):
+                return False
+            target = dict(entry["target"])
+        if event.get("provisional"):
+            def complete():
+                # A Grok Stop hook can continue the turn. Wait for Herdr's
+                # authoritative ready state without blocking the hook process.
+                for _ in range(40):
+                    with self.lock:
+                        current = self.sessions.get(token)
+                        if (not current or current["thread"] != session
+                                or current.get("active_turn") not in (
+                                    None, event["turn"]
+                                )):
+                            return
+                    try:
+                        self.terminal.validate(target)
+                    except RuntimeError:
+                        time.sleep(0.25)
+                        continue
+                    self.notify(token, {
+                        "type": "agent-turn-complete", "thread-id": session,
+                        "turn-id": event["turn"],
+                        "last-assistant-message": event.get("text", ""),
+                    })
+                    return
+
+            threading.Thread(target=complete, daemon=True).start()
+            return True
+        return self.notify(token, {
+            "type": "agent-turn-complete", "thread-id": session,
+            "turn-id": event["turn"],
+            "last-assistant-message": event.get("text", ""),
+        })
+
     def read(self, replace=False):
         with self.lock:
             if self.pending:
@@ -391,7 +647,7 @@ class Controller:
             if not cancelled.is_set():
                 self.notice("Could not read the reply", str(exc))
 
-    def record(self):
+    def record(self, mode="append"):
         with self.lock:
             if self.phase == "starting":
                 self.stop()
@@ -411,21 +667,25 @@ class Controller:
                 )
             if not self.target:
                 raise RuntimeError("Start codex-voice in a Herdr pane first")
-            self.stop()
+            previous = self.pending
+            self.stop(discard=False)
             self.draft = False
-            self.pending = None
+            self.pending = previous
             self.error = None
             self.phase = "starting"
             self.record_cancelled = threading.Event()
+            self.input_cancelled = threading.Event()
             path = self.runtime / (uuid.uuid4().hex + ".wav")
             self.worker = threading.Thread(
                 target=self._record,
-                args=(path, self.token, self.target, self.record_cancelled),
+                args=(path, self.token, self.target, self.record_cancelled,
+                      previous, mode),
                 daemon=True,
             )
             self.worker.start()
 
-    def _record(self, path, token, target, cancelled):
+    def _record(self, path, token, target, cancelled, previous=None,
+                mode="append", retry=False, deadline=None):
         capture = None
         try:
             # Readiness can be transiently unknown while Codex redraws. Check
@@ -433,52 +693,79 @@ class Controller:
             self.terminal.validate_target(target)
             if cancelled.is_set():
                 return
-            capture = self.audio.start_capture(path)
-            with self.lock:
-                if cancelled.is_set():
-                    return
-                self.capture = capture
-            if not capture.wait_ready(timeout=5):
-                raise RuntimeError("Microphone did not become ready")
-            with self.lock:
-                if cancelled.is_set():
-                    return
-                self.record_started = time.monotonic()
-                self.phase = "recording"
-            self._cue(880)
-            self.notice(
-                "Recording", "Press Super+Space to stop; maximum 3 minutes"
-            )
-            code = capture.wait(timeout=185)
-            with self.lock:
-                if cancelled.is_set():
-                    return
+            if not retry:
+                capture = self.audio.start_capture(path)
+                with self.lock:
+                    if cancelled.is_set():
+                        return
+                    self.capture = capture
+                if not capture.wait_ready(timeout=5):
+                    raise RuntimeError("Microphone did not become ready")
+                with self.lock:
+                    if cancelled.is_set():
+                        return
+                    self.record_started = time.monotonic()
+                    self.phase = "recording"
+                self._cue(880)
+                self.notice(
+                    "Recording", "Press Super+Space to stop; maximum 3 minutes"
+                )
+                code = capture.wait(timeout=185)
                 if code not in (0, -signal.SIGINT) or getattr(
                     capture, "error", None
                 ):
                     raise RuntimeError(
                         getattr(capture, "error", None)
-                        or "Microphone capture failed; check the input device"
+                        or "Microphone capture failed"
                     )
+            with self.lock:
+                if cancelled.is_set():
+                    return
                 self.capture = None
                 self.phase = "transcribing"
             self._cue(660)
             if not has_audio(path):
                 text = ""
             else:
-                text = dictation_text(self.audio.transcribe(path))
-            with self.lock:
-                if cancelled.is_set():
-                    return
                 try:
-                    staged = self.stage(text, token)
-                except DeliveryUncertain:
+                    text = dictation_text(
+                        self.audio.transcribe(path, cancelled)
+                    )
+                except Exception:
+                    with self.lock:
+                        if not cancelled.is_set() and token == self.token:
+                            self.retry_audio = (
+                                path, token, target,
+                                deadline or time.monotonic() + 120,
+                                previous, mode,
+                            )
+                    raise
+            if cancelled.is_set():
+                return
+            if not text and previous:
+                with self.lock:
+                    if cancelled.is_set() or token != self.token:
+                        return
+                    self.pending = previous
+                    self.phase = "draft"
+                self.notice("No new speech", "Previous dictation retained")
+                return
+            if text and previous and mode == "append":
+                text = previous + "\n" + text
+            try:
+                staged = self.stage(text, token, cancelled)
+            except DeliveryUncertain:
+                with self.lock:
                     # A lost acknowledgement is different from a failed
                     # connection. Never paste or press Enter again blindly.
-                    self.pending = None
-                    self.draft = False
-                    raise
-                except RuntimeError as exc:
+                    if token == self.token and not cancelled.is_set():
+                        self.pending = None
+                        self.draft = False
+                raise
+            except RuntimeError as exc:
+                with self.lock:
+                    if cancelled.is_set():
+                        return
                     # Keep a valid transcript when the pane is temporarily
                     # busy/unreachable. Never paste it into another session.
                     if text and not has_control_characters(text):
@@ -486,16 +773,16 @@ class Controller:
                         self.phase = "draft"
                         self.notice(
                             "Dictation retained",
-                            f"{exc}. Press Send when Codex is ready.",
+                            f"{exc}. Press Send when the agent is ready.",
                         )
                         return
-                    raise
-                if staged:
-                    self.notice(
-                        "Dictation ready", "Super+Shift+Space sends it to Codex"
-                    )
-                else:
-                    self.notice("No speech detected", "Nothing was inserted")
+                raise
+            if staged:
+                self.notice(
+                    "Dictation ready", "Super+Shift+Space sends this dictation"
+                )
+            else:
+                self.notice("No speech detected", "Nothing was inserted")
         except Exception as exc:
             with self.lock:
                 if (
@@ -510,15 +797,60 @@ class Controller:
                 if capture:
                     capture.close()
             finally:
-                path.unlink(missing_ok=True)
                 with self.lock:
+                    if self.active_retry and self.active_retry[2] is cancelled:
+                        self.active_retry = None
+                    if not self.retry_audio or self.retry_audio[0] != path:
+                        path.unlink(missing_ok=True)
                     if self.record_cancelled is cancelled:
                         self.capture = None
                         self.record_started = None
                         if self.recording_active():
-                            self.phase = "idle"
+                            self.phase = "draft" if self.pending else "idle"
 
-    def stage(self, text, token):
+    def _expire_retry(self, force=False):
+        if self.active_retry and (
+            force or time.monotonic() > self.active_retry[1]
+        ):
+            path, _deadline, cancelled = self.active_retry
+            cancelled.set()
+            path.unlink(missing_ok=True)
+            self.active_retry = None
+            if not force and self.record_cancelled is cancelled:
+                self.input_cancelled.set()
+                self.error = "Recording retry expired; record again"
+                self.phase = "error"
+        if self.retry_audio and (
+            force or time.monotonic() > self.retry_audio[3]
+        ):
+            self.retry_audio[0].unlink(missing_ok=True)
+            self.retry_audio = None
+
+    def retry(self):
+        with self.lock:
+            self._expire_retry()
+            if self.recording_active():
+                raise RuntimeError("Finish the current recording first")
+            if not self.retry_audio:
+                raise RuntimeError("No recording available to retry")
+            path, token, target, expiry, previous, mode = self.retry_audio
+            self.retry_audio = None
+            if token != self.token:
+                path.unlink(missing_ok=True)
+                raise RuntimeError("Voice session changed")
+            self.record_cancelled = threading.Event()
+            self.input_cancelled = threading.Event()
+            self.active_retry = (path, expiry, self.record_cancelled)
+            self.phase = "transcribing"
+            self.error = None
+            self.worker = threading.Thread(
+                target=self._record,
+                args=(path, token, target, self.record_cancelled,
+                      previous, mode, True, expiry), daemon=True,
+            )
+            self.worker.start()
+
+    def stage(self, text, token, cancelled=None):
         with self.lock:
             if not self.target or token != self.token:
                 raise RuntimeError(
@@ -534,13 +866,31 @@ class Controller:
                 raise RuntimeError(
                     "Discarded dictation containing terminal control characters"
                 )
-            try:
-                self.terminal.insert(self.target, text)
-            except DeliveryUncertain:
+            target = self.target
+            operation = self.input_cancelled
+        if not self.delivery_lock.acquire(blocking=False):
+            raise RuntimeError("Input delivery is already in progress")
+        try:
+            if operation.is_set() or (cancelled and cancelled.is_set()):
+                return False
+            guarded = getattr(self.terminal, "insert_guarded", None)
+            if guarded:
+                guarded(target, text, operation)
+            else:
+                self.terminal.insert(target, text)
+        except DeliveryUncertain:
+            with self.lock:
                 # This also covers Send retrying a previously retained draft.
-                self.pending = None
-                self.draft = False
-                raise
+                if token == self.token and operation is self.input_cancelled:
+                    self.pending = None
+                    self.draft = False
+            raise
+        finally:
+            self.delivery_lock.release()
+        with self.lock:
+            if (token != self.token or operation.is_set()
+                    or (cancelled and cancelled.is_set())):
+                return False
             self.draft = True
             self.pending = None
             self.phase = "draft"
@@ -553,17 +903,37 @@ class Controller:
                 raise RuntimeError(
                     "Finish recording and transcription before sending"
                 )
-            if self.target and self.pending:
-                self.stage(self.pending, self.token)
+            pending, token = self.pending, self.token
+        if pending:
+            self.stage(pending, token)
+        with self.lock:
             if not self.target or not self.draft:
                 raise RuntimeError("No new dictation to send")
-            self.terminal.validate(self.target)
-            # A failed delivery is ambiguous. Never retry Enter automatically.
-            self.draft = False
-            self.phase = "idle"
-            self.terminal.submit(self.target)
+            if self.input_cancelled.is_set():
+                self.input_cancelled = threading.Event()
+            target, operation = self.target, self.input_cancelled
+        if not self.delivery_lock.acquire(blocking=False):
+            raise RuntimeError("Input delivery is already in progress")
+        try:
+            self.terminal.validate(target)
+            with self.lock:
+                if token != self.token or operation.is_set():
+                    raise RuntimeError("Voice delivery was cancelled")
+                # Never retry an ambiguous Enter automatically.
+                self.draft = False
+                self.phase = "idle"
+            guarded = getattr(self.terminal, "submit_guarded", None)
+            if guarded:
+                guarded(target, operation)
+            else:
+                self.terminal.submit(target)
+        finally:
+            self.delivery_lock.release()
 
-    def stop(self):
+    def stop(self, discard=True):
+        self.input_cancelled.set()
+        self.cancelled.set()
+        self.record_cancelled.set()
         with self.lock:
             self.cancelled.set()
             self.record_cancelled.set()
@@ -573,235 +943,13 @@ class Controller:
                 ).start()
             self.capture = None
             self.record_started = None
-            self.pending = None
-            self.phase = "draft" if self.draft else "idle"
+            if discard:
+                self.pending = None
+            self._expire_retry(force=True)
+            self.phase = "draft" if self.draft or self.pending else "idle"
             self.error = None
             self.audio.stop()
 
-
-class LocalAudio:
-    def __init__(self, runtime, config):
-        self.runtime, self.config = runtime, config
-        self.player = None
-        self.lock = threading.Lock()
-        self.synthesis_lock = threading.Lock()
-
-    def stop(self):
-        with self.lock:
-            if self.player and self.player.poll() is None:
-                self.player.terminate()
-
-    def start_capture(self, path):
-        from voice_capture import PipeWireCapture
-
-        return PipeWireCapture(path)
-
-    def cue(self, frequency):
-        with tempfile.NamedTemporaryFile(
-            suffix=".wav", dir=self.runtime
-        ) as out:
-            with wave.open(out.name, "wb") as wav:
-                wav.setnchannels(1)
-                wav.setsampwidth(2)
-                wav.setframerate(16000)
-                samples = array.array(
-                    "h",
-                    (
-                        int(
-                            750
-                            * math.sin(2 * math.pi * frequency * i / 16000)
-                            * math.sin(math.pi * i / 1280)
-                        )
-                        for i in range(1280)
-                    ),
-                )
-                wav.writeframes(samples.tobytes())
-            subprocess.run(
-                ["pw-play", out.name],
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                timeout=3,
-                check=False,
-            )
-
-    def transcribe(self, path):
-        result = subprocess.run(
-            [
-                "curl",
-                "--silent",
-                "--show-error",
-                "--fail",
-                "--max-time",
-                "90",
-                self.config["stt_url"],
-                "-F",
-                f"file=@{path}",
-                "-F",
-                "response_format=json",
-                "-F",
-                "language=en",
-                "-F",
-                "temperature=0",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=95,
-        )
-        if result.returncode:
-            raise RuntimeError(
-                "Local Whisper is unavailable; check codex-voice-stt.service"
-            )
-        return json.loads(result.stdout).get("text", "")
-
-    def _synthesize(self, chunk, cancelled):
-        with self.synthesis_lock:
-            if cancelled.is_set():
-                return None
-            request = urllib.request.Request(
-                self.config["tts_url"],
-                data=json.dumps(
-                    {
-                        "model": "codex-voice",
-                        "input": chunk,
-                        "language": "English",
-                    }
-                ).encode(),
-                headers={"Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(request, timeout=90) as response:
-                data = response.read(32 * 1024 * 1024)
-        if cancelled.is_set():
-            return None
-        with wave.open(io.BytesIO(data), "rb") as wav:
-            params = wav.getparams()
-            frames = wav.readframes(wav.getnframes())
-            if not frames or len(frames) != (
-                wav.getnframes() * wav.getnchannels() * wav.getsampwidth()
-            ):
-                raise RuntimeError("Incomplete speech audio")
-        return params, frames
-
-    def _stream(self, chunks, cancelled):
-        prepared = self._synthesize(chunks[0], cancelled)
-        if prepared is None:
-            return
-        params, frames = prepared
-        formats = {1: "u8", 2: "s16", 3: "s24", 4: "s32"}
-        with ThreadPoolExecutor(max_workers=1) as worker:
-            with self.lock:
-                if cancelled.is_set():
-                    return
-                player = subprocess.Popen(
-                    [
-                        "pw-play",
-                        "--raw",
-                        "--format", formats[params.sampwidth],
-                        "--rate", str(params.framerate),
-                        "--channels", str(params.nchannels),
-                        "-",
-                    ],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.DEVNULL,
-                )
-                self.player = player
-            try:
-                for index in range(len(chunks)):
-                    if cancelled.is_set():
-                        return
-                    # One chunk ahead, with pipe backpressure bounding memory.
-                    pending = (
-                        worker.submit(
-                            self._synthesize, chunks[index + 1], cancelled
-                        )
-                        if index + 1 < len(chunks)
-                        else None
-                    )
-                    player.stdin.write(frames)
-                    player.stdin.flush()
-                    if pending is not None:
-                        prepared = pending.result()
-                        if prepared is None:
-                            return
-                        next_params, frames = prepared
-                        if next_params[:3] != params[:3]:
-                            raise RuntimeError("Speech audio format changed")
-                player.stdin.close()
-                if player.wait() and not cancelled.is_set():
-                    raise RuntimeError("Speech playback failed")
-            except BrokenPipeError:
-                if not cancelled.is_set():
-                    raise RuntimeError(
-                        "Speech playback stopped unexpectedly"
-                    ) from None
-            finally:
-                with self.lock:
-                    if self.player is player:
-                        self.player = None
-                if player.poll() is None:
-                    player.terminate()
-                    try:
-                        player.wait(timeout=5)
-                    except subprocess.TimeoutExpired:
-                        player.kill()
-                        player.wait()
-                if not player.stdin.closed:
-                    try:
-                        player.stdin.close()
-                    except BrokenPipeError:
-                        pass
-
-    def speak(self, text, cancelled):
-        # Short chunks bound cancellation latency and VRAM usage.
-        chunks, words = [], []
-        for word in text.split():
-            if words and sum(len(w) + 1 for w in words) + len(word) > 260:
-                chunks.append(" ".join(words))
-                words = []
-            words.append(word)
-        if words:
-            chunks.append(" ".join(words))
-        if not chunks or cancelled.is_set():
-            return
-        if self.config.get("playback_mode", "buffered") == "streaming":
-            self._stream(chunks, cancelled)
-            return
-        # An unnamed buffer also disappears if the controller exits abruptly.
-        with tempfile.TemporaryFile(suffix=".wav", dir=self.runtime) as out:
-            # Finish the entire WAV before playing, without parallel GPU work.
-            with ExitStack() as stack:
-                combined = None
-                for chunk in chunks:
-                    if cancelled.is_set():
-                        return
-                    prepared = self._synthesize(chunk, cancelled)
-                    if prepared is None:
-                        return
-                    params, frames = prepared
-                    if combined is None:
-                        combined = stack.enter_context(wave.open(out, "wb"))
-                        combined.setparams(params)
-                    elif combined.getparams()[:3] != params[:3]:
-                        raise RuntimeError("Speech audio format changed")
-                    combined.writeframesraw(frames)
-            out.flush()
-            out.seek(0)
-            with self.lock:
-                if cancelled.is_set():
-                    return
-                player = subprocess.Popen(
-                    ["pw-play", f"/proc/self/fd/{out.fileno()}"],
-                    pass_fds=(out.fileno(),),
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.DEVNULL,
-                )
-                self.player = player
-            try:
-                # Full replies can exceed two minutes; stop() interrupts this.
-                player.wait()
-            finally:
-                with self.lock:
-                    if self.player is player:
-                        self.player = None
 
 
 def runtime_dir():
@@ -819,7 +967,7 @@ def desktop_notice(title, detail=""):
         subprocess.run(
             [
                 "notify-send",
-                "--app-name=Codex Voice",
+                "--app-name=Agent Voice",
                 "--expire-time=4000",
                 "--hint=string:x-canonical-private-synchronous:codex-voice",
                 title,
@@ -834,6 +982,13 @@ def desktop_notice(title, detail=""):
 
 def dispatch(app, request):
     action = request["action"]
+    if isinstance(action, str) and action.startswith("select:"):
+        app.select(action.split(":", 1)[1])
+        return app.status()
+    if action == "harness-event":
+        return {"accepted": app.harness_event(
+            request["token"], request["event"]
+        )}
     if action == "register":
         app.register(request["token"], request["target"])
     elif action == "unregister":
@@ -843,7 +998,11 @@ def dispatch(app, request):
     elif action == "auto":
         with app.lock:
             app.auto = bool(request["enabled"])
-    elif action in ("record", "send", "read", "stop"):
+    elif action in ("append", "replace"):
+        app.record(mode=action)
+    elif action == "discard":
+        app.stop()
+    elif action in ("record", "send", "read", "stop", "retry", "rebind"):
         getattr(app, action)()
     elif action != "status":
         raise RuntimeError("Unknown voice command")
@@ -854,8 +1013,10 @@ def serve(runtime, config):
     from codex_voice_tray import VoiceTray
 
     app = Controller(
-        runtime, Herdr(), LocalAudio(runtime, config), desktop_notice
+        runtime, AgentTerminal(), LocalAudio(runtime, config), desktop_notice
     )
+    for stale in runtime.glob("*.wav"):
+        stale.unlink(missing_ok=True)
     app.auto = config.get("auto_speak", True)
     app.restore()
     def tray_action(action):
@@ -900,13 +1061,17 @@ def serve(runtime, config):
         def monitor():
             while not monitor_stop.wait(2):
                 with app.lock:
-                    if (
-                        app.target
-                        and process_start(app.target["pid"])
-                        != app.target["start"]
-                    ):
-                        app.unregister(app.token)
-                        stop_engines()
+                    expired = [
+                        token for token, entry in app.sessions.items()
+                        if process_start(entry["target"]["pid"])
+                        != entry["target"]["start"]
+                    ]
+                    for token in expired:
+                        app.unregister(token)
+                    app._expire_retry()
+                    empty = not app.sessions
+                if expired and empty:
+                    stop_engines()
 
         threading.Thread(target=monitor, daemon=True).start()
         try:
@@ -960,50 +1125,95 @@ def call(request, start=True):
     return response
 
 
-def launch(args):
+def launcher_command(harness, args, directory, notify):
+    if harness not in ("codex", "grok", "pi", "qwen-pi"):
+        raise RuntimeError("Unsupported voice harness")
+    if harness in ("pi", "qwen-pi"):
+        if any(arg in ("--print", "-p", "--mode")
+               or arg.startswith(("--mode=", "--print=")) for arg in args):
+            raise RuntimeError("Voice launchers require an interactive session")
+        return [harness, "--extension",
+                str(Path(__file__).parent / "pi_voice.mjs"), *args]
+    if harness == "grok":
+        forbidden = (
+            "--headless", "--print", "-p", "--leader", "--leader-socket",
+            "--single", "--prompt-file", "--prompt-json", "--json-schema",
+            "--output-format",
+        )
+        if (args[:1] and args[0] in ("agent", "leader", "wrap")) or any(
+            arg.split("=", 1)[0] in forbidden for arg in args
+        ):
+            raise RuntimeError(
+                "Grok voice requires a local interactive session"
+            )
+        return ["grok", "--no-leader", *args]
+    if args[:1] == ["exec"]:
+        raise RuntimeError("Voice launchers require an interactive session")
+    return ["codex", "-c", f"notify={notify}", *args]
+
+
+def launch(args, harness="codex"):
     if os.environ.get("HERDR_ENV") != "1" or not os.environ.get(
         "HERDR_PANE_ID"
     ):
         raise RuntimeError(
-            "Run codex-voice inside the Herdr pane you want to use for voice"
+            "Run the voice launcher inside the Herdr pane you want to use"
         )
     token = uuid.uuid4().hex
     executable = os.environ.get("CODEX_VOICE_COMMAND", "codex-voice")
     notify = json.dumps([executable, "notify", token])
-    subprocess.run(
-        [
-            "systemctl",
-            "--user",
-            "start",
-            "--no-block",
-            "codex-voice-stt.service",
-            "codex-voice-tts.service",
-        ],
-        check=True,
-        timeout=15,
+    directory = runtime_dir() / token
+    command = launcher_command(harness, args, directory, notify)
+    call({"action": "status"})
+    directory.mkdir(mode=0o700)
+    env = dict(
+        os.environ, AGENT_VOICE_TOKEN=token, AGENT_VOICE_KIND=harness,
+        AGENT_VOICE_SOCKET=str(runtime_dir() / "control.sock"),
+        AGENT_VOICE_ADAPTER_SOCKET=str(directory / "pi.sock"),
+        AGENT_VOICE_LAUNCH_PID=str(os.getpid()),
     )
-    # The user's codex wrapper retains authentication/provider setup.
-    child = subprocess.Popen(["codex", "-c", f"notify={notify}", *args])
-    previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    child = None
+    previous = None
     try:
+        subprocess.run(
+            [
+                "systemctl", "--user", "start", "--no-block",
+                "codex-voice-stt.service", "codex-voice-tts.service",
+            ], check=True, timeout=15,
+        )
+        # Existing wrappers retain provider settings, credentials and MCPs.
+        child = subprocess.Popen(command, env=env)
+        previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
         target = {
             "pane": os.environ["HERDR_PANE_ID"],
             "socket": os.environ["HERDR_SOCKET_PATH"],
             "pid": child.pid,
             "start": process_start(child.pid),
+            "harness": harness,
+            "adapter_socket": str(directory / "pi.sock"),
         }
         call({"action": "register", "token": token, "target": target})
         return child.wait()
     finally:
-        signal.signal(signal.SIGINT, previous)
-        if child.poll() is None:
+        if previous is not None:
+            signal.signal(signal.SIGINT, previous)
+        if child and child.poll() is None:
             child.terminate()
-            child.wait(timeout=10)
+            try:
+                child.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait()
         try:
             result = call({"action": "unregister", "token": token}, start=False)
-            if result.get("pane") is None:
+            if not result.get("sessions"):
                 stop_engines()
         except (OSError, RuntimeError):
+            pass
+        (directory / "pi.sock").unlink(missing_ok=True)
+        try:
+            directory.rmdir()
+        except OSError:
             pass
 
 
@@ -1035,6 +1245,11 @@ def main(args=None):
             "stop",
             "status",
             "auto",
+            "retry",
+            "rebind",
+            "discard",
+            "append",
+            "replace",
         ):
             request = {"action": args[0]}
             if args[0] == "auto":
@@ -1048,8 +1263,9 @@ def main(args=None):
             return 0
         if args and args[0] in ("--help", "-h"):
             print(
-                "Usage: codex-voice [Codex options or resume SESSION]\n"
+                "Usage: <codex|grok|pi|qwen-pi>-voice [options]\n"
                 "       codex-voice record|send|read|stop|status\n"
+                "       codex-voice retry|rebind|discard|append|replace\n"
                 "       codex-voice auto on|off\n\n"
                 "Super+Space: record/stop. Super+Shift+Space: send. "
                 "Super+R: read/stop.\n"
@@ -1059,7 +1275,10 @@ def main(args=None):
                 "codex-voice{,-stt,-tts}.service"
             )
             return 0
-        return launch(args[1:] if args[:1] == ["--"] else args)
+        return launch(
+            args[1:] if args[:1] == ["--"] else args,
+            os.environ.get("AGENT_VOICE_LAUNCH_KIND", "codex"),
+        )
     except Exception as exc:
         print(f"codex-voice: {exc}", file=sys.stderr)
         return 1

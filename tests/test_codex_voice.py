@@ -112,7 +112,7 @@ class Audio:
         self.capture = Capture()
         return self.capture
 
-    def transcribe(self, path):
+    def transcribe(self, path, cancelled=None):
         self.transcriptions += 1
         self.transcribe_started.set()
         self.transcribe_release.wait(2)
@@ -230,6 +230,94 @@ class VoiceTests(unittest.TestCase):
         self.app.unregister("token-2")
         self.assertIsNone(self.app.status()["pane"])
 
+    def test_registered_sessions_can_be_selected_without_losing_dictation(self):
+        self.app.pending = "Remember this request"
+        self.app.register("token-2", dict(self.target, pane="w1:p3"))
+        self.assertEqual(len(self.app.status()["sessions"]), 2)
+        self.app.select("token-1")
+        self.assertEqual(self.app.pending, "Remember this request")
+        self.assertEqual(self.app.status()["pane"], "w1:p2")
+        self.app.unregister("token-2")
+        self.assertEqual(self.app.status()["pane"], "w1:p2")
+
+    def test_harness_session_change_requires_explicit_rebind(self):
+        self.app.register("pi-token", dict(self.target, harness="pi"))
+        self.app.harness_event("pi-token", {
+            "harness": "pi", "type": "session", "session": "pi-first",
+        })
+        self.app.harness_event("pi-token", {
+            "harness": "pi", "type": "session", "session": "pi-next",
+        })
+        self.assertEqual(self.app.thread, "pi-first")
+        self.app.rebind()
+        self.assertEqual(self.app.thread, "pi-next")
+        self.assertEqual(self.app.target["session"], "pi-next")
+
+    def test_launcher_keeps_wrappers_and_loads_pi_extension(self):
+        for harness in ("pi", "qwen-pi"):
+            command = self.voice.launcher_command(
+                harness, ["--continue"], Path(self.tmp.name), "notify"
+            )
+            self.assertEqual(command[0], harness)
+            self.assertIn("--extension", command)
+            self.assertTrue(any(s.endswith("pi_voice.mjs") for s in command))
+            self.assertEqual(command[-1], "--continue")
+            with self.assertRaisesRegex(RuntimeError, "interactive"):
+                self.voice.launcher_command(
+                    harness, ["--mode", "rpc"], Path(self.tmp.name), "notify"
+                )
+
+    def test_failed_launcher_cleans_up_without_stopping_other_sessions(self):
+        for sessions in ([], [{"token": "another-session"}]):
+            with self.subTest(sessions=sessions), patch.dict(os.environ, {
+                "HERDR_ENV": "1", "HERDR_PANE_ID": "w1:p2",
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+            }), patch.object(
+                self.voice, "runtime_dir", return_value=Path(self.tmp.name)
+            ), patch.object(
+                self.voice, "call", return_value={"sessions": sessions}
+            ), patch.object(self.voice.subprocess, "run"), patch.object(
+                self.voice.subprocess, "Popen",
+                side_effect=FileNotFoundError("Missing harness"),
+            ), patch.object(self.voice, "stop_engines") as stop:
+                with self.assertRaises(FileNotFoundError):
+                    self.voice.launch([], "pi")
+                self.assertEqual(stop.call_count, int(not sessions))
+                directories = [
+                    path for path in Path(self.tmp.name).iterdir()
+                    if path.is_dir()
+                ]
+                self.assertEqual(directories, [])
+
+    def test_late_uncertain_paste_does_not_clear_another_sessions_words(self):
+        entered, release = threading.Event(), threading.Event()
+
+        def insert(_target, _text):
+            entered.set()
+            release.wait(2)
+            raise self.voice.DeliveryUncertain("May have arrived")
+
+        with patch.object(self.terminal, "insert", side_effect=insert):
+            self.start_recording()
+            self.app.record()
+            self.assertTrue(entered.wait(1))
+            worker = self.app.worker
+            self.app.register("new-token", dict(self.target, pane="w1:p3"))
+            self.app.pending = "New session words"
+            release.set()
+            worker.join(2)
+        self.assertEqual(self.app.pending, "New session words")
+
+    def test_rebind_cannot_accept_delayed_old_conversation_reply(self):
+        self.app.notify("token-1", self.event())
+        self.app.rebind()
+        self.assertFalse(self.app.notify(
+            "token-1", self.event(turn="late-old-turn")
+        ))
+        self.assertTrue(self.app.notify(
+            "token-1", self.event(thread="new-conversation", turn="new-turn")
+        ))
+
     def test_record_toggle_stages_transcript_without_submitting(self):
         self.start_recording()
         self.assertTrue(self.app.status()["recording"])
@@ -263,6 +351,30 @@ class VoiceTests(unittest.TestCase):
         self.app.send()
         self.assertEqual(len(self.terminal.text), 1)
         self.assertEqual(self.terminal.keys, ["Enter"])
+
+    def test_cancel_is_immediate_during_paste_and_disarms_late_result(self):
+        entered, release, stopped = (threading.Event() for _ in range(3))
+
+        def insert(_target, _text):
+            entered.set()
+            release.wait(2)
+
+        with patch.object(self.terminal, "insert", side_effect=insert):
+            self.start_recording()
+            self.app.record()
+            self.assertTrue(entered.wait(1))
+            stopper = threading.Thread(
+                target=lambda: (self.app.stop(), stopped.set()), daemon=True
+            )
+            stopper.start()
+            try:
+                self.assertTrue(stopped.wait(0.2), "Cancel waited for paste")
+            finally:
+                release.set()
+                stopper.join(2)
+                self.app.worker.join(2)
+        self.assertFalse(self.app.status()["draft"])
+        self.assertFalse(self.app.status()["pending"])
 
     def test_paste_connect_failure_is_known_not_to_have_delivered(self):
         terminal = self.voice.Herdr()
@@ -333,6 +445,94 @@ class VoiceTests(unittest.TestCase):
         self.assertFalse(self.app.status()["pending"])
         with self.assertRaisesRegex(RuntimeError, "dictation"):
             self.app.send()
+
+    def test_new_recording_appends_retained_dictation(self):
+        self.app.pending = "First instruction."
+        self.start_recording()
+        self.app.record()
+        self.app.worker.join(2)
+        self.assertEqual(self.terminal.text, [
+            "First instruction.\nPlease explain the failing tests."
+        ])
+
+    def test_silent_replacement_keeps_retained_dictation(self):
+        self.app.pending = "Keep this instruction."
+        self.audio.silent = True
+        self.app.record(mode="replace")
+        deadline = time.monotonic() + 1
+        while not self.app.status()["recording"]:
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.005)
+        self.app.record()
+        self.app.worker.join(2)
+        self.assertEqual(self.app.pending, "Keep this instruction.")
+        self.assertEqual(self.terminal.text, [])
+
+    def test_failed_transcription_can_retry_original_recording(self):
+        original = self.audio.transcribe
+        self.audio.transcribe = lambda *args: (_ for _ in ()).throw(
+            RuntimeError("Whisper unavailable")
+        )
+        self.start_recording()
+        self.app.record()
+        self.app.worker.join(2)
+        self.assertTrue(self.app.status()["retry"])
+        self.assertEqual(len(list(Path(self.tmp.name).glob("*.wav"))), 1)
+        self.audio.transcribe = original
+        self.app.retry()
+        self.app.worker.join(2)
+        self.assertEqual(len(self.terminal.text), 1)
+        self.assertFalse(self.app.status()["retry"])
+        self.assertIsNone(self.app.active_retry)
+        self.assertEqual(list(Path(self.tmp.name).glob("*.wav")), [])
+
+    def test_cancelled_staged_draft_can_be_explicitly_sent_once(self):
+        self.app.stage("Review this", "token-1")
+        self.app.stop()
+        self.app.send()
+        self.assertEqual(self.terminal.keys, ["Enter"])
+        with self.assertRaises(RuntimeError):
+            self.app.send()
+
+    def test_failed_retries_keep_original_expiry(self):
+        with patch.object(
+            self.audio, "transcribe", side_effect=RuntimeError("Unavailable")
+        ):
+            self.start_recording()
+            self.app.record()
+            self.app.worker.join(2)
+            path, _, _, expiry, _, _ = self.app.retry_audio
+            self.app.retry()
+            self.app.worker.join(2)
+            self.assertEqual(self.app.retry_audio[3], expiry)
+            self.assertTrue(path.exists())
+            with patch.object(
+                self.voice.time, "monotonic", return_value=expiry + 1
+            ):
+                self.assertFalse(self.app.status()["retry"])
+            self.assertFalse(path.exists())
+
+    def test_retry_expiry_cancels_inflight_transcription_and_removes_wav(self):
+        with patch.object(
+            self.audio, "transcribe", side_effect=RuntimeError("Unavailable")
+        ):
+            self.start_recording()
+            self.app.record()
+            self.app.worker.join(2)
+        path, _, _, expiry, _, _ = self.app.retry_audio
+        self.audio.transcribe_release.clear()
+        self.audio.transcribe_started.clear()
+        self.app.retry()
+        self.assertTrue(self.audio.transcribe_started.wait(1))
+        with patch.object(
+            self.voice.time, "monotonic", return_value=expiry + 1
+        ):
+            self.assertEqual(self.app.status()["phase"], "error")
+        self.assertFalse(path.exists())
+        self.assertTrue(self.app.record_cancelled.is_set())
+        self.audio.transcribe_release.set()
+        self.app.worker.join(2)
+        self.assertEqual(self.terminal.text, [])
 
     def test_read_does_not_discard_retained_dictation(self):
         self.app.pending = "Retained speech"

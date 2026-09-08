@@ -1,141 +1,142 @@
-# Codex voice on Andromeda and Foundation
+# Local agent voice on Andromeda and Foundation
 
-Local GPU dictation and spoken Codex replies in one Herdr pane. Whisper small.en
-recognizes speech; audio.cpp runs Qwen3-TTS 0.6B with the pinned Samantha
-reference from *Her*. Andromeda uses CUDA for TTS and NVIDIA Vulkan for
-Whisper on its RTX 5090. Foundation uses Radeon Vulkan for both services.
-Foundation was offline, so activation
-and live GPU, microphone and playback checks remain pending. The source recording,
-transcript, checksums and file-history investigation are in
-[`home/config/voice/voices`](../home/config/voice/voices/README.md).
+One local recorder, tray and pair of speech engines serve Codex, Grok and Pi.
+Whisper small.en recognizes speech with Silero VAD; audio.cpp runs Qwen3-TTS
+0.6B with the pinned Samantha reference. Andromeda uses CUDA for TTS and
+NVIDIA Vulkan for Whisper. Foundation uses Radeon Vulkan; its live microphone
+and playback checks remain pending. macOS needs separate platform adapters.
 
-## Use
+## Launch and select a session
 
-Run `codex-voice` in the Herdr pane you want to talk to. Normal Codex options
-work, including `codex-voice resume SESSION_ID`. This retains the existing
-Codex wrapper, provider configuration and approvals. The launcher selects
-that exact pane and process. Starting another voice launcher replaces the
-selection; other ordinary Codex sessions remain independent.
+Run a voice launcher inside the Herdr pane you want to use:
+
+| Launcher | Coding session |
+| --- | --- |
+| `codex-voice` | Existing Codex wrapper and provider configuration |
+| `grok-voice` | Existing Grok wrapper with local, in-process execution |
+| `pi-voice` | Normal Pi profile, providers and MCPs |
+| `qwen-pi-voice` | Existing local Qwen Pi profile, tuning and MCPs |
+
+Pass normal interactive options, for example `codex-voice resume SESSION_ID`
+or `pi-voice --continue`. Use `--` before options that conflict with a voice
+control command. Noninteractive print/RPC/agent modes are excluded. Grok uses
+`--no-leader` so its hooks inherit this launcher's token without a separate
+daemon. Ordinary launches continue to work independently of voice.
+
+Each voice launcher registers its own process, pane and conversation. The
+latest launcher becomes selected. The Agent Voice tray lists other registered
+sessions so you can select one explicitly. Keyboard focus never changes voice
+selection. Only the selected session receives dictation or automatic playback.
+Switching sessions preserves their retained text in memory and cancels current
+recording/playback. Exiting one launcher cannot stop engines another registered
+launcher is using; the last exit releases both model services.
 
 | Hotkey | Action |
 | --- | --- |
 | Super+Space | Start recording; press again to stop and transcribe |
-| Super+Shift+Space | Send the dictated draft to the selected Codex session |
+| Super+Shift+Space | Send the dictated draft |
 | Super+R | Read the latest completed reply; press again to stop speaking |
 
-Super is the Windows key. Optional sound cues mark microphone capture. The
-transcription appears in the prompt for review before you send it. Recording
-stops after three minutes. These shortcuts are configured on Andromeda and
-Foundation.
+Super is the Windows key. Transcription is staged for review; recording never
+automatically presses Enter. Capture starts only after microphone samples
+arrive and stops after three minutes. Silence, punctuation-only output and
+non-speech markers are skipped. Silero VAD adds speech detection beyond the
+initial quiet-audio gate, while a small vocabulary prompt helps with names
+such as Herdr, Qwen, NixOS and the configured hosts.
 
-The microphone tray icon is grey when idle, amber while starting or processing,
-red once audio samples are arriving, and green when dictation is ready. Open
-its menu for elapsed recording time, input level, errors and the same
-record/send/cancel/read controls as the hotkeys. A zero input level while
-recording means you should check the selected microphone and mute settings.
-The tray stays responsive during slow terminal operations and reconnects if
-COSMIC's status area restarts.
+## Tray and recovery
 
-Capture can start while Codex is working or Herdr briefly reports an unknown
-state. Delivery still requires the selected Codex process to be ready. If it
-is busy or unreachable before pasting, the transcript is retained in memory:
-press Send when Codex is ready. Cancel discards retained text. A lost paste
-acknowledgement is reported separately; inspect the selected prompt and send
-it there if it arrived. The controller never retries an uncertain paste.
+The tray is grey when idle, red while recording, amber during startup or
+processing, and green when dictation is ready. Its menu shows the selected
+harness/conversation, actual microphone, mute/clipping warnings and speech
+model readiness. Andromeda prefers the Razer Kiyo Pro Ultra's stable device
+name, with a visible fallback to PipeWire's default if absent. Foundation uses
+the default microphone. Speakers follow the PipeWire default.
 
-Silence, short recordings, punctuation-only results and Whisper markers such
-as `[BLANK_AUDIO]` or `[MUSIC]` are skipped and disarm Send. No Enter is sent
-automatically. Failed sound cues and desktop notifications do not abort
-dictation. Microphone startup requires samples within five seconds; a stream
-that stops producing samples for three seconds is reported as stalled.
-Cancellation and stop escalate stuck recorder processes and reap them within
-about 1.1 seconds.
+Recording works while the selected agent is busy. Valid text waits in memory
+until it can be safely delivered. A new recording appends to retained text by
+default. The menu also offers Replace; replacement happens only after valid
+new speech, so silence or a failed start preserves previous words. Discard
+removes retained text and retry audio. Cancel does not remove text already
+pasted into a terminal editor; that prompt remains available for review.
 
-Replies speak automatically by default. `codex-voice auto off` switches to
-manual playback; `codex-voice auto on` restores automatic playback. This option
-lasts until the controller restarts. `codex-voice stop` cancels recording or
-playback. `codex-voice status` reports the selected pane and audio state.
+A failed transcription retains one private WAV for up to two minutes after
+its first failure. Retry uses that recording and its original deadline.
+Cancel, discard, changing selected sessions or restarting the controller
+removes it. A successful transcription deletes the WAV. Model startup has a
+bounded readiness wait with loading/error feedback, so the first recording
+can wait for Whisper rather than failing immediately.
 
-Speech skips fenced code and simplifies Markdown. It reads the remaining
-prose in full, so ask Codex for concise replies when you want brief audio.
-On Andromeda, playback starts after the first chunk is prepared. The next
-chunk is synthesized while the current one plays, using one continuous audio
-stream. Foundation prepares the complete reply before playback, so its slower
-GPU cannot introduce synthesis pauses during speech. Super+R or
-`codex-voice stop` cancels preparation as well as playback.
-Recording interrupts speech, and a reply that completes during recording
-waits for manual playback with Super+R.
+Cancel signals immediately, independently of slow terminal operations. Once
+input has reached an editor it cannot safely be recalled automatically.
+Uncertain paste/submission acknowledgements disarm retries; inspect the prompt
+before sending manually. A cancelled HTTP caller returns promptly, but an
+already submitted model request may finish in the background. Requests remain
+serialized until that happens to avoid overlapping GPU allocations.
 
-Microphone and speakers follow the PipeWire defaults selected in COSMIC sound
-settings. At setup on Andromeda these were Razer Kiyo Pro Ultra and Audioengine
-2+. Foundation's audio devices still need a live check.
+## Conversation binding and adapters
 
-## Session behavior
+After `/new` or changing conversations, choose Rebind in the tray (or run
+`codex-voice rebind`). Pi/Grok report their new conversation as a candidate;
+voice keeps the old binding until you explicitly rebind. For Codex, Rebind
+can wait for the first completed reply from the new conversation. Delayed
+callbacks from the previous conversation are excluded after rebinding.
 
-The wrapper attaches a notification callback to its own Codex launch. A
-private token and the first accepted conversation ID filter completed replies.
-Inherited subagent notifications are rejected using read-only Codex metadata.
-This adapter currently expects `state_5.sqlite` and thread source `cli`; an
-unsupported schema or an `exec`-origin conversation fails closed for playback.
+Codex uses its per-launch notification callback and Herdr's guarded paste and
+submit operations. The callback accepts only root CLI threads, checked through
+read-only `state_5.sqlite` metadata. Unsupported schemas fail closed for spoken
+replies. Grok's conditional command hooks report root-session lifecycle events;
+provisional Stop replies wait for Herdr's ready state before playback. Grok
+creates its conversation lazily, so the first dictation can be staged before
+its initial session event arrives.
 
-Keep one conversation per wrapper launch. After `/new` or switching to another
-conversation inside Codex, exit and launch `codex-voice` again, optionally with
-`resume SESSION_ID`, to select the new conversation for spoken replies.
+Pi explicitly loads the voice extension, including in `qwen-pi` where automatic
+extension discovery is disabled. It uses native editor APIs for staging and
+single-use submission, preserving existing typed text. A changed editor must
+be reviewed and submitted in Pi. Spoken replies use `agent_settled`, excluding
+reasoning, aborted output and intermediate tool turns. Adapter sockets are
+private and check launcher token, process and conversation identity.
 
-Input is pasted through Herdr's bracketed-paste-aware socket API. Newlines do
-not submit the draft. Before pasting or sending, the controller checks the
-recorded PID, process start time, foreground process and Herdr's agent state.
-Working or blocked agents refuse delivery. The send action uses Herdr's own
-guarded prompt operation. Avoid pressing Enter manually at the same time as
-the send hotkey: Herdr's delayed submit is not atomic with a user's keystroke.
+Registration metadata survives a controller restart while the processes live.
+Retained dictation, prior replies, WAV retries and playback preferences do not.
+The registry never persists prompt or reply contents.
 
-The live pane selection, bound conversation ID and completed-turn identifiers
-survive a controller restart if the same Codex process is still running.
-Retained dictation, the previous reply and playback
-preferences do not survive that restart. Exiting the selected Codex process
-clears the selection and stops both model services, releasing their GPU memory.
+## Speech and services
 
-Speech recognition and synthesis are local. Prompt text still goes to the
-model provider configured for Codex.
+Replies speak automatically. Use `codex-voice auto off` for manual playback,
+`auto on` to restore it, `stop` to cancel and `status` to inspect state. All four
+launchers accept the same controls: `record`, `send`, `read`, `stop`, `status`,
+`retry`, `rebind`, `discard`, `append` and `replace`.
 
-## Models and services
+Speech skips fenced code and simplifies Markdown. It prefers sentence and
+clause boundaries with a shorter first phrase and a 260-character maximum.
+Andromeda synthesizes one chunk ahead during playback through one continuous
+PipeWire stream. Foundation prepares the entire reply before playback. These
+are complete-reply playback modes, not live reading of unfinished model text.
+Recording interrupts speech; a reply completing during recording waits for
+manual playback.
 
-The default Whisper, Qwen3 and fallback Supertonic models occupy about 2.93 GB in
-`~/.local/share/codex-voice/models`. Downloads have pinned revisions, sizes and
-SHA-256 checksums. Run `codex-voice-models` after installing on a fresh machine,
-or `codex-voice-models --check-only` to verify the local files. Model downloads
-are separate from Home Manager activation. The small reference WAV and
-transcript are included in the dotfiles and copied into the immutable Nix
-store with the configuration. Inference needs no Python ML packages, remote
-speech APIs or runtime downloads.
+The existing service names remain for compatibility:
 
-On Foundation, run `hmswitch` from this checkout when the laptop is online,
-then `codex-voice-models` and `codex-voice-models --check-only`. Check the Radeon
-Vulkan driver and try dictation and spoken playback on the laptop before
-considering its setup verified. Terminus and Relay are excluded from this
-configuration.
+- `codex-voice.service`: shared controller, hotkeys and tray.
+- `codex-voice-stt.service`: Whisper at `127.0.0.1:8178`.
+- `codex-voice-tts.service`: Qwen3 TTS at `127.0.0.1:8179`.
 
-The launcher starts three user services on demand:
+They start on demand, not at login. Ports must be available. The default
+models occupy about 2.93 GB in `~/.local/share/codex-voice/models`. Run
+`codex-voice-models` on a fresh host, and `codex-voice-models --check-only` to
+verify sizes and hashes. Silero VAD is also fetched with a fixed hash by Nix,
+so enabling it requires no extra setup on Foundation. Inference uses local
+files without cloud speech APIs or runtime Python package downloads. Prompt
+text still goes to the provider selected by the coding harness.
 
-- `codex-voice.service`: hotkeys, capture, selected session and playback.
-- `codex-voice-stt.service`: resident Whisper on `127.0.0.1:8178`.
-- `codex-voice-tts.service`: resident Qwen3 on `127.0.0.1:8179`.
+The voice reference, transcript and provenance are in
+[`home/config/voice/voices`](../home/config/voice/voices/README.md). Runtime
+state, private adapter sockets and temporary recordings use
+`$XDG_RUNTIME_DIR/codex-voice`. Whisper's diagnostic journal can contain
+recognized text; the TTS server disables request-body logging.
 
-The controller also owns the tray icon, using a pinned Python D-Bus library.
-The icon is present while that service runs, including a grey state without a
-selected session. No extra tray daemon, model or network service is required.
-The services are not enabled at login. Runtime state and temporary recordings live in
-the private `$XDG_RUNTIME_DIR/codex-voice` directory. Recordings are deleted
-after transcription or cancellation. Buffered speech uses one unnamed temporary
-WAV, released after playback, cancellation, synthesis failure or service exit.
-Streaming retains only the current and next chunk in memory and feeds PCM to
-one PipeWire player. Cancelling terminates playback immediately; an outstanding
-synthesis request finishes before its result is discarded. A synthesis failure
-stops the stream and reports an error, so a streamed reply can be partially heard.
-The speech server disables request-body
-logging; Whisper's diagnostic journal can contain recognized text.
-
-Stop all three explicitly with:
+Stop the services explicitly with:
 
 ```sh
 systemctl --user stop codex-voice.service codex-voice-stt.service codex-voice-tts.service
@@ -147,9 +148,9 @@ Inspect failures with:
 journalctl --user -u codex-voice -u codex-voice-stt -u codex-voice-tts -n 100
 ```
 
-The models take several seconds to load on first launch. If an immediate first
-request fails during startup, wait for startup to finish and retry. Ports 8178
-and 8179 must be available.
+On Foundation, pull the configuration, run `hmswitch`, then
+`codex-voice-models` and verify the microphone, Radeon Vulkan and playback.
+Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
 
 ## Voice choice and measured performance
 
@@ -243,7 +244,7 @@ are in `~/.local/share/codex-voice/voices`, including
 ## Development checks
 
 ```sh
-direnv exec . python3 -m unittest discover -s tests -p test_codex_voice.py -v
+direnv exec . node --test tests/pi-voice.test.mjs
 direnv exec . nix build \
   '.#homeConfigurations."william@andromeda".activationPackage' --no-link
 direnv exec . nix build \
@@ -252,7 +253,7 @@ direnv exec . nix flake check
 direnv exec . hmswitch
 ```
 
-Run all recording and tray regressions with the deployed Python environment:
+Run all controller, recording, adapter and tray regressions with dbus-next:
 
 ```sh
 # The interpreter used by the installed codex-voice launcher includes dbus-next.
@@ -268,8 +269,13 @@ after manual submission. Speech tests check complete buffering, sample order,
 one playback, and cleanup after cancellation, failed requests or invalid WAVs.
 Streaming tests check early playback, synthesis during playback, PCM order,
 cancellation of prefetched speech, failed requests and pipe cleanup.
-Live verification also requires a real Codex completion and a microphone trial,
-since mocked tests cannot establish desktop hotkey or physical audio behavior.
+Recovery tests cover a blocked terminal during Cancel, retained dictation across
+sessions and retries, absolute WAV expiry, late acknowledgements and rebinding.
+Pi tests exercise native staging, changed-editor rejection, final reply filtering
+and socket framing. Grok tests cover its installed hook schema and root events.
+Isolated installed-harness checks verify Pi extension loading and a real Grok
+TUI completion against a loopback mock. Physical microphone and listening trials
+are still needed to assess recognition and speech quality.
 Capture tests use real subprocess fixtures for startup timeout, cancellation,
 stalls, disconnects, partial PCM reads and file-write failures. Tray integration
 uses a private D-Bus session to check registration, icon changes, menu actions,
