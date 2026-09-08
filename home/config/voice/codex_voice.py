@@ -464,10 +464,11 @@ class Controller:
                 )),
                 "sessions": [
                     {"token": token, "selected": token == self.token,
+                     "harness": entry["target"].get("harness", "codex"),
+                     "id": entry.get("thread") or entry["target"]["pane"],
                      "label": (
-                         entry["target"].get("harness", "codex") + " "
-                         + entry["target"]["pane"] + " "
-                         + (entry.get("thread") or "new")[:12]
+                         entry["target"].get("harness", "codex") + ": "
+                         + (entry.get("thread") or entry["target"]["pane"])
                      )}
                     for token, entry in self.sessions.items()
                 ],

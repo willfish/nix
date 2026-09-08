@@ -204,6 +204,9 @@ class PresentationTests(unittest.TestCase):
         self.assertTrue(view["actions"]["rebind"][1])
         self.assertFalse(view["actions"]["select:one"][1])
         self.assertTrue(view["actions"]["select:two"][1])
+        self.assertEqual(view["actions"]["select:one"][0], "Codex: dotfiles")
+        self.assertEqual(view["actions"]["select:two"][0], "Pi: notes")
+        self.assertEqual(view["selected_session"], "select:one")
 
     def test_recording_keeps_red_icon_and_reports_clipping(self):
         view = self.tray.presentation({
@@ -303,6 +306,9 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
 
         def action(name):
             actions.append(name)
+            if name.startswith("select:"):
+                for session in state.get("sessions", []):
+                    session["selected"] = name == "select:" + session["token"]
             action_release.wait(3)
 
         class Watcher(ServiceInterface):
@@ -394,19 +400,68 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 )
                 action_release.set()
                 state.update(phase="idle", sessions=[
-                    {"token": "second", "label": "Second session"},
+                    {"token": "first", "label": "pi: dotfiles",
+                     "selected": True},
+                    {"token": "second", "label": "grok: notes"},
                 ])
                 await wait_until(
                     lambda: "select:second" in tray.view["actions"]
                 )
                 _, layout = await menu.call_get_layout(0, -1, [])
                 rows = [child.value for child in layout[2]]
-                old_session = next(
+                selector = next(
                     row for row in rows
-                    if row[1]["label"].value == "Select: Second session"
+                    if row[1]["label"].value == "Voice session"
                 )
+                self.assertEqual(
+                    selector[1]["children-display"].value, "submenu"
+                )
+                self.assertTrue(selector[1]["enabled"].value)
+                sessions = [child.value for child in selector[2]]
+                self.assertEqual(
+                    [row[1]["label"].value for row in sessions],
+                    ["pi: dotfiles", "grok: notes"],
+                )
+                self.assertEqual(
+                    [row[1]["toggle-state"].value for row in sessions], [1, 0]
+                )
+                self.assertTrue(all(
+                    row[1]["toggle-type"].value == "radio" for row in sessions
+                ))
+                _, shallow = await menu.call_get_layout(0, 1, [])
+                shallow_selector = next(
+                    child.value for child in shallow[2]
+                    if child.value[0] == selector[0]
+                )
+                self.assertEqual(shallow_selector[2], [])
+                _, subtree = await menu.call_get_layout(selector[0], -1, [])
+                self.assertEqual(subtree[2], selector[2])
+                # Opening the submenu must not select anything.
+                await menu.call_event(
+                    selector[0], "clicked", Variant("i", 0), 0
+                )
+                old_session = next(
+                    row for row in sessions
+                    if row[1]["label"].value == "grok: notes"
+                )
+                await menu.call_event(
+                    old_session[0], "clicked", Variant("i", 0), 0
+                )
+                await wait_until(
+                    lambda: tray.view["selected_session"] == "select:second"
+                )
+                self.assertEqual(actions, ["stop", "select:second"])
+                _, subtree = await menu.call_get_layout(selector[0], -1, [])
+                self.assertEqual(
+                    [child.value[1]["toggle-state"].value
+                     for child in subtree[2]], [0, 1]
+                )
+                _, selected_row = await menu.call_get_layout(
+                    old_session[0], 0, []
+                )
+                self.assertFalse(selected_row[1]["enabled"].value)
                 state["sessions"] = [
-                    {"token": "third", "label": "Third session"},
+                    {"token": "third", "label": "codex: third"},
                 ]
                 await wait_until(
                     lambda: "select:third" in tray.view["actions"]
@@ -416,7 +471,7 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                     old_session[0], "clicked", Variant("i", 0), 0
                 )
                 await asyncio.sleep(0.1)
-                self.assertEqual(actions, ["stop"])
+                self.assertEqual(actions, ["stop", "select:second"])
                 await watcher_bus.release_name("org.kde.StatusNotifierWatcher")
                 replacement = Watcher()
                 client.export("/StatusNotifierWatcher", replacement)

@@ -80,6 +80,7 @@ def presentation(status):
         "label": label,
         "colour": colour,
         "context": context,
+        "selected_session": None,
         "actions": {
             "record": (
                 "Stop and transcribe"
@@ -119,9 +120,10 @@ def presentation(status):
         if not isinstance(token, str) or not token:
             continue
         selected_session = bool(session.get("selected"))
-        prefix = "Selected: " if selected_session else "Select: "
+        if selected_session:
+            view["selected_session"] = f"select:{token}"
         view["actions"][f"select:{token}"] = (
-            prefix + public_label(session.get("label") or token),
+            public_label(session.get("label") or token),
             not busy and not selected_session,
         )
     return view
@@ -261,12 +263,13 @@ def _interfaces(tray):
             rows += [
                 (tray.action_id(action), label, enabled)
                 for action, (label, enabled) in tray.view["actions"].items()
+                if not action.startswith("select:")
             ]
             rows += [
                 (i, label, False)
                 for i, label in enumerate(tray.view["context"], 20)
             ]
-            return [
+            rows = [
                 [
                     i,
                     {
@@ -277,26 +280,59 @@ def _interfaces(tray):
                 ]
                 for i, label, enabled in rows
             ]
+            sessions = [
+                Variant("(ia{sv}av)", [
+                    tray.action_id(action),
+                    {
+                        "label": Variant("s", label),
+                        "enabled": Variant("b", enabled),
+                        "toggle-type": Variant("s", "radio"),
+                        "toggle-state": Variant(
+                            "i", int(action == tray.view["selected_session"])
+                        ),
+                    },
+                    [],
+                ])
+                for action, (label, enabled) in tray.view["actions"].items()
+                if action.startswith("select:")
+            ]
+            # This ID is deliberately outside actions_by_id: opening the
+            # submenu must not dispatch a voice command.
+            selector = [11, {
+                "label": Variant("s", "Voice session"),
+                "enabled": Variant("b", bool(sessions)),
+                "children-display": Variant("s", "submenu"),
+            }, sessions]
+            return [rows[0], selector, *rows[1:]]
 
         @method()
         def GetLayout(
             self, parent: "i", depth: "i", names: "as"
         ) -> "u(ia{sv}av)":
-            rows = self.rows()
-            if parent == 0:
-                children = (
-                    [Variant("(ia{sv}av)", row) for row in rows]
-                    if depth != 0
-                    else []
-                )
-                layout = [
-                    0,
-                    {"children-display": Variant("s", "submenu")},
-                    children,
-                ]
-            else:
-                layout = next(row for row in rows if row[0] == parent)
-            return [self.revision, layout]
+            root = [
+                0, {"children-display": Variant("s", "submenu")},
+                [Variant("(ia{sv}av)", row) for row in self.rows()],
+            ]
+
+            def find(row):
+                if row[0] == parent:
+                    return row
+                for child in row[2]:
+                    found = find(child.value)
+                    if found is not None:
+                        return found
+                return None
+
+            def limited(row, remaining):
+                return [row[0], row[1], [
+                    Variant("(ia{sv}av)", limited(child.value, remaining - 1))
+                    for child in row[2]
+                ] if remaining != 0 else []]
+
+            layout = find(root)
+            if layout is None:
+                raise ValueError("Unknown voice menu item")
+            return [self.revision, limited(layout, depth)]
 
         @method()
         def Event(self, item: "i", event: "s", data: "v", timestamp: "u"):

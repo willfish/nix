@@ -24,8 +24,12 @@ control command. Noninteractive print/RPC/agent modes are excluded. Grok uses
 daemon. Ordinary launches continue to work independently of voice.
 
 Each voice launcher registers its own process, pane and conversation. The
-latest launcher becomes selected. The Agent Voice tray lists other registered
-sessions so you can select one explicitly. Keyboard focus never changes voice
+latest launcher becomes selected. Open the Agent Voice tray's **Voice session**
+dropdown to choose another registered session. Each entry is labelled
+`<harness>: <id>`, with a checkmark beside the selected session. The ID is its
+full conversation ID, or its Herdr pane ID until the conversation is known.
+Codex, Grok, Pi and Qwen Pi sessions share the same dropdown, including multiple
+sessions of each harness. Keyboard focus never changes voice
 selection. Only the selected session receives dictation or automatic playback.
 Switching sessions preserves their retained text in memory and cancels current
 recording/playback. Exiting one launcher cannot stop engines another registered

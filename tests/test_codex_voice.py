@@ -242,6 +242,22 @@ class VoiceTests(unittest.TestCase):
         self.app.unregister("token-2")
         self.assertEqual(self.app.status()["pane"], "w1:p2")
 
+    def test_session_menu_labels_use_harness_and_conversation_or_pane_id(self):
+        self.app.register("token-1", self.target, "conversation-codex")
+        self.app.register(
+            "token-2", dict(self.target, harness="grok", pane="w1:p3")
+        )
+        self.app.register(
+            "token-3", dict(self.target, harness="pi", pane="w1:p4"),
+            "conversation-pi",
+        )
+        self.assertEqual(
+            [(s["label"], s["selected"])
+             for s in self.app.status()["sessions"]],
+            [("codex: conversation-codex", False), ("grok: w1:p3", False),
+             ("pi: conversation-pi", True)],
+        )
+
     def test_harness_session_change_requires_explicit_rebind(self):
         self.app.register("pi-token", dict(self.target, harness="pi"))
         self.app.harness_event("pi-token", {
