@@ -321,14 +321,15 @@ Model weights and the voice reference remain pinned independently of backend.
 On 2026-09-08, Q5 decoded a short 128-token response at about 60 tokens/sec.
 With the fixed speech runtime, a 120,029-token synthetic prompt completed in
 75.6 seconds and retrieved a fact from its beginning while TTS and Whisper
-ran concurrently. Sampled peak headroom was about 2.1 GiB. Repeated speech
-then generated 15-18 seconds of audio in about two seconds per chunk.
+ran concurrently. That run left about 2.1 GiB at its sampled peak; the final
+extended speech checks reached 31,398 MiB used with 711 MiB free. Repeated
+speech generated 13-18 seconds of audio in about two seconds per chunk.
 160K was also tested but exhausted TTS memory, so 128K is the retained shared
 configuration. These are functional and memory tests, not a coding-quality
 benchmark or a guarantee for other GPU workloads.
 
 Large prompt ingestion saturates the GPU: concurrent speech chunks took
-20-24 seconds in that stress test, including cold setup for the first chunk.
+19-25 seconds in these stress tests, including cold setup for the first chunk.
 Normal speech with Qwen resident but idle remains faster than playback.
 
 Pi compacts above 114,688 context tokens, reserves 16,384 output tokens and keeps
