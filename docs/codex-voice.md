@@ -2,9 +2,9 @@
 
 Local GPU dictation and spoken Codex replies in one Herdr pane. Whisper small.en
 recognizes speech; audio.cpp runs Qwen3-TTS 0.6B with the pinned Samantha
-reference from *Her*. Both use Vulkan on the configured AMD hosts. Andromeda's
-Radeon RX 7600 has been tested; Foundation was offline, so activation and
-live GPU, microphone and playback checks remain pending. The source recording,
+reference from *Her*. Both use Vulkan, with NVIDIA selected on Andromeda's
+RTX 5090 and Radeon selected on Foundation. Foundation was offline, so activation
+and live GPU, microphone and playback checks remain pending. The source recording,
 transcript, checksums and file-history investigation are in
 [`home/config/voice/voices`](../home/config/voice/voices/README.md).
 
@@ -34,9 +34,11 @@ playback. `codex-voice status` reports the selected pane and audio state.
 
 Speech skips fenced code and simplifies Markdown. It reads the remaining
 prose in full, so ask Codex for concise replies when you want brief audio.
-The complete reply is prepared before playback starts. Longer replies take
-longer to begin, then play as one recording without waits for more synthesis.
-Super+R or `codex-voice stop` cancels preparation as well as playback.
+On Andromeda, playback starts after the first chunk is prepared. The next
+chunk is synthesized while the current one plays, using one continuous audio
+stream. Foundation prepares the complete reply before playback, so its slower
+GPU cannot introduce synthesis pauses during speech. Super+R or
+`codex-voice stop` cancels preparation as well as playback.
 Recording interrupts speech, and a reply that completes during recording
 waits for manual playback with Super+R.
 
@@ -97,8 +99,12 @@ The launcher starts three user services on demand:
 
 They are not enabled at login. Runtime state and temporary recordings live in
 the private `$XDG_RUNTIME_DIR/codex-voice` directory. Recordings are deleted
-after transcription or cancellation. Prepared speech uses one unnamed temporary
+after transcription or cancellation. Buffered speech uses one unnamed temporary
 WAV, released after playback, cancellation, synthesis failure or service exit.
+Streaming retains only the current and next chunk in memory and feeds PCM to
+one PipeWire player. Cancelling terminates playback immediately; an outstanding
+synthesis request finishes before its result is discarded. A synthesis failure
+stops the stream and reports an error, so a streamed reply can be partially heard.
 The speech server disables request-body
 logging; Whisper's diagnostic journal can contain recognized text.
 
@@ -127,7 +133,8 @@ have fixed Hugging Face revisions, sizes and SHA-256 hashes in
 and run `hmswitch` to change the voice. Do not overwrite a reference beneath a
 running server: Qwen3 caches its encoded prompt. Restart TTS after changing it.
 
-Measurements on Andromeda on 2026-09-07 with both model services resident:
+Measurements on Andromeda's previous Radeon RX 7600 on 2026-09-07 with both
+model services resident:
 
 | Operation | Measured result |
 | --- | --- |
@@ -155,14 +162,36 @@ complete speech, verified by local Whisper and PipeWire playback. ASR
 comparison ignored punctuation and treated "you're" as equivalent to "you
 are". The installed reference matched its recorded SHA-256.
 
-Qwen3 1.7B was also tested, but used about 1.2 GiB more peak GPU memory for the
-short audition. The 0.6B model is the default to leave more room for the desktop
-and recognition engine. Replies use chunks of at most 260 characters, apart
+Qwen3 1.7B was also tested on the Radeon, but used about 1.2 GiB more peak GPU
+memory for the short audition. The 0.6B model remains the accepted voice.
+Replies use chunks of at most 260 characters, apart
 from individual longer words, with a 256-token synthesis limit per chunk.
-Chunks are generated sequentially and their PCM samples joined before a single
-playback starts. Buffering a full reply does not run concurrent inference or
-load another model onto the GPU. Cancelling during synthesis discards the
-prepared audio when the current request returns; it does not start playback.
+Inference remains sequential in both playback modes. On Andromeda, one worker
+prepares the next chunk while the current PCM is written to the playback pipe;
+pipe backpressure bounds the amount of queued audio. In buffered mode, all PCM
+samples are joined before playback. The `playback_mode` setting in
+`home/user/codex-voice.nix` selects `streaming` for Andromeda and `buffered` for
+Foundation. Neither mode loads another model onto the GPU.
+
+The RTX 5090 was verified on 2026-09-08 with NVIDIA 595.99.02 and both speech
+services using NVIDIA Vulkan. For the same 237-character sample, warmed-up
+0.6B inference generated 14.32 seconds of audio in 1.873 seconds; 1.7B generated
+12.00 seconds in 1.754 seconds. First requests took 19.455 and 22.002 seconds
+respectively, including voice-reference and shader setup. These are individual
+measurements, not a general speed ranking. Both recovered the full text through
+Whisper, allowing contractions; one 0.6B transcription also contained a `[MUSIC]`
+tag. Listening is still needed to judge voice similarity and prosody.
+
+A live two-chunk 0.6B playback check started the PipeWire stream after 2.518
+seconds. The second chunk was ready 13.883 seconds before the first chunk's
+audio ended. Playback completed normally in 23.03 seconds for 20.48 seconds of
+audio, including the initial preparation time.
+
+The larger model is not a universal English voice-cloning improvement:
+[upstream evaluations](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base#evaluation)
+are mixed across benchmarks. Those results use BF16 models, while these local
+models use Q8 weights. The 0.6B preset remains the default pending a preferred
+audition.
 
 Supertonic F1 is retained as a fast fallback model, with about 0.3 to 0.6
 seconds of synthesis for short replies. Earlier PocketTTS and dots.tts
@@ -192,5 +221,7 @@ replaced sessions, subagent filtering, duplicate replies, silence, cancellation
 and restart recovery, including the bound conversation and stale dictation
 after manual submission. Speech tests check complete buffering, sample order,
 one playback, and cleanup after cancellation, failed requests or invalid WAVs.
+Streaming tests check early playback, synthesis during playback, PCM order,
+cancellation of prefetched speech, failed requests and pipe cleanup.
 Live verification also requires a real Codex completion and a microphone trial,
 since mocked tests cannot establish desktop hotkey or physical audio behavior.

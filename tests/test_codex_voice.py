@@ -366,6 +366,149 @@ class VoiceTests(unittest.TestCase):
         player.wait.assert_called_once_with()
         self.assertEqual(list(Path(self.tmp.name).glob("*.wav")), [])
 
+    def test_streaming_prepares_the_next_chunk_while_playing(self):
+        audio = self.voice.LocalAudio(
+            Path(self.tmp.name),
+            {"tts_url": "http://unused.test", "playback_mode": "streaming"},
+        )
+        samples = [b"\x11\x00" * 240, b"\x22\x00" * 480]
+        writing = threading.Event()
+        prepared = threading.Event()
+        played = []
+
+        def synthesize(*args, **kwargs):
+            index = http.call_count - 1
+            if index == 1:
+                self.assertTrue(writing.wait(2), "Playback did not start early")
+                prepared.set()
+            return io.BytesIO(speech_wav(samples[index]))
+
+        def write_pcm(data):
+            if not played:
+                writing.set()
+                self.assertTrue(
+                    prepared.wait(2),
+                    "Next chunk was not prepared during playback",
+                )
+            played.append(data)
+            return len(data)
+
+        with (
+            patch.object(
+                self.voice.urllib.request, "urlopen", side_effect=synthesize
+            ) as http,
+            patch.object(self.voice.subprocess, "Popen") as process,
+        ):
+            player = process.return_value
+            player.stdin.write.side_effect = write_pcm
+            player.wait.return_value = 0
+            audio.speak("First " * 40 + "second " * 10, threading.Event())
+        self.assertEqual(played, samples)
+        process.assert_called_once()
+        self.assertIn("--raw", process.call_args.args[0])
+        self.assertEqual(process.call_args.kwargs["stdin"], subprocess.PIPE)
+        player.stdin.close.assert_called_once()
+        player.wait.assert_called_once_with()
+        self.assertIsNone(audio.player)
+
+    def test_streaming_cancellation_discards_the_prefetched_chunk(self):
+        audio = self.voice.LocalAudio(
+            Path(self.tmp.name),
+            {"tts_url": "http://unused.test", "playback_mode": "streaming"},
+        )
+        cancelled = threading.Event()
+        preparing = threading.Event()
+        stopped = threading.Event()
+        samples = b"\x11\x00" * 240
+
+        def synthesize(*args, **kwargs):
+            if http.call_count == 2:
+                preparing.set()
+                self.assertTrue(stopped.wait(2))
+            return io.BytesIO(speech_wav(samples))
+
+        def write_pcm(data):
+            self.assertTrue(preparing.wait(2))
+            cancelled.set()
+            audio.stop()
+            stopped.set()
+            return len(data)
+
+        with (
+            patch.object(
+                self.voice.urllib.request, "urlopen", side_effect=synthesize
+            ) as http,
+            patch.object(self.voice.subprocess, "Popen") as process,
+        ):
+            player = process.return_value
+            player.poll.return_value = None
+            player.terminate.side_effect = lambda: setattr(
+                player.poll, "return_value", 0
+            )
+            player.stdin.closed = False
+            player.stdin.write.side_effect = write_pcm
+            audio.speak("First " * 40 + "second " * 10, cancelled)
+        player.stdin.write.assert_called_once_with(samples)
+        player.terminate.assert_called_once()
+        player.stdin.close.assert_called_once()
+        self.assertIsNone(audio.player)
+
+    def test_streaming_failure_stops_playback_and_closes_the_pipe(self):
+        samples = b"\x11\x00" * 240
+        for failure in (
+            TimeoutError("Synthesis timed out"), speech_wav(samples)[:-2]
+        ):
+            with self.subTest(failure=type(failure).__name__):
+                audio = self.voice.LocalAudio(
+                    Path(self.tmp.name),
+                    {
+                        "tts_url": "http://unused.test",
+                        "playback_mode": "streaming",
+                    },
+                )
+                with (
+                    patch.object(
+                        self.voice.urllib.request, "urlopen",
+                        side_effect=[
+                            io.BytesIO(speech_wav(samples)),
+                            failure if isinstance(failure, Exception)
+                            else io.BytesIO(failure),
+                        ],
+                    ),
+                    patch.object(self.voice.subprocess, "Popen") as process,
+                ):
+                    player = process.return_value
+                    player.poll.return_value = None
+                    player.stdin.closed = False
+                    with self.assertRaises((TimeoutError, RuntimeError)):
+                        audio.speak(
+                            "First " * 40 + "second " * 10, threading.Event()
+                        )
+                player.terminate.assert_called_once()
+                player.wait.assert_called_once_with(timeout=5)
+                player.stdin.close.assert_called_once()
+                self.assertIsNone(audio.player)
+
+    def test_cancelling_before_first_streamed_chunk_never_starts_playback(self):
+        audio = self.voice.LocalAudio(
+            Path(self.tmp.name),
+            {"tts_url": "http://unused.test", "playback_mode": "streaming"},
+        )
+        cancelled = threading.Event()
+
+        def synthesize(*args, **kwargs):
+            cancelled.set()
+            return io.BytesIO(speech_wav(b"\0\0" * 24))
+
+        with (
+            patch.object(
+                self.voice.urllib.request, "urlopen", side_effect=synthesize
+            ),
+            patch.object(self.voice.subprocess, "Popen") as process,
+        ):
+            audio.speak("Hello William.", cancelled)
+        process.assert_not_called()
+
     def test_cancelling_buffered_speech_discards_audio_before_playback(self):
         audio = self.voice.LocalAudio(
             Path(self.tmp.name), {"tts_url": "http://127.0.0.1:8179/speech"}

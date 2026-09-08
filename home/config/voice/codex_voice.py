@@ -2,6 +2,7 @@
 """Local speech and hotkeys for one explicitly selected Codex pane."""
 
 import array
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, closing
 import io
 import json
@@ -481,6 +482,103 @@ class LocalAudio:
             )
         return json.loads(result.stdout).get("text", "")
 
+    def _synthesize(self, chunk, cancelled):
+        with self.synthesis_lock:
+            if cancelled.is_set():
+                return None
+            request = urllib.request.Request(
+                self.config["tts_url"],
+                data=json.dumps(
+                    {
+                        "model": "codex-voice",
+                        "input": chunk,
+                        "language": "English",
+                    }
+                ).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=90) as response:
+                data = response.read(32 * 1024 * 1024)
+        if cancelled.is_set():
+            return None
+        with wave.open(io.BytesIO(data), "rb") as wav:
+            params = wav.getparams()
+            frames = wav.readframes(wav.getnframes())
+            if not frames or len(frames) != (
+                wav.getnframes() * wav.getnchannels() * wav.getsampwidth()
+            ):
+                raise RuntimeError("Incomplete speech audio")
+        return params, frames
+
+    def _stream(self, chunks, cancelled):
+        prepared = self._synthesize(chunks[0], cancelled)
+        if prepared is None:
+            return
+        params, frames = prepared
+        formats = {1: "u8", 2: "s16", 3: "s24", 4: "s32"}
+        with ThreadPoolExecutor(max_workers=1) as worker:
+            with self.lock:
+                if cancelled.is_set():
+                    return
+                player = subprocess.Popen(
+                    [
+                        "pw-play",
+                        "--raw",
+                        "--format", formats[params.sampwidth],
+                        "--rate", str(params.framerate),
+                        "--channels", str(params.nchannels),
+                        "-",
+                    ],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL,
+                )
+                self.player = player
+            try:
+                for index in range(len(chunks)):
+                    if cancelled.is_set():
+                        return
+                    # One chunk ahead, with pipe backpressure bounding memory.
+                    pending = (
+                        worker.submit(
+                            self._synthesize, chunks[index + 1], cancelled
+                        )
+                        if index + 1 < len(chunks)
+                        else None
+                    )
+                    player.stdin.write(frames)
+                    player.stdin.flush()
+                    if pending is not None:
+                        prepared = pending.result()
+                        if prepared is None:
+                            return
+                        next_params, frames = prepared
+                        if next_params[:3] != params[:3]:
+                            raise RuntimeError("Speech audio format changed")
+                player.stdin.close()
+                if player.wait() and not cancelled.is_set():
+                    raise RuntimeError("Speech playback failed")
+            except BrokenPipeError:
+                if not cancelled.is_set():
+                    raise RuntimeError(
+                        "Speech playback stopped unexpectedly"
+                    ) from None
+            finally:
+                with self.lock:
+                    if self.player is player:
+                        self.player = None
+                if player.poll() is None:
+                    player.terminate()
+                    try:
+                        player.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        player.kill()
+                        player.wait()
+                if not player.stdin.closed:
+                    try:
+                        player.stdin.close()
+                    except BrokenPipeError:
+                        pass
+
     def speak(self, text, cancelled):
         # Short chunks bound cancellation latency and VRAM usage.
         chunks, words = [], []
@@ -493,6 +591,9 @@ class LocalAudio:
             chunks.append(" ".join(words))
         if not chunks or cancelled.is_set():
             return
+        if self.config.get("playback_mode", "buffered") == "streaming":
+            self._stream(chunks, cancelled)
+            return
         # An unnamed buffer also disappears if the controller exits abruptly.
         with tempfile.TemporaryFile(suffix=".wav", dir=self.runtime) as out:
             # Finish the entire WAV before playing, without parallel GPU work.
@@ -501,40 +602,16 @@ class LocalAudio:
                 for chunk in chunks:
                     if cancelled.is_set():
                         return
-                    with self.synthesis_lock:
-                        if cancelled.is_set():
-                            return
-                        request = urllib.request.Request(
-                            self.config["tts_url"],
-                            data=json.dumps(
-                                {
-                                    "model": "codex-voice",
-                                    "input": chunk,
-                                    "language": "English",
-                                }
-                            ).encode(),
-                            headers={"Content-Type": "application/json"},
-                        )
-                        with urllib.request.urlopen(
-                            request, timeout=90
-                        ) as response:
-                            data = response.read(32 * 1024 * 1024)
-                    if cancelled.is_set():
+                    prepared = self._synthesize(chunk, cancelled)
+                    if prepared is None:
                         return
-                    with wave.open(io.BytesIO(data), "rb") as wav:
-                        if combined is None:
-                            combined = stack.enter_context(wave.open(out, "wb"))
-                            combined.setparams(wav.getparams())
-                        elif combined.getparams()[:3] != wav.getparams()[:3]:
-                            raise RuntimeError("Speech audio format changed")
-                        frames = wav.readframes(wav.getnframes())
-                        if len(frames) != (
-                            wav.getnframes()
-                            * wav.getnchannels()
-                            * wav.getsampwidth()
-                        ):
-                            raise RuntimeError("Incomplete speech audio")
-                        combined.writeframesraw(frames)
+                    params, frames = prepared
+                    if combined is None:
+                        combined = stack.enter_context(wave.open(out, "wb"))
+                        combined.setparams(params)
+                    elif combined.getparams()[:3] != params[:3]:
+                        raise RuntimeError("Speech audio format changed")
+                    combined.writeframesraw(frames)
             out.flush()
             out.seek(0)
             with self.lock:

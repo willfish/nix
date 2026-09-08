@@ -15,6 +15,7 @@ let
   dataDir = "${config.home.homeDirectory}/.local/share/codex-voice";
   audio = pkgs.callPackage ./voice-audio-package.nix { };
   whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
+  vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
   voice = pkgs.writeShellApplication {
     name = "codex-voice";
     runtimeInputs = [
@@ -84,6 +85,7 @@ in
       stt_url = "http://127.0.0.1:8178/inference";
       tts_url = "http://127.0.0.1:8179/v1/audio/speech";
       auto_speak = true;
+      playback_mode = if hostName == "andromeda" then "streaming" else "buffered";
     };
     xdg.configFile."codex-voice/tts.json".source = ttsConfig;
 
@@ -99,17 +101,17 @@ in
       };
     };
     systemd.user.services.codex-voice-stt = {
-      Unit.Description = "Local Whisper speech recognition on the AMD GPU";
+      Unit.Description = "Local Whisper speech recognition on the GPU";
       Service = common // {
         ExecStart = "${whisper}/bin/whisper-server --host 127.0.0.1 --port 8178 -m ${dataDir}/models/ggml-small.en.bin -t 4 -l en";
-        Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json" ];
+        Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}" ];
       };
     };
     systemd.user.services.codex-voice-tts = {
-      Unit.Description = "Local Samantha speech synthesis on the AMD GPU";
+      Unit.Description = "Local Samantha speech synthesis on the GPU";
       Service = common // {
         ExecStart = "${audio}/bin/audiocpp_server --config ${config.home.homeDirectory}/.config/codex-voice/tts.json --no-ui";
-        Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json" ];
+        Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}" ];
       };
     };
     home.activation.codexVoiceDirectories = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
