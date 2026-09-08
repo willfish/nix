@@ -236,6 +236,13 @@ class AgentTerminal:
     def validate(self, target):
         return self._adapter(target).validate(target)
 
+    def activity(self, target):
+        info = self._adapter(target).validate_target(target)
+        state = info.get("agent_status", info.get("state", "unknown"))
+        if state == "done":
+            return "idle"
+        return state if state in ("working", "blocked", "idle") else "unknown"
+
     def insert_guarded(self, target, text, cancelled):
         return self._adapter(target).insert_guarded(target, text, cancelled)
 
@@ -272,6 +279,7 @@ class Controller:
         self.worker = None
         self.retry_audio = None
         self.active_retry = None
+        self.activity_inflight = set()
 
     @property
     def transcribing(self):
@@ -364,6 +372,7 @@ class Controller:
             self.thread = candidate
             self.target = dict(self.target, session=candidate)
             self.sessions[self.token]["target"] = self.target
+            self._set_activity(self.sessions[self.token], "unknown")
             self.turns = set()
             self.draft = False
             self.reply = None
@@ -447,14 +456,68 @@ class Controller:
             if self.sessions:
                 self._save_selection()
 
+    @staticmethod
+    def _set_activity(entry, state):
+        entry["agent_state"] = state
+        entry["activity_revision"] = entry.get("activity_revision", 0) + 1
+
+    def _settle_activity(self, entry, turn=None):
+        active = entry.get("active_turn")
+        if turn and active and turn != active:
+            return
+        if turn and (
+            turn == active or entry["target"].get("harness", "codex") == "codex"
+        ):
+            self._set_activity(entry, "idle")
+            return
+        # Pi has no shared run ID and some Grok hooks omit one. Such events
+        # cannot establish ordering relative to a newer turn or status probe.
+        self._set_activity(entry, entry.get("agent_state", "unknown"))
+        entry["activity_checked"] = float("-inf")
+
+    def _refresh_activity(self):
+        activity = getattr(self.terminal, "activity", None)
+        entry = self.sessions.get(self.token)
+        if not activity or not entry or self.token in self.activity_inflight:
+            return
+        now = time.monotonic()
+        if now - entry.get("activity_checked", float("-inf")) < 1:
+            return
+        token, target = self.token, dict(self.target)
+        revision = entry.get("activity_revision", 0)
+        entry["activity_checked"] = now
+        self.activity_inflight.add(token)
+
+        def probe():
+            try:
+                state = activity(target)
+            except Exception:
+                state = "unknown"
+            if state not in ("working", "blocked", "idle"):
+                state = "unknown"
+            with self.lock:
+                if (self.sessions.get(token) is entry
+                        and entry["target"] == target
+                        and entry.get("activity_revision", 0) == revision):
+                    self._set_activity(entry, state)
+                self.activity_inflight.discard(token)
+
+        threading.Thread(target=probe, daemon=True).start()
+
     def status(self):
         audio_status = getattr(self.audio, "status", lambda: {})()
         with self.lock:
             self._expire_retry()
+            self._refresh_activity()
+            agent_state = self.sessions.get(self.token, {}).get(
+                "agent_state", "unknown"
+            )
             return {
                 "pane": self.target["pane"] if self.target else None,
                 "harness": self.target.get("harness", "codex")
                 if self.target else None,
+                "agent_state": agent_state,
+                "responding": agent_state == "working",
                 "session_label": (self.thread or "Awaiting conversation")[:48],
                 "rebind_needed": bool(self.token and self.sessions[
                     self.token
@@ -516,6 +579,8 @@ class Controller:
                 if token != self.token:
                     thread = event.get("thread-id")
                     if not entry["thread"] or entry["thread"] == thread:
+                        if event.get("turn-id") not in entry["turns"]:
+                            self._settle_activity(entry, event.get("turn-id"))
                         entry["thread"] = thread
                         entry["draft"] = False
                         entry["reply"] = spoken_text(event.get(
@@ -539,6 +604,7 @@ class Controller:
                 return False
             if turn in self.turns:
                 return False
+            self._settle_activity(entry, turn)
             self.thread = thread
             self.turns.add(turn)
             self._save_selection()
@@ -577,6 +643,9 @@ class Controller:
             if entry["thread"] != session:
                 return False
             if kind == "busy":
+                self._set_activity(entry,
+                    "blocked" if event.get("state") == "blocked" else "working"
+                )
                 entry["draft"] = False
                 entry["active_turn"] = event.get("turn")
                 if token == self.token:
@@ -585,6 +654,7 @@ class Controller:
                         self.phase = "idle"
                 return True
             if kind in ("settled", "shutdown"):
+                self._settle_activity(entry, event.get("turn"))
                 return True
             if kind != "reply" or not event.get("turn"):
                 return False
@@ -1027,6 +1097,9 @@ def dispatch(app, request):
     elif action == "auto":
         with app.lock:
             app.auto = bool(request["enabled"])
+    elif action == "auto-toggle":
+        with app.lock:
+            app.auto = not app.auto
     elif action in ("append", "replace"):
         app.record(mode=action)
     elif action == "discard":

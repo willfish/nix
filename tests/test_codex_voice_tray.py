@@ -32,7 +32,7 @@ class PresentationTests(unittest.TestCase):
         view = self.tray.presentation({"pane": "p1", "phase": "starting"})
         self.assertEqual(view["label"], "Starting microphone")
         self.assertEqual(view["colour"], "amber")
-        self.assertFalse(view["actions"]["send"][1])
+        self.assertNotIn("send", view["actions"])
         self.assertTrue(view["actions"]["stop"][1])
 
     def test_recording_displays_elapsed_time_and_only_stop_capture_actions(
@@ -50,31 +50,30 @@ class PresentationTests(unittest.TestCase):
         )
         self.assertIn("01:05", view["label"])
         self.assertEqual(view["colour"], "red")
-        self.assertEqual(
-            view["actions"]["record"], ("Stop and transcribe", True)
-        )
-        self.assertFalse(view["actions"]["send"][1])
-        self.assertFalse(view["actions"]["read"][1])
+        self.assertNotIn("record", view["actions"])
+        self.assertNotIn("send", view["actions"])
+        self.assertNotIn("read", view["actions"])
+        self.assertEqual(view["actions"]["stop"], ("Cancel recording", True))
 
     def test_empty_idle_and_busy_states_cannot_submit(self):
         for phase in ("idle", "starting", "stopping", "transcribing", "error"):
             with self.subTest(phase=phase):
                 view = self.tray.presentation({"pane": "p1", "phase": phase})
-                self.assertFalse(view["actions"]["send"][1])
+                self.assertNotIn("send", view["actions"])
 
-    def test_pending_dictation_can_be_sent_only_with_a_selected_session(self):
+    def test_record_more_requires_prepared_text_and_a_selected_session(self):
         for pane in (None, "p1"):
             view = self.tray.presentation(
                 {"pane": pane, "phase": "draft", "pending": True}
             )
-            self.assertEqual(view["actions"]["send"][1], bool(pane))
+            self.assertEqual("append" in view["actions"], bool(pane))
 
     def test_cancel_is_not_offered_for_text_already_staged_in_terminal(self):
         view = self.tray.presentation(
             {"pane": "p1", "phase": "draft", "draft": True}
         )
-        self.assertTrue(view["actions"]["send"][1])
-        self.assertFalse(view["actions"]["stop"][1])
+        self.assertEqual(view["actions"]["append"], ("Record more", True))
+        self.assertNotIn("stop", view["actions"])
 
     def test_presentation_does_not_include_transcript_or_reply(self):
         view = self.tray.presentation(
@@ -103,11 +102,11 @@ class PresentationTests(unittest.TestCase):
         self.assertLessEqual(len(view["label"]), 150)
 
     def test_cancel_can_interrupt_a_slow_tray_action(self):
-        state = {"pane": "p1", "phase": "idle"}
+        state = {"pane": "p1", "phase": "draft", "draft": True}
         began, release, cancelled = (threading.Event() for _ in range(3))
 
         def action(name):
-            if name == "record":
+            if name == "append":
                 state["phase"] = "starting"
                 began.set()
                 release.wait(2)
@@ -116,7 +115,7 @@ class PresentationTests(unittest.TestCase):
 
         tray = self.tray.VoiceTray(lambda: dict(state), action)
         try:
-            tray.action("record")
+            tray.action("append")
             self.assertTrue(began.wait(1))
             tray.action("stop")
             self.assertTrue(cancelled.wait(0.5))
@@ -153,33 +152,104 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("Speech models loading", context)
         self.assertEqual(view["colour"], "amber")
 
-    def test_retained_text_offers_append_replace_discard_and_retry(self):
+    def test_idle_menu_has_only_the_read_replies_toggle_and_sessions(self):
+        view = self.tray.presentation({"pane": "p1", "auto": True})
+        self.assertEqual(view["actions"], {
+            "auto-toggle": ("Read replies aloud", True),
+        })
+        self.assertTrue(view["auto"])
+
+    def test_last_reply_can_be_replayed_only_when_usable(self):
+        status = {"pane": "p1", "reply": "An answer"}
+        view = self.tray.presentation(status)
+        self.assertEqual(view["actions"]["read"], ("Replay last reply", True))
+        for updates in ({"speaking": True}, {"responding": True},
+                        {"phase": "recording"}, {"pending": True}):
+            self.assertNotIn("read", self.tray.presentation(
+                {**status, **updates}
+            )["actions"])
+
+    def test_responding_has_blue_dots_and_blocked_has_a_distinct_glyph(self):
+        responding = self.tray.presentation({
+            "pane": "p1", "harness": "Grok", "responding": True,
+            "agent_state": "working",
+        })
+        self.assertEqual(responding["label"], "Grok is responding")
+        self.assertEqual((responding["colour"], responding["glyph"]),
+                         ("blue", "dots"))
+        self.assertNotIn("stop", responding["actions"])
+        blocked = self.tray.presentation({
+            "pane": "p1", "harness": "Pi", "agent_state": "blocked",
+        })
+        self.assertIn("needs your attention", blocked["label"])
+        self.assertEqual(blocked["glyph"], "blocked")
+
+    def test_voice_work_takes_priority_over_agent_activity(self):
+        for state, colour, glyph in (
+            ({"phase": "recording"}, "red", "microphone"),
+            ({"phase": "transcribing"}, "amber", "microphone"),
+            ({"phase": "draft", "draft": True}, "green", "check"),
+            ({"phase": "error", "error": "Lost microphone"},
+             "orange", "blocked"),
+        ):
+            view = self.tray.presentation({
+                "pane": "p1", "responding": True, **state,
+            })
+            self.assertEqual((view["colour"], view["glyph"]), (colour, glyph))
+
+    def test_icons_have_distinct_shapes_even_without_colour(self):
+        icons = [self.tray.icon_pixmap("blue", glyph=glyph)[0][2]
+                 for glyph in ("microphone", "dots", "blocked",
+                               "speaker", "check")]
+        self.assertEqual(len(set(icons)), 5)
+
+    def test_cancel_labels_describe_the_voice_operation(self):
+        for status, label in (
+            ({"phase": "recording"}, "Cancel recording"),
+            ({"phase": "transcribing"}, "Cancel transcription"),
+            ({"speaking": True}, "Stop speaking"),
+        ):
+            view = self.tray.presentation({"pane": "p1", **status})
+            self.assertEqual(view["actions"]["stop"], (label, True))
+
+    def test_three_dots_are_visible_at_the_icon_centres(self):
+        pixels = self.tray.icon_pixmap("blue", glyph="dots")[0][2]
+
+        def pixel(x, y):
+            start = (y * 32 + x) * 4
+            return tuple(pixels[start:start + 4])
+
+        for x in (8, 16, 24):
+            self.assertEqual(pixel(x, 16), (255, 255, 255, 255))
+        self.assertEqual(pixel(16, 10), (255, 48, 125, 224))
+
+    def test_retained_text_offers_only_relevant_recovery_actions(self):
         view = self.tray.presentation({
             "pane": "p1", "phase": "draft", "pending": True,
             "harness": "Pi", "retry": True,
         })
         self.assertIn("Pi", view["label"])
-        for name in ("append", "replace", "discard", "retry"):
+        for name in ("append", "discard", "retry"):
             self.assertTrue(view["actions"][name][1])
         fresh = self.tray.presentation({"pane": "p1"})
         self.assertNotIn("append", fresh["actions"])
         self.assertNotIn("replace", fresh["actions"])
-        self.assertFalse(fresh["actions"]["retry"][1])
+        self.assertNotIn("retry", fresh["actions"])
 
     def test_retained_dictation_disables_read_until_sent_or_discarded(self):
         view = self.tray.presentation({
             "pane": "p1", "phase": "draft", "pending": True,
             "reply": "Latest reply",
         })
-        self.assertFalse(view["actions"]["read"][1])
+        self.assertNotIn("read", view["actions"])
 
-    def test_retry_audio_can_be_cancelled_or_discarded_without_pending_text(
+    def test_retry_audio_has_one_discard_action_without_pending_text(
         self,
     ):
         view = self.tray.presentation({
             "pane": "p1", "phase": "error", "retry": True,
         })
-        self.assertTrue(view["actions"]["stop"][1])
+        self.assertNotIn("stop", view["actions"])
         self.assertTrue(view["actions"]["discard"][1])
         self.assertIn("recording", view["actions"]["discard"][0])
 
@@ -201,7 +271,7 @@ class PresentationTests(unittest.TestCase):
                 {"token": "two", "label": "Pi: notes", "selected": False},
             ],
         })
-        self.assertTrue(view["actions"]["rebind"][1])
+        self.assertNotIn("rebind", view["actions"])
         self.assertFalse(view["actions"]["select:one"][1])
         self.assertTrue(view["actions"]["select:two"][1])
         self.assertEqual(view["actions"]["select:one"][0], "Codex: dotfiles")
@@ -288,7 +358,7 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
         state = {
             "pane": "p1", "phase": "idle", "harness": "Pi",
             "session_label": "dotfiles", "models": "loading",
-            "microphone": {"name": "USB mic"},
+            "microphone": {"name": "USB mic"}, "auto": True,
         }
         actions = []
         action_release = threading.Event()
@@ -306,6 +376,8 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
 
         def action(name):
             actions.append(name)
+            if name == "auto-toggle":
+                state["auto"] = not state["auto"]
             if name.startswith("select:"):
                 for session in state.get("sessions", []):
                     session["selected"] = name == "select:" + session["token"]
@@ -374,23 +446,22 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotEqual(await item.get_icon_pixmap(), old_pixmap)
                 _, layout = await menu.call_get_layout(0, -1, [])
                 rows = [child.value for child in layout[2]]
-                self.assertIn("00:12", rows[0][1]["label"].value)
                 labels = [row[1]["label"].value for row in rows]
-                self.assertIn("Pi: dotfiles", labels)
-                self.assertIn("Microphone: USB mic", labels)
-                self.assertIn("Speech models loading", labels)
-                send = next(
-                    row
-                    for row in rows
-                    if row[1]["label"].value == "Send dictation"
-                )
-                await menu.call_event(send[0], "clicked", Variant("i", 0), 0)
+                self.assertEqual(labels, [
+                    "Voice session", "Read replies aloud", "Cancel recording",
+                ])
+                tooltip = (await item.get_tool_tip())[3]
+                for detail in ("00:12", "Pi: dotfiles", "Microphone: USB mic",
+                               "Speech models loading"):
+                    self.assertIn(detail, tooltip)
+                # A stale Send row from the old tray cannot trigger delivery.
+                await menu.call_event(3, "clicked", Variant("i", 0), 0)
                 await asyncio.sleep(0.1)
                 self.assertEqual(actions, [])
                 cancel = next(
                     row
                     for row in rows
-                    if row[1]["label"].value == "Cancel / stop speech"
+                    if row[1]["label"].value == "Cancel recording"
                 )
                 await menu.call_event(cancel[0], "clicked", Variant("i", 0), 0)
                 await wait_until(lambda: actions == ["stop"])
@@ -399,6 +470,17 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                     await asyncio.wait_for(item.get_title(), 0.5), "Agent Voice"
                 )
                 action_release.set()
+                state.update(phase="idle", models="ready", responding=True)
+                await wait_until(lambda: tray.view.get("glyph") == "dots")
+                working_pixmap = await item.get_icon_pixmap()
+                icon_count = len(icons)
+                state.update(responding=False, speaking=True)
+                await wait_until(lambda: len(icons) > icon_count)
+                self.assertEqual(tray.view["glyph"], "speaker")
+                self.assertNotEqual(
+                    await item.get_icon_pixmap(), working_pixmap
+                )
+                state["speaking"] = False
                 state.update(phase="idle", sessions=[
                     {"token": "first", "label": "pi: dotfiles",
                      "selected": True},
@@ -472,6 +554,19 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 )
                 await asyncio.sleep(0.1)
                 self.assertEqual(actions, ["stop", "select:second"])
+                _, layout = await menu.call_get_layout(0, -1, [])
+                toggle = next(
+                    child.value for child in layout[2]
+                    if child.value[1]["label"].value == "Read replies aloud"
+                )
+                self.assertEqual(toggle[1]["toggle-type"].value, "checkmark")
+                self.assertEqual(toggle[1]["toggle-state"].value, 1)
+                await menu.call_event(
+                    toggle[0], "clicked", Variant("i", 0), 0
+                )
+                await wait_until(lambda: tray.view.get("auto") is False)
+                _, updated_toggle = await menu.call_get_layout(toggle[0], 0, [])
+                self.assertEqual(updated_toggle[1]["toggle-state"].value, 0)
                 await watcher_bus.release_name("org.kde.StatusNotifierWatcher")
                 replacement = Watcher()
                 client.export("/StatusNotifierWatcher", replacement)

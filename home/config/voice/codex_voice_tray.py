@@ -19,7 +19,15 @@ def presentation(status):
     ready = bool(status.get("draft") or status.get("pending"))
     pending = bool(status.get("pending"))
     retry = bool(status.get("retry"))
+    speaking = bool(status.get("speaking"))
+    responding = bool(status.get("responding")) or (
+        status.get("agent_state") == "working"
+    )
+    blocked = status.get("agent_state") == "blocked"
     harness = public_label(status.get("harness") or "Codex", 30)
+    harness = {"codex": "Codex", "grok": "Grok", "pi": "Pi",
+               "qwen-pi": "Qwen Pi"}.get(harness, harness)
+    glyph = "microphone"
     label, colour = {
         "idle": (
             "Ready to record" if selected else "No voice session selected",
@@ -40,12 +48,29 @@ def presentation(status):
     elif phase == "error" and status.get("error"):
         detail = public_label(status["error"])
         label = f"Voice error: {detail}"
-    elif not busy and pending:
-        label, colour = f"Dictation waiting for {harness}", "green"
+    if phase == "error":
+        glyph = "blocked"
+    elif not busy:
+        if ready:
+            label = f"Dictation waiting for {harness}" if pending else (
+                "Dictation ready; Super+Space sends it"
+            )
+            colour, glyph = "green", "check"
+        elif speaking:
+            label, colour, glyph = "Reading reply aloud", "blue", "speaker"
+        elif selected and blocked:
+            label = f"{harness} needs your attention"
+            colour, glyph = "orange", "blocked"
+        elif selected and responding:
+            label, colour, glyph = f"{harness} is responding", "blue", "dots"
     context = []
     if selected:
         session = public_label(status.get("session_label") or status["pane"])
         context.append(f"{harness}: {session}")
+        if responding and glyph != "dots":
+            context.append(f"{harness} is responding")
+        elif blocked and label != f"{harness} needs your attention":
+            context.append(f"{harness} needs your attention")
     microphone = status.get("microphone") or {}
     if microphone:
         name = public_label(microphone.get("name") or "Unknown")
@@ -62,13 +87,13 @@ def presentation(status):
     models = status.get("models")
     if models == "loading":
         context.append("Speech models loading")
-        if phase == "idle":
+        if colour == "grey":
             colour = "amber"
     elif models == "unavailable":
         context.append("Speech models unavailable")
         if status.get("model_error"):
             context.append(public_label(status["model_error"]))
-        if phase == "idle":
+        if colour in ("grey", "amber") and not busy:
             colour = "orange"
     if status.get("rebind_needed"):
         context.append(
@@ -79,42 +104,32 @@ def presentation(status):
     view = {
         "label": label,
         "colour": colour,
+        "glyph": glyph,
         "context": context,
+        "auto": bool(status.get("auto")),
         "selected_session": None,
-        "actions": {
-            "record": (
-                "Stop and transcribe"
-                if phase == "recording"
-                else "Start recording",
-                selected and (not busy or phase == "recording"),
-            ),
-            "send": ("Send dictation", selected and not busy and ready),
-            "stop": (
-                "Cancel / stop speech",
-                busy or pending or retry or bool(status.get("speaking")),
-            ),
-            "read": (
-                "Read latest reply",
-                selected and not busy and not pending
-                and bool(status.get("reply")),
-            ),
-            "rebind": ("Bind to current conversation", selected and not busy),
-            "retry": (
-                "Retry last transcription",
-                selected and not busy and retry,
-            ),
-            "discard": (
-                "Discard retained dictation" if pending
-                else "Discard retained recording",
-                (pending or retry) and not busy,
-            ),
-        },
+        "actions": {"auto-toggle": ("Read replies aloud", True)},
     }
-    if pending:
-        view["actions"].update({
-            "append": ("Record and append dictation", selected and not busy),
-            "replace": ("Record replacement dictation", selected and not busy),
-        })
+    actions = view["actions"]
+    if selected and not busy and not pending and not speaking \
+            and not responding and status.get("reply"):
+        actions["read"] = ("Replay last reply", True)
+    if busy or speaking:
+        actions["stop"] = (
+            "Cancel transcription" if phase == "transcribing"
+            else "Cancel recording" if busy else "Stop speaking", True,
+        )
+    if selected and ready and not busy:
+        actions["append"] = ("Record more", True)
+    if selected and retry and not busy:
+        actions["retry"] = ("Retry transcription", True)
+    if (pending or retry) and not busy:
+        actions["discard"] = (
+            "Discard retained dictation" if pending
+            else "Discard retained recording", True,
+        )
+    if selected and status.get("rebind_needed") and not busy:
+        actions["rebind"] = ("Bind to current conversation", True)
     for session in status.get("sessions", []):
         token = session.get("token")
         if not isinstance(token, str) or not token:
@@ -129,7 +144,7 @@ def presentation(status):
     return view
 
 
-def icon_pixmap(colour, size=32):
+def icon_pixmap(colour, size=32, glyph="microphone"):
     """Supply network-order ARGB so COSMIC preserves recording colours."""
     rgb = {
         "grey": (100, 110, 120),
@@ -137,6 +152,7 @@ def icon_pixmap(colour, size=32):
         "amber": (205, 154, 30),
         "green": (42, 164, 95),
         "orange": (226, 104, 30),
+        "blue": (48, 125, 224),
     }[colour]
     pixels = bytearray()
     for y in range(size):
@@ -152,9 +168,25 @@ def icon_pixmap(colour, size=32):
             stand = (15 <= px <= 17 and 22 <= py <= 26) or (
                 12 <= px <= 20 and 25 <= py <= 27
             )
+            mark = capsule or cradle or stand
+            if glyph == "dots":
+                mark = any((px - cx) ** 2 + (py - 16) ** 2 < 2.3**2
+                           for cx in (8, 16, 24))
+            elif glyph == "blocked":
+                mark = (14.5 <= px <= 17.5 and 7 <= py <= 19) or (
+                    (px - 16) ** 2 + (py - 24) ** 2 < 2**2
+                )
+            elif glyph == "speaker":
+                mark = (7 <= px <= 12 and 12 <= py <= 20) or (
+                    12 <= px <= 18 and abs(py - 16) <= px - 8
+                ) or (px >= 21 and 49 < (px - 16) ** 2 + (py - 16) ** 2 < 81)
+            elif glyph == "check":
+                mark = (8 <= px <= 14 and abs(py - px - 7) < 1.5) or (
+                    14 <= px <= 25 and abs(py + px - 35) < 1.5
+                )
             pixels.extend(
                 (255, 255, 255, 255)
-                if capsule or cradle or stand
+                if mark
                 else (255, *rgb)
                 if circle
                 else (0, 0, 0, 0)
@@ -206,7 +238,7 @@ def _interfaces(tray):
 
         @readonly()
         def IconPixmap(self) -> "a(iiay)":
-            return icon_pixmap(tray.view["colour"])
+            return icon_pixmap(tray.view["colour"], glyph=tray.view["glyph"])
 
         @readonly()
         def IconThemePath(self) -> "s":
@@ -259,15 +291,10 @@ def _interfaces(tray):
             return "normal"
 
         def rows(self):
-            rows = [(1, tray.view["label"], False)]
-            rows += [
+            rows = [
                 (tray.action_id(action), label, enabled)
                 for action, (label, enabled) in tray.view["actions"].items()
                 if not action.startswith("select:")
-            ]
-            rows += [
-                (i, label, False)
-                for i, label in enumerate(tray.view["context"], 20)
             ]
             rows = [
                 [
@@ -280,6 +307,12 @@ def _interfaces(tray):
                 ]
                 for i, label, enabled in rows
             ]
+            for row in rows:
+                if tray.actions_by_id[row[0]] == "auto-toggle":
+                    row[1].update({
+                        "toggle-type": Variant("s", "checkmark"),
+                        "toggle-state": Variant("i", int(tray.view["auto"])),
+                    })
             sessions = [
                 Variant("(ia{sv}av)", [
                     tray.action_id(action),
@@ -303,7 +336,7 @@ def _interfaces(tray):
                 "enabled": Variant("b", bool(sessions)),
                 "children-display": Variant("s", "submenu"),
             }, sessions]
-            return [rows[0], selector, *rows[1:]]
+            return [selector, *rows]
 
         @method()
         def GetLayout(
@@ -375,6 +408,7 @@ class VoiceTray:
                 "discard", "append", "replace",
             ), 2)
         }
+        self.ids_by_action["auto-toggle"] = 12
         self.actions_by_id = {
             i: action for action, i in self.ids_by_action.items()
         }
@@ -487,7 +521,8 @@ class VoiceTray:
                 while bus.connected and not self.stopped.is_set():
                     view = self.snapshot
                     if view != self.view:
-                        changed_icon = view["colour"] != self.view["colour"]
+                        changed_icon = any(view[key] != self.view[key]
+                                           for key in ("colour", "glyph"))
                         self.view = view
                         if changed_icon:
                             item.NewIcon()

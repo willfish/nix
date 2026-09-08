@@ -58,21 +58,46 @@ same harness.
 This decision tracks prompts prepared by voice, including subsequent edits.
 Codex and Grok do not expose authoritative editor contents, so entirely
 hand-typed prompts do not trigger automatic submission. Clearing their editor
-manually does not clear voice's tracked draft. Use the tray's Start recording
+manually does not clear voice's tracked draft. Use the tray's Record more
 or `codex-voice record` to add more speech instead of sending a prepared prompt.
 
 ## Tray and recovery
 
-The tray is grey when idle, red while recording, amber during startup or
-processing, and green when dictation is ready. Its menu shows the selected
-harness/conversation, actual microphone, mute/clipping warnings and speech
-model readiness. Andromeda prefers the Razer Kiyo Pro Ultra's stable device
+The idle menu contains **Voice session** and **Read replies aloud**. The latter
+toggles automatic playback of completed replies. Other actions appear only
+when useful: Replay last reply, Record more, Retry transcription, Discard
+retained dictation/recording, and Bind to current conversation. Cancel recording,
+Cancel transcription or Stop speaking appears while that voice work is active.
+These controls do not cancel a running coding-agent turn. Super+Space handles
+the normal record/transcribe/send flow.
+
+The icon communicates the current state without repeating it in the menu:
+
+| Icon | State |
+| --- | --- |
+| Grey microphone | Ready to record |
+| Red microphone | Recording |
+| Amber microphone | Starting, finishing capture or transcribing |
+| Green checkmark | Dictation prepared for Super+Space to send |
+| Blue dots | Selected coding agent is responding or using tools |
+| Blue speaker | Reading a reply aloud |
+| Orange warning | Voice/model error or agent waiting for attention |
+
+Recording, transcription and prepared dictation take priority over the agent
+activity indicator. Hover for the full status, selected session, microphone,
+mute/clipping warnings and model readiness. Pi/Grok lifecycle events update
+activity promptly; bounded background reads confirm completion and refresh the
+selected process's status about once a second, including Codex and manually
+submitted prompts.
+Slow or unavailable harnesses cannot block the menu or voice cancellation.
+
+Andromeda prefers the Razer Kiyo Pro Ultra's stable device
 name, with a visible fallback to PipeWire's default if absent. Foundation uses
 the default microphone. Speakers follow the PipeWire default.
 
 Recording works while the selected agent is busy. Valid text waits in memory
 until it can be safely delivered. A new recording appends to retained text by
-default. The menu also offers Replace; replacement happens only after valid
+default. `codex-voice replace` replaces retained text only after valid
 new speech, so silence or a failed start preserves previous words. Discard
 removes retained text and retry audio. Cancel does not remove text already
 pasted into a terminal editor; that prompt remains available for review.
