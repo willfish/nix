@@ -144,7 +144,8 @@ let
     builtins.toJSON {
       defaultProvider = hostName;
       defaultModel = modelAlias;
-      defaultThinkingLevel = "medium";
+      # Pi's highest level; pi-qwen.js maps it to Qwen's top "xhigh" reasoning effort.
+      defaultThinkingLevel = "max";
       enableInstallTelemetry = false;
       compaction = {
         enabled = true;
