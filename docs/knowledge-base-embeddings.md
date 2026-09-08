@@ -1,9 +1,15 @@
 # Knowledge base embeddings
 
 Andromeda runs Qwen3-Embedding-0.6B Q8_0 through a localhost-only
-`llama-server` on port 8082, using Vulkan on the AMD GPU. Home Manager pins
+`llama-server` on port 8082, using eight CPU threads. This reserves Andromeda's
+RTX 5090 memory for the local coding model, speech and desktop. Home Manager pins
 both the model revision and SHA-256. Other hosts continue to use `kb-search`
 SSH fallback when they have no local database.
+
+The CPU migration retains the same model, pooling and preprocessing. A public
+query returned 1,024 finite dimensions in 0.218 seconds, with cosine similarity
+0.99967 to the previous Vulkan result. A representative 6,000-byte document
+chunk took 8.459 seconds on 2026-09-08, within the client's 180-second timeout.
 
 ## Contract
 

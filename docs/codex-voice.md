@@ -2,8 +2,9 @@
 
 Local GPU dictation and spoken Codex replies in one Herdr pane. Whisper small.en
 recognizes speech; audio.cpp runs Qwen3-TTS 0.6B with the pinned Samantha
-reference from *Her*. Both use Vulkan, with NVIDIA selected on Andromeda's
-RTX 5090 and Radeon selected on Foundation. Foundation was offline, so activation
+reference from *Her*. Andromeda uses CUDA for TTS and NVIDIA Vulkan for
+Whisper on its RTX 5090. Foundation uses Radeon Vulkan for both services.
+Foundation was offline, so activation
 and live GPU, microphone and playback checks remain pending. The source recording,
 transcript, checksums and file-history investigation are in
 [`home/config/voice/voices`](../home/config/voice/voices/README.md).
@@ -173,8 +174,8 @@ samples are joined before playback. The `playback_mode` setting in
 `home/user/codex-voice.nix` selects `streaming` for Andromeda and `buffered` for
 Foundation. Neither mode loads another model onto the GPU.
 
-The RTX 5090 was verified on 2026-09-08 with NVIDIA 595.99.02 and both speech
-services using NVIDIA Vulkan. For the same 237-character sample, warmed-up
+The initial RTX 5090 verification on 2026-09-08 used NVIDIA 595.99.02 and both
+speech services on NVIDIA Vulkan. For the same 237-character sample, warmed-up
 0.6B inference generated 14.32 seconds of audio in 1.873 seconds; 1.7B generated
 12.00 seconds in 1.754 seconds. First requests took 19.455 and 22.002 seconds
 respectively, including voice-reference and shader setup. These are individual
@@ -186,6 +187,15 @@ A live two-chunk 0.6B playback check started the PipeWire stream after 2.518
 seconds. The second chunk was ready 13.883 seconds before the first chunk's
 audio ended. Playback completed normally in 23.03 seconds for 20.48 seconds of
 audio, including the initial preparation time.
+
+Andromeda also runs a local Qwen coding model. Its TTS runtime uses CUDA 12.9
+on Blackwell and a patch to the pinned audio.cpp decoder. When an utterance
+needs a different decoder shape, the patch releases the previous graph and
+its CUDA graph cache before allocating the replacement. This prevents the
+temporary overlap that caused allocation failures while Qwen was resident.
+Matching decoder graphs remain cached. Foundation retains Vulkan without
+this CUDA-specific patch. See [local Qwen](local-llm.md) for the shared memory
+budget and measured context configuration.
 
 The larger model is not a universal English voice-cloning improvement:
 [upstream evaluations](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base#evaluation)

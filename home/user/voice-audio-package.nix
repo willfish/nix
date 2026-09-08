@@ -10,9 +10,15 @@
   vulkan-loader,
   glslang,
   shaderc,
+  cudaPackages,
+  autoAddDriverRunpath,
+  cudaSupport ? false,
 }:
 
-stdenv.mkDerivation {
+let
+  effectiveStdenv = if cudaSupport then cudaPackages.backendStdenv else stdenv;
+in
+effectiveStdenv.mkDerivation {
   pname = "codex-voice-audio";
   version = "0-unstable-2026-09-07";
 
@@ -23,13 +29,33 @@ stdenv.mkDerivation {
     hash = "sha256-+VrxrXEqnsMOYaFhf7TkwIs2Bmcrim2Mv4KR92F9EWg=";
   };
 
+  # Avoid overlapping decoder arenas when speech shares VRAM with local Qwen.
+  patches = lib.optionals cudaSupport [
+    ../config/voice/patches/qwen3-tts-release-decoder-graph.patch
+  ];
+
   nativeBuildInputs = [
     cmake
     ninja
     pkg-config
+  ]
+  ++ lib.optionals cudaSupport [
+    cudaPackages.cuda_nvcc
+    autoAddDriverRunpath
   ];
   buildInputs = [
     openssl
+  ]
+  ++ lib.optionals cudaSupport (
+    with cudaPackages;
+    [
+      cuda_cccl
+      cuda_cudart
+      libcublas
+      libcufft
+    ]
+  )
+  ++ lib.optionals (!cudaSupport) [
     vulkan-headers
     vulkan-loader
     glslang
@@ -40,12 +66,18 @@ stdenv.mkDerivation {
     "-DCMAKE_BUILD_TYPE=Release"
     "-DBUILD_SHARED_LIBS=OFF"
     "-DENGINE_ENABLE_NATIVE_CPU=OFF"
-    "-DENGINE_ENABLE_VULKAN=ON"
+    (lib.cmakeBool "ENGINE_ENABLE_CUDA" cudaSupport)
+    (lib.cmakeBool "ENGINE_ENABLE_VULKAN" (!cudaSupport))
     "-DAUDIOCPP_DEPLOYMENT_BUILD=ON"
     "-DAUDIOCPP_BUILD_NATIVE_MODEL_MANAGER=ON"
     "-DAUDIOCPP_USE_SYSTEM_OPENSSL=ON"
     "-DAUDIOCPP_MODEL_SET=custom"
     "-DAUDIOCPP_MODELS=dots_tts,pocket_tts,supertonic,qwen3_tts"
+  ]
+  ++ lib.optionals cudaSupport [
+    # RTX 5090 only, using the existing CUDA 12.9 toolchain.
+    "-DCMAKE_CUDA_ARCHITECTURES=120a-real"
+    "-DGGML_CUDA_NCCL=OFF"
   ];
 
   # Runtime only: packaged GGUF models need no Python, Torch or converters.
@@ -58,7 +90,7 @@ stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Local Vulkan speech synthesis runtime for Codex voice";
+    description = "Local GPU speech synthesis runtime for Codex voice";
     homepage = "https://github.com/0xShug0/audio.cpp";
     license = lib.licenses.mit;
     platforms = lib.platforms.linux;

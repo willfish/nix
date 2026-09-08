@@ -1,8 +1,11 @@
-# Local chat on relay
+# Local Qwen on Relay and Andromeda
 
-Home Manager manages a Metal-accelerated llama.cpp server on the M4 Pro Mac mini.
-The configuration is in `home/user/local-llm.nix` and only applies to Darwin host
-`relay`.
+Home Manager manages a Metal-accelerated llama.cpp server on the M4 Pro Mac mini
+`relay` and a CUDA server on Andromeda's RTX 5090. Both use the lean `qwen-pi`
+launcher and pinned Unsloth Qwen3.8-27B weights: Q6 on Relay, Q5_K_M on
+Andromeda. Configuration is in
+`home/user/local-llm.nix`. The browser UI and Hermes setup below apply to Relay;
+Andromeda exposes its authenticated API only on localhost.
 
 ## Chat
 
@@ -43,7 +46,8 @@ Qwen3.6-35B-A3B Q4_K_S weights, their Ollama hard link, and their exclusive
 Ollama projector/config/manifest were removed with permission to make room.
 The separate Ollama Qwen3-Coder model is unchanged.
 
-For comparison, Gemma measured on relay on 2026-09-05 using llama.cpp 9190 achieved 39.5-44.4
+For comparison, Gemma measured on relay on 2026-09-05 using llama.cpp 9190
+achieved 39.5-44.4
 generated tokens/sec for 128-token responses and 600.3 prompt tokens/sec for an
 uncached 5,250-token prompt. The process used about 23.5 GiB RSS with the 64K
 slot allocated and no system swap. A filesystem tool round trip succeeded and
@@ -54,11 +58,13 @@ or model-quality evaluation.
 Qwen3.8-27B Q6 rechecked on relay on 2026-09-06 using llama.cpp
 9190 achieved 9.3-9.7 generated tokens/sec
 for 128-token responses, and 113.2 prompt tokens/sec for an uncached 5,250-token
-prompt (46.4 seconds prefill). The process used about 23.1 GiB RSS with the 64K slot allocated and no
+prompt (46.4 seconds prefill). The process used about 23.1 GiB RSS with the 64K
+slot allocated and no
 system swap. These are small text-chat measurements, not a full-context or
 model-quality evaluation. A filesystem tool round trip succeeded and reused
 888 cached prompt tokens on the follow-up.
-The server is configured with one 65,536-token conversation slot, including input and
+The server is configured with one 65,536-token conversation slot, including
+input and
 output, with Flash Attention and q8_0 K/V caches. Parallel conversations queue.
 Qwen uses its embedded chat/tool template with `preserve_thinking` enabled.
 Cached browser summaries are invalidated automatically when the model changes.
@@ -143,22 +149,26 @@ direnv exec . node --experimental-strip-types --test tests/local-chat-compaction
 
 The `pi-coding-agent` package is in the shared `home/user/packages.nix` list,
 so plain `pi` is installed on every Home Manager host after updating this
-checkout and switching there. The local server and `qwen-pi` wrapper remain
-relay-only. Installing Pi elsewhere does not download Qwen or start a server.
+checkout and switching there. The local server and `qwen-pi` wrapper are enabled
+on Relay and Andromeda. Installing Pi elsewhere does not download Qwen or start
+a server.
 
-Run `qwen-pi` from the directory you want it to work in. This uses the same
-Qwen server and API key as Hermes, with a short system prompt and four tools:
-`read`, `bash`, `edit`, and `write`. `qwen` still launches Hermes.
+Run `qwen-pi` from the directory you want it to work in. It uses the local
+Qwen server with a short system prompt and four tools: `read`, `bash`, `edit`,
+and `write`. On Relay, it shares the server and API key with Hermes;
+`qwen` still launches Hermes there.
 
 ```sh
 qwen-pi                         # Medium thinking, interactive terminal UI
 qwen-pi --thinking off          # Quick chat without thinking tokens
 qwen-pi --thinking low          # Lighter reasoning
 qwen-pi --thinking high         # Maps to Qwen's xhigh reasoning
+qwen-pi --thinking max          # Also maps to xhigh on Pi versions with max
 qwen-pi --continue              # Continue the last session in this directory
 ```
 
-Home Manager installs Pi 0.75.4 from the pinned Nix package, without a global
+Home Manager installs Pi from the pinned Nix package (0.85.1 verified on
+Andromeda), without a global
 npm install or install-script bypass. The launcher uses an isolated agent
 directory at `~/.config/local-llm/pi`. Model credentials are resolved from the
 existing key file at request time, not embedded in Git, process arguments or
@@ -173,9 +183,16 @@ William with his filesystem permissions and without per-command approval
 popups. The short prompt asks before destructive actions, but is not an
 enforced permission boundary. No web-search tool or MCP integration is added.
 
-Pi's native automatic compaction is enabled above 49,152 of the configured
-65,536 context tokens, with an 8,192-token recent-history budget and 16,384
-tokens reserved for output. `/compact` also requests it manually. Summaries use
+Pi's native automatic compaction reserves 16,384 tokens for output and keeps
+an 8,192-token recent-history budget:
+
+| Host | Weights | Total context | Compaction above |
+| --- | --- | --- | --- |
+| Relay | UD-Q6_K | 65,536 | 49,152 |
+| Andromeda | UD-Q5_K_M | 131,072 | 114,688 |
+
+The context includes instructions, tool definitions, history and output.
+`/compact` also requests compaction manually. Summaries use
 the local model and are lossy; original sessions remain in Pi's session files.
 This policy is separate from browser and Hermes compression. Home Manager
 restores the declared Pi settings on activation, backing up changed settings
@@ -203,6 +220,14 @@ Live requests verified thinking on/off and medium reasoning kwargs. Tests
 cover reasoning-level mapping and sampling. Pi's installed compaction predicate
 was checked at 49,152/49,153 tokens; a complete 64K Pi compaction session has not
 been exercised.
+
+On Andromeda, the installed Pi wrapper completed a public-fixture read-tool
+round trip in 9.43 seconds. Manual compaction took 33.78 seconds, reducing
+10,933 tokens to an immediate estimate of 8,539; subsequent recall preserved
+both test markers. That isolated test used a temporary 32K server slot. It
+verifies the tool and manual compaction paths, not a full automatic compaction
+at the production limit. The summary also suggested an unrequested next step,
+so successful recall does not establish complete summary fidelity.
 
 ```sh
 direnv exec . node --test tests/local-pi.test.mjs
@@ -256,6 +281,8 @@ has been completed and tested.
 
 ## Install and activate
 
+On Relay:
+
 ```sh
 direnv exec . nix build .#homeConfigurations.william-darwin.activationPackage --no-link
 direnv exec . hmswitch
@@ -265,11 +292,66 @@ local-chat
 local-chat-key
 ```
 
-`local-llm-fetch` downloads 22.0 GB from the pinned Unsloth Hugging Face revision
-`4ca720788d1e01f1bff70c033e0d0028fd02e502` and verifies SHA256
-`c9c206812fbe4ac7b76a729e25928b63f2ae89d37f69da7a71c20aec763cd436`
-before making the model available. Interrupted downloads resume on the next
-invocation. If an identical Ollama blob already exists, it is verified and
+On Andromeda:
+
+```sh
+direnv exec . nix build \
+  '.#homeConfigurations."william@andromeda".activationPackage' --no-link
+direnv exec . hmswitch
+local-llm-fetch
+systemctl --user start local-llm
+qwen-pi
+```
+
+The Andromeda runtime is llama.cpp 9190 with CUDA 12.9, compiled for the RTX
+5090's Blackwell architecture. It uses one 128K slot, q8 K/V, Flash Attention,
+full layer offload, a 512-token logical batch and a 128-token physical batch.
+Automatic fitting is disabled so it cannot silently reduce context or move
+transformer layers to the CPU. The embedding service runs on eight CPU threads
+to reserve GPU memory for Qwen, speech and the desktop.
+
+Qwen shares VRAM with speech and the desktop. The previous Vulkan speech
+backend exhausted memory during concurrent and repeated requests, even when
+Qwen itself could run. Andromeda now uses CUDA for TTS and applies a small
+patch to release obsolete decoder graphs before allocating replacements.
+This avoids overlapping two decoder arenas and clears the old CUDA graph
+cache before its buffers are freed. Foundation retains its Vulkan runtime.
+Model weights and the voice reference remain pinned independently of backend.
+
+On 2026-09-08, Q5 decoded a short 128-token response at about 60 tokens/sec.
+With the fixed speech runtime, a 120,029-token synthetic prompt completed in
+75.6 seconds and retrieved a fact from its beginning while TTS and Whisper
+ran concurrently. Sampled peak headroom was about 2.1 GiB. Repeated speech
+then generated 15-18 seconds of audio in about two seconds per chunk.
+160K was also tested but exhausted TTS memory, so 128K is the retained shared
+configuration. These are functional and memory tests, not a coding-quality
+benchmark or a guarantee for other GPU workloads.
+
+Large prompt ingestion saturates the GPU: concurrent speech chunks took
+20-24 seconds in that stress test, including cold setup for the first chunk.
+Normal speech with Qwen resident but idle remains faster than playback.
+
+Pi compacts above 114,688 context tokens, reserves 16,384 output tokens and keeps
+8,192 recent tokens. Its provider is `andromeda` locally and `relay` on the Mac;
+the same request adapter controls thinking and sampling on both hosts.
+
+The service unloads the model after ten idle minutes and reloads it on the next
+request. Inspect it with `systemctl --user status local-llm` or
+`journalctl --user -u local-llm -n 60`. The API is at
+`http://127.0.0.1:8081/v1`; the key is in `~/.config/local-llm/api-key`.
+The Pi wrapper reads it automatically without exposing it in process arguments.
+
+`local-llm-fetch` selects the host's weights from the pinned Unsloth Hugging Face
+revision `4ca720788d1e01f1bff70c033e0d0028fd02e502` and verifies SHA256:
+
+- Andromeda Q5_K_M, 19,771,509,664 bytes:
+  `2de73110cb254cbf09b54b717578dadff12ef1194e7271527e68202f39ba4bfd`
+- Relay Q6_K, 21,983,677,344 bytes:
+  `c9c206812fbe4ac7b76a729e25928b63f2ae89d37f69da7a71c20aec763cd436`
+
+Verification finishes before the model becomes available. Interrupted downloads
+resume on the next invocation. If an identical Ollama blob already exists,
+it is verified and
 hard-linked instead, consuming no additional space for the weights.
 
 Weights live under `~/.local/share/local-llm`, outside the Nix store. Builds and
@@ -345,6 +427,8 @@ Measurements on 2026-09-06 used a harmless terminal task: inspect a JSON fixture
 identify its invalid port and suggest a valid replacement. They do not measure
 model quality or demonstrate arbitrary system repair competence.
 
+<!-- markdownlint-disable MD013 -->
+
 | Run | Wall time | Key observation |
 | --- | --- | --- |
 | Minimal isolated Hermes, thinking off, cold prompt | 54.1 sec | 5,036-token prefill took 44.7 sec; decode 9.55 tokens/sec |
@@ -352,6 +436,8 @@ model quality or demonstrate arbitrary system repair competence.
 | Actual `qwen` profile, thinking on, partly cached | 32.9 sec | Terminal task succeeded; decode 9.2-9.4 tokens/sec |
 | Actual `qwen chat` path, thinking on, warm cache | 25.5 sec | Terminal task succeeded; decode 9.1 tokens/sec |
 | Direct `hermes --yolo -p qwen chat`, partly cached | 27.5 sec | No wrapper credentials; authenticated terminal task succeeded at 9.3-9.4 tokens/sec |
+
+<!-- markdownlint-enable MD013 -->
 
 The initial real-profile attempt took 97 seconds and failed to find the fixture
 because the terminal was pinned to the old OpenClaw directory. The profile and

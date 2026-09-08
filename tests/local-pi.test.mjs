@@ -41,8 +41,24 @@ if (existsSync(extensionPath)) {
     assert.equal(result.presence_penalty, 1.5);
   });
   test('Pi levels map to supported Qwen template levels', () => {
-    for (const [level, expected] of [['minimal', 'low'], ['low', 'low'], ['medium', 'medium'], ['high', 'xhigh'], ['xhigh', 'xhigh']]) {
+    for (const [level, expected] of [['minimal', 'low'], ['low', 'low'], ['medium', 'medium'], ['high', 'xhigh'], ['xhigh', 'xhigh'], ['max', 'xhigh']]) {
       assert.equal(adapt({ chat_template_kwargs: { enable_thinking: true } }, level).chat_template_kwargs.reasoning_effort, expected);
+    }
+  });
+  test('Andromeda uses the same thinking and sampling behavior as Relay', () => {
+    for (const level of ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']) {
+      for (const enableThinking of [false, true]) {
+        const payload = {
+          model: 'qwen3.8-27b',
+          messages: [{ role: 'user', content: 'Explain this change.' }],
+          chat_template_kwargs: { enable_thinking: enableThinking, custom_option: 'keep' },
+        };
+        assert.deepEqual(
+          adapt(payload, level, 'andromeda'),
+          adapt(payload, level, 'relay'),
+          `${level} with enable_thinking=${enableThinking}`,
+        );
+      }
     }
   });
   test('other providers are untouched', () => {

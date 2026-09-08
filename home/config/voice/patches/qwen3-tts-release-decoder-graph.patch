@@ -1,0 +1,26 @@
+Release obsolete Qwen3-TTS decoder graphs before allocating a replacement.
+
+Pinned audio.cpp constructs the new decoder arena while the previous graph
+still owns its GPU allocation. Different speech lengths can therefore require
+two arenas at once. Drop the obsolete graph first and evict its CUDA graph
+cache before freeing its arena. Matching graphs remain cached and reusable.
+
+--- a/src/models/qwen3_tts/tokenizer_speech_decoder.cpp
++++ b/src/models/qwen3_tts/tokenizer_speech_decoder.cpp
+@@ -1044,5 +1044,5 @@ public:
+     ~Qwen3SpeechTokenizerDecoderGraph() {
+-        engine::core::release_backend_graph_resources(backend_, graph_);
++        engine::core::release_backend_graph_resources(backend_, graph_, true);
+         if (gallocr_ != nullptr) {
+             ggml_gallocr_free(gallocr_);
+         }
+@@ -1226,6 +1226,9 @@ runtime::AudioBuffer Qwen3SpeechTokenizerDecoderRuntime::decode(const Qwen3SpeechCo
+             graph == nullptr || !graph->matches(*weights_, chunk_frames, execution_context_->backend(), threads);
+         if (graph_rebuilt) {
+             const auto build_start = Clock::now();
++            // Release the obsolete arena before allocating a different shape.
++            // The previous run has already copied its waveform back to the CPU.
++            graph.reset();
+             auto replacement = std::make_unique<Qwen3SpeechTokenizerDecoderGraph>(
+                 weights_,
+                 chunk_frames,

@@ -1,11 +1,11 @@
 // Pi handles enable_thinking; Qwen 3.8 also needs its level inside the template kwargs.
 export default function localQwen(pi) {
   pi.on('before_provider_request', (event, ctx) => {
-    if (ctx.model?.provider !== 'relay') return;
+    if (!['relay', 'andromeda'].includes(ctx.model?.provider)) return;
     const payload = event.payload;
     const thinking = payload.chat_template_kwargs?.enable_thinking === true;
     const level = pi.getThinkingLevel();
-    const effort = level === 'high' || level === 'xhigh' ? 'xhigh'
+    const effort = level === 'high' || level === 'xhigh' || level === 'max' ? 'xhigh'
       : level === 'medium' ? 'medium' : 'low';
     return {
       ...payload,

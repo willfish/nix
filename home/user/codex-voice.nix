@@ -13,7 +13,10 @@ let
       "foundation"
     ];
   dataDir = "${config.home.homeDirectory}/.local/share/codex-voice";
-  audio = pkgs.callPackage ./voice-audio-package.nix { };
+  cudaTts = hostName == "andromeda";
+  audio = pkgs.callPackage ./voice-audio-package.nix {
+    cudaSupport = cudaTts;
+  };
   whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
   voice = pkgs.writeShellApplication {
@@ -42,7 +45,7 @@ let
   ttsConfig = (pkgs.formats.json { }).generate "codex-voice-tts.json" {
     host = "127.0.0.1";
     port = 8179;
-    backend = "vulkan";
+    backend = if cudaTts then "cuda" else "vulkan";
     device = 0;
     threads = 4;
     lazy_load = false;
@@ -111,7 +114,9 @@ in
       Unit.Description = "Local Samantha speech synthesis on the GPU";
       Service = common // {
         ExecStart = "${audio}/bin/audiocpp_server --config ${config.home.homeDirectory}/.config/codex-voice/tts.json --no-ui";
-        Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}" ];
+        Environment = lib.optionals (!cudaTts) [
+          "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}"
+        ];
       };
     };
     home.activation.codexVoiceDirectories = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

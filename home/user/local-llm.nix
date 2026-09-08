@@ -6,11 +6,33 @@
   ...
 }:
 let
+  isRelay = pkgs.stdenv.isDarwin && hostName == "relay";
+  isAndromeda = pkgs.stdenv.isLinux && hostName == "andromeda";
+  llamaCpp =
+    if isAndromeda then
+      (pkgs.llama-cpp.override {
+        cudaSupport = true;
+        inherit (pkgs) cudaPackages;
+      }).overrideAttrs
+        (previous: {
+          # Andromeda's Blackwell GPU only; avoid compiling unused architectures.
+          cmakeFlags =
+            builtins.filter (flag: !(lib.hasPrefix "-DCMAKE_CUDA_ARCHITECTURES" flag)) previous.cmakeFlags
+            ++ [ "-DCMAKE_CUDA_ARCHITECTURES=120" ];
+        })
+    else
+      pkgs.llama-cpp;
+  contextSize = if isAndromeda then 131072 else 65536;
   modelDir = "${config.xdg.dataHome}/local-llm";
   modelAlias = "qwen3.8-27b";
-  modelName = "Qwen3.8-27B-UD-Q6_K.gguf";
+  modelQuant = if isAndromeda then "UD-Q5_K_M" else "UD-Q6_K";
+  modelName = "Qwen3.8-27B-${modelQuant}.gguf";
   modelPath = "${modelDir}/${modelName}";
-  modelHash = "c9c206812fbe4ac7b76a729e25928b63f2ae89d37f69da7a71c20aec763cd436";
+  modelHash =
+    if isAndromeda then
+      "2de73110cb254cbf09b54b717578dadff12ef1194e7271527e68202f39ba4bfd"
+    else
+      "c9c206812fbe4ac7b76a729e25928b63f2ae89d37f69da7a71c20aec763cd436";
   modelRevision = "4ca720788d1e01f1bff70c033e0d0028fd02e502";
   modelUrl = "https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/resolve/${modelRevision}/${modelName}";
   ollamaBlob = "${config.home.homeDirectory}/.ollama/models/blobs/sha256-${modelHash}";
@@ -120,7 +142,7 @@ let
   piAgentDir = "${config.xdg.configHome}/local-llm/pi";
   piSettings = pkgs.writeText "local-qwen-pi-settings.json" (
     builtins.toJSON {
-      defaultProvider = "relay";
+      defaultProvider = hostName;
       defaultModel = modelAlias;
       defaultThinkingLevel = "medium";
       enableInstallTelemetry = false;
@@ -136,7 +158,7 @@ let
     }
   );
   piSystemPrompt = pkgs.writeText "local-qwen-pi-system.md" ''
-    You are a local system administration and coding assistant running on William's Mac.
+    You are a local system administration and coding assistant running on William's ${hostName} computer.
     Use the available tools to inspect the actual machine, run commands and edit files.
     Work in the current directory. Diagnose before changing things, preserve unrelated work,
     and verify your changes. Never claim to have run a tool unless you did.
@@ -151,7 +173,7 @@ let
       export PI_CODING_AGENT_DIR=${lib.escapeShellArg piAgentDir}
       export PI_TELEMETRY=0
       exec ${pkgs.pi-coding-agent}/bin/pi \
-        --offline --provider relay --model ${modelAlias} \
+        --offline --provider ${hostName} --model ${modelAlias} \
         --no-context-files --no-skills --no-extensions --no-prompt-templates --no-themes \
         --extension ${../config/local-llm/pi-qwen.js} \
         --system-prompt "$(< ${piSystemPrompt})" \
@@ -231,7 +253,7 @@ let
         # An independent hard link survives deletion from Ollama's model library.
         ln ${lib.escapeShellArg ollamaBlob} "$model"
       else
-        echo "Downloading Unsloth Qwen3.8 27B UD-Q6_K (22.0 GB)."
+        echo "Downloading Unsloth ${modelName}."
         curl --fail --location --retry 3 --continue-at - \
           --output "$model.partial" ${lib.escapeShellArg modelUrl}
         printf '%s  %s\n' ${lib.escapeShellArg modelHash} "$model.partial" | sha256sum --check
@@ -258,15 +280,15 @@ let
         openssl rand -hex 32 > ${lib.escapeShellArg apiKeyPath}
       fi
       chmod 600 ${lib.escapeShellArg apiKeyPath}
-      exec ${pkgs.llama-cpp}/bin/llama-server \
+      exec ${llamaCpp}/bin/llama-server \
         --model ${lib.escapeShellArg modelPath} \
         --alias ${modelAlias} \
-        --host 0.0.0.0 --port 8081 \
+        --host ${if isAndromeda then "127.0.0.1" else "0.0.0.0"} --port 8081 \
         --api-key-file ${lib.escapeShellArg apiKeyPath} \
-        --ui-mcp-proxy --ui-config-file ${uiConfig} \
-        --path ${chatUi} \
-        --ctx-size 65536 --parallel 1 \
+        ${lib.optionalString isRelay "--ui-mcp-proxy --ui-config-file ${uiConfig} --path ${chatUi}"} \
+        --ctx-size ${toString contextSize} --parallel 1 \
         --n-gpu-layers 99 --flash-attn on \
+        ${lib.optionalString isAndromeda "--fit off --batch-size 512 --ubatch-size 128"} \
         --cache-type-k q8_0 --cache-type-v q8_0 --cache-ram 1024 \
         --jinja --reasoning off \
         --chat-template-kwargs '{"preserve_thinking":true}' \
@@ -292,19 +314,21 @@ let
     '';
   };
 in
-lib.mkIf (pkgs.stdenv.isDarwin && hostName == "relay") {
+lib.mkIf (isRelay || isAndromeda) {
   home.packages = [
-    pkgs.llama-cpp
     qwenPi
     fetchModel
     server
+  ]
+  ++ lib.optionals isRelay [
+    pkgs.llama-cpp
     chat
     chatKey
     assistantTools
   ];
 
   xdg.configFile."local-llm/pi/models.json".text = builtins.toJSON {
-    providers.relay = {
+    providers.${hostName} = {
       baseUrl = "http://127.0.0.1:8081/v1";
       api = "openai-completions";
       # Resolve at request time, never embed the secret in the Nix store.
@@ -312,10 +336,10 @@ lib.mkIf (pkgs.stdenv.isDarwin && hostName == "relay") {
       models = [
         {
           id = modelAlias;
-          name = "Local Qwen 3.8 27B Q6";
+          name = "Local Qwen 3.8 27B ${modelQuant}";
           reasoning = true;
           input = [ "text" ];
-          contextWindow = 65536;
+          contextWindow = contextSize;
           maxTokens = 16384;
           compat = {
             supportsStore = false;
@@ -339,20 +363,22 @@ lib.mkIf (pkgs.stdenv.isDarwin && hostName == "relay") {
     ${pkgs.coreutils}/bin/install -m 0600 ${piSettings} "$piSettingsPath"
   '';
 
-  home.activation.configureLocalHermes = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    if [ -x ${lib.escapeShellArg "${config.home.homeDirectory}/.local/bin/hermes"} ]; then
-      ${profilePython}/bin/python3 ${../config/local-llm/hermes_profile.py} \
-        ${lib.escapeShellArg "${config.home.homeDirectory}/.hermes/profiles/qwen/config.yaml"} \
-        ${hermesOverlay} --key-file ${lib.escapeShellArg apiKeyPath}
-      qwenPath=${lib.escapeShellArg "${config.home.homeDirectory}/.local/bin/qwen"}
-      if [ -f "$qwenPath" ] && [ ! -e "$qwenPath.before-local-llm" ]; then
-        ${pkgs.coreutils}/bin/cp -p "$qwenPath" "$qwenPath.before-local-llm"
+  home.activation.configureLocalHermes = lib.mkIf isRelay (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ -x ${lib.escapeShellArg "${config.home.homeDirectory}/.local/bin/hermes"} ]; then
+        ${profilePython}/bin/python3 ${../config/local-llm/hermes_profile.py} \
+          ${lib.escapeShellArg "${config.home.homeDirectory}/.hermes/profiles/qwen/config.yaml"} \
+          ${hermesOverlay} --key-file ${lib.escapeShellArg apiKeyPath}
+        qwenPath=${lib.escapeShellArg "${config.home.homeDirectory}/.local/bin/qwen"}
+        if [ -f "$qwenPath" ] && [ ! -e "$qwenPath.before-local-llm" ]; then
+          ${pkgs.coreutils}/bin/cp -p "$qwenPath" "$qwenPath.before-local-llm"
+        fi
+        ${pkgs.coreutils}/bin/install -m 0755 ${qwen}/bin/qwen "$qwenPath"
       fi
-      ${pkgs.coreutils}/bin/install -m 0755 ${qwen}/bin/qwen "$qwenPath"
-    fi
-  '';
+    ''
+  );
 
-  launchd.agents.local-llm = {
+  launchd.agents.local-llm = lib.mkIf isRelay {
     enable = true;
     config = {
       ProgramArguments = [ "${server}/bin/local-llm-server" ];
@@ -365,7 +391,7 @@ lib.mkIf (pkgs.stdenv.isDarwin && hostName == "relay") {
     };
   };
 
-  launchd.agents.local-assistant-tools = {
+  launchd.agents.local-assistant-tools = lib.mkIf isRelay {
     enable = true;
     config = {
       ProgramArguments = [ "${assistantTools}/bin/local-assistant-tools" ];
@@ -375,5 +401,22 @@ lib.mkIf (pkgs.stdenv.isDarwin && hostName == "relay") {
       StandardOutPath = "${config.home.homeDirectory}/Library/Logs/local-assistant-tools.log";
       StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/local-assistant-tools.log";
     };
+  };
+
+  systemd.user.services.local-llm = lib.mkIf isAndromeda {
+    Unit = {
+      Description = "Local Qwen3.8 27B ${modelQuant} on the NVIDIA GPU";
+      After = [ "graphical-session.target" ];
+      ConditionPathExists = modelPath;
+    };
+    Service = {
+      ExecStart = "${server}/bin/local-llm-server";
+      Restart = "on-failure";
+      RestartSec = 5;
+      TimeoutStopSec = 30;
+      UMask = "0077";
+      NoNewPrivileges = true;
+    };
+    Install.WantedBy = [ "default.target" ];
   };
 }
