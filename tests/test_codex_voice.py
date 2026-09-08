@@ -11,6 +11,8 @@ import sqlite3
 import os
 import io
 import json
+import subprocess
+import sys
 from contextlib import closing
 import unittest
 from unittest.mock import patch
@@ -18,6 +20,16 @@ from unittest.mock import patch
 MODULE = (
     Path(__file__).resolve().parents[1] / "home/config/voice/codex_voice.py"
 )
+
+
+def speech_wav(samples):
+    out = io.BytesIO()
+    with wave.open(out, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(24000)
+        wav.writeframes(samples)
+    return out.getvalue()
 
 
 class Terminal:
@@ -313,7 +325,7 @@ class VoiceTests(unittest.TestCase):
             patch.object(
                 self.voice.urllib.request,
                 "urlopen",
-                return_value=io.BytesIO(b"test audio"),
+                return_value=io.BytesIO(speech_wav(b"\0\0" * 24)),
             ) as http,
             patch.object(self.voice.subprocess, "Popen"),
         ):
@@ -321,6 +333,152 @@ class VoiceTests(unittest.TestCase):
         payload = json.loads(http.call_args.args[0].data)
         self.assertEqual(payload.get("language"), "English")
         self.assertEqual(payload["input"], "Hello William.")
+
+    def test_full_reply_is_synthesized_before_one_continuous_playback(self):
+        audio = self.voice.LocalAudio(
+            Path(self.tmp.name), {"tts_url": "http://127.0.0.1:8179/speech"}
+        )
+        samples = [b"\x11\x00" * 240, b"\x22\x00" * 480]
+        text = "First " * 40 + "second " * 10
+        played = []
+
+        def capture_playback(command, **kwargs):
+            self.assertEqual(http.call_count, 2)
+            with wave.open(command[1], "rb") as wav:
+                self.assertEqual(wav.getframerate(), 24000)
+                self.assertEqual(wav.getnchannels(), 1)
+                self.assertEqual(wav.getsampwidth(), 2)
+                played.append(wav.readframes(wav.getnframes()))
+            return player
+
+        with (
+            patch.object(
+                self.voice.urllib.request,
+                "urlopen",
+                side_effect=[io.BytesIO(speech_wav(p)) for p in samples],
+            ) as http,
+            patch.object(self.voice.subprocess, "Popen") as process,
+        ):
+            player = process.return_value
+            process.side_effect = capture_playback
+            audio.speak(text, threading.Event())
+        self.assertEqual(played, [b"".join(samples)])
+        player.wait.assert_called_once_with()
+        self.assertEqual(list(Path(self.tmp.name).glob("*.wav")), [])
+
+    def test_cancelling_buffered_speech_discards_audio_before_playback(self):
+        audio = self.voice.LocalAudio(
+            Path(self.tmp.name), {"tts_url": "http://127.0.0.1:8179/speech"}
+        )
+        cancelled = threading.Event()
+
+        def synthesize(*args, **kwargs):
+            if http.call_count == 2:
+                cancelled.set()
+            return io.BytesIO(speech_wav(b"\0\0" * 24))
+
+        with (
+            patch.object(
+                self.voice.urllib.request, "urlopen", side_effect=synthesize
+            ) as http,
+            patch.object(self.voice.subprocess, "Popen") as process,
+        ):
+            audio.speak("A longer reply. " * 60, cancelled)
+        self.assertEqual(http.call_count, 2)
+        process.assert_not_called()
+        self.assertEqual(list(Path(self.tmp.name).glob("*.wav")), [])
+
+    def test_later_synthesis_failure_never_plays_a_partial_reply(self):
+        audio = self.voice.LocalAudio(
+            Path(self.tmp.name), {"tts_url": "http://127.0.0.1:8179/speech"}
+        )
+        with (
+            patch.object(
+                self.voice.urllib.request,
+                "urlopen",
+                side_effect=[
+                    io.BytesIO(speech_wav(b"\0\0" * 24)),
+                    TimeoutError("Synthesis timed out"),
+                ],
+            ),
+            patch.object(self.voice.subprocess, "Popen") as process,
+        ):
+            with self.assertRaisesRegex(TimeoutError, "Synthesis timed out"):
+                audio.speak("A longer reply. " * 60, threading.Event())
+        process.assert_not_called()
+        self.assertEqual(list(Path(self.tmp.name).glob("*.wav")), [])
+
+    def test_exit_during_synthesis_leaves_no_speech_buffer(self):
+        script = """
+import importlib.util
+import io
+import os
+from pathlib import Path
+import sys
+import threading
+import wave
+
+spec = importlib.util.spec_from_file_location("voice", sys.argv[1])
+voice = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(voice)
+data = io.BytesIO()
+with wave.open(data, "wb") as wav:
+    wav.setnchannels(1)
+    wav.setsampwidth(2)
+    wav.setframerate(24000)
+    wav.writeframes(b"\\0\\0" * 24000)
+calls = 0
+
+def synthesize(*args, **kwargs):
+    global calls
+    calls += 1
+    if calls == 2:
+        os._exit(0)
+    return io.BytesIO(data.getvalue())
+
+voice.urllib.request.urlopen = synthesize
+voice.LocalAudio(Path(sys.argv[2]), {"tts_url": "http://unused.test"}).speak(
+    "A longer reply. " * 60, threading.Event()
+)
+raise SystemExit("Did not exit during synthesis")
+"""
+        subprocess.run(
+            [sys.executable, "-c", script, str(MODULE), self.tmp.name],
+            check=True,
+            timeout=5,
+            capture_output=True,
+        )
+        self.assertEqual(list(Path(self.tmp.name).glob("*.wav")), [])
+
+    def test_invalid_later_wav_discards_the_buffered_reply(self):
+        original = speech_wav(b"\0\0" * 24)
+        stereo = io.BytesIO()
+        with wave.open(stereo, "wb") as wav:
+            wav.setnchannels(2)
+            wav.setsampwidth(2)
+            wav.setframerate(24000)
+            wav.writeframes(b"\0\0\0\0" * 24)
+        for invalid, error in (
+            (stereo.getvalue(), "Speech audio format changed"),
+            (original[:-2], "Incomplete speech audio"),
+        ):
+            with self.subTest(error=error):
+                audio = self.voice.LocalAudio(
+                    Path(self.tmp.name),
+                    {"tts_url": "http://127.0.0.1:8179/speech"},
+                )
+                with (
+                    patch.object(
+                        self.voice.urllib.request,
+                        "urlopen",
+                        side_effect=[io.BytesIO(original), io.BytesIO(invalid)],
+                    ),
+                    patch.object(self.voice.subprocess, "Popen") as process,
+                ):
+                    with self.assertRaisesRegex(RuntimeError, error):
+                        audio.speak("A longer reply. " * 60, threading.Event())
+                process.assert_not_called()
+                self.assertEqual(list(Path(self.tmp.name).glob("*.wav")), [])
 
     def test_blocked_agent_does_not_receive_enter(self):
         self.app.stage("Check the tests", "token-1")

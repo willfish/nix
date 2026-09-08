@@ -2,8 +2,8 @@
 
 Local GPU dictation and spoken Codex replies in one Herdr pane. Whisper small.en
 recognizes speech; audio.cpp runs Qwen3-TTS 0.6B with the pinned Samantha
-reference from *Her*. Both use Vulkan on the configured AMD hosts. Andromeda's Radeon RX 7600
-has been tested; Foundation is configured but was offline, so activation and
+reference from *Her*. Both use Vulkan on the configured AMD hosts. Andromeda's
+Radeon RX 7600 has been tested; Foundation was offline, so activation and
 live GPU, microphone and playback checks remain pending. The source recording,
 transcript, checksums and file-history investigation are in
 [`home/config/voice/voices`](../home/config/voice/voices/README.md).
@@ -34,6 +34,9 @@ playback. `codex-voice status` reports the selected pane and audio state.
 
 Speech skips fenced code and simplifies Markdown. It reads the remaining
 prose in full, so ask Codex for concise replies when you want brief audio.
+The complete reply is prepared before playback starts. Longer replies take
+longer to begin, then play as one recording without waits for more synthesis.
+Super+R or `codex-voice stop` cancels preparation as well as playback.
 Recording interrupts speech, and a reply that completes during recording
 waits for manual playback with Super+R.
 
@@ -94,7 +97,9 @@ The launcher starts three user services on demand:
 
 They are not enabled at login. Runtime state and temporary recordings live in
 the private `$XDG_RUNTIME_DIR/codex-voice` directory. Recordings are deleted
-after transcription or cancellation. The speech server disables request-body
+after transcription or cancellation. Prepared speech uses one unnamed temporary
+WAV, released after playback, cancellation, synthesis failure or service exit.
+The speech server disables request-body
 logging; Whisper's diagnostic journal can contain recognized text.
 
 Stop all three explicitly with:
@@ -154,6 +159,10 @@ Qwen3 1.7B was also tested, but used about 1.2 GiB more peak GPU memory for the
 short audition. The 0.6B model is the default to leave more room for the desktop
 and recognition engine. Replies use chunks of at most 260 characters, apart
 from individual longer words, with a 256-token synthesis limit per chunk.
+Chunks are generated sequentially and their PCM samples joined before a single
+playback starts. Buffering a full reply does not run concurrent inference or
+load another model onto the GPU. Cancelling during synthesis discards the
+prepared audio when the current request returns; it does not start playback.
 
 Supertonic F1 is retained as a fast fallback model, with about 0.3 to 0.6
 seconds of synthesis for short replies. Earlier PocketTTS and dots.tts
@@ -170,8 +179,10 @@ are in `~/.local/share/codex-voice/voices`, including
 
 ```sh
 direnv exec . python3 -m unittest discover -s tests -p test_codex_voice.py -v
-direnv exec . nix build '.#homeConfigurations."william@andromeda".activationPackage' --no-link
-direnv exec . nix build '.#homeConfigurations."william@foundation".activationPackage' --no-link
+direnv exec . nix build \
+  '.#homeConfigurations."william@andromeda".activationPackage' --no-link
+direnv exec . nix build \
+  '.#homeConfigurations."william@foundation".activationPackage' --no-link
 direnv exec . nix flake check
 direnv exec . hmswitch
 ```
@@ -179,6 +190,7 @@ direnv exec . hmswitch
 Behavioral tests cover literal input, guarded submission, stale processes,
 replaced sessions, subagent filtering, duplicate replies, silence, cancellation
 and restart recovery, including the bound conversation and stale dictation
-after manual submission. Live verification also requires a real Codex completion
-and a microphone trial, since mocked tests cannot establish desktop hotkey or
-physical audio behavior.
+after manual submission. Speech tests check complete buffering, sample order,
+one playback, and cleanup after cancellation, failed requests or invalid WAVs.
+Live verification also requires a real Codex completion and a microphone trial,
+since mocked tests cannot establish desktop hotkey or physical audio behavior.

@@ -2,7 +2,8 @@
 """Local speech and hotkeys for one explicitly selected Codex pane."""
 
 import array
-from contextlib import closing
+from contextlib import ExitStack, closing
+import io
 import json
 import math
 import os
@@ -490,42 +491,66 @@ class LocalAudio:
             words.append(word)
         if words:
             chunks.append(" ".join(words))
-        for chunk in chunks:
-            if cancelled.is_set():
-                return
-            with self.synthesis_lock:
-                if cancelled.is_set():
-                    return
-                request = urllib.request.Request(
-                    self.config["tts_url"],
-                    data=json.dumps(
-                        {
-                            "model": "codex-voice",
-                            "input": chunk,
-                            "language": "English",
-                        }
-                    ).encode(),
-                    headers={"Content-Type": "application/json"},
-                )
-                with urllib.request.urlopen(request, timeout=90) as response:
-                    wav = response.read(32 * 1024 * 1024)
-            if cancelled.is_set():
-                return
-            with tempfile.NamedTemporaryFile(
-                suffix=".wav", dir=self.runtime
-            ) as out:
-                out.write(wav)
-                out.flush()
-                with self.lock:
+        if not chunks or cancelled.is_set():
+            return
+        # An unnamed buffer also disappears if the controller exits abruptly.
+        with tempfile.TemporaryFile(suffix=".wav", dir=self.runtime) as out:
+            # Finish the entire WAV before playing, without parallel GPU work.
+            with ExitStack() as stack:
+                combined = None
+                for chunk in chunks:
                     if cancelled.is_set():
                         return
-                    player = subprocess.Popen(
-                        ["pw-play", out.name],
-                        stdin=subprocess.DEVNULL,
-                        stdout=subprocess.DEVNULL,
-                    )
-                    self.player = player
-                player.wait(timeout=120)
+                    with self.synthesis_lock:
+                        if cancelled.is_set():
+                            return
+                        request = urllib.request.Request(
+                            self.config["tts_url"],
+                            data=json.dumps(
+                                {
+                                    "model": "codex-voice",
+                                    "input": chunk,
+                                    "language": "English",
+                                }
+                            ).encode(),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        with urllib.request.urlopen(
+                            request, timeout=90
+                        ) as response:
+                            data = response.read(32 * 1024 * 1024)
+                    if cancelled.is_set():
+                        return
+                    with wave.open(io.BytesIO(data), "rb") as wav:
+                        if combined is None:
+                            combined = stack.enter_context(wave.open(out, "wb"))
+                            combined.setparams(wav.getparams())
+                        elif combined.getparams()[:3] != wav.getparams()[:3]:
+                            raise RuntimeError("Speech audio format changed")
+                        frames = wav.readframes(wav.getnframes())
+                        if len(frames) != (
+                            wav.getnframes()
+                            * wav.getnchannels()
+                            * wav.getsampwidth()
+                        ):
+                            raise RuntimeError("Incomplete speech audio")
+                        combined.writeframesraw(frames)
+            out.flush()
+            out.seek(0)
+            with self.lock:
+                if cancelled.is_set():
+                    return
+                player = subprocess.Popen(
+                    ["pw-play", f"/proc/self/fd/{out.fileno()}"],
+                    pass_fds=(out.fileno(),),
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                )
+                self.player = player
+            try:
+                # Full replies can exceed two minutes; stop() interrupts this.
+                player.wait()
+            finally:
                 with self.lock:
                     if self.player is player:
                         self.player = None
