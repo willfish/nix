@@ -23,10 +23,33 @@ selection; other ordinary Codex sessions remain independent.
 | Super+Shift+Space | Send the dictated draft to the selected Codex session |
 | Super+R | Read the latest completed reply; press again to stop speaking |
 
-Super is the Windows key. Start and stop cues mark microphone capture. The
+Super is the Windows key. Optional sound cues mark microphone capture. The
 transcription appears in the prompt for review before you send it. Recording
 stops after three minutes. These shortcuts are configured on Andromeda and
 Foundation.
+
+The microphone tray icon is grey when idle, amber while starting or processing,
+red once audio samples are arriving, and green when dictation is ready. Open
+its menu for elapsed recording time, input level, errors and the same
+record/send/cancel/read controls as the hotkeys. A zero input level while
+recording means you should check the selected microphone and mute settings.
+The tray stays responsive during slow terminal operations and reconnects if
+COSMIC's status area restarts.
+
+Capture can start while Codex is working or Herdr briefly reports an unknown
+state. Delivery still requires the selected Codex process to be ready. If it
+is busy or unreachable before pasting, the transcript is retained in memory:
+press Send when Codex is ready. Cancel discards retained text. A lost paste
+acknowledgement is reported separately; inspect the selected prompt and send
+it there if it arrived. The controller never retries an uncertain paste.
+
+Silence, short recordings, punctuation-only results and Whisper markers such
+as `[BLANK_AUDIO]` or `[MUSIC]` are skipped and disarm Send. No Enter is sent
+automatically. Failed sound cues and desktop notifications do not abort
+dictation. Microphone startup requires samples within five seconds; a stream
+that stops producing samples for three seconds is reported as stalled.
+Cancellation and stop escalate stuck recorder processes and reap them within
+about 1.1 seconds.
 
 Replies speak automatically by default. `codex-voice auto off` switches to
 manual playback; `codex-voice auto on` restores automatic playback. This option
@@ -68,7 +91,7 @@ the send hotkey: Herdr's delayed submit is not atomic with a user's keystroke.
 
 The live pane selection, bound conversation ID and completed-turn identifiers
 survive a controller restart if the same Codex process is still running.
-Pending dictation, the previous reply and playback
+Retained dictation, the previous reply and playback
 preferences do not survive that restart. Exiting the selected Codex process
 clears the selection and stops both model services, releasing their GPU memory.
 
@@ -98,7 +121,10 @@ The launcher starts three user services on demand:
 - `codex-voice-stt.service`: resident Whisper on `127.0.0.1:8178`.
 - `codex-voice-tts.service`: resident Qwen3 on `127.0.0.1:8179`.
 
-They are not enabled at login. Runtime state and temporary recordings live in
+The controller also owns the tray icon, using a pinned Python D-Bus library.
+The icon is present while that service runs, including a grey state without a
+selected session. No extra tray daemon, model or network service is required.
+The services are not enabled at login. Runtime state and temporary recordings live in
 the private `$XDG_RUNTIME_DIR/codex-voice` directory. Recordings are deleted
 after transcription or cancellation. Buffered speech uses one unnamed temporary
 WAV, released after playback, cancellation, synthesis failure or service exit.
@@ -226,6 +252,15 @@ direnv exec . nix flake check
 direnv exec . hmswitch
 ```
 
+Run all recording and tray regressions with the deployed Python environment:
+
+```sh
+# The interpreter used by the installed codex-voice launcher includes dbus-next.
+direnv exec . nix shell --impure --expr \
+  'let f = builtins.getFlake (toString ./.); in f.nixosConfigurations.andromeda.pkgs.python3.withPackages (p: [ p.dbus-next ])' \
+  -c python3 -m unittest discover -s tests -p 'test_*voice*.py' -v
+```
+
 Behavioral tests cover literal input, guarded submission, stale processes,
 replaced sessions, subagent filtering, duplicate replies, silence, cancellation
 and restart recovery, including the bound conversation and stale dictation
@@ -235,3 +270,7 @@ Streaming tests check early playback, synthesis during playback, PCM order,
 cancellation of prefetched speech, failed requests and pipe cleanup.
 Live verification also requires a real Codex completion and a microphone trial,
 since mocked tests cannot establish desktop hotkey or physical audio behavior.
+Capture tests use real subprocess fixtures for startup timeout, cancellation,
+stalls, disconnects, partial PCM reads and file-write failures. Tray integration
+uses a private D-Bus session to check registration, icon changes, menu actions,
+watcher replacement and responsiveness during blocked controller status reads.

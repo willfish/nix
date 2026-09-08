@@ -24,6 +24,27 @@ import uuid
 import wave
 
 
+def dictation_text(text):
+    """Whisper's non-speech markers are metadata, never prompt contents."""
+    if not isinstance(text, str):
+        raise RuntimeError("Whisper returned an invalid transcript")
+    text = re.sub(
+        r"[\[(]\s*(?:blank[_ ]audio|no[_ ]speech|silence|silent|music|"
+        r"inaudible|noise|applause|laughter|breathing)\s*[\])]",
+        " ", text, flags=re.I,
+    )
+    text = text.replace("\u200b", "").replace("\ufeff", "")
+    text = re.sub(r"[ \t]+", " ", text).strip()
+    return text if any(c.isalnum() for c in text) else ""
+
+
+def has_control_characters(text):
+    return any(
+        (ord(c) < 32 and c not in "\n\r\t") or 127 <= ord(c) < 160
+        for c in text
+    )
+
+
 def has_audio(path):
     """Discard quiet recordings before Whisper can hallucinate speech."""
     with wave.open(str(path), "rb") as wav:
@@ -86,6 +107,10 @@ def is_cli_thread(thread_id, codex_home=None):
         return False
 
 
+class DeliveryUncertain(RuntimeError):
+    """Input may already be pasted; retrying could duplicate it."""
+
+
 class Herdr:
     def input_request(self, target, text):
         # pane.send_text is raw bytes. send_input observes bracketed-paste mode.
@@ -96,23 +121,45 @@ class Herdr:
         }
         with socket.socket(socket.AF_UNIX) as sock:
             sock.settimeout(8)
-            sock.connect(target["socket"])
-            sock.sendall(json.dumps(request).encode() + b"\n")
-            with sock.makefile("rb") as incoming:
-                response = json.loads(incoming.readline(1024 * 1024))
+            try:
+                sock.connect(target["socket"])
+            except OSError as exc:
+                raise RuntimeError(
+                    "Selected Herdr pane is unavailable"
+                ) from exc
+            try:
+                sock.sendall(json.dumps(request).encode() + b"\n")
+                with sock.makefile("rb") as incoming:
+                    response = json.loads(incoming.readline(1024 * 1024))
+                if response.get("id") != request["id"]:
+                    raise ValueError("Mismatched response")
+            except (OSError, ValueError) as exc:
+                raise DeliveryUncertain(
+                    "Could not confirm paste; check the selected Codex prompt "
+                    "and send it there if the dictation arrived"
+                ) from exc
         if "error" in response:
             raise RuntimeError("Could not paste into the selected Codex pane")
 
     def request(self, target, *args):
         env = dict(os.environ, HERDR_SOCKET_PATH=target["socket"])
-        result = subprocess.run(
-            ["herdr", *args], env=env, capture_output=True, text=True, timeout=8
-        )
+        try:
+            result = subprocess.run(
+                ["herdr", *args], env=env, capture_output=True,
+                text=True, timeout=8,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise RuntimeError(
+                "Could not reach the selected Herdr pane"
+            ) from exc
         if result.returncode:
             raise RuntimeError("Could not reach the selected Herdr pane")
-        return json.loads(result.stdout)["result"]
+        try:
+            return json.loads(result.stdout)["result"]
+        except (ValueError, KeyError, TypeError) as exc:
+            raise RuntimeError("Invalid response from the Herdr pane") from exc
 
-    def validate(self, target):
+    def validate_target(self, target):
         if (
             not target.get("start")
             or process_start(target["pid"]) != target["start"]
@@ -134,6 +181,10 @@ class Herdr:
         agent = self.request(target, "agent", "get", target["pane"])["agent"]
         if agent.get("agent") != "codex":
             raise RuntimeError("The selected pane is not running Codex")
+        return agent
+
+    def validate(self, target):
+        agent = self.validate_target(target)
         state = agent.get("agent_status")
         if state not in ("idle", "done"):
             raise RuntimeError(
@@ -167,14 +218,44 @@ class Controller:
         self.playback = None
         self.capture = None
         self.record_cancelled = threading.Event()
-        self.transcribing = False
+        self.phase = "idle"
+        self.error = None
+        self.pending = None
+        self.record_started = None
         self.worker = None
+
+    @property
+    def transcribing(self):
+        return self.phase == "transcribing"
+
+    def recording_active(self):
+        return self.phase in (
+            "starting", "recording", "stopping", "transcribing"
+        )
+
+    def _cue(self, frequency):
+        # A disconnected speaker or failed notification must not stop capture.
+        def play():
+            try:
+                self.audio.cue(frequency)
+            except Exception:
+                print("Codex voice: sound cue unavailable", file=sys.stderr)
+
+        threading.Thread(target=play, daemon=True).start()
+
+    def report_error(self, error):
+        with self.lock:
+            self.error = str(error)
+            if not self.recording_active():
+                self.phase = "error"
 
     def register(self, token, target, thread=None, turns=()):
         with self.lock:
             self.stop()
             self.token, self.target = token, target
             self.draft = False
+            self.pending = None
+            self.phase = "idle"
             self.reply, self.thread = None, thread
             self.turns = set(turns)
             self._save_selection()
@@ -223,6 +304,8 @@ class Controller:
                 self.stop()
                 self.target, self.token = None, None
                 self.reply, self.thread, self.draft = None, None, False
+                self.pending = None
+                self.phase = "idle"
                 (self.runtime / "selection.json").unlink(missing_ok=True)
 
     def status(self):
@@ -232,9 +315,18 @@ class Controller:
                 "draft": self.draft,
                 "reply": self.reply,
                 "auto": self.auto,
-                "recording": self.capture is not None,
+                "recording": self.phase == "recording",
                 "transcribing": self.transcribing,
                 "speaking": bool(self.playback and self.playback.is_alive()),
+                "phase": self.phase,
+                "error": self.error,
+                "pending": bool(self.pending),
+                "recording_seconds": (
+                    max(0, time.monotonic() - self.record_started)
+                    if self.record_started and self.phase == "recording"
+                    else 0
+                ),
+                "input_level": getattr(self.capture, "level", 0.0),
             }
 
     def notify(self, token, event):
@@ -258,19 +350,23 @@ class Controller:
             self.turns.add(turn)
             self._save_selection()
             self.draft = False
+            if self.phase == "draft" and not self.pending:
+                self.phase = "idle"
             self.reply = spoken_text(event.get("last-assistant-message") or "")
             if (
                 self.auto
                 and self.reply
-                and not self.capture
-                and not self.transcribing
+                and not self.recording_active()
+                and not self.pending
             ):
                 self.read(replace=True)
             return True
 
     def read(self, replace=False):
         with self.lock:
-            if self.capture or self.transcribing:
+            if self.pending:
+                raise RuntimeError("Send or cancel retained dictation first")
+            if self.recording_active():
                 raise RuntimeError(
                     "Finish recording and transcription before reading a reply"
                 )
@@ -297,10 +393,17 @@ class Controller:
 
     def record(self):
         with self.lock:
-            if self.capture:
-                if self.capture.poll() is None:
-                    self.capture.send_signal(signal.SIGINT)
-                self.notice("Transcribing", "Processing your recording locally")
+            if self.phase == "starting":
+                self.stop()
+                self.notice("Recording cancelled", "Microphone was starting")
+                return
+            if self.phase == "recording":
+                self.phase = "stopping"
+                threading.Thread(
+                    target=self.capture.close, daemon=True
+                ).start()
+                return
+            if self.phase == "stopping":
                 return
             if self.transcribing:
                 raise RuntimeError(
@@ -308,54 +411,112 @@ class Controller:
                 )
             if not self.target:
                 raise RuntimeError("Start codex-voice in a Herdr pane first")
-            self.terminal.validate(self.target)
             self.stop()
-            self.audio.cue(880)
+            self.draft = False
+            self.pending = None
+            self.error = None
+            self.phase = "starting"
             self.record_cancelled = threading.Event()
             path = self.runtime / (uuid.uuid4().hex + ".wav")
-            self.capture = self.audio.start_capture(path)
             self.worker = threading.Thread(
                 target=self._record,
-                args=(self.capture, path, self.token, self.record_cancelled),
+                args=(path, self.token, self.target, self.record_cancelled),
                 daemon=True,
             )
             self.worker.start()
+
+    def _record(self, path, token, target, cancelled):
+        capture = None
+        try:
+            # Readiness can be transiently unknown while Codex redraws. Check
+            # identity now and enforce idle/done only when delivering text.
+            self.terminal.validate_target(target)
+            if cancelled.is_set():
+                return
+            capture = self.audio.start_capture(path)
+            with self.lock:
+                if cancelled.is_set():
+                    return
+                self.capture = capture
+            if not capture.wait_ready(timeout=5):
+                raise RuntimeError("Microphone did not become ready")
+            with self.lock:
+                if cancelled.is_set():
+                    return
+                self.record_started = time.monotonic()
+                self.phase = "recording"
+            self._cue(880)
             self.notice(
                 "Recording", "Press Super+Space to stop; maximum 3 minutes"
             )
-
-    def _record(self, capture, path, token, cancelled):
-        try:
-            capture.wait(timeout=185)
+            code = capture.wait(timeout=185)
             with self.lock:
                 if cancelled.is_set():
                     return
+                if code not in (0, -signal.SIGINT) or getattr(
+                    capture, "error", None
+                ):
+                    raise RuntimeError(
+                        getattr(capture, "error", None)
+                        or "Microphone capture failed; check the input device"
+                    )
                 self.capture = None
-                self.transcribing = True
-            self.audio.cue(660)
+                self.phase = "transcribing"
+            self._cue(660)
             if not has_audio(path):
-                raise RuntimeError(
-                    "No speech detected; check your microphone and try again"
-                )
-            text = self.audio.transcribe(path).strip()
+                text = ""
+            else:
+                text = dictation_text(self.audio.transcribe(path))
             with self.lock:
                 if cancelled.is_set():
                     return
-                self.stage(text, token)
-                self.notice(
-                    "Dictation ready", "Super+Shift+Space sends it to Codex"
-                )
+                try:
+                    staged = self.stage(text, token)
+                except DeliveryUncertain:
+                    # A lost acknowledgement is different from a failed
+                    # connection. Never paste or press Enter again blindly.
+                    self.pending = None
+                    self.draft = False
+                    raise
+                except RuntimeError as exc:
+                    # Keep a valid transcript when the pane is temporarily
+                    # busy/unreachable. Never paste it into another session.
+                    if text and not has_control_characters(text):
+                        self.pending = text
+                        self.phase = "draft"
+                        self.notice(
+                            "Dictation retained",
+                            f"{exc}. Press Send when Codex is ready.",
+                        )
+                        return
+                    raise
+                if staged:
+                    self.notice(
+                        "Dictation ready", "Super+Shift+Space sends it to Codex"
+                    )
+                else:
+                    self.notice("No speech detected", "Nothing was inserted")
         except Exception as exc:
-            if not cancelled.is_set():
-                self.notice("Dictation stopped", str(exc))
-        finally:
-            if capture.poll() is None:
-                capture.terminate()
-            path.unlink(missing_ok=True)
             with self.lock:
-                if self.record_cancelled is cancelled:
-                    self.capture = None
-                    self.transcribing = False
+                if (
+                    not cancelled.is_set()
+                    and self.record_cancelled is cancelled
+                ):
+                    self.error = str(exc)
+                    self.phase = "error"
+                    self.notice("Dictation stopped", str(exc))
+        finally:
+            try:
+                if capture:
+                    capture.close()
+            finally:
+                path.unlink(missing_ok=True)
+                with self.lock:
+                    if self.record_cancelled is cancelled:
+                        self.capture = None
+                        self.record_started = None
+                        if self.recording_active():
+                            self.phase = "idle"
 
     def stage(self, text, token):
         with self.lock:
@@ -363,39 +524,58 @@ class Controller:
                 raise RuntimeError(
                     "Voice session changed; discarded the old transcription"
                 )
-            if not text.strip():
-                raise RuntimeError("No speech detected")
-            if any(
-                (ord(c) < 32 and c not in "\n\r\t") or 127 <= ord(c) < 160
-                for c in text
-            ):
+            text = dictation_text(text)
+            if not text:
+                self.draft = False
+                self.pending = None
+                self.phase = "idle"
+                return False
+            if has_control_characters(text):
                 raise RuntimeError(
                     "Discarded dictation containing terminal control characters"
                 )
-            self.terminal.insert(self.target, text)
+            try:
+                self.terminal.insert(self.target, text)
+            except DeliveryUncertain:
+                # This also covers Send retrying a previously retained draft.
+                self.pending = None
+                self.draft = False
+                raise
             self.draft = True
+            self.pending = None
+            self.phase = "draft"
+            self.error = None
+            return True
 
     def send(self):
         with self.lock:
-            if self.capture or self.transcribing:
+            if self.recording_active():
                 raise RuntimeError(
                     "Finish recording and transcription before sending"
                 )
+            if self.target and self.pending:
+                self.stage(self.pending, self.token)
             if not self.target or not self.draft:
                 raise RuntimeError("No new dictation to send")
             self.terminal.validate(self.target)
             # A failed delivery is ambiguous. Never retry Enter automatically.
             self.draft = False
+            self.phase = "idle"
             self.terminal.submit(self.target)
 
     def stop(self):
         with self.lock:
             self.cancelled.set()
             self.record_cancelled.set()
-            if self.capture and self.capture.poll() is None:
-                self.capture.send_signal(signal.SIGINT)
+            if self.capture:
+                threading.Thread(
+                    target=self.capture.close, daemon=True
+                ).start()
             self.capture = None
-            self.transcribing = False
+            self.record_started = None
+            self.pending = None
+            self.phase = "draft" if self.draft else "idle"
+            self.error = None
             self.audio.stop()
 
 
@@ -412,18 +592,9 @@ class LocalAudio:
                 self.player.terminate()
 
     def start_capture(self, path):
-        return subprocess.Popen(
-            [
-                "pw-record",
-                "--rate=16000",
-                "--channels=1",
-                "--format=s16",
-                "--sample-count=2880000",
-                str(path),
-            ],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-        )
+        from voice_capture import PipeWireCapture
+
+        return PipeWireCapture(path)
 
     def cue(self, frequency):
         with tempfile.NamedTemporaryFile(
@@ -644,18 +815,21 @@ def runtime_dir():
 
 def desktop_notice(title, detail=""):
     print(f"{title}: {detail}", file=sys.stderr, flush=True)
-    subprocess.run(
-        [
-            "notify-send",
-            "--app-name=Codex Voice",
-            "--expire-time=4000",
-            "--hint=string:x-canonical-private-synchronous:codex-voice",
-            title,
-            detail,
-        ],
-        check=False,
-        timeout=5,
-    )
+    try:
+        subprocess.run(
+            [
+                "notify-send",
+                "--app-name=Codex Voice",
+                "--expire-time=4000",
+                "--hint=string:x-canonical-private-synchronous:codex-voice",
+                title,
+                detail,
+            ],
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        pass
 
 
 def dispatch(app, request):
@@ -677,11 +851,21 @@ def dispatch(app, request):
 
 
 def serve(runtime, config):
+    from codex_voice_tray import VoiceTray
+
     app = Controller(
         runtime, Herdr(), LocalAudio(runtime, config), desktop_notice
     )
     app.auto = config.get("auto_speak", True)
     app.restore()
+    def tray_action(action):
+        try:
+            dispatch(app, {"action": action})
+        except Exception as exc:
+            app.report_error(exc)
+            desktop_notice("Codex voice", str(exc))
+
+    tray = VoiceTray(app.status, tray_action)
     path = runtime / "control.sock"
     path.unlink(missing_ok=True)
 
@@ -694,6 +878,7 @@ def serve(runtime, config):
                 response = {"ok": True, **dispatch(app, json.loads(raw))}
             except Exception as exc:
                 response = {"ok": False, "error": str(exc)}
+                app.report_error(exc)
                 desktop_notice("Codex voice", str(exc))
             self.wfile.write(json.dumps(response).encode() + b"\n")
 
@@ -702,6 +887,7 @@ def serve(runtime, config):
 
     with Server(str(path), Handler) as server:
         os.chmod(path, 0o600)
+        tray.start()
 
         def shutdown(_sig, _frame):
             app.stop()
@@ -727,6 +913,7 @@ def serve(runtime, config):
             server.serve_forever(poll_interval=0.2)
         finally:
             monitor_stop.set()
+            tray.stop()
             app.stop()
             path.unlink(missing_ok=True)
 

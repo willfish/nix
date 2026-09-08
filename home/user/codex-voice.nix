@@ -19,10 +19,17 @@ let
   };
   whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
+  voicePython = pkgs.python3.withPackages (ps: [ ps.dbus-next ]);
+  voiceScripts = pkgs.runCommand "codex-voice-scripts" { } ''
+    mkdir -p "$out"
+    cp ${../config/voice/codex_voice.py} "$out/codex_voice.py"
+    cp ${../config/voice/voice_capture.py} "$out/voice_capture.py"
+    cp ${../config/voice/codex_voice_tray.py} "$out/codex_voice_tray.py"
+  '';
   voice = pkgs.writeShellApplication {
     name = "codex-voice";
     runtimeInputs = [
-      pkgs.python3
+      voicePython
       pkgs.pipewire
       pkgs.curl
       pkgs.libnotify
@@ -32,7 +39,7 @@ let
     text = ''
       export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
       export CODEX_VOICE_COMMAND="$0"
-      exec python3 ${../config/voice/codex_voice.py} "$@"
+      exec python3 ${voiceScripts}/codex_voice.py "$@"
     '';
   };
   modelSetup = pkgs.writeShellApplication {

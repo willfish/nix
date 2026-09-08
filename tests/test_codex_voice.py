@@ -13,6 +13,7 @@ import io
 import json
 import subprocess
 import sys
+import time
 from contextlib import closing
 import unittest
 from unittest.mock import patch
@@ -39,9 +40,12 @@ class Terminal:
         self.text = []
         self.keys = []
 
-    def validate(self, target):
+    def validate_target(self, target):
         if not self.alive:
             raise RuntimeError("Selected Codex process has exited")
+
+    def validate(self, target):
+        self.validate_target(target)
         if self.state not in ("idle", "done"):
             raise RuntimeError("Codex is " + self.state)
 
@@ -66,6 +70,13 @@ class Capture:
 
     def poll(self):
         return self.returncode
+
+    def wait_ready(self, timeout=5):
+        return True
+
+    def close(self):
+        if self.poll() is None:
+            self.terminate()
 
     def send_signal(self, sig):
         self.returncode = 0
@@ -130,7 +141,12 @@ class VoiceTests(unittest.TestCase):
         self.app = self.voice.Controller(
             Path(self.tmp.name), self.terminal, self.audio, lambda *a: None
         )
-        self.addCleanup(self.app.stop)
+        def stop_workers():
+            self.app.stop()
+            if self.app.worker:
+                self.app.worker.join(2)
+
+        self.addCleanup(stop_workers)
         self.target = {
             "pane": "w1:p2",
             "socket": "/tmp/test-herdr.sock",
@@ -138,6 +154,17 @@ class VoiceTests(unittest.TestCase):
             "start": "200",
         }
         self.app.register("token-1", self.target)
+
+    def start_recording(self):
+        self.app.record()
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            if self.app.status()["recording"]:
+                return
+            if self.app.status()["phase"] == "error":
+                break
+            time.sleep(0.005)
+        self.fail(f"Capture did not become ready: {self.app.status()}")
 
     def test_service_restart_restores_only_a_live_process_selection(self):
         target = dict(
@@ -204,7 +231,7 @@ class VoiceTests(unittest.TestCase):
         self.assertIsNone(self.app.status()["pane"])
 
     def test_record_toggle_stages_transcript_without_submitting(self):
-        self.app.record()
+        self.start_recording()
         self.assertTrue(self.app.status()["recording"])
         self.app.record()
         self.app.worker.join(2)
@@ -215,17 +242,182 @@ class VoiceTests(unittest.TestCase):
         self.assertFalse(self.app.status()["recording"])
         self.assertFalse(self.app.status()["transcribing"])
 
+    def test_failed_sound_cue_does_not_prevent_dictation(self):
+        def failed_cue(_frequency):
+            raise subprocess.TimeoutExpired("pw-play", 3)
+
+        self.audio.cue = failed_cue
+        self.start_recording()
+        self.app.record()
+        self.app.worker.join(2)
+        self.assertEqual(len(self.terminal.text), 1)
+
+    def test_busy_terminal_does_not_block_capture_or_lose_transcript(self):
+        self.terminal.state = "unknown"
+        self.start_recording()
+        self.app.record()
+        self.app.worker.join(2)
+        self.assertTrue(self.app.status()["pending"])
+        self.assertEqual(self.terminal.text, [])
+        self.terminal.state = "idle"
+        self.app.send()
+        self.assertEqual(len(self.terminal.text), 1)
+        self.assertEqual(self.terminal.keys, ["Enter"])
+
+    def test_paste_connect_failure_is_known_not_to_have_delivered(self):
+        terminal = self.voice.Herdr()
+        with patch.object(self.voice.socket, "socket") as connection:
+            sock = connection.return_value.__enter__.return_value
+            sock.connect.side_effect = ConnectionRefusedError()
+            with self.assertRaises(RuntimeError):
+                terminal.input_request(self.target, "Retain this speech")
+            sock.sendall.assert_not_called()
+
+    def test_paste_timeout_is_ambiguous_and_never_retried(self):
+        terminal = self.voice.Herdr()
+        with patch.object(self.voice.socket, "socket") as connection:
+            sock = connection.return_value.__enter__.return_value
+            incoming = sock.makefile.return_value.__enter__.return_value
+            incoming.readline.side_effect = TimeoutError()
+            with self.assertRaises(self.voice.DeliveryUncertain):
+                terminal.input_request(self.target, "May have arrived")
+            self.assertEqual(sock.sendall.call_count, 1)
+        with patch.object(
+            self.terminal, "insert",
+            side_effect=self.voice.DeliveryUncertain("May have arrived"),
+        ):
+            self.start_recording()
+            self.app.record()
+            self.app.worker.join(1)
+        self.assertFalse(self.app.status()["pending"])
+        self.assertFalse(self.app.status()["draft"])
+        with self.assertRaisesRegex(RuntimeError, "dictation"):
+            self.app.send()
+
+    def test_read_only_terminal_timeout_is_a_retryable_failure(self):
+        with patch.object(
+            self.voice.subprocess, "run",
+            side_effect=subprocess.TimeoutExpired("herdr", 8),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.voice.Herdr().request(self.target, "agent", "get")
+
+    def test_uncertain_retained_paste_disarms_further_send_attempts(self):
+        self.app.pending = "Retained speech"
+        self.app.phase = "draft"
+        with patch.object(
+            self.terminal, "insert",
+            side_effect=self.voice.DeliveryUncertain("May have arrived"),
+        ) as paste:
+            with self.assertRaises(self.voice.DeliveryUncertain):
+                self.app.send()
+            self.assertFalse(self.app.status()["pending"])
+            self.assertFalse(self.app.status()["draft"])
+            with self.assertRaisesRegex(RuntimeError, "dictation"):
+                self.app.send()
+            self.assertEqual(paste.call_count, 1)
+        self.assertEqual(self.terminal.keys, [])
+
+    def test_failed_capture_is_never_transcribed(self):
+        self.start_recording()
+        self.audio.capture.returncode = 1
+        self.audio.capture.done.set()
+        self.app.worker.join(2)
+        self.assertEqual(self.audio.transcriptions, 0)
+        self.assertEqual(self.app.status()["phase"], "error")
+
+    def test_cancel_discards_retained_dictation(self):
+        self.app.pending = "Retained speech"
+        self.app.phase = "draft"
+        self.app.stop()
+        self.assertFalse(self.app.status()["pending"])
+        with self.assertRaisesRegex(RuntimeError, "dictation"):
+            self.app.send()
+
+    def test_read_does_not_discard_retained_dictation(self):
+        self.app.pending = "Retained speech"
+        self.app.reply = "Previous reply"
+        with self.assertRaisesRegex(RuntimeError, "dictation"):
+            self.app.read()
+        self.assertTrue(self.app.status()["pending"])
+
+    def test_startup_failure_cleans_up_and_allows_retry(self):
+        with patch.object(
+            self.audio, "start_capture", side_effect=OSError("No microphone")
+        ):
+            self.app.record()
+            self.app.worker.join(1)
+        self.assertEqual(self.app.status()["phase"], "error")
+        self.assertEqual(list(Path(self.tmp.name).glob("*.wav")), [])
+        self.start_recording()
+        self.app.stop()
+        self.app.worker.join(1)
+        self.assertEqual(self.terminal.text, [])
+
+    def test_cancel_startup_never_opens_the_microphone_afterwards(self):
+        validating, release = threading.Event(), threading.Event()
+
+        def validate(_target):
+            validating.set()
+            release.wait(1)
+
+        with (
+            patch.object(
+                self.terminal, "validate_target", side_effect=validate
+            ),
+            patch.object(self.audio, "start_capture") as capture,
+        ):
+            self.app.record()
+            self.assertTrue(validating.wait(1))
+            self.assertEqual(self.app.status()["phase"], "starting")
+            self.app.record()
+            release.set()
+            self.app.worker.join(1)
+            capture.assert_not_called()
+        self.assertFalse(self.app.status()["recording"])
+
+    def test_cancelled_worker_cannot_clear_a_new_recording(self):
+        self.audio.transcribe_release.clear()
+        self.start_recording()
+        self.app.record()
+        self.assertTrue(self.audio.transcribe_started.wait(1))
+        previous = self.app.worker
+        self.app.stop()
+        self.start_recording()
+        self.audio.transcribe_release.set()
+        previous.join(1)
+        self.assertTrue(self.app.status()["recording"])
+        self.app.stop()
+        self.app.worker.join(1)
+        self.assertEqual(self.terminal.text, [])
+
     def test_silence_does_not_reach_whisper_or_codex(self):
         self.audio.silent = True
-        self.app.record()
+        self.start_recording()
         self.app.record()
         self.app.worker.join(2)
         self.assertEqual(self.audio.transcriptions, 0)
         self.assertEqual(self.terminal.text, [])
 
+    def test_non_speech_results_disarm_send_without_pasting(self):
+        for text in ("", " \n", "[BLANK_AUDIO]", "(silence)",
+                     "[MUSIC] ...", "...", "\u200b\ufeff"):
+            with self.subTest(text=text):
+                self.app.draft = True
+                self.app.stage(text, "token-1")
+                self.assertFalse(self.app.status()["draft"])
+                with self.assertRaisesRegex(RuntimeError, "dictation"):
+                    self.app.send()
+        self.assertEqual(self.terminal.text, [])
+        self.assertEqual(self.terminal.keys, [])
+
+    def test_non_speech_markers_are_removed_from_real_dictation(self):
+        self.app.stage("[BLANK_AUDIO] Check the tests. [MUSIC]", "token-1")
+        self.assertEqual(self.terminal.text, ["Check the tests."])
+
     def test_cancel_during_transcription_discards_late_result(self):
         self.audio.transcribe_release.clear()
-        self.app.record()
+        self.start_recording()
         self.app.record()
         self.assertTrue(self.audio.transcribe_started.wait(1))
         worker = self.app.worker
@@ -236,7 +428,7 @@ class VoiceTests(unittest.TestCase):
 
     def test_completion_during_recording_does_not_start_playback(self):
         self.app.auto = True
-        self.app.record()
+        self.start_recording()
         self.app.notify("token-1", self.event())
         self.assertTrue(self.app.status()["recording"])
         self.assertEqual(self.audio.spoken, [])
@@ -297,6 +489,13 @@ class VoiceTests(unittest.TestCase):
         self.assertIsNone(self.app.status()["reply"])
         self.assertFalse(self.app.status()["draft"])
         self.assertFalse(self.app.notify("token-1", self.event()))
+        self.assertEqual(self.app.status()["phase"], "idle")
+
+    def test_new_registration_resets_a_ready_tray_without_a_completion(self):
+        self.app.stage("Existing draft", "token-1")
+        self.app.register("token-2", self.target)
+        self.assertEqual(self.app.status()["phase"], "idle")
+        self.assertFalse(self.app.status()["draft"])
 
     def test_exited_codex_never_receives_dictation_or_enter(self):
         self.terminal.alive = False
