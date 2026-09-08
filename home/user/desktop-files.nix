@@ -173,7 +173,7 @@ in
               [
                 ''
                   key: "space",
-                      ): Spawn("codex-voice record"),
+                      ): Spawn("codex-voice interact"),
                       (
                           modifiers: [Super, Shift],
                           key: "space",

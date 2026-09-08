@@ -39,6 +39,7 @@ class Terminal:
         self.state = "idle"
         self.text = []
         self.keys = []
+        self.submitted = []
 
     def validate_target(self, target):
         if not self.alive:
@@ -56,6 +57,7 @@ class Terminal:
     def submit(self, target):
         self.validate(target)
         self.keys.append("Enter")
+        self.submitted.append(target["pane"])
 
 
 class Capture:
@@ -329,6 +331,157 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(self.terminal.keys, [])
         self.assertFalse(self.app.status()["recording"])
         self.assertFalse(self.app.status()["transcribing"])
+
+    def test_primary_hotkey_records_then_transcribes_then_sends(self):
+        def press():
+            return self.voice.dispatch(self.app, {"action": "interact"})
+
+        press()
+        deadline = time.monotonic() + 1
+        while not self.app.status()["recording"]:
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.005)
+        press()
+        self.app.worker.join(2)
+        self.assertEqual(self.terminal.keys, [])
+        self.assertTrue(self.app.status()["draft"])
+        with patch.object(self.audio, "start_capture") as capture:
+            press()
+            capture.assert_not_called()
+        self.assertEqual(self.terminal.keys, ["Enter"])
+        self.assertFalse(self.app.status()["draft"])
+
+    def test_primary_hotkey_sends_retained_words_when_agent_is_ready(self):
+        self.terminal.state = "working"
+        self.start_recording()
+        self.app.interact()
+        self.app.worker.join(2)
+        with self.assertRaisesRegex(RuntimeError, "working"):
+            self.app.interact()
+        self.assertTrue(self.app.status()["pending"])
+        self.assertFalse(self.app.status()["recording"])
+        self.terminal.state = "idle"
+        self.app.interact()
+        self.assertEqual(self.terminal.text, [
+            "Please explain the failing tests."
+        ])
+        self.assertEqual(self.terminal.keys, ["Enter"])
+
+    def test_primary_hotkey_does_not_send_while_transcription_is_pending(self):
+        self.audio.transcribe_release.clear()
+        self.start_recording()
+        self.app.interact()
+        self.assertTrue(self.audio.transcribe_started.wait(1))
+        with self.assertRaisesRegex(RuntimeError, "transcribing"):
+            self.app.interact()
+        self.assertEqual(self.terminal.keys, [])
+        self.audio.transcribe_release.set()
+        self.app.worker.join(2)
+        self.assertTrue(self.app.status()["draft"])
+
+    def test_primary_hotkey_never_fans_out_to_other_registered_sessions(self):
+        self.app.stage("First session request", "token-1")
+        self.app.register("token-2", dict(self.target, pane="w1:p3"))
+        self.app.stage("Second session request", "token-2")
+        self.app.interact()
+        self.assertEqual(self.terminal.submitted, ["w1:p3"])
+        self.app.select("token-1")
+        self.assertTrue(self.app.status()["draft"])
+        self.app.interact()
+        self.assertEqual(self.terminal.submitted, ["w1:p3", "w1:p2"])
+
+    def test_cancel_between_hotkey_selection_and_send_prevents_enter(self):
+        self.app.stage("Review this", "token-1")
+        original = self.app.send
+
+        def delayed_send(**kwargs):
+            self.app.stop()
+            original(**kwargs)
+
+        with patch.object(self.app, "send", side_effect=delayed_send):
+            with self.assertRaisesRegex(RuntimeError, "cancelled"):
+                self.app.interact()
+        self.assertEqual(self.terminal.keys, [])
+
+    def test_cancel_after_retained_paste_prevents_hotkey_submission(self):
+        self.app.pending = "Retained dictation"
+        original = self.app.stage
+
+        def stage_then_cancel(*args, **kwargs):
+            result = original(*args, **kwargs)
+            self.app.stop()
+            return result
+
+        with patch.object(self.app, "stage", side_effect=stage_then_cancel):
+            with self.assertRaisesRegex(RuntimeError, "cancelled"):
+                self.app.interact()
+        self.assertEqual(self.terminal.text, ["Retained dictation"])
+        self.assertEqual(self.terminal.keys, [])
+        self.assertTrue(self.app.status()["draft"])
+
+    def test_hotkey_does_not_follow_selection_into_another_draft(self):
+        self.app.stage("First request", "token-1")
+        self.app.register("token-2", dict(self.target, pane="w1:p3"))
+        self.app.stage("Second request", "token-2")
+        self.app.select("token-1")
+        original = self.app.send
+
+        def select_then_send(**kwargs):
+            self.app.select("token-2")
+            original(**kwargs)
+
+        with patch.object(self.app, "send", side_effect=select_then_send):
+            with self.assertRaisesRegex(RuntimeError, "session changed"):
+                self.app.interact()
+        self.assertEqual(self.terminal.submitted, [])
+        self.assertTrue(self.app.status()["draft"])
+
+    def test_overlapping_hotkeys_submit_the_same_draft_only_once(self):
+        self.app.stage("Review this", "token-1")
+        lock = self.app.delivery_lock
+        original_validate = self.terminal.validate
+        first_validate = threading.Event()
+        second_acquire = threading.Event()
+        first_done = threading.Event()
+        errors = []
+
+        class SchedulingLock:
+            def acquire(self, blocking=False):
+                if threading.current_thread().name == "second-hotkey":
+                    second_acquire.set()
+                    first_done.wait(2)
+                return lock.acquire(blocking=blocking)
+
+            def release(self):
+                lock.release()
+
+        def validate(target):
+            if threading.current_thread().name == "first-hotkey":
+                first_validate.set()
+                second_acquire.wait(2)
+            original_validate(target)
+
+        def press():
+            try:
+                self.app.interact()
+            except RuntimeError as exc:
+                errors.append(str(exc))
+            finally:
+                if threading.current_thread().name == "first-hotkey":
+                    first_done.set()
+
+        self.app.delivery_lock = SchedulingLock()
+        with patch.object(self.terminal, "validate", side_effect=validate):
+            first = threading.Thread(target=press, name="first-hotkey")
+            second = threading.Thread(target=press, name="second-hotkey")
+            first.start()
+            self.assertTrue(first_validate.wait(1))
+            second.start()
+            first.join(3)
+            second.join(3)
+        self.assertFalse(first.is_alive() or second.is_alive())
+        self.assertEqual(self.terminal.keys, ["Enter"])
+        self.assertEqual(errors, ["No new dictation to send"])
 
     def test_failed_sound_cue_does_not_prevent_dictation(self):
         def failed_cue(_frequency):

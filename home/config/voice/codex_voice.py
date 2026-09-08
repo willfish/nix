@@ -212,7 +212,7 @@ class Herdr:
             raise RuntimeError("Voice delivery was cancelled")
         self.input_request(target, text)
 
-    def submit_guarded(self, target, cancelled):
+    def submit_guarded(self, target, cancelled, allow_edited=False):
         self.validate(target)
         if cancelled.is_set():
             raise RuntimeError("Voice delivery was cancelled")
@@ -239,8 +239,10 @@ class AgentTerminal:
     def insert_guarded(self, target, text, cancelled):
         return self._adapter(target).insert_guarded(target, text, cancelled)
 
-    def submit_guarded(self, target, cancelled):
-        return self._adapter(target).submit_guarded(target, cancelled)
+    def submit_guarded(self, target, cancelled, allow_edited=False):
+        return self._adapter(target).submit_guarded(
+            target, cancelled, allow_edited=allow_edited
+        )
 
 
 class Controller:
@@ -647,6 +649,16 @@ class Controller:
             if not cancelled.is_set():
                 self.notice("Could not read the reply", str(exc))
 
+    def interact(self):
+        with self.lock:
+            if self.recording_active() or not (self.draft or self.pending):
+                self.record()
+                return
+            if self.input_cancelled.is_set():
+                self.input_cancelled = threading.Event()
+            expected = (self.token, self.input_cancelled)
+        self.send(expected=expected, allow_edited=True)
+
     def record(self, mode="append"):
         with self.lock:
             if self.phase == "starting":
@@ -779,7 +791,7 @@ class Controller:
                 raise
             if staged:
                 self.notice(
-                    "Dictation ready", "Super+Shift+Space sends this dictation"
+                    "Dictation ready", "Press Super+Space again to send"
                 )
             else:
                 self.notice("No speech detected", "Nothing was inserted")
@@ -897,8 +909,14 @@ class Controller:
             self.error = None
             return True
 
-    def send(self):
+    def send(self, expected=None, allow_edited=False):
         with self.lock:
+            if expected is not None and expected != (
+                self.token, self.input_cancelled
+            ):
+                raise RuntimeError("Voice session changed; press Send again")
+            if expected is not None and expected[1].is_set():
+                raise RuntimeError("Voice delivery was cancelled")
             if self.recording_active():
                 raise RuntimeError(
                     "Finish recording and transcription before sending"
@@ -907,6 +925,11 @@ class Controller:
         if pending:
             self.stage(pending, token)
         with self.lock:
+            if expected is not None and (
+                expected != (self.token, self.input_cancelled)
+                or expected[1].is_set()
+            ):
+                raise RuntimeError("Voice delivery was cancelled")
             if not self.target or not self.draft:
                 raise RuntimeError("No new dictation to send")
             if self.input_cancelled.is_set():
@@ -919,12 +942,17 @@ class Controller:
             with self.lock:
                 if token != self.token or operation.is_set():
                     raise RuntimeError("Voice delivery was cancelled")
+                if not self.draft:
+                    raise RuntimeError("No new dictation to send")
                 # Never retry an ambiguous Enter automatically.
                 self.draft = False
                 self.phase = "idle"
             guarded = getattr(self.terminal, "submit_guarded", None)
             if guarded:
-                guarded(target, operation)
+                if allow_edited:
+                    guarded(target, operation, allow_edited=True)
+                else:
+                    guarded(target, operation)
             else:
                 self.terminal.submit(target)
         finally:
@@ -1002,7 +1030,9 @@ def dispatch(app, request):
         app.record(mode=action)
     elif action == "discard":
         app.stop()
-    elif action in ("record", "send", "read", "stop", "retry", "rebind"):
+    elif action in (
+        "interact", "record", "send", "read", "stop", "retry", "rebind"
+    ):
         getattr(app, action)()
     elif action != "status":
         raise RuntimeError("Unknown voice command")
@@ -1239,6 +1269,7 @@ def main(args=None):
                 )
             return 0
         if args and args[0] in (
+            "interact",
             "record",
             "send",
             "read",
@@ -1264,10 +1295,11 @@ def main(args=None):
         if args and args[0] in ("--help", "-h"):
             print(
                 "Usage: <codex|grok|pi|qwen-pi>-voice [options]\n"
-                "       codex-voice record|send|read|stop|status\n"
+                "       codex-voice interact|record|send|read|stop|status\n"
                 "       codex-voice retry|rebind|discard|append|replace\n"
                 "       codex-voice auto on|off\n\n"
-                "Super+Space: record/stop. Super+Shift+Space: send. "
+                "Super+Space: record/stop/send draft. "
+                "Super+Shift+Space: send. "
                 "Super+R: read/stop.\n"
                 "Run inside Herdr. Prefix Codex options with -- "
                 "if they conflict.\n"

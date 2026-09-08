@@ -75,11 +75,12 @@ class PiTerminal:
     def insert(self, target, text):
         self.insert_guarded(target, text, None)
 
-    def submit_guarded(self, target, cancelled):
+    def submit_guarded(self, target, cancelled, allow_edited=False):
         self.check_cancelled(cancelled)
         self.validate(target)
         self.check_cancelled(cancelled)
-        self.request(target, 'submit')
+        fields = {'allow_edited': True} if allow_edited else {}
+        self.request(target, 'submit', **fields)
 
     def submit(self, target):
         self.submit_guarded(target, None)

@@ -118,6 +118,47 @@ if (existsSync(extensionPath)) {
     assert.deepEqual(f.sent, []);
   });
 
+  test('explicit hotkey submit sends the edited voice draft once', async (t) => {
+    const f = await fixture(t);
+    await f.request('stage', { text: 'Original dictation' });
+    f.setEditor('My corrected dictation');
+    assert.equal((await f.request('submit', { allow_edited: true })).ok, true);
+    assert.deepEqual(f.sent, ['My corrected dictation']);
+    assert.equal(f.editor(), '');
+    f.setIdle(true);
+    assert.equal((await f.request('submit', { allow_edited: true })).ok, false);
+    assert.deepEqual(f.sent, ['My corrected dictation']);
+  });
+
+  test('only literal true opts into submitting an edited voice draft', async (t) => {
+    const f = await fixture(t);
+    await f.request('stage', { text: 'Original dictation' });
+    f.setEditor('My corrected dictation');
+    assert.equal((await f.request('submit', { allow_edited: 'true' })).ok, false);
+    assert.deepEqual(f.sent, []);
+    assert.equal(f.editor(), 'My corrected dictation');
+  });
+
+  test('explicit hotkey submit rejects empty or unsafe edited drafts', async (t) => {
+    const f = await fixture(t);
+    for (const invalid of ['', '   ', '\x1b[1;1H']) {
+      f.setEditor('');
+      await f.request('stage', { text: 'Original dictation' });
+      f.setEditor(invalid);
+      assert.equal((await f.request('submit', { allow_edited: true })).ok, false);
+      assert.equal(f.editor(), invalid);
+    }
+    assert.deepEqual(f.sent, []);
+  });
+
+  test('explicit hotkey submit never sends an unarmed hand typed prompt', async (t) => {
+    const f = await fixture(t);
+    f.setEditor('Unrelated hand typed prompt');
+    assert.equal((await f.request('submit', { allow_edited: true })).ok, false);
+    assert.deepEqual(f.sent, []);
+    assert.equal(f.editor(), 'Unrelated hand typed prompt');
+  });
+
   test('only speaks a final successful assistant reply after Pi settles', async (t) => {
     const f = await fixture(t);
     f.setIdle(false);

@@ -33,8 +33,8 @@ launcher is using; the last exit releases both model services.
 
 | Hotkey | Action |
 | --- | --- |
-| Super+Space | Start recording; press again to stop and transcribe |
-| Super+Shift+Space | Send the dictated draft |
+| Super+Space | Stop an active recording; otherwise send a prepared voice prompt, or start recording if none is prepared |
+| Super+Shift+Space | Explicitly send the dictated draft |
 | Super+R | Read the latest completed reply; press again to stop speaking |
 
 Super is the Windows key. Transcription is staged for review; recording never
@@ -43,6 +43,19 @@ arrive and stops after three minutes. Silence, punctuation-only output and
 non-speech markers are skipped. Silero VAD adds speech detection beyond the
 initial quiet-audio gate, while a small vocabulary prompt helps with names
 such as Herdr, Qwen, NixOS and the configured hosts.
+
+The usual flow uses Super+Space three times: record, stop and transcribe, then
+send. Wait for the green ready state before the third press. Retained dictation
+is delivered and sent when the selected agent is ready; a busy agent leaves
+those words retained. The hotkey applies across all four launchers and never
+broadcasts to other registered sessions, including multiple sessions of the
+same harness.
+
+This decision tracks prompts prepared by voice, including subsequent edits.
+Codex and Grok do not expose authoritative editor contents, so entirely
+hand-typed prompts do not trigger automatic submission. Clearing their editor
+manually does not clear voice's tracked draft. Use the tray's Start recording
+or `codex-voice record` to add more speech instead of sending a prepared prompt.
 
 ## Tray and recovery
 
@@ -92,8 +105,10 @@ its initial session event arrives.
 
 Pi explicitly loads the voice extension, including in `qwen-pi` where automatic
 extension discovery is disabled. It uses native editor APIs for staging and
-single-use submission, preserving existing typed text. A changed editor must
-be reviewed and submitted in Pi. Spoken replies use `agent_settled`, excluding
+single-use submission, preserving existing typed text. Super+Space explicitly
+submits the current edited voice draft. The separate Send action keeps its
+unchanged-editor guard; after that guard rejects edits, submit in Pi or record
+again. Spoken replies use `agent_settled`, excluding
 reasoning, aborted output and intermediate tool turns. Adapter sockets are
 private and check launcher token, process and conversation identity.
 
@@ -105,7 +120,7 @@ The registry never persists prompt or reply contents.
 
 Replies speak automatically. Use `codex-voice auto off` for manual playback,
 `auto on` to restore it, `stop` to cancel and `status` to inspect state. All four
-launchers accept the same controls: `record`, `send`, `read`, `stop`, `status`,
+launchers accept the same controls: `interact`, `record`, `send`, `read`, `stop`, `status`,
 `retry`, `rebind`, `discard`, `append` and `replace`.
 
 Speech skips fenced code and simplifies Markdown. It prefers sentence and
@@ -271,6 +286,8 @@ Streaming tests check early playback, synthesis during playback, PCM order,
 cancellation of prefetched speech, failed requests and pipe cleanup.
 Recovery tests cover a blocked terminal during Cancel, retained dictation across
 sessions and retries, absolute WAV expiry, late acknowledgements and rebinding.
+Primary-hotkey tests cover the record/transcribe/send flow, busy agents,
+in-progress transcription, cancellation and submission to one selected session.
 Pi tests exercise native staging, changed-editor rejection, final reply filtering
 and socket framing. Grok tests cover its installed hook schema and root events.
 Isolated installed-harness checks verify Pi extension loading and a real Grok

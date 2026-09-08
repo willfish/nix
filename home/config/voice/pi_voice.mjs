@@ -93,7 +93,7 @@ export function registerVoice(pi, env = process.env) {
     if (request.command === 'submit') {
       if (!armed) throw new Error('No voice dictation is ready to send');
       const text = context.ui.getEditorText();
-      if (text !== staged) {
+      if (text !== staged && request.allow_edited !== true) {
         armed = false;
         throw new Error('Pi prompt changed; review and send it from Pi');
       }

@@ -110,6 +110,16 @@ class AdapterTests(unittest.TestCase):
             'token': 'secret', 'session': 'session-a', 'command': 'submit',
         })
 
+    def test_explicit_hotkey_submit_opts_into_current_edited_draft(self):
+        self.server([self.status(), self.status(draft=False)])
+        PiTerminal().submit_guarded(
+            self.target, threading.Event(), allow_edited=True
+        )
+        self.assertEqual(self.requests[-1], {
+            'token': 'secret', 'session': 'session-a', 'command': 'submit',
+            'allow_edited': True,
+        })
+
 
 if __name__ == '__main__':
     unittest.main()
