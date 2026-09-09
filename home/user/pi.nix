@@ -32,6 +32,9 @@ in
   home.file.".pi/agent/models.json".source = ../config/pi/models.json;
 
   home.file.".pi/agent/extensions/mcp".source = "${mcpAdapter}/lib/node_modules/pi-mcp-adapter";
+  # Keep agent state reporting in sync with the pinned Herdr package.
+  home.file.".pi/agent/extensions/herdr-agent-state.ts".source =
+    "${pkgs.herdr.src}/src/integration/assets/pi/herdr-agent-state.ts";
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
