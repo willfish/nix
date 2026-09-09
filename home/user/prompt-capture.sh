@@ -4,7 +4,7 @@
 # Built into a single executable by home/user/prompt-capture.nix, which
 # prepends the shell shebang and the MITMDUMP closure path. Modes:
 #
-#   prompt-capture <codex|pi|grok> -- <command> [args...]
+#   prompt-capture <codex|pi|grok|claude|qwen-claude> -- <command> [args...]
 #   prompt-capture stop <tool>
 #   prompt-capture logs <tool>
 set -euo pipefail
@@ -18,7 +18,7 @@ usage:
   prompt-capture stop <tool>                     stop a capture server left behind
   prompt-capture logs <tool>                     tail the capture file
 
-tools: codex | pi | grok
+tools: codex | pi | grok | claude | qwen-claude
 USAGE
   exit 2
 }
@@ -29,7 +29,7 @@ mode="$1"
 shift
 
 case "$mode" in
-codex | pi | grok)
+codex | pi | grok | claude | qwen-claude)
   tool="$mode"
   ;;
 stop | logs)
@@ -45,6 +45,8 @@ case "$tool" in
 codex) port=8301 ;;
 pi) port=8302 ;;
 grok) port=8303 ;;
+claude) port=8304 ;;
+qwen-claude) port=8305 ;;
 *) usage ;;
 esac
 
@@ -184,23 +186,58 @@ def _clean(headers):
     }
 
 
+def _usage(flow, text):
+    try:
+        payload = json.loads(text)
+    except (ValueError, TypeError):
+        return
+    if not isinstance(payload, dict):
+        return
+    usage = payload.get("usage")
+    for key in ("message", "response"):
+        if not isinstance(usage, dict) and isinstance(payload.get(key), dict):
+            usage = payload[key].get("usage")
+    if _fh is not None and isinstance(usage, dict):
+        _fh.write(json.dumps({
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "run": _run, "tool": _tool, "kind": "usage",
+            "flow_id": flow.id, "usage": usage,
+        }) + "\n")
+        _fh.flush()
+
+
 def _record(kind, flow):
     if _fh is None:
         return
     req = flow.request
+    body = req.get_text(strict=False) or ""
     rec = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "run": _run,
         "tool": _tool,
         "kind": kind,
+        "flow_id": flow.id,
         "method": req.method,
         "url": req.pretty_host + req.path,
         "request_headers": _clean(req.headers),
-        "request_body": _clip(req.get_text(strict=False)),
+        "request_body": body,
+        "request_bytes": len(req.raw_content or b""),
+        "request_chars": len(body),
     }
+    try:
+        payload = json.loads(body)
+        if isinstance(payload, dict):
+            rec["model"] = payload.get("model")
+            for key, label in (("messages", "message_count"), ("tools", "tool_count")):
+                if isinstance(payload.get(key), list):
+                    rec[label] = len(payload[key])
+    except (ValueError, TypeError):
+        pass
     resp = flow.response
     if resp is not None:
         rec["status"] = resp.status_code
+        if not resp.stream:
+            _usage(flow, resp.get_text(strict=False))
         if not resp.stream and os.environ.get("PROMPT_CAPTURE_RESPONSE_BODY") == "1":
             rec["response_body"] = _clip(resp.get_text(strict=False))
     _fh.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
@@ -212,23 +249,41 @@ class PromptCapture:
         content_type = flow.response.headers.get("content-type", "")
         if content_type.split(";", 1)[0].strip().lower() != "text/event-stream":
             return
-        if os.environ.get("PROMPT_CAPTURE_RESPONSE_BODY") != "1":
-            flow.response.stream = True
-            return
-
+        capture_body = os.environ.get("PROMPT_CAPTURE_RESPONSE_BODY") == "1"
         decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        pending = ""
+        data_lines = []
 
         def capture_chunk(chunk):
+            nonlocal pending
             # Forward the original bytes immediately, including the final empty
             # chunk. Decode incrementally because UTF-8 can span network chunks.
             try:
                 text = decoder.decode(chunk, final=not chunk)
-                if _fh is not None and text:
+                pending += text
+                while "\n" in pending:
+                    line, pending = pending.split("\n", 1)
+                    line = line.rstrip("\r")
+                    if not line:
+                        if data_lines:
+                            _usage(flow, "\n".join(data_lines))
+                            data_lines.clear()
+                    elif line.startswith("data:"):
+                        data_lines.append(line[5:].lstrip(" "))
+                if not chunk:
+                    if pending.startswith("data:"):
+                        data_lines.append(pending[5:].lstrip(" "))
+                    if data_lines:
+                        _usage(flow, "\n".join(data_lines))
+                        data_lines.clear()
+                    pending = ""
+                if _fh is not None and text and capture_body:
                     rec = {
                         "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                         "run": _run,
                         "tool": _tool,
                         "kind": "response_chunk",
+                        "flow_id": flow.id,
                         "method": flow.request.method,
                         "url": flow.request.pretty_host + flow.request.path,
                         "status": flow.response.status_code,
@@ -272,6 +327,7 @@ class PromptCapture:
                 "run": _run,
                 "tool": _tool,
                 "kind": "ws_request" if msg.from_client else "ws_response",
+                "flow_id": flow.id,
                 "method": "WS",
                 "url": flow.request.pretty_host + flow.request.path,
                 "data": _clip(payload),
@@ -285,10 +341,16 @@ class PromptCapture:
 addons = [PromptCapture()]
 PYEOF
 
+proxy_args=()
+if [ "$tool" = "qwen-claude" ]; then
+  proxy_args=(--mode "reverse:${PROMPT_CAPTURE_UPSTREAM:-http://127.0.0.1:8081}")
+fi
+
 PROMPT_CAPTURE_JSONL="$jsonl" \
   PROMPT_CAPTURE_TOOL="$tool" \
   PROMPT_CAPTURE_RUN="$run_id" \
   "$MITMDUMP" \
+  "${proxy_args[@]}" \
   --listen-host 127.0.0.1 \
   --listen-port "$port" \
   --set confdir="$confdir" \
@@ -318,15 +380,21 @@ fi
 # Combined trust store: system bundle plus the mitmproxy CA.
 cat /etc/ssl/certs/ca-bundle.crt "$ca" >"$cafile"
 
-export HTTP_PROXY="http://127.0.0.1:$port"
-export HTTPS_PROXY="$HTTP_PROXY"
-export http_proxy="$HTTP_PROXY"
-export https_proxy="$HTTP_PROXY"
-export NO_PROXY="localhost,127.0.0.1${NO_PROXY:+,$NO_PROXY}"
-export no_proxy="$NO_PROXY"
-export SSL_CERT_FILE="$cafile"
-export REQUESTS_CA_BUNDLE="$cafile"
-export NODE_EXTRA_CA_CERTS="$ca"
+if [ "$tool" = "qwen-claude" ]; then
+  export ANTHROPIC_BASE_URL="http://127.0.0.1:$port"
+  export NO_PROXY="localhost,127.0.0.1${NO_PROXY:+,$NO_PROXY}"
+  export no_proxy="$NO_PROXY"
+else
+  export HTTP_PROXY="http://127.0.0.1:$port"
+  export HTTPS_PROXY="$HTTP_PROXY"
+  export http_proxy="$HTTP_PROXY"
+  export https_proxy="$HTTP_PROXY"
+  export NO_PROXY="localhost,127.0.0.1${NO_PROXY:+,$NO_PROXY}"
+  export no_proxy="$NO_PROXY"
+  export SSL_CERT_FILE="$cafile"
+  export REQUESTS_CA_BUNDLE="$cafile"
+  export NODE_EXTRA_CA_CERTS="$ca"
+fi
 
 echo "prompt-capture[$tool]: run $run_id, server pid $srv_pid on 127.0.0.1:$port" >&2
 echo "prompt-capture[$tool]: prompts are logged to $jsonl" >&2

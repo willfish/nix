@@ -37,6 +37,7 @@ class AddonTests(unittest.TestCase):
         exec(compile(addon, "capture-addon", "exec"), self.namespace)
         self.addCleanup(self.namespace["_fh"].close)
         self.flow = SimpleNamespace(
+            id="flow-1",
             request=SimpleNamespace(
                 method="GET", pretty_host="example.test", path="/events"
             ),
@@ -56,11 +57,65 @@ class AddonTests(unittest.TestCase):
         captured = "".join(r["response_body"] for r in records)
         self.assertEqual(captured, "data: €\n\n")
 
+    def test_large_request_is_complete_with_metrics_and_redacted_auth(self):
+        body = json.dumps(
+            {
+                "model": "qwen",
+                "system": "instructions",
+                "messages": [{"role": "user", "content": "€" * 210000}],
+                "tools": [{"name": "read"}],
+            },
+            ensure_ascii=False,
+        )
+        self.flow.id = "request-1"
+        self.flow.response = None
+        self.flow.request.headers = {
+            "Authorization": "secret",
+            "x-api-key": "secret",
+        }
+        self.flow.request.get_text = lambda strict=False: body
+        self.flow.request.raw_content = body.encode()
+        self.namespace["addons"][0].request(self.flow)
+        record = json.loads(self.log.read_text())
+        self.assertEqual(record["request_body"], body)
+        self.assertEqual(record["flow_id"], "request-1")
+        self.assertEqual(record["request_bytes"], len(body.encode()))
+        self.assertEqual(record["request_chars"], len(body))
+        self.assertEqual(record["message_count"], 1)
+        self.assertEqual(record["tool_count"], 1)
+        self.assertEqual(
+            record["request_headers"]["Authorization"], "<redacted>"
+        )
+        self.assertNotIn("secret", self.log.read_text())
+
     def test_streaming_without_body_capture_does_not_log_response_content(self):
         with patch.dict(os.environ, PROMPT_CAPTURE_RESPONSE_BODY="0"):
             self.namespace["addons"][0].responseheaders(self.flow)
-        self.assertIs(self.flow.response.stream, True)
+        self.assertEqual(
+            self.flow.response.stream(b"data: {}\n\n"), b"data: {}\n\n"
+        )
         self.assertEqual(self.log.read_text(), "")
+
+    def test_anthropic_usage_across_chunks_without_body_logging(self):
+        with patch.dict(os.environ, PROMPT_CAPTURE_RESPONSE_BODY="0"):
+            self.namespace["addons"][0].responseheaders(self.flow)
+        events = (
+            'event: message_start\r\ndata: {"type":"message_start",'
+            '"message":{"usage":{"input_tokens":123,'
+            '"output_tokens":0}}}\r\n\r\n'
+            'data: {"type":"message_delta","usage":{"output_tokens":7}}\n\n'
+        ).encode()
+        for part in (events[:31], events[31:120], events[120:], b""):
+            self.assertEqual(self.flow.response.stream(part), part)
+        records = [
+            json.loads(line) for line in self.log.read_text().splitlines()
+        ]
+        self.assertEqual(
+            [r["usage"] for r in records],
+            [{"input_tokens": 123, "output_tokens": 0}, {"output_tokens": 7}],
+        )
+        self.assertTrue(all(r["flow_id"] == "flow-1" for r in records))
+        self.assertTrue(all("response_body" not in r for r in records))
 
 
 @unittest.skipUnless(MITMDUMP, "set MITMDUMP to run proxy integration tests")
@@ -73,13 +128,18 @@ class CaptureTests(unittest.TestCase):
             sock.bind(("127.0.0.1", 0))
             self.port = sock.getsockname()[1]
         self.script = self.root / "capture.sh"
-        self.script.write_text(SOURCE.read_text().replace(
-            "codex) port=8301", f"codex) port={self.port}"
-        ))
-        self.env = dict(os.environ, MITMDUMP=MITMDUMP,
-                        FLOCK=os.environ.get("FLOCK") or shutil.which("flock"),
-                        XDG_STATE_HOME=str(self.root),
-                        PROMPT_CAPTURE_RESPONSE_BODY="1")
+        self.script.write_text(
+            SOURCE.read_text()
+            .replace("codex) port=8301", f"codex) port={self.port}")
+            .replace("qwen-claude) port=8305", f"qwen-claude) port={self.port}")
+        )
+        self.env = dict(
+            os.environ,
+            MITMDUMP=MITMDUMP,
+            FLOCK=os.environ.get("FLOCK") or shutil.which("flock"),
+            XDG_STATE_HOME=str(self.root),
+            PROMPT_CAPTURE_RESPONSE_BODY="1",
+        )
         self.cdir = self.root / "prompt-capture"
 
     def stop(self, proc):
@@ -93,14 +153,26 @@ class CaptureTests(unittest.TestCase):
             os.killpg(proc.pid, signal.SIGKILL)
             proc.communicate(timeout=5)
 
-    def start(self):
+    def start(self, tool="codex"):
         ready = self.root / "ready"
         proc = subprocess.Popen(
-            ["bash", str(self.script), "codex", "--", sys.executable, "-c",
-             "import pathlib,sys,time; "
-             "pathlib.Path(sys.argv[1]).touch(); time.sleep(60)",
-             str(ready)], env=self.env, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, text=True, start_new_session=True,
+            [
+                "bash",
+                str(self.script),
+                tool,
+                "--",
+                sys.executable,
+                "-c",
+                "import os,pathlib,sys,time; "
+                "pathlib.Path(sys.argv[1]).write_text("
+                "os.environ.get('ANTHROPIC_BASE_URL', '')); time.sleep(60)",
+                str(ready),
+            ],
+            env=self.env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
             umask=0o022,
         )
         self.addCleanup(self.stop, proc)
@@ -111,6 +183,57 @@ class CaptureTests(unittest.TestCase):
             time.sleep(0.05)
         self.assertTrue(ready.exists(), "wrapped command did not start")
         return proc
+
+    def test_qwen_reverse_proxy_routes_local_requests_and_records_usage(self):
+        received = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_POST(self):
+                received.append(
+                    (
+                        self.path,
+                        self.rfile.read(int(self.headers["Content-Length"])),
+                    )
+                )
+                body = b'{"usage":{"input_tokens":321,"output_tokens":5}}'
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        self.env["PROMPT_CAPTURE_UPSTREAM"] = (
+            f"http://127.0.0.1:{server.server_port}"
+        )
+        proc = self.start("qwen-claude")
+        self.assertEqual(
+            (self.root / "ready").read_text(), f"http://127.0.0.1:{self.port}"
+        )
+        body = (
+            b'{"model":"qwen","messages":[{"role":"user","content":"hello"}]}'
+        )
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        conn.request("POST", "/v1/messages", body, {"x-api-key": "secret"})
+        response = conn.getresponse()
+        self.assertEqual(response.status, 200)
+        response.read()
+        conn.close()
+        self.stop(proc)
+        self.assertEqual(received, [("/v1/messages", body)])
+        log = (self.cdir / "qwen-claude.jsonl").read_text()
+        self.assertNotIn("secret", log)
+        records = [json.loads(line) for line in log.splitlines()]
+        usage = next(r for r in records if r["kind"] == "usage")
+        self.assertEqual(usage["usage"]["input_tokens"], 321)
+        with socket.socket() as sock:
+            self.assertNotEqual(sock.connect_ex(("127.0.0.1", self.port)), 0)
 
     def test_sse_arrives_before_upstream_finishes_and_is_captured(self):
         self.start()
