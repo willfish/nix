@@ -298,6 +298,7 @@ let
         ${lib.optionalString isAndromeda "--fit off --batch-size 512 --ubatch-size 128"} \
         --cache-type-k q8_0 --cache-type-v q8_0 --cache-ram 1024 \
         --jinja --reasoning off \
+        --chat-template-file ${../config/local-llm/qwen3.8-chat-template.jinja} \
         --chat-template-kwargs '{"preserve_thinking":true}' \
         --temp 0.7 --top-p 0.8 --top-k 20 --min-p 0 \
         --presence-penalty 1.5 --repeat-penalty 1.0 \
