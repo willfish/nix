@@ -159,6 +159,18 @@ class PresentationTests(unittest.TestCase):
         })
         self.assertTrue(view["auto"])
 
+    def test_voice_choices_are_characters_without_samantha_variants(self):
+        voices = {"samantha": "Samantha", "data": "Data", "jarvis": "JARVIS"}
+        for character in voices:
+            view = self.tray.presentation(
+                {"selected_voice": character, "voices": voices}
+            )
+            self.assertEqual(view["selected_voice"], character)
+            self.assertEqual(
+                {key for key in view["actions"] if key.startswith("voice:")},
+                {"voice:" + key for key in voices},
+            )
+
     def test_last_reply_can_be_replayed_only_when_usable(self):
         status = {"pane": "p1", "reply": "An answer"}
         view = self.tray.presentation(status)
@@ -378,6 +390,8 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
             actions.append(name)
             if name == "auto-toggle":
                 state["auto"] = not state["auto"]
+            if name.startswith("voice:"):
+                state["selected_voice"] = name.split(":", 1)[1]
             if name.startswith("select:"):
                 for session in state.get("sessions", []):
                     session["selected"] = name == "select:" + session["token"]
@@ -567,6 +581,45 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 await wait_until(lambda: tray.view.get("auto") is False)
                 _, updated_toggle = await menu.call_get_layout(toggle[0], 0, [])
                 self.assertEqual(updated_toggle[1]["toggle-state"].value, 0)
+                state.update(
+                    voices={
+                        "samantha": "Samantha",
+                        "data": "Data",
+                        "jarvis": "JARVIS",
+                    },
+                    selected_voice="samantha",
+                )
+                await wait_until(lambda: "voice:jarvis" in tray.view["actions"])
+                _, layout = await menu.call_get_layout(0, -1, [])
+                selector = next(
+                    child.value
+                    for child in layout[2]
+                    if child.value[1]["label"].value == "Character voice"
+                )
+                voices = [child.value for child in selector[2]]
+                self.assertEqual(
+                    [r[1]["toggle-state"].value for r in voices], [1, 0, 0]
+                )
+                self.assertTrue(
+                    all(r[1]["toggle-type"].value == "radio" for r in voices)
+                )
+                before = list(actions)
+                await menu.call_event(
+                    selector[0], "clicked", Variant("i", 0), 0
+                )
+                await asyncio.sleep(0.1)
+                self.assertEqual(actions, before)
+                await menu.call_event(
+                    voices[2][0], "clicked", Variant("i", 0), 0
+                )
+                await wait_until(
+                    lambda: tray.view["selected_voice"] == "jarvis"
+                )
+                _, subtree = await menu.call_get_layout(selector[0], -1, [])
+                self.assertEqual(
+                    [r.value[1]["toggle-state"].value for r in subtree[2]],
+                    [0, 0, 1],
+                )
                 await watcher_bus.release_name("org.kde.StatusNotifierWatcher")
                 replacement = Watcher()
                 client.export("/StatusNotifierWatcher", replacement)

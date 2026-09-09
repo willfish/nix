@@ -107,10 +107,13 @@ def presentation(status):
         "glyph": glyph,
         "context": context,
         "auto": bool(status.get("auto")),
+        "selected_voice": status.get("selected_voice", "samantha"),
         "selected_session": None,
         "actions": {"auto-toggle": ("Read replies aloud", True)},
     }
     actions = view["actions"]
+    for character, label in status.get("voices", {}).items():
+        actions["voice:" + character] = (public_label(label), True)
     if selected and not busy and not pending and not speaking \
             and not responding and status.get("reply"):
         actions["read"] = ("Replay last reply", True)
@@ -294,7 +297,7 @@ def _interfaces(tray):
             rows = [
                 (tray.action_id(action), label, enabled)
                 for action, (label, enabled) in tray.view["actions"].items()
-                if not action.startswith("select:")
+                if not action.startswith(("select:", "voice:"))
             ]
             rows = [
                 [
@@ -336,7 +339,35 @@ def _interfaces(tray):
                 "enabled": Variant("b", bool(sessions)),
                 "children-display": Variant("s", "submenu"),
             }, sessions]
-            return [selector, *rows]
+            voices = [
+                Variant(
+                    "(ia{sv}av)",
+                    [
+                        tray.action_id(action),
+                        {
+                            "label": Variant("s", label),
+                            "enabled": Variant("b", enabled),
+                            "toggle-type": Variant("s", "radio"),
+                            "toggle-state": Variant(
+                                "i",
+                                int(
+                                    action
+                                    == "voice:" + tray.view["selected_voice"]
+                                ),
+                            ),
+                        },
+                        [],
+                    ],
+                )
+                for action, (label, enabled) in tray.view["actions"].items()
+                if action.startswith("voice:")
+            ]
+            voice_selector = [13, {
+                "label": Variant("s", "Character voice"),
+                "enabled": Variant("b", True),
+                "children-display": Variant("s", "submenu"),
+            }, voices]
+            return [selector, *([voice_selector] if voices else []), *rows]
 
         @method()
         def GetLayout(

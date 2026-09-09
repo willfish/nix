@@ -902,6 +902,99 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(payload.get("language"), "English")
         self.assertEqual(payload["input"], "Hello William.")
 
+    def test_character_stays_fixed_and_only_samantha_switches_at_50_words(self):
+        for playback in ("buffered", "streaming"):
+            for character, words, expected in (
+                ("samantha", 50, None),
+                ("samantha", 51, "/newer.wav"),
+                ("data", 1, "/data.wav"),
+                ("data", 51, "/data.wav"),
+            ):
+                with self.subTest(
+                    playback=playback, character=character, words=words
+                ):
+                    local = self.voice.LocalAudio(
+                        Path(self.tmp.name),
+                        {
+                            "tts_url": "http://unused.test",
+                            "playback_mode": playback,
+                            "tts_voices": {
+                                "data": {
+                                    "label": "Data",
+                                    "options": {
+                                        "voice_ref": "/data.wav",
+                                        "reference_text": "Data reference.",
+                                    },
+                                }
+                            },
+                            "tts_long_voice": {
+                                "voice_ref": "/newer.wav",
+                                "reference_text": "New reference.",
+                            },
+                        },
+                    )
+                    local.set_voice(character)
+                    requests = []
+
+                    def respond(request, *args, **kwargs):
+                        requests.append(json.loads(request.data))
+                        local.set_voice(
+                            "data" if character == "samantha" else "samantha"
+                        )
+                        return io.BytesIO(speech_wav(b"\0\0" * 24))
+
+                    with (
+                        patch.object(
+                            self.voice.urllib.request,
+                            "urlopen",
+                            side_effect=respond,
+                        ),
+                        patch.object(self.voice.subprocess, "Popen") as process,
+                    ):
+                        process.return_value.wait.return_value = 0
+                        local.speak("word " * words, threading.Event())
+                    self.assertTrue(requests)
+                    for request in requests:
+                        self.assertEqual(request.get("voice_ref"), expected)
+                        self.assertEqual(
+                            request.get("reference_text"),
+                            {
+                                None: None,
+                                "/newer.wav": "New reference.",
+                                "/data.wav": "Data reference.",
+                            }[expected],
+                        )
+                    self.assertEqual(
+                        sum(len(r["input"].split()) for r in requests), words
+                    )
+
+    def test_character_choice_persists_and_old_samantha_modes_migrate(self):
+        preferences = Path(self.tmp.name) / "voice-mode"
+        config = {
+            "voice_preferences_path": str(preferences),
+            "tts_voices": {
+                "data": {
+                    "label": "Data",
+                    "options": {
+                        "voice_ref": "/data.wav",
+                        "reference_text": "Words.",
+                    },
+                }
+            },
+        }
+        for old in ("auto", "current", "newer", "removed-character"):
+            preferences.write_text(old)
+            local = self.voice.LocalAudio(Path(self.tmp.name), config)
+            self.assertEqual(local.selected_voice, "samantha")
+        self.app.audio = local
+        status = self.voice.dispatch(self.app, {"action": "voice:data"})
+        self.assertEqual(status["selected_voice"], "data")
+        restored = self.voice.LocalAudio(Path(self.tmp.name), config)
+        self.assertEqual(restored.selected_voice, "data")
+        with self.assertRaisesRegex(RuntimeError, "Unknown voice"):
+            self.voice.dispatch(self.app, {"action": "voice:unknown"})
+        self.assertEqual(preferences.read_text().strip(), "data")
+
     def test_full_reply_is_synthesized_before_one_continuous_playback(self):
         audio = self.voice.LocalAudio(
             Path(self.tmp.name), {"tts_url": "http://127.0.0.1:8179/speech"}

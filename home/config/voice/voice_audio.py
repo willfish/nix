@@ -4,6 +4,7 @@ import array
 import io
 import json
 import math
+from pathlib import Path
 import re
 from contextlib import ExitStack
 from concurrent.futures import ThreadPoolExecutor
@@ -53,6 +54,18 @@ class LocalAudio:
         self.runtime, self.config = runtime, config
         self.player = None
         self.lock = threading.Lock()
+        self.voices = {
+            "samantha": {"label": "Samantha", "options": {}},
+            **config.get("tts_voices", {}),
+        }
+        self.selected_voice = "samantha"
+        preferences = config.get("voice_preferences_path")
+        self.voice_preferences = Path(preferences) if preferences else None
+        if self.voice_preferences and self.voice_preferences.exists():
+            saved = self.voice_preferences.read_text().strip()
+            # Previous Samantha modes and removed characters return to Samantha.
+            if saved in self.voices:
+                self.selected_voice = saved
         self.synthesis_lock = threading.Lock()
         self.recognition_lock = threading.Lock()
         self.stopped = threading.Event()
@@ -143,6 +156,18 @@ class LocalAudio:
             cancelled.wait(min(.1, max(0, deadline - time.monotonic())))
         return False
 
+    def set_voice(self, character):
+        if character not in self.voices:
+            raise RuntimeError(
+                "Unknown voice; choose " + ", ".join(self.voices)
+            )
+        with self.lock:
+            if self.voice_preferences:
+                temporary = self.voice_preferences.with_suffix(".tmp")
+                temporary.write_text(character + "\n")
+                temporary.replace(self.voice_preferences)
+            self.selected_voice = character
+
     def status(self):
         """Return cached health immediately, refreshing in bounded workers."""
         def refresh(engine):
@@ -157,6 +182,10 @@ class LocalAudio:
 
         with self.backend_lock:
             result = {
+                "selected_voice": self.selected_voice,
+                "voices": {
+                    key: voice["label"] for key, voice in self.voices.items()
+                },
                 "backends": dict(self.backends),
                 "backend_errors": dict(self.backend_errors),
             }
@@ -325,7 +354,7 @@ class LocalAudio:
             recognize, self.recognition_lock, cancelled
         ) or ""
 
-    def _synthesize(self, chunk, cancelled):
+    def _synthesize(self, chunk, cancelled, voice_options):
         def synthesize():
             request = urllib.request.Request(
                 self.config["tts_url"],
@@ -334,6 +363,7 @@ class LocalAudio:
                         "model": self.config.get("tts_model", "codex-voice"),
                         "input": chunk,
                         "language": "English",
+                        **voice_options,
                     }
                 ).encode(),
                 headers={"Content-Type": "application/json"},
@@ -352,8 +382,8 @@ class LocalAudio:
                 raise RuntimeError("Incomplete speech audio")
         return params, frames
 
-    def _stream(self, chunks, cancelled):
-        prepared = self._synthesize(chunks[0], cancelled)
+    def _stream(self, chunks, cancelled, voice_options):
+        prepared = self._synthesize(chunks[0], cancelled, voice_options)
         if prepared is None:
             return
         params, frames = prepared
@@ -382,7 +412,8 @@ class LocalAudio:
                     # One chunk ahead, with pipe backpressure bounding memory.
                     pending = (
                         worker.submit(
-                            self._synthesize, chunks[index + 1], cancelled
+                            self._synthesize, chunks[index + 1], cancelled,
+                            voice_options
                         )
                         if index + 1 < len(chunks)
                         else None
@@ -422,13 +453,18 @@ class LocalAudio:
                         pass
 
     def speak(self, text, cancelled):
+        # Select once for the complete spoken reply, before chunking or waits.
+        character = self.selected_voice
+        voice_options = dict(self.voices[character]["options"])
+        if character == "samantha" and len(text.split()) > 50:
+            voice_options = dict(self.config.get("tts_long_voice", {}))
         chunks = speech_chunks(text)
         if not chunks or cancelled.is_set():
             return
         if not self.wait_ready("tts", cancelled):
             return
         if self.config.get("playback_mode", "buffered") == "streaming":
-            self._stream(chunks, cancelled)
+            self._stream(chunks, cancelled, voice_options)
             return
         # An unnamed buffer also disappears if the controller exits abruptly.
         with tempfile.TemporaryFile(suffix=".wav", dir=self.runtime) as out:
@@ -438,7 +474,7 @@ class LocalAudio:
                 for chunk in chunks:
                     if cancelled.is_set():
                         return
-                    prepared = self._synthesize(chunk, cancelled)
+                    prepared = self._synthesize(chunk, cancelled, voice_options)
                     if prepared is None:
                         return
                     params, frames = prepared

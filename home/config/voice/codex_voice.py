@@ -554,6 +554,10 @@ class Controller:
                 "draft": self.draft,
                 "reply": self.reply,
                 "auto": self.auto,
+                "selected_voice": audio_status.get(
+                    "selected_voice", "samantha"
+                ),
+                "voices": audio_status.get("voices", {}),
                 "recording": self.phase == "recording",
                 "transcribing": self.transcribing,
                 "speaking": bool(self.playback and self.playback.is_alive()),
@@ -1084,6 +1088,9 @@ def dispatch(app, request):
     if isinstance(action, str) and action.startswith("select:"):
         app.select(action.split(":", 1)[1])
         return app.status()
+    if isinstance(action, str) and action.startswith("voice:"):
+        app.audio.set_voice(action.split(":", 1)[1])
+        return app.status()
     if action == "harness-event":
         return {"accepted": app.harness_event(
             request["token"], request["event"]
@@ -1350,6 +1357,7 @@ def main(args=None):
             "stop",
             "status",
             "auto",
+            "voice",
             "retry",
             "rebind",
             "discard",
@@ -1361,8 +1369,12 @@ def main(args=None):
                 if len(args) != 2 or args[1] not in ("on", "off"):
                     raise RuntimeError("Usage: codex-voice auto on|off")
                 request["enabled"] = args[1] == "on"
+            if args[0] == "voice":
+                if len(args) != 2:
+                    raise RuntimeError("Usage: codex-voice voice CHARACTER")
+                request["action"] = "voice:" + args[1]
             response = call(request)
-            if args[0] in ("status", "auto"):
+            if args[0] in ("status", "auto", "voice"):
                 response.pop("reply", None)
                 print(json.dumps(response, indent=2))
             return 0
@@ -1371,7 +1383,8 @@ def main(args=None):
                 "Usage: <codex|grok|pi|qwen-pi>-voice [options]\n"
                 "       codex-voice interact|record|send|read|stop|status\n"
                 "       codex-voice retry|rebind|discard|append|replace\n"
-                "       codex-voice auto on|off\n\n"
+                "       codex-voice auto on|off\n"
+                "       codex-voice voice CHARACTER\n\n"
                 "Super+Space: record/stop/send draft. "
                 "Super+Shift+Space: send. "
                 "Super+R: read/stop.\n"

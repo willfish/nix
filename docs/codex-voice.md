@@ -2,7 +2,7 @@
 
 One local recorder, tray and pair of speech engines serve Codex, Grok and Pi.
 Whisper small.en recognizes speech with Silero VAD; audio.cpp runs Qwen3-TTS
-0.6B with the pinned Samantha reference. Andromeda uses CUDA for TTS and
+0.6B with two pinned Samantha references. Andromeda uses CUDA for TTS and
 NVIDIA Vulkan for Whisper. Foundation uses Radeon Vulkan; its live microphone
 and playback checks remain pending. macOS needs separate platform adapters.
 
@@ -37,7 +37,7 @@ launcher is using; the last exit releases both model services.
 
 | Hotkey | Action |
 | --- | --- |
-| Super+Space | Stop an active recording; otherwise send a prepared voice prompt, or start recording if none is prepared |
+| Super+Space | Stop recording, send prepared dictation, or start recording |
 | Super+Shift+Space | Explicitly send the dictated draft |
 | Super+R | Read the latest completed reply; press again to stop speaking |
 
@@ -147,10 +147,27 @@ The registry never persists prompt or reply contents.
 
 ## Speech and services
 
+The tray's **Character voice** submenu selects Samantha or another character.
+Samantha automatically uses the current reference for up to 50 words and the
+newer reference for longer replies. This is intrinsic to Samantha; other
+characters use their own reference at every reply length. The complete spoken
+reply is counted after Markdown cleanup and keeps one voice across all chunks.
+Selections apply on the next playback and persist across service restarts.
+Use `codex-voice voice samantha`, `codex-voice voice data`, or another character
+ID for the same control from a terminal. `codex-voice status` lists the IDs.
+The choice is shared by Codex, Grok, Pi and Qwen Pi. Two prompt cache slots retain
+recent references without loading additional models. Previous saved Samantha
+modes migrate to the single Samantha selection.
+
+The catalogue includes JARVIS, HAL 9000, Joi, Data, KITT, Galadriel, Avasarala,
+Spock, Picard, Snape, Seven of Nine, Kryten, Holly, Loki and Vesper. These are
+experimental audition references, with source and transcript limitations
+recorded in [the catalogue](../home/config/voice/voices/catalogue.json).
+
 Replies speak automatically. Use `codex-voice auto off` for manual playback,
 `auto on` to restore it, `stop` to cancel and `status` to inspect state. All four
-launchers accept the same controls: `interact`, `record`, `send`, `read`, `stop`, `status`,
-`retry`, `rebind`, `discard`, `append` and `replace`.
+launchers accept the same controls: `interact`, `record`, `send`, `read`, `stop`,
+`status`, `retry`, `rebind`, `discard`, `append`, `replace` and `voice`.
 
 Speech skips fenced code and simplifies Markdown. It prefers sentence and
 clause boundaries with a shorter first phrase and a 260-character maximum.
@@ -199,7 +216,9 @@ Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only
 ## Voice choice and measured performance
 
 The model and `default_voice_preset` are set in `home/user/codex-voice.nix`.
-The preset references the committed WAV and its exact transcript. Model weights
+The default preset references the committed short-reply WAV and its transcript.
+The controller supplies the newer pinned WAV and transcript for long Samantha
+replies, or the selected character reference. Model weights
 have fixed Hugging Face revisions, sizes and SHA-256 hashes in
 `home/config/voice/voice-model-setup`. Change the managed configuration, build
 and run `hmswitch` to change the voice. Do not overwrite a reference beneath a
@@ -302,7 +321,9 @@ Run all controller, recording, adapter and tray regressions with dbus-next:
 ```sh
 # The interpreter used by the installed codex-voice launcher includes dbus-next.
 direnv exec . nix shell --impure --expr \
-  'let f = builtins.getFlake (toString ./.); in f.nixosConfigurations.andromeda.pkgs.python3.withPackages (p: [ p.dbus-next ])' \
+  'let f = builtins.getFlake (toString ./.);
+   in f.nixosConfigurations.andromeda.pkgs.python3.withPackages
+     (p: [ p.dbus-next ])' \
   -c python3 -m unittest discover -s tests -p 'test_*voice*.py' -v
 ```
 

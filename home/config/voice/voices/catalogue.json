@@ -1,0 +1,137 @@
+{
+  "jarvis": {
+    "label": "JARVIS",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/jarvis-ref.wav",
+    "sha256": "acd48f4361a78264458a8b1831700041fb00328dabc00d44b1f4705ea1835870",
+    "reference_text": "The compression in cylinder three appears to be down. For you, sir, always. Shall I store this on the Stark Industries central database? Working on a secret project, are we, sir? At your service, sir. Check. We'll do, sir. I have a...",
+    "source": "https://www.youtube.com/watch?v=KUxTstoFd1Q",
+    "duration_seconds": 15.0,
+    "review_notes": "Useful assistant character candidate. Transcript is a montage with a partial ending; ASR differs on several words. Recut and retranscribe."
+  },
+  "hal-9000": {
+    "label": "HAL 9000",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/hal-9000-ref.wav",
+    "sha256": "74473f055ef3e3781ae622935a5493facb805b81155227f48b8849f8d6f957af",
+    "reference_text": "Good afternoon, Mr. Raymer. Everything is going extremely well. Let me put it this way, Mr. Raymer. The 9000 series is the most reliable computer ever made. No 9000 computer has ever made a mistake or",
+    "source": "https://www.youtube.com/watch?v=9wrjl-H4Hs8",
+    "duration_seconds": 15.0,
+    "review_notes": "Suitable duration, but ends in an unfinished sentence. Trim to a complete phrase and check the proper name in the transcript."
+  },
+  "joi": {
+    "label": "Joi",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/joi-ref.wav",
+    "sha256": "7ca7d85b14c883d98d9429f941914049a27aeea1d727de2840451a2c665fd966",
+    "reference_text": "How was your meeting? I'm getting cabin fever. I had an accident at work. I think I ruined my shirt. Let me take a look at it. You want to drink first? I just need a bit more practice. Don't fuss. I should have marinated it longer.",
+    "source": "local-file",
+    "duration_seconds": 14.61,
+    "review_notes": "Hold for speaker verification. Metadata claims solo speech, but dialogue includes a work accident and ruined shirt, suggesting possible K dialogue. ASR cannot identify speakers. Two near-full-scale samples after resampling warrant inspection, not a claim of audible clipping."
+  },
+  "data": {
+    "label": "Data",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/data-ref.wav",
+    "sha256": "c77ed0ab9b455e2b71a00221ab6ecbb292f366c93dbb931da2e0d29733e20ca4",
+    "reference_text": "I have asked myself that many times, as I have struggled to be more human. Until I realized, it is the struggle itself that is most important. We must strive to be more.",
+    "source": "https://www.youtube.com/watch?v=5PdVkA3HYYY",
+    "duration_seconds": 10.562,
+    "review_notes": "Promising first audition. Supplied transcript appears to omit the final word recovered by ASR. Check and correct before promotion."
+  },
+  "kitt": {
+    "label": "KITT",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/kitt-ref.wav",
+    "sha256": "1913fdfe56f156ebc860e696827f72c7b1a375be0af53b22429efe34501618ab",
+    "reference_text": "an action-filled NBC television series, Knight Rider. I must say that I'm truly delighted to meet all of you today. Filming a television series is a demanding and challenging",
+    "source": "https://www.youtube.com/watch?v=jiZXnHAffuA",
+    "duration_seconds": 15.0,
+    "review_notes": "Appears to be a promotional address rather than an in-scene exchange. Begins and ends mid-sentence; select a complete phrase and verify desired performance."
+  },
+  "galadriel": {
+    "label": "Galadriel",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/galadriel-ref.wav",
+    "sha256": "b1eee5a0e9fe18f1c71b7a1e00034610d5a8f3cc6019e71eee184b9a62ac2765",
+    "reference_text": "It began with the forging of the great rings. Three were given to the elves, immortal, wisest and fairest of all beings. Seven to the dwarf lords.",
+    "source": "https://www.youtube.com/watch?v=vOulsEGvSCo",
+    "duration_seconds": 14.677333,
+    "review_notes": "Transcript broadly agrees with ASR. Opening narration could carry score or dramatic pacing; listen for these before use."
+  },
+  "avasarala": {
+    "label": "Avasarala",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/avasarala-ref.wav",
+    "sha256": "6aae4349dce967eaef737d05d3a6e28bdf8a5e1c9fcad9fac93a5f7d8c3cef91",
+    "reference_text": "I sent you to that planet to be my eyes and ears and now large ruins that were supposed to be inert are shooting out lightning. And there is nothing but radio silence from you.",
+    "source": "https://youtube.com/watch?v=cmRQXpbeA-0",
+    "duration_seconds": 15.0,
+    "review_notes": "Complete passage and strong character candidate. ASR disagreement around a key adjective needs listening; do not replace source wording blindly."
+  },
+  "spock": {
+    "label": "Spock",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/spock-ref.wav",
+    "sha256": "caf5dff59a916a7b2cfebd600c9c9e13c8417faefa25af61f821bf8d9d975487",
+    "reference_text": "Space, the final frontier. These are the continuing voyages of the Starship Enterprise.",
+    "source": "https://www.youtube.com/watch?v=fHAOWLhrxhQ",
+    "duration_seconds": 10.8,
+    "review_notes": "Only a short opening narration despite 10.8 seconds. Check pauses, score and whether this performance suits conversational replies."
+  },
+  "picard": {
+    "label": "Picard",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/picard-ref.wav",
+    "sha256": "0dfabf6f33026ad50b937424ab6e8edeab95af89d50af520212765952b45c3fa",
+    "reference_text": "With the first link the chain is forged. The first speech censured, the first thought forbidden, the first freedom denied, chains us all irrevocably.",
+    "source": "https://www.youtube.com/watch?v=K5Po40kvI9c",
+    "duration_seconds": 11.992,
+    "review_notes": "Promising complete passage. Small ASR differences around short function words; verify exact onset. Dramatic delivery may transfer."
+  },
+  "snape": {
+    "label": "Snape",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/snape-ref.wav",
+    "sha256": "7360091823e20b716bfbfe053aa1f80561c4148eb540e7b629946242df13753b",
+    "reference_text": "There will be no foolish wand waving or silly incantations in this class.",
+    "source": null,
+    "duration_seconds": 7.0,
+    "review_notes": "Short but complete sentence with strong transcript agreement. Good example of a seven-second candidate worth testing before longer contaminated material."
+  },
+  "seven-of-nine": {
+    "label": "Seven of Nine",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/seven-of-nine-ref.wav",
+    "sha256": "387fc5b4bd69e42da11b452f516c1727a99240030f03fd11fea3f8bf62ebcbbe",
+    "reference_text": "Today, Ensign Kim and I will conduct a comprehensive diagnostic of the aft sensor array. I have allocated 3 hours 20 minutes for the task, and an additional 17 minutes for Ensign Kim's usual conversational digressions.",
+    "source": "https://youtube.com/watch?v=Yq9aBjo_6O8",
+    "duration_seconds": 15.0,
+    "review_notes": "Hold until recut. Metadata acknowledges trailing speech beyond the supplied two-sentence transcript; fresh ASR also detects extra words."
+  },
+  "kryten": {
+    "label": "Kryten",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/kryten-ref.wav",
+    "sha256": "a6873d82f23e73812a5f365b6364eda8b7e61deb91610fea4f60bae272da155e",
+    "reference_text": "Listen, have you got quite in there with you? Yeah, what's the problem? The problem is, I've been waiting fully 20 minutes for him in the hangar. Oh, spin my nipple nuts and send me to Alaska. I'm supposed to take you Asteroid Sputting. I'll be right down, sir.",
+    "source": "https://www.youtube.com/watch?v=RXKlC8ph7mM",
+    "duration_seconds": 15.0,
+    "review_notes": "Hold for speaker separation. Transcript is a back-and-forth conversation and contains obvious recognition errors. Do not clone this montage as one speaker."
+  },
+  "holly": {
+    "label": "Holly",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/holly-ref.wav",
+    "sha256": "958473e1c5677ac4ee495a27f8f199e6738525e1d929811e1e682a2f3a63d194",
+    "reference_text": "all sausages Dave now cover seven eighths of the Earth's surface. Also you left 17 pounds 50 pets in your bank account thanks to compound interest you now owe 98 % of all the world's wealth. Because you hold it for three million years nobody",
+    "source": "https://www.youtube.com/watch?v=elZfflKkfxM",
+    "duration_seconds": 15.0,
+    "review_notes": "Hold for transcript repair and end trim. Supplied text has likely errors in amounts and verbs; ends mid-sentence."
+  },
+  "loki": {
+    "label": "Loki",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/loki-ref.wav",
+    "sha256": "dd905c8724272e1d1562af478da688cfb719a9de40046df7c12fe70fdfaa9fab",
+    "reference_text": "Is not this simpler? Is this not your natural state?",
+    "source": null,
+    "duration_seconds": 7.8,
+    "review_notes": "Short, complete two-question sample with transcript agreement. Test whether emphatic delivery becomes tiring during technical explanations."
+  },
+  "vesper": {
+    "label": "Vesper",
+    "url": "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/vesper-ref.wav",
+    "sha256": "8406585ecf05605cace994b2296c30cb31fc811b10403e84a20d4b2b55734ad7",
+    "reference_text": "Now, I haven't just met you. I wouldn't go as far as calling you a cold-hearted bastard. But it wouldn't be a stretch to imagine. You think of women as disposable pleasures rather than meaningful pursuits.",
+    "source": "https://www.youtube.com/watch?v=xuyoqS31Yug",
+    "duration_seconds": 13.226667,
+    "review_notes": "Complete passage with broad ASR agreement. Check the first phrase and listen for other speakers, score and whether the delivery is representative."
+  }
+}

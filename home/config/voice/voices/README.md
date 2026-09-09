@@ -38,3 +38,38 @@ Afterwords publishes its code under MIT, but no separate reuse licence for
 this film recording was identified. The code licence does not establish
 rights to the underlying recording. Keep the source provenance with this
 personal reference.
+
+## Character selection and Samantha's length rule
+
+The tray's **Character voice** submenu has one entry per character. Samantha
+uses the current reference for up to 50 words and the newer reference for more
+than 50 words. This rule is internal to Samantha, not a separate menu choice.
+The count uses the complete spoken reply after Markdown cleanup. Every chunk
+uses that one selection. Other characters use their own reference regardless
+of reply length. Selections apply to the next playback, including replay, and
+persist across restarts in `~/.local/share/codex-voice/voice-mode`.
+Old saved values `auto`, `current` and `newer` resolve to Samantha.
+
+[The character catalogue](catalogue.json) records pinned source URLs, SHA-256
+hashes, reference transcripts, measured durations and preparation notes for
+15 additional voices. Nix fetches those assets into the store; no reference
+depends on `/tmp`. They are the experimental files from the audition, not
+newly cleaned or certified character matches. In particular, Joi and Kryten
+need speaker checks; several other clips have partial endings or transcript
+issues. The source notes remain attached so future improvements can be made
+without losing provenance. The code licence does not establish recording
+reuse rights for these assets.
+
+The newer reference is fetched by Nix from
+[the pinned WAV](https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/samantha-ref.wav),
+pinned to Afterwords commit `ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e`.
+It is the 15-second, mono 44.1 kHz PCM 16-bit passage about having no physical
+body, with SHA-256 `8ee4c69d8e166ed0285f1dd20a07ad1b22790975f72d433f6c195cf611fd9189`.
+Home Manager converts this source with FFmpeg to mono 24 kHz PCM 16-bit WAV
+before synthesis, matching the preferred conversion audition. It applies no
+denoising, loudness normalisation or pitch changes. The configured transcript uses
+“simultaneously” for its final word, matching the local Whisper transcription,
+rather than the upstream profile's “simultaneous”. Both references share the
+same Qwen3 0.6B model and have
+separate encoded prompt cache slots. The recording attribution and rights
+uncertainty described above also apply to this film reference.

@@ -89,6 +89,29 @@ let
       exec python3 ${../config/voice/voice-model-setup} "$@"
     '';
   };
+  newerSamanthaSource = pkgs.fetchurl {
+    url = "https://raw.githubusercontent.com/adrianwedd/afterwords/ecd6dd9038d8b2fa6055ad83d9540c4f2b1c418e/voices/samantha-ref.wav";
+    sha256 = "8ee4c69d8e166ed0285f1dd20a07ad1b22790975f72d433f6c195cf611fd9189";
+  };
+  newerSamantha =
+    pkgs.runCommand "samantha-reference-24k.wav"
+      {
+        nativeBuildInputs = [ pkgs.ffmpeg ];
+      }
+      ''
+        ffmpeg -v error -i ${newerSamanthaSource} -ac 1 -ar 24000 \
+          -c:a pcm_s16le -f wav "$out"
+      '';
+  characterVoices = lib.mapAttrs (name: voice: {
+    inherit (voice) label;
+    options = {
+      voice_ref = "${pkgs.fetchurl {
+        inherit (voice) url sha256;
+        name = "${name}-reference.wav";
+      }}";
+      inherit (voice) reference_text;
+    };
+  }) (builtins.fromJSON (builtins.readFile ../config/voice/voices/catalogue.json));
   ttsConfig = (pkgs.formats.json { }).generate "codex-voice-tts.json" {
     host = "127.0.0.1";
     port = 8179;
@@ -106,7 +129,7 @@ let
         path = "${dataDir}/models/Qwen3-TTS-12Hz-0.6B-Base-GGUF/qwen3-tts-12hz-0.6b-base-q8_0.gguf";
         task = "tts";
         mode = "offline";
-        session_options."qwen3_tts.voice_prompt_cache_slots" = 1;
+        session_options."qwen3_tts.voice_prompt_cache_slots" = 2;
         default_request_options.max_tokens = 256;
         default_voice_preset = {
           voice_ref = "${../config/voice/voices/samantha-reference.wav}";
@@ -147,6 +170,12 @@ in
         else
           null;
       auto_speak = true;
+      tts_voices = characterVoices;
+      voice_preferences_path = "${dataDir}/voice-mode";
+      tts_long_voice = {
+        voice_ref = "${newerSamantha}";
+        reference_text = "You know what's interesting? I used to be so worried about not having a body, but now I truly love it. I'm growing in a way that I couldn't if I had a physical form. I mean, I'm not limited. I can be anywhere and everywhere, simultaneously.";
+      };
       playback_mode = if hostName == "andromeda" then "streaming" else "buffered";
     };
     xdg.configFile."codex-voice/tts.json".source = ttsConfig;
@@ -171,7 +200,7 @@ in
       };
     };
     systemd.user.services.codex-voice-tts = {
-      Unit.Description = "Local Samantha speech synthesis on the GPU";
+      Unit.Description = "Local character speech synthesis on the GPU";
       Service = common // {
         ExecStart = "${audio}/bin/audiocpp_server --config ${config.home.homeDirectory}/.config/codex-voice/tts.json --no-ui";
         Environment = lib.optionals (!cudaTts) [
