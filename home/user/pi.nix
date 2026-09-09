@@ -7,8 +7,26 @@
 let
   llmMcps = import ./llm-mcps.nix { inherit config lib; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
+  promptCapture = import ./prompt-capture.nix { inherit pkgs; };
 in
 {
+  # Wrapper around the Home Manager pi package. Default behaviour is
+  # unchanged; with CAPTURE_PROMPTS set it runs behind a local mitmproxy that
+  # logs every request/response to $XDG_STATE_HOME/prompt-capture/pi.jsonl.
+  home.file.".local/bin/pi" = {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      if [ -n "''${CAPTURE_PROMPTS:-}" ] && [ "''${CAPTURE_PROMPTS:-}" != "0" ]; then
+        exec ${promptCapture}/bin/prompt-capture pi -- ${pkgs.pi-coding-agent}/bin/pi "$@"
+      fi
+
+      exec ${pkgs.pi-coding-agent}/bin/pi "$@"
+    '';
+  };
+
   # Keep credentials and user settings writable and outside Home Manager.
   # qwen-pi has a separate local profile and does not use these models.
   home.file.".pi/agent/models.json".source = ../config/pi/models.json;
