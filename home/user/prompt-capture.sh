@@ -8,6 +8,8 @@
 #   prompt-capture stop <tool>
 #   prompt-capture logs <tool>
 set -euo pipefail
+original_umask="$(umask)"
+umask 077
 
 usage() {
   cat >&2 <<'USAGE'
@@ -52,10 +54,17 @@ confdir="$cdir/mitmproxy"
 pidfile="$cdir/$tool.pid"
 jsonl="$cdir/$tool.jsonl"
 serverlog="$cdir/$tool-server.log"
-ca="$confdir/mitmproxy-ca.pem"
+ca="$confdir/mitmproxy-ca-cert.pem"
 cafile="$cdir/$tool-ca.pem"
 
 mkdir -p "$confdir"
+chmod 700 "$cdir" "$confdir"
+# Repair permissions on files created by earlier versions as well.
+for private_file in "$jsonl" "$serverlog" "$cafile" "$pidfile" "$confdir"/*; do
+  if [ -f "$private_file" ]; then
+    chmod 600 "$private_file"
+  fi
+done
 
 port_open() {
   (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null
@@ -101,8 +110,18 @@ shift
 cmd=("$@")
 [ "${#cmd[@]}" -ge 1 ] || usage
 
-# Reap a capture server left behind by a crashed or killed run.
-kill_pidfile
+# Keep the lock file in place: unlinking it lets callers lock different inodes.
+# The proxy inherits this descriptor so a stranded server also keeps ownership.
+exec 9>"$cdir/$tool.lock"
+if ! "$FLOCK" -n 9; then
+  echo "prompt-capture: $tool capture already active; use 'prompt-capture stop $tool' to stop its server" >&2
+  exit 1
+fi
+if port_open; then
+  echo "prompt-capture: port $port is already in use" >&2
+  exit 1
+fi
+rm -f "$pidfile"
 
 workdir="$(mktemp -d "$cdir/work.XXXXXX")"
 run_id="$(date +%Y%m%dT%H%M%S)-$$"
@@ -129,6 +148,7 @@ trap 'exit 143' TERM
 trap 'exit 129' HUP
 
 cat >"$workdir/addon.py" <<'PYEOF'
+import codecs
 import json
 import os
 import time
@@ -181,13 +201,47 @@ def _record(kind, flow):
     resp = flow.response
     if resp is not None:
         rec["status"] = resp.status_code
-        if os.environ.get("PROMPT_CAPTURE_RESPONSE_BODY") == "1":
+        if not resp.stream and os.environ.get("PROMPT_CAPTURE_RESPONSE_BODY") == "1":
             rec["response_body"] = _clip(resp.get_text(strict=False))
     _fh.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
     _fh.flush()
 
 
 class PromptCapture:
+    def responseheaders(self, flow):
+        content_type = flow.response.headers.get("content-type", "")
+        if content_type.split(";", 1)[0].strip().lower() != "text/event-stream":
+            return
+        if os.environ.get("PROMPT_CAPTURE_RESPONSE_BODY") != "1":
+            flow.response.stream = True
+            return
+
+        decoder = codecs.getincrementaldecoder("utf-8")("replace")
+
+        def capture_chunk(chunk):
+            # Forward the original bytes immediately, including the final empty
+            # chunk. Decode incrementally because UTF-8 can span network chunks.
+            try:
+                text = decoder.decode(chunk, final=not chunk)
+                if _fh is not None and text:
+                    rec = {
+                        "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                        "run": _run,
+                        "tool": _tool,
+                        "kind": "response_chunk",
+                        "method": flow.request.method,
+                        "url": flow.request.pretty_host + flow.request.path,
+                        "status": flow.response.status_code,
+                        "response_body": _clip(text),
+                    }
+                    _fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                    _fh.flush()
+            except Exception as exc:
+                print("prompt-capture addon error: %r" % (exc,), flush=True)
+            return chunk
+
+        flow.response.stream = capture_chunk
+
     def request(self, flow):
         try:
             _record("request", flow)
@@ -255,7 +309,7 @@ while [ "$i" -lt 100 ]; do
   sleep 0.1
 done
 
-if ! port_open || [ ! -s "$ca" ]; then
+if ! kill -0 "$srv_pid" 2>/dev/null || ! port_open || [ ! -s "$ca" ]; then
   echo "prompt-capture: capture server did not start (see $serverlog)" >&2
   tail -n 20 "$serverlog" >&2 || true
   exit 1
@@ -277,4 +331,6 @@ export NODE_EXTRA_CA_CERTS="$ca"
 echo "prompt-capture[$tool]: run $run_id, server pid $srv_pid on 127.0.0.1:$port" >&2
 echo "prompt-capture[$tool]: prompts are logged to $jsonl" >&2
 
-"${cmd[@]}"
+# Children of the CLI must not keep the capture lock after the proxy exits.
+umask "$original_umask"
+"${cmd[@]}" 9>&-

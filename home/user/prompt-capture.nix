@@ -15,6 +15,7 @@ pkgs.writeTextFile {
   text = ''
     #!${pkgs.bash}/bin/bash
     MITMDUMP="${pkgs.mitmproxy}/bin/mitmdump"
+    FLOCK="${pkgs.flock}/bin/flock"
     ${builtins.readFile ./prompt-capture.sh}
   '';
 }
