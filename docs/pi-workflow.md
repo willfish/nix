@@ -34,6 +34,37 @@ are already provided by Pi. The existing MCP adapter supplies your external
 integrations. The configuration keeps those facilities and adds no background
 services, model calls at startup or new npm dependencies.
 
+## Session context budget
+
+In `pi` and `pi-voice`, `/context` opens a picker for the
+`openai-codex/gpt-6-astra` subscription model:
+
+| Preset | Context ceiling | Command |
+| --- | --- | --- |
+| Lean (default) | 272k | `/context lean` |
+| Extended | 500k | `/context extended` |
+| Maximum | 872k | `/context maximum` |
+
+Numeric aliases `/context 272k`, `/context 500k` and `/context 872k` also work.
+The footer shows the active ceiling. Changes require an idle session and affect
+only that session's model, not `models.json`, authentication, output limits or
+startup defaults. The choice follows the active session branch through resume,
+reload and model switching. Forks inherit choices on their copied branch;
+new sessions start lean. Other models and the isolated Qwen profile are unchanged.
+
+The 872k maximum comes from Astra's locally cached Codex catalogue on
+2026-09-09, not a successful large-request test. Extended and Maximum are
+labelled backend-untested. Backend access and subscription usage rules still
+apply; this command cannot increase an account's entitlement.
+
+A larger ceiling permits more history before auto-compaction; it does not
+immediately fill the context. Pi still subtracts its configured response reserve
+before compacting. Reducing below current usage (or with unknown usage) asks for
+confirmation and may cause lossy auto-compaction on the next turn. The command
+itself does not compact. Increasing the ceiling cannot recover already compacted
+details. Choose the larger budget before loading a large legal document set,
+and retain original sources for quotation and citation checks.
+
 ## Configuration and updates
 
 `home/user/pi.nix` loads `todo.ts` from the same pinned Nix package as Pi and
