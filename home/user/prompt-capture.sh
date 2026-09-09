@@ -200,6 +200,33 @@ class PromptCapture:
         except Exception as exc:
             print("prompt-capture addon error: %r" % (exc,), flush=True)
 
+    def websocket_message(self, flow):
+        # Codex-style backends stream the real payload over WebSocket frames
+        # after the HTTP upgrade, so record text frames explicitly.
+        try:
+            if _fh is None or flow.websocket is None:
+                return
+            msg = flow.websocket.messages[-1]
+            if msg.is_text:
+                payload = msg.text
+            elif msg.type.name == "BINARY":
+                payload = repr(msg.content)
+            else:
+                return
+            rec = {
+                "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                "run": _run,
+                "tool": _tool,
+                "kind": "ws_request" if msg.from_client else "ws_response",
+                "method": "WS",
+                "url": flow.request.pretty_host + flow.request.path,
+                "data": _clip(payload),
+            }
+            _fh.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
+            _fh.flush()
+        except Exception as exc:
+            print("prompt-capture addon error: %r" % (exc,), flush=True)
+
 
 addons = [PromptCapture()]
 PYEOF
