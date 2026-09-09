@@ -152,7 +152,8 @@ class ActivityTests(unittest.TestCase):
         })
         self.assertTrue(self.app.notify("first", {
             "type": "agent-turn-complete", "thread-id": "conversation-first",
-            "turn-id": "old-turn", "last-assistant-message": "Earlier reply.",
+            "turn-id": "old-turn",
+            "last-assistant-message": "TL;DR: Earlier reply.",
         }))
         self.assertTrue(self.app.status()["responding"])
         self.assertEqual(self.app.reply, "Earlier reply.")
@@ -169,7 +170,8 @@ class ActivityTests(unittest.TestCase):
         self.app.register("second", dict(self.target, pane="second"))
         self.app.notify("first", {
             "type": "agent-turn-complete", "thread-id": "conversation-first",
-            "turn-id": "old-turn", "last-assistant-message": "Earlier reply.",
+            "turn-id": "old-turn",
+            "last-assistant-message": "TL;DR: Earlier reply.",
         })
         self.app.select("first")
         self.assertTrue(self.app.status()["responding"])
@@ -225,7 +227,7 @@ class ActivityTests(unittest.TestCase):
             lambda: self.app.notify("first", {
                 "type": "agent-turn-complete",
                 "thread-id": "conversation-first", "turn-id": "leaf-id",
-                "last-assistant-message": "Completed reply.",
+                "last-assistant-message": "TL;DR: Completed reply.",
             })
         )
         self.assertEqual(self.app.reply, "Completed reply.")

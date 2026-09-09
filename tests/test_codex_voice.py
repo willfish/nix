@@ -18,9 +18,10 @@ from contextlib import closing
 import unittest
 from unittest.mock import patch
 
-MODULE = (
-    Path(__file__).resolve().parents[1] / "home/config/voice/codex_voice.py"
-)
+MODULE = Path(os.environ.get(
+    "VOICE_TEST_CONTROLLER",
+    Path(__file__).resolve().parents[1] / "home/config/voice/codex_voice.py",
+))
 
 
 def speech_wav(samples):
@@ -804,7 +805,8 @@ class VoiceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "recording"):
             self.app.read()
 
-    def event(self, thread="thread-1", turn="turn-1", text="The tests passed."):
+    def event(self, thread="thread-1", turn="turn-1",
+              text="Detailed results.\n\n## Spoken summary\nThe tests passed."):
         return {
             "type": "agent-turn-complete",
             "thread-id": thread,
@@ -842,6 +844,7 @@ class VoiceTests(unittest.TestCase):
             "token-1",
             self.event(
                 text=(
+                    "Screen-only details.\n\n## Spoken summary\n"
                     "**Fixed** the [login](https://example.test).\n"
                     "```sh\nrm -rf example\n```\nTests passed."
                 )
@@ -850,6 +853,82 @@ class VoiceTests(unittest.TestCase):
         self.app.read()
         self.app.playback.join(1)
         self.assertEqual(self.audio.spoken, ["Fixed the login. Tests passed."])
+
+    def test_spoken_summary_formats_and_markdown_cleanup(self):
+        for label in ("## Spoken summary", "Spoken summary:",
+                      "**Spoken summary:**", "### TL;DR", "**TL;DR**:",
+                      "TLDR:", "tl;dr:"):
+            for separator in ("\n", " ") if label.endswith(":") else ("\n",):
+                with self.subTest(label=label, separator=separator):
+                    text = ("# Full response\nDo not speak these details.\n\n"
+                            + label + separator + "It worked. Next, review it.")
+                    self.assertEqual(self.voice.spoken_text(text),
+                                     "It worked. Next, review it.")
+        self.assertEqual(self.voice.spoken_text(
+            "## Spoken summary\n- **Fixed** the issue.\n2. Tests passed."
+        ), "Fixed the issue. Tests passed.")
+
+    def test_missing_or_invalid_summaries_fail_closed(self):
+        for text in (None, {}, "", "Just read the source.",
+                     "# Summary\nNot an explicit spoken summary.",
+                     "Spoken summary is a feature, not a label.",
+                     "```md\n## Spoken summary\nExample only.\n```",
+                     "~~~~md\n## Spoken summary\nExample only.\n~~~~",
+                     "> ## Spoken summary\n> A quoted example.",
+                     "## Spoken summary\n",
+                     "## Spoken summary\n```sh\nexit\n```",
+                     "## Spoken summary\nShort.\n## Details\nLong answer.",
+                     "## Spoken summary\nShort.\nDetails\n-------\nDetails.",
+                     "## Spoken summary\n" + "word " * 121,
+                     "## Spoken summary\n" + "a" * 1501):
+            with self.subTest(text=str(text)[:100]):
+                self.assertEqual(self.voice.spoken_text(text), "")
+
+    def test_final_summary_wins_over_earlier_sections_and_fenced_examples(self):
+        self.assertEqual(self.voice.spoken_text(
+            "## TL;DR\nEarlier overview.\n## Details\nScreen only.\n"
+            "````md\n```\n## Spoken summary\nFake.\n```\n````\n"
+            "## Spoken summary\nThe final result."
+        ), "The final result.")
+
+    def test_missing_summary_clears_previous_reply_and_never_autoplays(self):
+        self.app.notify("token-1", self.event())
+        self.app.auto = True
+        self.app.notify("token-1", self.event(turn="next", text="No summary."))
+        self.assertFalse(self.app.reply)
+        self.assertEqual(self.audio.spoken, [])
+        with self.assertRaisesRegex(RuntimeError, "spoken summary"):
+            self.app.read()
+
+    def test_unselected_session_stores_only_summary_for_replay(self):
+        self.app.register("token-2", dict(self.target, pane="w1:p3"))
+        self.app.notify("token-1", self.event())
+        self.app.select("token-1")
+        self.app.read()
+        self.app.playback.join(1)
+        self.assertEqual(self.audio.spoken, ["The tests passed."])
+
+    def test_pi_and_grok_replies_share_summary_only_playback(self):
+        for harness in ("pi", "grok"):
+            with self.subTest(harness=harness):
+                self.app.register(harness, dict(self.target, harness=harness))
+                self.app.harness_event(harness, {
+                    "harness": harness, "type": "session", "session": harness,
+                })
+                self.app.auto = True
+                self.app.harness_event(harness, {
+                    "harness": harness, "type": "reply", "session": harness,
+                    "turn": "one",
+                    "text": "Full details.\n## TL;DR\nIt worked.",
+                })
+                self.app.playback.join(1)
+                self.assertEqual(self.audio.spoken[-1], "It worked.")
+                self.app.harness_event(harness, {
+                    "harness": harness, "type": "reply", "session": harness,
+                    "turn": "two", "text": "Missing summary.",
+                })
+                self.assertFalse(self.app.reply)
+        self.assertEqual(self.audio.spoken, ["It worked.", "It worked."])
 
     def test_new_registration_clears_previous_reply_and_draft(self):
         self.app.stage("hello", "token-1")

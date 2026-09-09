@@ -72,12 +72,48 @@ def has_audio(path):
 
 
 def spoken_text(text):
-    text = re.sub(r"```[^\n]*\n.*?(?:```|\Z)", " ", text, flags=re.S)
-    text = re.sub(r"~~~[^\n]*\n.*?(?:~~~|\Z)", " ", text, flags=re.S)
+    """Extract a bounded final summary, never fall back to the full reply."""
+    if not isinstance(text, str):
+        return ""
+    lines = []
+    fence = None
+    for line in text.splitlines():
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence:
+            if (marker and marker[1][0] == fence[0]
+                    and len(marker[1]) >= len(fence) and not marker[2].strip()):
+                fence = None
+            continue
+        if marker:
+            fence = marker[1]
+            continue
+        lines.append(line)
+
+    start, inline = None, ""
+    for index, line in enumerate(lines):
+        label = re.fullmatch(
+            r" {0,3}(?:#{1,6}[ \t]+)?(?:Spoken summary|TL;DR|TLDR)"
+            r"(?::[ \t]*(.*)|[ \t]*)",
+            line.replace("**", ""), flags=re.I,
+        )
+        if label:
+            start, inline = index + 1, label[1] or ""
+    if start is None:
+        return ""
+    tail = lines[start:]
+    # The summary must be the final section, not an overview before details.
+    if any(re.match(r"^ {0,3}(?:#{1,6}(?:\s|$)|(?:=+|-+)\s*$)", line)
+           for line in tail):
+        return ""
+    text = "\n".join([inline, *tail])
     text = re.sub(r"!?\[([^\]]+)\]\([^\n)]*\)", r"\1", text)
-    text = re.sub(r"^\s*(?:#{1,6}\s+|[-*+]\s+|>\s*)", "", text, flags=re.M)
+    text = re.sub(r"^\s*(?:[-*+]\s+|\d+[.)]\s+|>\s*)", "", text, flags=re.M)
     text = text.replace("**", "").replace("__", "").replace("`", "")
-    return " ".join(text.split())
+    text = " ".join(text.split())
+    if (len(text) > 1500 or len(text.split()) > 120
+            or not any(c.isalnum() for c in text)):
+        return ""
+    return text
 
 
 def process_start(pid):
@@ -708,7 +744,9 @@ class Controller:
             if playing and not replace:
                 return
             if not self.reply:
-                raise RuntimeError("No completed reply to read yet")
+                raise RuntimeError(
+                    "No spoken summary in the latest completed reply"
+                )
             self.cancelled = threading.Event()
             self.playback = threading.Thread(
                 target=self._speak,

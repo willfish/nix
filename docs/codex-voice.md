@@ -39,7 +39,7 @@ launcher is using; the last exit releases both model services.
 | --- | --- |
 | Super+Space | Stop recording, send prepared dictation, or start recording |
 | Super+Shift+Space | Explicitly send the dictated draft |
-| Super+R | Read the latest completed reply; press again to stop speaking |
+| Super+R | Read the latest completed spoken summary; press again to stop speaking |
 
 Super is the Windows key. Transcription is staged for review; recording never
 automatically presses Enter. Capture starts only after microphone samples
@@ -164,13 +164,47 @@ Spock, Picard, Snape, Seven of Nine, Kryten, Holly, Loki and Vesper. These are
 experimental audition references, with source and transcript limitations
 recorded in [the catalogue](../home/config/voice/voices/catalogue.json).
 
-Replies speak automatically. Use `codex-voice auto off` for manual playback,
+Spoken summaries play automatically. Use `codex-voice auto off` for manual playback,
 `auto on` to restore it, `stop` to cancel and `status` to inspect state. All four
 launchers accept the same controls: `interact`, `record`, `send`, `read`, `stop`,
 `status`, `retry`, `rebind`, `discard`, `append`, `replace` and `voice`.
 
-Speech skips fenced code and simplifies Markdown. It prefers sentence and
-clause boundaries with a shorter first phrase and a 260-character maximum.
+### Summary-only playback
+
+The complete written answer stays in the coding TUI. Automatic speech and manual
+replay consume only its final `## Spoken summary` section, using the same shared
+controller for Codex, Grok, Pi and Qwen Pi. `TL;DR` and `TLDR` are accepted aliases;
+plain colon labels, bold labels and Markdown headings work too. For example:
+
+```markdown
+The full response can contain detailed explanations, lists, paths and code.
+
+## Spoken summary
+The fix is in place and the tests passed. Live microphone testing is still
+needed. Next, try a voice session to check how the summary sounds.
+```
+
+Shared agent instructions request conversational prose, usually two to four
+short sentences: outcome, important caveat, then next action. Short answers can
+use one sentence. They target 30 to 80 words without lists, paths, commands or
+URLs. Exact-output requests such as JSON-only responses take precedence and do
+not need a summary.
+
+The controller accepts at most 120 words and 1500 characters after cleanup.
+Missing, empty, oversized or non-terminal summaries stay silent; there is no
+full-answer fallback or extra summarization model call. A completion without a
+summary also clears the previous summary so Replay cannot read stale results.
+Manual Read reports that the latest reply has no spoken summary. Fenced code is
+ignored during extraction, and common Markdown/list markers are stripped as a
+defensive cleanup, not a substitute for writing prose.
+
+After switching Home Manager, restart the controller if it has not restarted
+with the new generation. Existing voice launchers use the shared controller, but
+agent instruction changes may require a fresh session or the agent's instruction
+reload mechanism before summaries appear. Old unlabelled replies are not read.
+
+Speech prefers sentence and clause boundaries with a shorter first phrase and
+a 260-character maximum.
 Andromeda synthesizes one chunk ahead during playback through one continuous
 PipeWire stream. Foundation prepares the entire reply before playback. These
 are complete-reply playback modes, not live reading of unfinished model text.
