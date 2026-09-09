@@ -181,6 +181,8 @@ let
         --extension ${../config/local-llm/pi-qwen.js} \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/mcp/index.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/todo.ts \
+        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-agent-state.ts \
+        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-ui.js \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/plan-work.md \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/review.md \
         --system-prompt "$(< ${piSystemPrompt})" \
