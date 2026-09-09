@@ -49,6 +49,49 @@ let
       '';
     };
   voice = makeVoice "codex";
+  # Match the managed COSMIC Macchiato/Lavender palette, without changing
+  # the user's application launcher or requiring another background service.
+  menuConfig = pkgs.writeText "voice-menu-fuzzel.ini" ''
+    [main]
+    font=JetBrainsMono Nerd Font:size=12
+    anchor=center
+    layer=overlay
+    width=55
+    lines=10
+    minimal-lines=yes
+    match-mode=fzf
+    icons-enabled=no
+    horizontal-pad=20
+    vertical-pad=12
+    inner-pad=8
+
+    [colors]
+    background=24273aff
+    text=cad3f5ff
+    prompt=b7bdf8ff
+    input=cad3f5ff
+    match=b7bdf8ff
+    selection=494d64ff
+    selection-text=cad3f5ff
+    selection-match=b7bdf8ff
+    border=b7bdf8ff
+
+    [border]
+    width=2
+    radius=12
+  '';
+  voiceMenu = pkgs.writeShellApplication {
+    name = "voice-menu";
+    runtimeInputs = [
+      voicePython
+      pkgs.fuzzel
+      pkgs.systemd
+      pkgs.libnotify
+    ];
+    text = ''
+      exec python3 ${voiceScripts}/voice_menu.py --config ${menuConfig} "$@"
+    '';
+  };
   grokHooks = {
     hooks = builtins.listToAttrs (
       map
@@ -156,6 +199,7 @@ in
       (makeVoice "pi")
       (makeVoice "qwen-pi")
       modelSetup
+      voiceMenu
     ];
     xdg.configFile."codex-voice/config.json".text = builtins.toJSON {
       stt_url = "http://127.0.0.1:8178/inference";
@@ -179,6 +223,7 @@ in
       playback_mode = if hostName == "andromeda" then "streaming" else "buffered";
     };
     xdg.configFile."codex-voice/tts.json".source = ttsConfig;
+    xdg.configFile."voice-menu/fuzzel.ini".source = menuConfig;
     home.file.".grok/hooks/voice.json".text = builtins.toJSON grokHooks;
 
     systemd.user.services.codex-voice = {

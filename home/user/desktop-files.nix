@@ -177,7 +177,11 @@ in
                       (
                           modifiers: [Super, Shift],
                           key: "space",
-                      ): Spawn("codex-voice send"),''
+                      ): Spawn("codex-voice send"),
+                      (
+                          modifiers: [Super, Shift],
+                          key: "v",
+                      ): Spawn("voice-menu"),''
                 "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"codex-voice read\"),"
               ]
               (builtins.readFile "${configDir}/cosmic/shortcuts")
