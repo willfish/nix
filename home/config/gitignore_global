@@ -10,8 +10,3 @@ plans/
 .worktrees/
 docs/superpowers/plans/
 docs/superpowers/specs/
-
-# Defense in depth only: Gortex state belongs outside project repositories.
-.gortex/
-.gortex.yaml
-.gortex.yml
