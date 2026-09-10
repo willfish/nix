@@ -1,5 +1,7 @@
 # Dashboards
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Shared guidance for CloudWatch and Grafana dashboard design, implementation and
 review. AWS API details below apply to CloudWatch, not automatically to Grafana.
 
@@ -10,6 +12,16 @@ shared `~/.agents/guides/dashboards.md`; do not maintain harness-specific copies
 
 AWS sources checked: 2026-09-10. Recheck when changing query features, sharing,
 service limits or dashboard APIs. Separate AWS requirements from our conventions.
+
+## Contents
+
+- [Audience and decision](#start-with-the-audience-and-decision)
+- [Measurement integrity](#measurement-integrity)
+- [Layout and visualisation](#layout-and-visualisation)
+- [CloudWatch queries](#cloudwatch-queries-cost-and-correctness)
+- [Terraform and ownership](#terraform-and-ownership)
+- [Verification checklist](#verification-checklist)
+- [AWS references](#aws-references)
 
 ## Start with the audience and decision
 

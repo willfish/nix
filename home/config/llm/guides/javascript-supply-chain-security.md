@@ -1,5 +1,7 @@
 # JavaScript Supply Chain Security
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Source: https://docs.npmjs.com/trusted-publishers/, https://docs.npmjs.com/cli/v11/commands/npm-install/, https://yarnpkg.com/configuration/yarnrc, https://pnpm.io/cli/approve-builds
 Checked: 2026-06-20
 Update trigger: package manager major release, npm publishing policy change, trusted publishing change, or quarterly review.

@@ -10,6 +10,8 @@ metadata:
 
 # Writing Plans (Grok Native)
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 **Goal:** Produce a plan so clear and detailed that a skilled developer (or subagent) who has never seen the codebase can implement it correctly with minimal additional context.
 
 **When to use:** Any non-trivial feature, refactor, or bug fix that will take more than a few focused steps. Especially valuable before entering heavy implementation.

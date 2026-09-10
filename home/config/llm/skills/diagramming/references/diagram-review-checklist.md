@@ -1,5 +1,7 @@
 # Diagram Review Checklist
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this checklist when reviewing diagrams in a PR or design document.
 
 ## Clarity & Purpose

@@ -1,5 +1,7 @@
 # Audit Playbook
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Source: https://github.com/shadcn/improve
 Checked: 2026-06-20
 Update trigger: improve workflow change, recurring audit quality issue, or quarterly review.

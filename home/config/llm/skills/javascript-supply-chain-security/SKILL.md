@@ -5,6 +5,8 @@ description: JavaScript supply-chain security. Use for npm/Yarn/pnpm/Bun install
 
 # JavaScript Supply Chain Security
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this skill before changing JavaScript dependencies, running install commands, reviewing package manager lockfiles, publishing npm packages, or handling npm/Yarn/pnpm/Bun security questions.
 
 Read `references/javascript-supply-chain-security.md` for the current policy and checklist.

@@ -1,5 +1,7 @@
 # Audiobook Library Import: Andromeda to Terminus
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 This is the concrete runbook for reviewing audiobook sources on **Andromeda**
 (qBittorrent downloads and Libation Audible rips), transferring them to
 **Terminus**, importing them safely into Audiobookshelf, and repairing metadata

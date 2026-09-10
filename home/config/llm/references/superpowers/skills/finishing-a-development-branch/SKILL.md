@@ -5,6 +5,8 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 # Finishing a Development Branch
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 ## Overview
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
@@ -124,15 +126,10 @@ git branch -d <feature-branch>
 # Push branch
 git push -u origin <feature-branch>
 
-# Create PR
-gh pr create --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<2-3 bullets of what changed>
-
-## Test Plan
-- [ ] <verification steps>
-EOF
-)"
+# Draft a reader-focused body using the repository's PR template.
+# Do not duplicate CI results or add routine verification checklists.
+# Include only reviewer-relevant evidence CI lacks, or material coverage gaps.
+gh pr create --title "<title>" --body-file <pr-body-file>
 ```
 
 **Do NOT clean up worktree** — user needs it alive to iterate on PR feedback.

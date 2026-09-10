@@ -5,6 +5,8 @@ description: Code review judgement and private review drafting. Use for PR findi
 
 # Code Review Workflow
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this for code review.
 
 Read `references/reviews.md` before writing review comments. Read `references/voice.md` when the comment should sound like Will.

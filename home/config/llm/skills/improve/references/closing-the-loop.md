@@ -1,5 +1,7 @@
 # Closing the Loop — execute, reconcile, issues
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 The advisor's job doesn't end at the plan. This file covers the three follow-through flows: dispatching an executor and reviewing its work (`execute`), keeping the plan backlog alive (`reconcile`), and publishing plans where work gets picked up (`--issues`).
 
 The founding rule survives unchanged: **the advisor never edits source code.** In `execute`, a *separate executor subagent* edits code in an isolated git worktree; the advisor dispatches, reviews, and renders a verdict — like a tech lead who doesn't push commits to your branch.
@@ -89,7 +91,8 @@ Modifier on any planning invocation (`/improve --issues`, `/improve security --i
 
 1. Preflight: `gh auth status` succeeds and the repo has a GitHub remote. If either fails, write the plan files as normal and say why issues were skipped.
 2. Show the list of titles about to become issues; confirm once if interactive.
-3. Per plan: `gh issue create --title "<plan title>" --body-file <plan file>`. Labels: `improve` plus the category — apply only if the labels exist or can be created without erroring; skip labels rather than fail.
+3. Draft an issue body from the plan: problem, rationale, scope, acceptance criteria, and material risks. Remove session history, scratch paths, resolved detours, and routine verification output. Do not publish the local plan verbatim. Use the configured GitHub MCP when supported; otherwise `gh issue create --title "<plan title>" --body-file <issue body file>`. Labels: `improve` plus the category, only when available.
 4. Record each issue URL in the plan's Status block (`- **Issue**: <url>`) and the index.
 
-The plan file remains the source of truth; the issue is distribution. The self-containment rule pays off here — the issue body needs no edits to make sense to whoever (or whatever) picks it up.
+The local plan remains the execution record. The issue must stand alone for its
+reader without exposing the agent's working diary.

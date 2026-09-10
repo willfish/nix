@@ -9,6 +9,8 @@ metadata:
 
 # Create Skill
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Interactively gather requirements from the user and create a fully working Grok skill on disk.
 
 ## Step 1: Gather information
@@ -74,6 +76,7 @@ Also write any supporting files (scripts, references) using the same create meth
 ## Guidelines
 
 - Keep the SKILL.md body focused and actionable. It is a prompt for the agent, not documentation.
+- Every new skill or guide that produces prose must reference `~/.agents/guides/documentation-relevance.md`. Reuse the shared gate instead of copying its rules.
 - The `description` field is critical. It controls auto-invocation. Be specific with trigger words.
 - Prefer referencing existing CLI tools over writing custom scripts.
 - Do NOT skip creating the directory. The file will fail to save without it.

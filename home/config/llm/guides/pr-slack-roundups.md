@@ -1,5 +1,7 @@
 # PR Slack Roundups
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this when summarising pull requests for Slack.
 
 ## Gathering PRs

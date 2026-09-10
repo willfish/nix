@@ -1,5 +1,7 @@
 # Code Reviews
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 ## Tone
 
 - Sound like a human, not an AI. Write the way a colleague would in a Slack DM.
@@ -12,7 +14,7 @@
 - Lead with the biggest issue, not a preamble.
 - Use bold for the key point of each item, then a sentence or two of context.
 - Code snippets only when they make the point clearer than words.
-- End on something positive if the approach is generally sound.
+- Include positive feedback when it identifies something worth preserving, not as a mandatory closing formula.
 
 ## Examples
 

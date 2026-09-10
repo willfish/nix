@@ -14,6 +14,8 @@ description: >
 
 # Audiobook Library Import
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this skill for the full Andromeda → Terminus audiobook pipeline: source
 inventory (qBittorrent and Libation), transfer readiness, staging, review,
 import into Audiobookshelf libraries on Terminus, and metadata repair.

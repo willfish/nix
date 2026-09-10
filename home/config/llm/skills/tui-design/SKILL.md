@@ -5,6 +5,8 @@ description: Terminal UI and Ratatui design. Use for TUI features, reactive term
 
 # TUI Design
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this before changing a terminal UI, adding a TUI feature, or writing TUI issues. The default target is a quiet, fast, keyboard-first control surface, not a dashboard or marketing UI.
 
 ## Design Principles

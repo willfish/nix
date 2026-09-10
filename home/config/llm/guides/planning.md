@@ -1,5 +1,7 @@
 # Planning & Verification
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 ## When to plan
 
 Before implementing anything that involves:
@@ -73,19 +75,10 @@ This mirrors how code review works — the reviewer hasn't seen your thought pro
 
 ### Output format
 
-```markdown
-## Baseline
-[Initial analysis]
-
-## Challenge
-[Independent critique — what's wrong, what's missing]
-
-## Synthesis
-[Final verified output with confidence levels]
-
-### Confidence: HIGH / MEDIUM / LOW
-[One-line justification]
-```
+Publish the verified synthesis: recommendation, decision-relevant rationale,
+trade-offs, and material uncertainty. Keep baseline drafts and challenge notes
+in the local working record unless the user requests them. Do not make readers
+reconstruct the conclusion from the investigation history.
 
 ## Planning anti-patterns
 

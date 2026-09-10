@@ -1,5 +1,7 @@
 # How to Use the Diagramming Skill
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 The `diagramming` skill helps you create clear, maintainable technical diagrams and gives consistent feedback when reviewing diagrams in PRs.
 
 ## When to Invoke It

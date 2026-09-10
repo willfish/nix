@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Skill Evaluation
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this for local skill-harness maintenance and evaluation.
 
 ## Default Workflow

@@ -9,6 +9,8 @@ disable-model-invocation: true
 
 The user has asked you to teach them something. This is a stateful request — they intend to learn the topic over multiple sessions, possibly across days or weeks.
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 ## Teaching Workspace
 
 Treat a dedicated directory as the teaching workspace (the user will usually create e.g. `learning-nix-flakes/`, `learning-fish/`, or `learning-home-manager/`). The state of their learning lives in files in this directory:

@@ -1,5 +1,7 @@
 # Mermaid on GitHub - Tips & Gotchas
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 GitHub's Mermaid renderer is convenient but has several limitations.
 
 ## Common Problems

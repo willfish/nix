@@ -1,5 +1,7 @@
 # Generating PDFs with LaTeX
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use LaTeX via `nix-shell` for PDF generation. This avoids needing a permanent install and works from any directory.
 
 ## Quick command

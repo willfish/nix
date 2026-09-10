@@ -1,5 +1,7 @@
 # GLOSSARY.md Format
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 `GLOSSARY.md` (or the equivalent source that feeds `reference/glossary.html` and other references) is the canonical language for this teaching workspace. All explainers, exercises, and learning records should adhere to its terminology. Building it is itself part of learning: compressing a concept into a tight definition is evidence the user understands it.
 
 ## Structure

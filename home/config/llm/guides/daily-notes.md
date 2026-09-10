@@ -1,5 +1,7 @@
 # Daily Notes
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 ## Location and structure
 
 - Notes directory: `~/Notes/`

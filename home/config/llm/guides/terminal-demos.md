@@ -1,5 +1,7 @@
 # Terminal Demo GIFs
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 When working on CLI tools, proactively generate animated GIF demos for READMEs and PR descriptions.
 
 ## Contents

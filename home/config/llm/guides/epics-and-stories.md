@@ -1,5 +1,7 @@
 # Writing Epics and Stories
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 ## Contents
 
 - [Audience](#audience)

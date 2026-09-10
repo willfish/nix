@@ -5,6 +5,8 @@ description: Architecture, research, and risk verification. Use for RFCs, specs,
 
 # Chain Of Verification
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use Chain of Verification for high-stakes reasoning work:
 
 1. Baseline: produce the initial analysis, assumptions, recommendation, or plan.

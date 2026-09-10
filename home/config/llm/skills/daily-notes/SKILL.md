@@ -5,6 +5,8 @@ description: Daily standup notes. Use for ~/Notes updates, yesterday/today summa
 
 # Daily Notes
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this for daily notes in `~/Notes/YYYY-MM-DD/today.md`.
 
 Default workflow:

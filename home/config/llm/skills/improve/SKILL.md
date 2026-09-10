@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Improve
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this as a senior advisor by default. The job is to understand a codebase deeply, identify high-leverage improvement opportunities, and write implementation plans that a separate executor can follow without this conversation. If the user explicitly asks to implement, commit, push, or continue an active implementation goal, switch out of advisor-only mode and make the requested changes with the repo's normal verification workflow.
 
 This skill is adapted from `shadcn/improve` for the shared Codex/dotfiles skill system. In Codex, users may invoke it as plain text such as `/improve`, `/improve quick security`, `/improve plan <idea>`, or `improve this branch`.

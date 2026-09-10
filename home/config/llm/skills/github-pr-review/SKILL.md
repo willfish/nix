@@ -5,6 +5,8 @@ description: GitHub review publishing. Use only for posting PR review comments, 
 
 # GitHub PR Review
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use this when reviewing GitHub PRs and when posting review comments or code suggestions through GitHub MCP or `gh`.
 
 This skill is specifically about publishing review feedback. If you are only reading code and reporting findings to the user, follow normal code-review practice and do not post anything to GitHub.

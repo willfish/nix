@@ -5,6 +5,8 @@ description: LaTeX PDF generation. Use for professional PDFs, pdflatex, nix-shel
 
 # LaTeX PDFs
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 Use LaTeX through `nix-shell` for portable PDF generation.
 
 Rules:

@@ -9,6 +9,8 @@ metadata:
 
 # Verification Before Completion (Grok Native)
 
+Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
+
 **Iron Law:** NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE.
 
 Claiming something is done without actually verifying it in this turn is not efficiency — it is lying to the user and to yourself.
@@ -29,7 +31,12 @@ You **must** do all of the following in the current response:
 2. **Run** the full, fresh command(s) using the `run_command` tool (or `todo_write` + commands if multi-step).
 3. **Read** the complete output, including exit codes and any failure counts.
 4. **Confirm** that the output actually supports the claim you want to make.
-5. Only *then* make the claim — and include the key evidence in your summary.
+5. Only *then* make the claim and include key evidence in your response to the requester.
+
+Keep full output in the execution record, not the published artifact. This gate
+requires running checks, not adding verification prose to PRs, commits, or
+architecture docs. Do not duplicate CI results or routine test counts in PRs;
+include only evidence CI does not provide that affects review, or material gaps.
 
 Skipping any of these steps = invalid claim.
 
