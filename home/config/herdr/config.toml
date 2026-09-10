@@ -89,6 +89,12 @@ navigate_pane_up = "k"
 navigate_pane_right = "l"
 
 [[keys.command]]
+key = "prefix+a"
+type = "plugin_action"
+command = "herdr-navigator.open"
+description = "fuzzy search agent panes"
+
+[[keys.command]]
 key = "prefix+o"
 type = "shell"
 command = "herdr plugin pane open --plugin willfish.herdr-workspacex --entrypoint picker --placement overlay --focus"

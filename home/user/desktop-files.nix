@@ -75,6 +75,8 @@ in
 {
   home.file = {
     ".config/herdr/config.toml" = sourceFile herdrConfigFile;
+    ".config/herdr/plugins/config/herdr-navigator/config.toml" =
+      sourceFile "${configDir}/herdr/agent-picker.toml";
   }
   // lib.optionalAttrs stdenv.isDarwin {
     ".aerospace.toml" = sourceFile "${configDir}/aerospace/aerospace.toml";
@@ -107,7 +109,7 @@ in
         export PATH="$herdrPluginPath"
 
         installHerdrPlugin() {
-          if ! "$herdrBin" plugin install "$1" --yes >/dev/null; then
+          if ! "$herdrBin" plugin install "$@" --yes >/dev/null; then
             echo "warning: failed to install Herdr plugin $1; continuing Home Manager activation" >&2
             return 1
           fi
@@ -125,6 +127,12 @@ in
         if ! "$herdrBin" plugin list --plugin willfish.herdr-navigator --json 2>/dev/null | grep -Fq '"kind":"github"'; then
           "$herdrBin" plugin unlink willfish.herdr-navigator >/dev/null 2>&1 || true
           installHerdrPlugin willfish/herdr-navigator || true
+        fi
+        # v0.3.3 focuses terminal IDs, which current Herdr rejects. Pin the
+        # upstream pane-ID fix until it is included in a tagged release.
+        navigatorRef="9bdf30f03f53730e6232377a3fca3bdc6ed9f3ca"
+        if ! "$herdrBin" plugin list --plugin herdr-navigator --json 2>/dev/null | grep -Fq "\"resolved_commit\":\"$navigatorRef\""; then
+          installHerdrPlugin thanhdat77/herdr-navigator --ref "$navigatorRef" || true
         fi
         if ! "$herdrBin" plugin list --plugin hotchpotch.herdr-tiny-fingers --json 2>/dev/null | grep -Fq '"kind":"github"'; then
           "$herdrBin" plugin unlink hotchpotch.herdr-tiny-fingers >/dev/null 2>&1 || true

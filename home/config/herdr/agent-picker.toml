@@ -1,0 +1,24 @@
+# Agent-only fuzzy switching, separate from willfish.herdr-navigator.
+[picker]
+engine = "nucleo"
+source_order = ["agent"]
+agent_sort = "herdr"
+create_missing = false
+check_updates = false
+
+[jump_back]
+enabled = false
+pin_previous = false
+
+[sources]
+agents = true
+open_workspaces = false
+herdr_plus_projects = false
+herdr_plus_quick_actions = false
+zoxide = false
+roots = false
+servers = false
+sessions = false
+
+[theme]
+inherit_herdr = true
