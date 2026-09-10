@@ -39,7 +39,7 @@ launcher is using; the last exit releases both model services.
 | --- | --- |
 | Super+Space | Stop recording, send prepared dictation, or start recording |
 | Super+Shift+Space | Explicitly send the dictated draft |
-| Super+R | Read the latest completed spoken summary; press again to stop speaking |
+| Super+R | Read the latest completed summary; press again to stop speaking |
 | Super+Shift+V | Open the keyboard voice/session/action picker |
 
 Super is the Windows key. Transcription is staged for review; recording never
@@ -204,14 +204,15 @@ launchers accept the same controls: `interact`, `record`, `send`, `read`, `stop`
 ### Summary-only playback
 
 The complete written answer stays in the coding TUI. Automatic speech and manual
-replay consume only its final `## Spoken summary` section, using the same shared
-controller for Codex, Grok, Pi and Qwen Pi. `TL;DR` and `TLDR` are accepted aliases;
-plain colon labels, bold labels and Markdown headings work too. For example:
+replay consume only its final `## Summary` section, using the same shared
+controller for Codex, Grok, Pi and Qwen Pi. `Spoken summary`, `TL;DR` and `TLDR`
+are accepted aliases; plain colon labels, bold labels and Markdown headings work
+too. For example:
 
 ```markdown
 The full response can contain detailed explanations, lists, paths and code.
 
-## Spoken summary
+## Summary
 The fix is in place and the tests passed. Live microphone testing is still
 needed. Next, try a voice session to check how the summary sounds.
 ```
@@ -226,7 +227,7 @@ The controller accepts at most 120 words and 1500 characters after cleanup.
 Missing, empty, oversized or non-terminal summaries stay silent; there is no
 full-answer fallback or extra summarization model call. A completion without a
 summary also clears the previous summary so Replay cannot read stale results.
-Manual Read reports that the latest reply has no spoken summary. Fenced code is
+Manual Read reports that the latest reply has no summary. Fenced code is
 ignored during extraction, and common Markdown/list markers are stripped as a
 defensive cleanup, not a substitute for writing prose.
 

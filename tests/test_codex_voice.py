@@ -856,7 +856,8 @@ class VoiceTests(unittest.TestCase):
 
     def test_spoken_summary_formats_and_markdown_cleanup(self):
         for label in ("## Spoken summary", "Spoken summary:",
-                      "**Spoken summary:**", "### TL;DR", "**TL;DR**:",
+                      "**Spoken summary:**", "## Summary", "Summary:",
+                      "**Summary:**", "### TL;DR", "**TL;DR**:",
                       "TLDR:", "tl;dr:"):
             for separator in ("\n", " ") if label.endswith(":") else ("\n",):
                 with self.subTest(label=label, separator=separator):
@@ -870,8 +871,9 @@ class VoiceTests(unittest.TestCase):
 
     def test_missing_or_invalid_summaries_fail_closed(self):
         for text in (None, {}, "", "Just read the source.",
-                     "# Summary\nNot an explicit spoken summary.",
+                     "# Overview\nNot an explicit summary.",
                      "Spoken summary is a feature, not a label.",
+                     "Summary of the work is not a label.",
                      "```md\n## Spoken summary\nExample only.\n```",
                      "~~~~md\n## Spoken summary\nExample only.\n~~~~",
                      "> ## Spoken summary\n> A quoted example.",
@@ -897,7 +899,7 @@ class VoiceTests(unittest.TestCase):
         self.app.notify("token-1", self.event(turn="next", text="No summary."))
         self.assertFalse(self.app.reply)
         self.assertEqual(self.audio.spoken, [])
-        with self.assertRaisesRegex(RuntimeError, "spoken summary"):
+        with self.assertRaisesRegex(RuntimeError, "No summary"):
             self.app.read()
 
     def test_unselected_session_stores_only_summary_for_replay(self):

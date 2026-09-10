@@ -92,7 +92,7 @@ def spoken_text(text):
     start, inline = None, ""
     for index, line in enumerate(lines):
         label = re.fullmatch(
-            r" {0,3}(?:#{1,6}[ \t]+)?(?:Spoken summary|TL;DR|TLDR)"
+            r" {0,3}(?:#{1,6}[ \t]+)?(?:Spoken summary|Summary|TL;DR|TLDR)"
             r"(?::[ \t]*(.*)|[ \t]*)",
             line.replace("**", ""), flags=re.I,
         )
@@ -745,7 +745,7 @@ class Controller:
                 return
             if not self.reply:
                 raise RuntimeError(
-                    "No spoken summary in the latest completed reply"
+                    "No summary in the latest completed reply"
                 )
             self.cancelled = threading.Event()
             self.playback = threading.Thread(
