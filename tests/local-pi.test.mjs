@@ -79,7 +79,9 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   }
   // The local Qwen profile is memory-constrained, so it must never load the
   // subagent extension or its agents; subagents are a standard-profile only
-  // capability for Grok/OpenAI models.
+  // capability for Grok/OpenAI models. The history-search extension is also
+  // standard-profile only, keeping the local editor's key handling untouched.
   assert.ok(!source.includes('subagent'), 'qwen-pi launcher references the subagent extension');
+  assert.ok(!source.includes('history-search'), 'qwen-pi launcher references the history-search extension');
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
 });

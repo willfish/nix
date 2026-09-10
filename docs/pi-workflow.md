@@ -10,6 +10,7 @@ and `qwen-pi-voice`.
 | Session todos | Keep multi-step work visible and preserve its checklist when resuming or branching | Ask Pi to track the work; `/todos` opens the list |
 | Planning prompt | Investigate a change and agree on the approach before implementation | `/plan-work add a recording timeout` |
 | Review prompt | Check a diff for concrete bugs and gaps in verification | `/review`, `/review HEAD~1`, or specify files |
+| Prompt history search | Re-submit or adapt a prompt you used in any earlier session or project | Ctrl+R, refine the pattern, Enter to accept |
 
 The [official todo extension](https://github.com/earendil-works/pi/blob/v0.85.1/packages/coding-agent/examples/extensions/todo.ts)
 provides one model tool, `todo`, with list, add, toggle and clear actions. Each
@@ -113,15 +114,46 @@ As in the example, only user-level agents are loaded by default. Project-local
 agents under `.pi/agents/` are opt-in through the tool's `agentScope`
 parameter, with a confirmation prompt in untrusted projects.
 
+## History search
+
+`pi` and `pi-voice` load the `history-search.ts` extension from
+`home/config/pi/extensions/`. Ctrl+R starts a bash-style reverse search over
+every prompt you have previously submitted: it scans the session JSONL files
+under the agent directory and the current project's `.pi/sessions`, so it
+works across sessions and projects, not just the current one. The search
+starts seeded with the text already in the editor, and keeps working as you
+type more of the pattern. A status line above the editor shows the match
+position and the current pattern.
+
+| Key | Action |
+| --- | --- |
+| Printable keys, Backspace | Refine the search pattern |
+| Ctrl+R | Older match |
+| Ctrl+S | Newer match |
+| Enter | Accept the current match and submit it |
+| Esc or Ctrl+C | Cancel and restore the previous editor contents |
+
+While searching, the editor buffer always shows the current match (or the raw
+pattern when nothing matches), so Enter re-submits an old prompt as if you had
+typed it. Commands (lines starting with `/`) and duplicates are skipped, and
+the list is capped at a few thousand most-recent entries, so startup cost is
+small. Ctrl+R and Ctrl+S are normally the session-rename and model-save
+shortcuts, but those pickers handle their own keys, so the extension only
+wins in the main editor. The extension wraps the editor, so it needs a new
+session or `/reload` to take effect; it makes no model calls. `qwen-pi` keeps
+its explicit extension list without it, so the local profile's key handling
+and memory footprint are unchanged.
+
 ## Configuration and updates
 
 `home/user/pi.nix` loads `todo.ts` and the subagent extension from the same
-pinned Nix package as Pi and deploys the templates from `home/config/pi/`
+pinned Nix package as Pi, deploys `history-search.ts` from
+`home/config/pi/extensions/`, and deploys the templates from `home/config/pi/`
 and the subagent definitions from `home/config/pi/agents/`. There is no
 separate plugin version to update. `home/user/local-llm.nix` explicitly loads
 those resources for the isolated Qwen profile and includes `todo` in its tool
-list, but not the subagent extension. The voice launchers inherit the same
-configuration.
+list, but not the subagent or history-search extensions. The voice launchers
+inherit the same configuration.
 
 After switching Home Manager, start a new Pi session to load the additions.
 An existing plain Pi session can use `/reload`; existing Qwen sessions should

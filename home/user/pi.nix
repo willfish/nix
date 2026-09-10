@@ -50,6 +50,12 @@ in
   # Grok/OpenAI model the session is using.
   home.file.".pi/agent/extensions/subagent".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent";
+  # Bash-style Ctrl+R incremental search over all previously submitted
+  # prompts (scanned from session files under the agent dir and the project
+  # .pi/sessions). Ctrl+R/Ctrl+S cycle matches, Enter accepts and submits.
+  # Standard profile only: qwen-pi's explicit --extension list omits it.
+  home.file.".pi/agent/extensions/history-search.ts".source =
+    ../config/pi/extensions/history-search.ts;
   home.file.".pi/agent/agents/scout.md".source = ../config/pi/agents/scout.md;
   home.file.".pi/agent/agents/planner.md".source = ../config/pi/agents/planner.md;
   home.file.".pi/agent/agents/reviewer.md".source = ../config/pi/agents/reviewer.md;
