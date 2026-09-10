@@ -79,9 +79,26 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   }
   // The local Qwen profile is memory-constrained, so it must never load the
   // subagent extension or its agents; subagents are a standard-profile only
-  // capability for Grok/OpenAI models. The history-search extension is also
-  // standard-profile only, keeping the local editor's key handling untouched.
+  // capability for Grok/OpenAI models. The prompt-history extension is pure
+  // editor UI with no model calls, so qwen-pi loads it explicitly as well.
   assert.ok(!source.includes('subagent'), 'qwen-pi launcher references the subagent extension');
-  assert.ok(!source.includes('history-search'), 'qwen-pi launcher references the history-search extension');
+  assert.ok(
+    source.includes('/extensions/prompt-history/index.ts'),
+    'qwen-pi launcher missing the explicit prompt-history extension',
+  );
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
+});
+
+test('both profiles use the pinned upstream package, not the retired implementation', () => {
+  const standard = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
+  const qwen = readFileSync(new URL('../home/user/local-llm.nix', import.meta.url), 'utf8');
+  const pkg = readFileSync(new URL('../home/user/pi-packages/prompt-history.nix', import.meta.url), 'utf8');
+  assert.match(standard, /callPackage \.\/pi-packages\/prompt-history\.nix/);
+  assert.match(standard, /home\.file\."\.pi\/agent\/extensions\/prompt-history"\.source/);
+  assert.ok(!standard.includes('history-search.ts'));
+  assert.ok(!qwen.includes('history-search.ts'));
+  assert.ok(!existsSync(new URL('../home/config/pi/extensions/history-search.ts', import.meta.url)));
+  assert.match(pkg, /rev = "[a-f0-9]{40}"/);
+  assert.match(pkg, /hash = "sha256-[A-Za-z0-9+/=]+"/);
+  assert.match(pkg, /doCheck = true/);
 });

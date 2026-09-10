@@ -1,0 +1,71 @@
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -1,2 +1,3 @@
++import { getAgentDir } from "@earendil-works/pi-coding-agent";
+ import { existsSync, readFileSync } from "node:fs";
+ import { homedir } from "node:os";
+@@ -24,4 +25,6 @@
+   extensionDir?: string;
+   homeDir?: string;
++  agentDir?: string;
++  projectTrusted?: boolean;
+ }
+
+@@ -57,12 +60,16 @@
+   const homeDir = overrides.homeDir ?? homedir();
+   const cwd = overrides.cwd ?? process.cwd();
++  // Keep explicit homeDir support for upstream callers/tests. At runtime use
++  // Pi's resolver, including PI_CODING_AGENT_DIR for isolated profiles.
++  const agentDir = overrides.agentDir ??
++    (overrides.homeDir ? join(homeDir, ".pi", "agent") : getAgentDir());
+
+   const extensionConfig = readConfigFile(join(extensionDir, "config.json"));
+   const globalConfig = readConfigFile(
+-    join(homeDir, ".pi", "agent", "extensions", "prompt-history.json"),
+-  );
+-  const projectConfig = readConfigFile(
+-    join(cwd, ".pi", "extensions", "prompt-history.json"),
++    join(agentDir, "extensions", "prompt-history.json"),
+   );
++  const projectConfig = overrides.projectTrusted
++    ? readConfigFile(join(cwd, ".pi", "extensions", "prompt-history.json"))
++    : {};
+
+   return {
+@@ -70,5 +77,5 @@
+       [projectConfig.dbPath, globalConfig.dbPath, extensionConfig.dbPath],
+       resolveString,
+-      DEFAULT_PROMPT_HISTORY_CONFIG.dbPath,
++      join(agentDir, "prompt-history", "history.db"),
+     ),
+     sessionDir: resolveFirstValid(
+@@ -79,5 +86,5 @@
+       ],
+       resolveString,
+-      DEFAULT_PROMPT_HISTORY_CONFIG.sessionDir,
++      join(agentDir, "sessions"),
+     ),
+     maxResults: resolveFirstValid(
+--- a/config.json
++++ b/config.json
+@@ -1,5 +1,3 @@
+ {
+-  "dbPath": "~/.pi/agent/prompt-history/history.db",
+-  "sessionDir": "~/.pi/agent/sessions",
+   "maxResults": 20,
+   "primaryAction": "copy"
+--- a/__tests__/config.test.ts
++++ b/__tests__/config.test.ts
+@@ -41,4 +41,5 @@
+     extensionDir,
+     homeDir,
++    projectTrusted: true,
+   });
+
+@@ -94,5 +95,6 @@
+     extensionDir,
+     homeDir,
++    projectTrusted: true,
+   });
+
+   assert.equal(config.maxResults, 15);

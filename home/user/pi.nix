@@ -7,6 +7,7 @@
 let
   llmMcps = import ./llm-mcps.nix { inherit config lib; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
+  promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
   promptCapture = import ./prompt-capture.nix { inherit pkgs; };
 in
 {
@@ -50,12 +51,9 @@ in
   # Grok/OpenAI model the session is using.
   home.file.".pi/agent/extensions/subagent".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent";
-  # Bash-style Ctrl+R incremental search over all previously submitted
-  # prompts (scanned from session files under the agent dir and the project
-  # .pi/sessions). Ctrl+R/Ctrl+S cycle matches, Enter accepts and submits.
-  # Standard profile only: qwen-pi's explicit --extension list omits it.
-  home.file.".pi/agent/extensions/history-search.ts".source =
-    ../config/pi/extensions/history-search.ts;
+  # Pinned upstream fuzzy history overlay. Enter restores without submitting.
+  # Both launchers share code, but history/index/settings follow getAgentDir().
+  home.file.".pi/agent/extensions/prompt-history".source = promptHistory;
   home.file.".pi/agent/agents/scout.md".source = ../config/pi/agents/scout.md;
   home.file.".pi/agent/agents/planner.md".source = ../config/pi/agents/planner.md;
   home.file.".pi/agent/agents/reviewer.md".source = ../config/pi/agents/reviewer.md;

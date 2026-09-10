@@ -10,7 +10,7 @@ and `qwen-pi-voice`.
 | Session todos | Keep multi-step work visible and preserve its checklist when resuming or branching | Ask Pi to track the work; `/todos` opens the list |
 | Planning prompt | Investigate a change and agree on the approach before implementation | `/plan-work add a recording timeout` |
 | Review prompt | Check a diff for concrete bugs and gaps in verification | `/review`, `/review HEAD~1`, or specify files |
-| Prompt history search | Re-submit or adapt a prompt you used in any earlier session or project | Ctrl+R, refine the pattern, Enter to accept |
+| Prompt history search | Find and adapt a prompt from earlier sessions or projects | Ctrl+R, fuzzy search, Enter to restore for editing |
 
 The [official todo extension](https://github.com/earendil-works/pi/blob/v0.85.1/packages/coding-agent/examples/extensions/todo.ts)
 provides one model tool, `todo`, with list, add, toggle and clear actions. Each
@@ -116,44 +116,71 @@ parameter, with a confirmation prompt in untrusted projects.
 
 ## History search
 
-`pi` and `pi-voice` load the `history-search.ts` extension from
-`home/config/pi/extensions/`. Ctrl+R starts a bash-style reverse search over
-every prompt you have previously submitted: it scans the session JSONL files
-under the agent directory and the current project's `.pi/sessions`, so it
-works across sessions and projects, not just the current one. The search
-starts seeded with the text already in the editor, and keeps working as you
-type more of the pattern. A status line above the editor shows the match
-position and the current pattern.
+All four launchers use [vedang/pi-prompt-history](https://github.com/vedang/pi-prompt-history),
+pinned to `eedbef7afdf16a317785be469f600d71fadc9ef0` with a verified source
+hash in `home/user/pi-packages/prompt-history.nix`. Nix installs the source
+without npm dependencies or install scripts. The overlay uses Pi's bundled
+TUI and SQLite support. Standard Pi discovers `extensions/prompt-history/index.ts`;
+Qwen explicitly loads that same package despite `--no-extensions`.
+
+Ctrl+R opens an overlay seeded with the editor contents. Search supports fuzzy
+subsequences, boosts exact matches and highlights matched characters. Local
+scope means the current working directory, across sessions; Global means all
+working directories within the active profile. Sections distinguish the current
+session, other sessions in the same directory and other directories.
 
 | Key | Action |
 | --- | --- |
-| Printable keys, Backspace | Refine the search pattern |
-| Ctrl+R | Older match |
-| Ctrl+S | Newer match |
-| Enter | Accept the current match and submit it |
-| Esc or Ctrl+C | Cancel and restore the previous editor contents |
+| Printable keys, Backspace, paste | Edit the search query |
+| Up / Down, PageUp / PageDown | Navigate results |
+| Tab or Ctrl+R inside the overlay | Toggle Local / Global scope |
+| Enter | Restore the prompt into the editor and OS clipboard, without submitting |
+| Esc | Cancel without changing the editor |
+| F2 | Restore-session or current-session fork flow; cross-session forking is blocked |
 
-While searching, the editor buffer always shows the current match (or the raw
-pattern when nothing matches), so Enter re-submits an old prompt as if you had
-typed it. Commands (lines starting with `/`) and duplicates are skipped, and
-the list is capped at a few thousand most-recent entries, so startup cost is
-small. Ctrl+R and Ctrl+S are normally the session-rename and model-save
-shortcuts, but those pickers handle their own keys, so the extension only
-wins in the main editor. The extension wraps the editor, so it needs a new
-session or `/reload` to take effect; it makes no model calls. `qwen-pi` keeps
-its explicit extension list without it, so the local profile's key handling
-and memory footprint are unchanged.
+`/prompt-history-global` opens Global scope directly. `/prompt-history-status`
+reports index counts, and `/prompt-history-reindex global` rebuilds the index.
+Prefer the default copy action for recall; session restoration is a separate,
+more invasive action and has not been end-to-end tested. The package blocks
+upstream's incompatible cross-session fork path before it can switch sessions.
+Copy the prompt instead, or restore the entire session first. No model calls
+are made by history search.
+
+A small Nix-applied patch makes defaults and profile settings follow Pi's
+`getAgentDir()` rather than upstream's hardcoded `~/.pi/agent`:
+
+| Profile | Session root | SQLite index |
+| --- | --- | --- |
+| Standard Pi | `~/.pi/agent/sessions` | `~/.pi/agent/prompt-history/history.db` |
+| Qwen | `~/.config/local-llm/pi/sessions` | `~/.config/local-llm/pi/prompt-history/history.db` |
+
+The Qwen profile path follows Home Manager's XDG configuration directory.
+Each profile reads its own `extensions/prompt-history.json` overrides. Explicit
+`dbPath` and `sessionDir` overrides still work, and project settings at
+`.pi/extensions/prompt-history.json` take precedence only when Pi trusts the
+project. Untrusted project settings cannot redirect history storage. The active session is
+also indexed even when stored outside the default session root; unrelated
+project-local session directories are not automatically scanned. Indexing
+refreshes when the overlay opens and skips unchanged session files.
+
+The old custom `history-search.ts` implementation and local trial wiring are
+retired. Existing prompts and the standard profile's trial index are retained.
 
 ## Configuration and updates
 
-`home/user/pi.nix` loads `todo.ts` and the subagent extension from the same
-pinned Nix package as Pi, deploys `history-search.ts` from
-`home/config/pi/extensions/`, and deploys the templates from `home/config/pi/`
-and the subagent definitions from `home/config/pi/agents/`. There is no
-separate plugin version to update. `home/user/local-llm.nix` explicitly loads
-those resources for the isolated Qwen profile and includes `todo` in its tool
-list, but not the subagent or history-search extensions. The voice launchers
-inherit the same configuration.
+`home/user/pi.nix` loads `todo.ts` and the subagent extension from Pi's pinned
+package, and the history overlay from its independently pinned Nix package.
+It also deploys templates from `home/config/pi/` and subagent definitions from
+`home/config/pi/agents/`. To update history search, change its revision/hash,
+review the profile-path and safety patches and rebuild. The package build runs
+the full upstream callback suite (with expectations updated for trust and the
+fork guard) plus profile-isolation regressions against the bundled Pi API
+in both standard and Qwen environments. No test dependencies are installed.
+
+`home/user/local-llm.nix` explicitly loads the history extension and `todo`
+for Qwen, but excludes subagents. Voice launchers inherit the same configuration.
+The shared Home Manager module deploys history search on every machine; Qwen
+receives it wherever the local-Qwen launcher is enabled.
 
 After switching Home Manager, start a new Pi session to load the additions.
 An existing plain Pi session can use `/reload`; existing Qwen sessions should

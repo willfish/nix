@@ -1,0 +1,81 @@
+--- a/src/commands.ts
++++ b/src/commands.ts
+@@ -34,4 +34,14 @@
+ export { PROMPT_HISTORY_RESUME_CHOICES };
+
++export function resolveConfigForContext(
++  ctx: Pick<ExtensionContext, "cwd"> & Partial<Pick<ExtensionContext, "isProjectTrusted">>,
++  cwd = ctx.cwd,
++): PromptHistoryConfig {
++  return resolvePromptHistoryConfig({
++    cwd,
++    projectTrusted: ctx.isProjectTrusted?.() === true,
++  });
++}
++
+ type PromptHistoryDbLike = Pick<
+   PromptHistoryDb,
+@@ -172,5 +182,5 @@
+   const resolveConfig =
+     overrides.resolveConfig ??
+-    ((cwd: string) => resolvePromptHistoryConfig({ cwd }));
++    ((cwd: string) => resolveConfigForContext(ctx, cwd));
+   const createDb =
+     overrides.createDb ??
+@@ -363,8 +373,12 @@
+   }
+
+-  // Fork mode: switch to session first if needed
++  // Pi 0.85 invalidates this context on switchSession. Do not half-complete
++  // a cross-session fork; restoring the session or copying the prompt is safe.
+   if (getActiveSessionFile(ctx) !== request.sessionFile) {
+-    const switchResult = await ctx.switchSession(request.sessionFile);
+-    if (switchResult.cancelled) return;
++    ctx.ui.notify(
++      "Cross-session forking is disabled. Restore the entire session first, or copy the prompt instead.",
++      "warning",
++    );
++    return;
+   }
+
+@@ -440,5 +454,5 @@
+   handler: (db: PromptHistoryDb, config: PromptHistoryConfig) => Promise<T>,
+ ): Promise<T> {
+-  const config = resolvePromptHistoryConfig({ cwd: ctx.cwd });
++  const config = resolveConfigForContext(ctx);
+   const db = new PromptHistoryDb({ path: config.dbPath });
+
+@@ -485,5 +499,5 @@
+   forceRebuild: boolean,
+ ): Promise<IndexerResult[]> {
+-  const config = resolvePromptHistoryConfig({ cwd: ctx.cwd });
++  const config = resolveConfigForContext(ctx);
+   const sessionDir = expandHomePath(config.sessionDir);
+
+--- a/__tests__/commands.test.ts
++++ b/__tests__/commands.test.ts
+@@ -684,5 +684,5 @@
+ });
+
+-test("handlePromptHistorySelection offers fork for global selections and switches sessions before forking", async () => {
++test("handlePromptHistorySelection blocks cross-session forking without switching", async () => {
+   const operations: string[] = [];
+   const selection = createSelection({ action: "resume", scope: "global" });
+@@ -719,14 +719,9 @@
+   await handlePromptHistorySelection(ctx as never, selection);
+
+-  assert.deepEqual(operations.slice(0, 5), [
+-    "wait",
+-    "select",
+-    "switch:/tmp/sessions/session-a.jsonl",
+-    "fork:entry-1",
+-    "set:fix the prompt",
+-  ]);
++  assert.deepEqual(operations.slice(0, 2), ["wait", "select"]);
++  assert.equal(operations.some((entry) => /^(switch|fork|set):/.test(entry)), false);
+   assert.match(
+     operations.find((entry) => entry.startsWith("notify:")) ?? "",
+-    /Forked from global history/,
++    /Cross-session forking is disabled/,
+   );
+ });
