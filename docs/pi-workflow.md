@@ -65,6 +65,18 @@ itself does not compact. Increasing the ceiling cannot recover already compacted
 details. Choose the larger budget before loading a large legal document set,
 and retain original sources for quotation and citation checks.
 
+## Subscription allowance
+
+`/usage` reports how much allowance is left for the model active in the
+session. For `openai-codex` it queries the ChatGPT backend `wham/usage`
+endpoint with the stored OAuth token (refreshing it through the same grant
+Pi's login flow uses when the access token is expired) and shows the
+remaining percentage of the rate-limit window, its reset time, whether the
+active model is currently available, and any reset credits. Other models are
+usage-based and have no subscription window, so the command reports the
+session context figure instead. It makes one HTTP request per invocation and
+only writes to `auth.json` when it has to refresh the token.
+
 ## Configuration and updates
 
 `home/user/pi.nix` loads `todo.ts` from the same pinned Nix package as Pi and
