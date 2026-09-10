@@ -43,6 +43,23 @@ in
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
+  # Subagent delegation for the standard profile. Auto-discovered by pi; the
+  # qwen-pi launcher passes --no-extensions plus an explicit list that omits
+  # it, so the memory-constrained local Qwen profile never spawns subagent
+  # processes. Agent definitions pin no model, so subagents run on whatever
+  # Grok/OpenAI model the session is using.
+  home.file.".pi/agent/extensions/subagent".source =
+    "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent";
+  home.file.".pi/agent/agents/scout.md".source = ../config/pi/agents/scout.md;
+  home.file.".pi/agent/agents/planner.md".source = ../config/pi/agents/planner.md;
+  home.file.".pi/agent/agents/reviewer.md".source = ../config/pi/agents/reviewer.md;
+  home.file.".pi/agent/agents/worker.md".source = ../config/pi/agents/worker.md;
+  home.file.".pi/agent/prompts/implement.md".source =
+    "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts/implement.md";
+  home.file.".pi/agent/prompts/scout-and-plan.md".source =
+    "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts/scout-and-plan.md";
+  home.file.".pi/agent/prompts/implement-and-review.md".source =
+    "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts/implement-and-review.md";
   home.file.".pi/agent/prompts/plan-work.md".source = ../config/pi/prompts/plan-work.md;
   home.file.".pi/agent/prompts/review.md".source = ../config/pi/prompts/review.md;
 

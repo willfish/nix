@@ -79,13 +79,49 @@ only writes to `auth.json` when it has to refresh the token. The isolated
 Qwen profile does not load it, because its local model has no allowance to
 report.
 
+## Subagents
+
+The standard profile ships the
+[official subagent extension](https://github.com/earendil-works/pi/blob/v0.85.1/packages/coding-agent/examples/extensions/subagent/README.md),
+which registers one `subagent` tool. It delegates work to a separate `pi`
+session with its own context window, streams the subagent's tool calls and
+progress back into the main session, and supports single, parallel and chained
+runs. Four user-level agents are deployed from `home/config/pi/agents/`:
+
+| Agent | Purpose |
+| --- | --- |
+| `scout` | Fast read-only recon that returns compressed context for handoff |
+| `planner` | Read-only implementation planning |
+| `reviewer` | Read-only code and security review of a diff |
+| `worker` | General-purpose delegation with full tools |
+
+None of the definitions pin a model, so each subagent runs on the model and
+thinking level the dispatching session is using. The capability is meant for
+cloud models (Grok, OpenAI): a subagent is a second live model conversation,
+and in the local Qwen profile a concurrent request would double the KV cache
+memory the GPU does not have. `qwen-pi` passes `--no-extensions` plus an
+explicit list that omits the extension, so its tool set and memory footprint
+are unchanged.
+
+The three workflow prompts from the same example are deployed as
+`/implement <task>` (scout, planner, worker), `/scout-and-plan <task>` and
+`/implement-and-review <task>`. The tool also takes direct instructions: ask
+Pi to use one agent, run several in parallel, or chain steps with the
+`{previous}` placeholder.
+
+As in the example, only user-level agents are loaded by default. Project-local
+agents under `.pi/agents/` are opt-in through the tool's `agentScope`
+parameter, with a confirmation prompt in untrusted projects.
+
 ## Configuration and updates
 
-`home/user/pi.nix` loads `todo.ts` from the same pinned Nix package as Pi and
-deploys the two templates from `home/config/pi/prompts/`. There is no separate
-plugin version to update. `home/user/local-llm.nix` explicitly loads those
-resources for the isolated Qwen profile and includes `todo` in its tool list.
-The voice launchers inherit the same configuration.
+`home/user/pi.nix` loads `todo.ts` and the subagent extension from the same
+pinned Nix package as Pi and deploys the templates from `home/config/pi/`
+and the subagent definitions from `home/config/pi/agents/`. There is no
+separate plugin version to update. `home/user/local-llm.nix` explicitly loads
+those resources for the isolated Qwen profile and includes `todo` in its tool
+list, but not the subagent extension. The voice launchers inherit the same
+configuration.
 
 After switching Home Manager, start a new Pi session to load the additions.
 An existing plain Pi session can use `/reload`; existing Qwen sessions should

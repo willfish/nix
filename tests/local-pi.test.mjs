@@ -77,5 +77,9 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   for (const name of ['herdr-agent-state.ts', 'herdr-ui.js', 'herdr-model.js']) {
     assert.ok(source.includes(`/extensions/${name}`), `missing explicit ${name}`);
   }
+  // The local Qwen profile is memory-constrained, so it must never load the
+  // subagent extension or its agents; subagents are a standard-profile only
+  // capability for Grok/OpenAI models.
+  assert.ok(!source.includes('subagent'), 'qwen-pi launcher references the subagent extension');
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
 });
