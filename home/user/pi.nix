@@ -39,6 +39,7 @@ in
   home.file.".pi/agent/extensions/herdr-model.js".source = ../config/pi/extensions/herdr-model.js;
   home.file.".pi/agent/extensions/context-window.js".source =
     ../config/pi/extensions/context-window.js;
+  home.file.".pi/agent/extensions/usage.js".source = ../config/pi/extensions/usage.js;
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
