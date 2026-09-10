@@ -74,5 +74,8 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   }
   assert.match(source, /defaultThinkingLevel = "medium";/);
   assert.match(source, /PI_CODING_AGENT_DIR/);
+  for (const name of ['herdr-agent-state.ts', 'herdr-ui.js', 'herdr-model.js']) {
+    assert.ok(source.includes(`/extensions/${name}`), `missing explicit ${name}`);
+  }
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
 });

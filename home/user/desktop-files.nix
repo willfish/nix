@@ -128,11 +128,13 @@ in
           "$herdrBin" plugin unlink willfish.herdr-navigator >/dev/null 2>&1 || true
           installHerdrPlugin willfish/herdr-navigator || true
         fi
-        # v0.3.3 focuses terminal IDs, which current Herdr rejects. Pin the
-        # upstream pane-ID fix until it is included in a tagged release.
-        navigatorRef="9bdf30f03f53730e6232377a3fca3bdc6ed9f3ca"
-        if ! "$herdrBin" plugin list --plugin herdr-navigator --json 2>/dev/null | grep -Fq "\"resolved_commit\":\"$navigatorRef\""; then
-          installHerdrPlugin thanhdat77/herdr-navigator --ref "$navigatorRef" || true
+        # The fork retains the herdr-navigator plugin ID and adds model/effort
+        # display and search. Check provenance too when migrating from upstream.
+        navigatorRef="7b418ab752612b5a27d9d8912d188eff0ea71429"
+        navigatorInstalled="$("$herdrBin" plugin list --plugin herdr-navigator --json 2>/dev/null || true)"
+        if ! printf '%s' "$navigatorInstalled" | grep -Fq '"owner":"willfish","repo":"herdr-agent-picker"' ||
+           ! printf '%s' "$navigatorInstalled" | grep -Fq "\"resolved_commit\":\"$navigatorRef\""; then
+          installHerdrPlugin willfish/herdr-agent-picker --ref "$navigatorRef" || true
         fi
         if ! "$herdrBin" plugin list --plugin hotchpotch.herdr-tiny-fingers --json 2>/dev/null | grep -Fq '"kind":"github"'; then
           "$herdrBin" plugin unlink hotchpotch.herdr-tiny-fingers >/dev/null 2>&1 || true

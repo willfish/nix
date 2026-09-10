@@ -1,8 +1,10 @@
 # Agent-only fuzzy switching, separate from willfish.herdr-navigator.
 [picker]
 engine = "nucleo"
+preview = false
 source_order = ["agent"]
 agent_sort = "herdr"
+agent_metadata = true
 create_missing = false
 check_updates = false
 

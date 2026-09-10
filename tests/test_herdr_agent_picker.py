@@ -32,6 +32,8 @@ class HerdrAgentPickerTests(unittest.TestCase):
     def test_fuzzy_matching_and_sidebar_order(self):
         self.assertEqual(self.picker['picker']['engine'], 'nucleo')
         self.assertEqual(self.picker['picker']['agent_sort'], 'herdr')
+        self.assertTrue(self.picker['picker']['agent_metadata'])
+        self.assertFalse(self.picker['picker']['preview'])
         self.assertEqual(self.picker['picker']['source_order'], ['agent'])
         self.assertFalse(self.picker['picker']['check_updates'])
 
