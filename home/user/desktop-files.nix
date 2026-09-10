@@ -130,7 +130,7 @@ in
         fi
         # The fork retains the herdr-navigator plugin ID and adds model/effort
         # display and search. Check provenance too when migrating from upstream.
-        navigatorRef="7b418ab752612b5a27d9d8912d188eff0ea71429"
+        navigatorRef="b6a7bdab71bda7e0e27836f5cbeb139ade0a8a97"
         navigatorInstalled="$("$herdrBin" plugin list --plugin herdr-navigator --json 2>/dev/null || true)"
         if ! printf '%s' "$navigatorInstalled" | grep -Fq '"owner":"willfish","repo":"herdr-agent-picker"' ||
            ! printf '%s' "$navigatorInstalled" | grep -Fq "\"resolved_commit\":\"$navigatorRef\""; then
