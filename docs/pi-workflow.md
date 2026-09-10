@@ -75,7 +75,9 @@ remaining percentage of the rate-limit window, its reset time, whether the
 active model is currently available, and any reset credits. Other models are
 usage-based and have no subscription window, so the command reports the
 session context figure instead. It makes one HTTP request per invocation and
-only writes to `auth.json` when it has to refresh the token.
+only writes to `auth.json` when it has to refresh the token. The isolated
+Qwen profile does not load it, because its local model has no allowance to
+report.
 
 ## Configuration and updates
 

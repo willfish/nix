@@ -189,7 +189,6 @@ let
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-agent-state.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-ui.js \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-model.js \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/usage.js \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/plan-work.md \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/review.md \
         --system-prompt "$(< ${piSystemPrompt})" \
