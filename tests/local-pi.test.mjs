@@ -72,6 +72,7 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   for (const flag of ['--offline', '--no-context-files', '--no-skills', '--no-extensions', '--no-prompt-templates']) {
     assert.ok(source.includes(flag), `missing ${flag}`);
   }
+  assert.match(source, /defaultThinkingLevel = "medium";/);
   assert.match(source, /PI_CODING_AGENT_DIR/);
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
 });
