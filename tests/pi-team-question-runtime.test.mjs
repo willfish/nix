@@ -56,12 +56,6 @@ const paneIds = node => node.type === 'pane' ? [node.pane_id] : [...paneIds(node
 const shape = node => node.type === 'pane' ? { pane: node.pane_id } : {
   direction: node.direction, ratio: node.ratio, first: shape(node.first), second: shape(node.second),
 };
-function parentOf(node, id) {
-  if (node.type !== 'split') return;
-  if ([node.first, node.second].some(child => child.type === 'pane' && child.pane_id === id)) return node;
-  return parentOf(node.first, id) ?? parentOf(node.second, id);
-}
-
 function guardedPanes() {
   assert.equal(process.env.HERDR_ENV, '1');
   assert.ok(process.env.HERDR_SOCKET_PATH && process.env.HERDR_PANE_ID, 'Run inside a real herdr pane');
@@ -341,7 +335,9 @@ test('live Pi/herdr: real child question termination, resumable jobs, repeated q
     assert.deepEqual([...owned], [temporaryParent], 'Index shutdown closes all owned children');
     assert.equal(new Set(children).size, 7, 'Only the expected retained child sessions were launched');
     const current = await layout();
-    assert.equal(parentOf(current.root, realParent).ratio, parentOf(baseline.root, realParent).ratio);
+    // The temporary coordinator can disappear after its acknowledged shutdown.
+    const expected = paneIds(current.root).includes(temporaryParent) ? baseline : before;
+    assert.deepEqual(shape(current.root), shape(expected.root));
     assert.equal(current.focused_pane_id, before.focused_pane_id);
     assert.equal((await call('pane.current', {})).pane.pane_id, focused);
     assert.deepEqual(violations, []);

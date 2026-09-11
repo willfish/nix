@@ -484,7 +484,10 @@ test('live herdr: full index interactive parent delegates skills and sends to th
     assert.deepEqual(await waitForJson(stopped, 15000), { shutdown: true });
     assert.deepEqual([...owned], [temporaryParent], 'Parent shutdown must close its retained child');
     const current = await layout();
-    assert.equal(parentOf(current.root, realParent).ratio, parentOf(baseline.root, realParent).ratio);
+    // Herdr may already remove the temporary pane when its exec'd Pi exits.
+    // Check the entire expected tree in either case, not a vanished split.
+    const expected = paneIds(current.root).includes(temporaryParent) ? baseline : before;
+    assert.deepEqual(layoutShape(current.root), layoutShape(expected.root));
     assert.equal(current.focused_pane_id, before.focused_pane_id);
     assert.equal((await call('pane.current', {})).pane.pane_id, focused);
     assert.deepEqual(violations, []);
