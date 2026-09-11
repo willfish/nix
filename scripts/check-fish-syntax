@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# identify classifies .fish files, but not extensionless Fish shebangs.
+for path in "$@"; do
+  first_line=''
+  IFS= read -r first_line <"$path" || true
+  if [[ "$path" == *.fish || "$first_line" =~ ^\#\![[:space:]]*([^[:space:]]*/)?(env[[:space:]]+(-S[[:space:]]+)?)?fish([[:space:]]|$) ]]; then
+    fish --no-config --no-execute "$path"
+  fi
+done

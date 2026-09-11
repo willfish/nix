@@ -2,9 +2,11 @@
 # shellcheck disable=SC2016
 
 setup() {
+  bats_require_minimum_version 1.5.0
   export TEST_TMPDIR="$BATS_TEST_TMPDIR"
   export PATH="$TEST_TMPDIR/bin:$PATH"
   mkdir -p "$TEST_TMPDIR/bin"
+  write_tool hostname '#!/usr/bin/env bash' 'printf "%s\n" fixture-host'
   write_tool getent '#!/usr/bin/env bash' 'exit 1'
   write_tool nc '#!/usr/bin/env bash' 'exit 1'
   write_tool tailscale '#!/usr/bin/env bash' 'exit 1'
@@ -186,6 +188,22 @@ terminus"'
 
   [ "$status" -eq 0 ]
   [ "$output" = "herdr --remote william@andromeda.local --remote-keybindings server" ]
+}
+
+@test "excludes the current host from the remote picker" {
+  write_tool realpath '#!/usr/bin/env bash' 'printf "%s\n" "$1"'
+  write_tool nix '#!/usr/bin/env bash' 'printf "%s\n" andromeda terminus'
+  write_tool hostname '#!/usr/bin/env bash' 'printf "%s\n" andromeda'
+  write_tool getent '#!/usr/bin/env bash' 'exit 0'
+  write_tool nc '#!/usr/bin/env bash' 'exit 0'
+  write_tool fzf '#!/usr/bin/env bash' 'tee "$TEST_TMPDIR/fzf-input" | head -n1'
+
+  run env SSHTO_FLAKE="$PWD" SSHTO_DOMAIN=local SSHTO_ASSUME_TTY=1 \
+    bash home/config/bin/sshto --print
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "herdr --remote william@terminus.local --remote-keybindings server" ]
+  run ! grep -F andromeda "$TEST_TMPDIR/fzf-input"
 }
 
 @test "ignores a Tailscale search suffix when detecting the LAN domain" {

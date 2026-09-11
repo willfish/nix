@@ -1,5 +1,78 @@
 import { randomUUID } from 'node:crypto';
 
+/** Await pipe closure and cancellation escalation. processGroup requires a detached POSIX child. */
+export function waitForProcess(proc, { signal, onAbort, processGroup = false, graceMs = 5000 } = {}) {
+  return new Promise(resolve => {
+    let exited = proc.exitCode != null || proc.signalCode != null;
+    let settled = false, timer, closed = false, closeCode;
+    let cancelling = false, escalationPending = false, groupGone = false;
+    const grouped = processGroup && !!proc.pid;
+    const send = name => {
+      if (groupGone) return;
+      try {
+        // An exited launcher can leave descendants holding its output pipes open.
+        if (grouped) process.kill(-proc.pid, name);
+        else if (!exited) proc.kill(name);
+      } catch (error) {
+        // Never target this numeric group again after confirmed disappearance.
+        if (grouped && error.code === 'ESRCH') groupGone = true;
+        else if (name !== 0 && error.code !== 'ESRCH' && !exited) proc.kill(name);
+      }
+    };
+    const endEscalation = () => {
+      clearTimeout(timer);
+      escalationPending = false;
+      if (closed) finish(closeCode);
+    };
+    const abort = () => {
+      if (settled || cancelling) return;
+      cancelling = true;
+      onAbort?.();
+      escalationPending = grouped;
+      const deadline = Date.now() + graceMs;
+      const tick = () => {
+        if (grouped) send(0);
+        if (groupGone) return endEscalation();
+        const remaining = deadline - Date.now();
+        if (remaining > 0) { timer = setTimeout(tick, Math.min(50, remaining)); return; }
+        send('SIGKILL');
+        endEscalation();
+      };
+      // kill() may emit an error synchronously, so cleanup must already own the timer.
+      timer = setTimeout(tick, Math.min(50, Math.max(0, graceMs)));
+      send('SIGTERM');
+      if (groupGone) endEscalation();
+    };
+    const exit = () => { exited = true; };
+    const finish = code => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+      proc.removeListener('exit', exit);
+      proc.removeListener('close', close);
+      proc.removeListener('error', error);
+      resolve(code);
+    };
+    const close = code => {
+      closed = true;
+      closeCode = code ?? 1;
+      if (escalationPending) {
+        // Pipe closure says nothing about descendants with redirected output.
+        send(0);
+        if (!groupGone) return;
+        endEscalation();
+      } else finish(closeCode);
+    };
+    const error = () => close(1);
+    proc.on('exit', exit);
+    proc.on('close', close);
+    proc.on('error', error);
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
+  });
+}
+
 const terminal = new Set(['completed', 'error', 'aborted']);
 const occupied = new Set(['running', 'waiting_question']);
 

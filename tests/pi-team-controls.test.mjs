@@ -26,6 +26,16 @@ function fakePi() {
     sendMessage: (message, options) => messages.push({ message, options }),
   };
 }
+test('close all continues after cleanup debt failure and releases only confirmed members', async t => {
+  const f = fixture(t), released = [], attempts = [];
+  f.team.list = async () => [{ id: 'debt' }, { id: 'healthy' }];
+  f.team.close = async id => { attempts.push(id); if (id === 'debt') throw new Error('denied'); };
+  f.jobs.memberClosed = id => released.push(id);
+  await assert.rejects(f.tool({ action: 'close', id: 'all' }), /Could not close 1.*denied/);
+  assert.deepEqual(attempts, ['debt', 'healthy']);
+  assert.deepEqual(released, ['healthy']);
+});
+
 function fixture(t) {
   const pi = fakePi(), resumes = [], sends = [], closes = [], uiCalls = [], notices = [];
   const member = { id: 'member', agent: 'builder', pending: false };

@@ -1,24 +1,10 @@
 // /usage: remaining allowance for the active model.
 // For openai-codex (ChatGPT subscription) this queries the same backend the
-// ChatGPT app uses (wham/usage) with the stored OAuth access token, refreshing
-// it like pi does if expired. Usage-based providers have no window, so they
+// ChatGPT app uses (wham/usage) with OAuth resolved and refreshed by Pi.
+// Usage-based providers have no window, so they
 // get the session context figure instead. Never mutates models or settings.
-import { readFileSync, writeFileSync, renameSync } from 'node:fs';
-import { homedir } from 'node:os';
-import path from 'node:path';
-
 const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
-const REFRESH_URL = 'https://auth.openai.com/oauth/token';
-// Same public Codex OAuth client id pi uses for its token exchange.
-const CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const CODEX_PROVIDER = 'openai-codex';
-const EXPIRY_MARGIN_MS = 5 * 60 * 1000;
-
-function agentDir() {
-  return process.env.PI_CODING_AGENT_DIR
-    ? path.join(process.env.PI_CODING_AGENT_DIR, 'agent')
-    : path.join(homedir(), '.pi', 'agent');
-}
 
 function formatSeconds(total) {
   if (!Number.isFinite(total) || total <= 0) return 'soon';
@@ -54,50 +40,6 @@ async function tokenFromRegistry(ctx, provider) {
   } catch {
     return null;
   }
-}
-
-// Fallback for when the registry yields no usable token: read the credential
-// file directly and refresh it with the same grant pi's login flow uses.
-function tokenFromStore() {
-  const store = JSON.parse(readFileSync(path.join(agentDir(), 'auth.json'), 'utf8'));
-  const credential = store?.[CODEX_PROVIDER];
-  if (!credential?.access || !credential.refresh) return { token: credential?.access ?? null, refreshed: false };
-  if (Number.isFinite(credential.expires) && credential.expires - Date.now() > EXPIRY_MARGIN_MS) {
-    return { token: credential.access, refreshed: false };
-  }
-  return { token: null, store, credential, refreshed: false };
-}
-
-async function refreshStoredToken(store, credential) {
-  const response = await fetch(REFRESH_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: credential.refresh,
-      client_id: CODEX_CLIENT_ID,
-    }),
-  });
-  if (!response.ok) throw new Error(`token refresh failed (HTTP ${response.status})`);
-  const data = await response.json();
-  credential.access = data.access_token;
-  if (data.refresh_token) credential.refresh = data.refresh_token;
-  const seconds = Number.isFinite(data.expires_in) ? data.expires_in : 30 * 86400;
-  credential.expires = Date.now() + seconds * 1000;
-  const file = path.join(agentDir(), 'auth.json');
-  const temp = `${file}.usage-tmp`;
-  writeFileSync(temp, JSON.stringify(store, null, 2) + '\n', { mode: 0o600 });
-  renameSync(temp, file);
-  return credential.access;
-}
-
-async function codexToken(ctx) {
-  let token = await tokenFromRegistry(ctx, CODEX_PROVIDER);
-  if (token) return token;
-  const stored = tokenFromStore();
-  if (stored.token) return stored.token;
-  if (!stored.credential) throw new Error('openai-codex credentials not found (run /login).');
-  return refreshStoredToken(stored.store, stored.credential);
 }
 
 async function fetchUsage(token) {
@@ -170,7 +112,9 @@ export default function (pi) {
           ctx.ui.notify(lines.join('\n'), 'info');
           return;
         }
-        const token = await codexToken(ctx);
+        // Pi owns credential paths, refresh coordination and provider-scoped writes.
+        // Fail closed when its resolver is unavailable; never replay a file snapshot.
+        const token = await tokenFromRegistry(ctx, CODEX_PROVIDER);
         if (!token) {
           ctx.ui.notify('No usable openai-codex token; run /login openai-codex.', 'warning');
           return;

@@ -2,6 +2,7 @@
   lib,
   pkgs,
   hostName ? null,
+  isGraphicalLinux,
   ...
 }:
 let
@@ -100,6 +101,7 @@ in
             pkgs.gnugrep
             pkgs.gnutar
             pkgs.gzip
+            pkgs.jq
             pkgs.rustc
             pkgs.stdenv.cc
           ]
@@ -108,41 +110,14 @@ in
         export NIX_SSL_CERT_FILE="$SSL_CERT_FILE"
         export PATH="$herdrPluginPath"
 
-        installHerdrPlugin() {
-          if ! "$herdrBin" plugin install "$@" --yes >/dev/null; then
-            echo "warning: failed to install Herdr plugin $1; continuing Home Manager activation" >&2
-            return 1
-          fi
-        }
-
         # Retired plugins / IDs from earlier experiments.
         "$herdrBin" plugin unlink fish.herdr-workspacex >/dev/null 2>&1 || true
         "$herdrBin" plugin uninstall rmarganti.herdr-pluck >/dev/null 2>&1 || true
         "$herdrBin" plugin unlink rmarganti.herdr-pluck >/dev/null 2>&1 || true
 
-        if ! "$herdrBin" plugin list --plugin willfish.herdr-workspacex --json 2>/dev/null | grep -Fq '"kind":"github"'; then
-          "$herdrBin" plugin unlink willfish.herdr-workspacex >/dev/null 2>&1 || true
-          installHerdrPlugin willfish/herdr-workspacex || true
-        fi
-        if ! "$herdrBin" plugin list --plugin willfish.herdr-navigator --json 2>/dev/null | grep -Fq '"kind":"github"'; then
-          "$herdrBin" plugin unlink willfish.herdr-navigator >/dev/null 2>&1 || true
-          installHerdrPlugin willfish/herdr-navigator || true
-        fi
-        # The fork retains the herdr-navigator plugin ID and adds model/effort
-        # display and search. Check provenance too when migrating from upstream.
-        navigatorRef="b6a7bdab71bda7e0e27836f5cbeb139ade0a8a97"
-        navigatorInstalled="$("$herdrBin" plugin list --plugin herdr-navigator --json 2>/dev/null || true)"
-        if ! printf '%s' "$navigatorInstalled" | grep -Fq '"owner":"willfish","repo":"herdr-agent-picker"' ||
-           ! printf '%s' "$navigatorInstalled" | grep -Fq "\"resolved_commit\":\"$navigatorRef\""; then
-          installHerdrPlugin willfish/herdr-agent-picker --ref "$navigatorRef" || true
-        fi
-        if ! "$herdrBin" plugin list --plugin hotchpotch.herdr-tiny-fingers --json 2>/dev/null | grep -Fq '"kind":"github"'; then
-          "$herdrBin" plugin unlink hotchpotch.herdr-tiny-fingers >/dev/null 2>&1 || true
-          installHerdrPlugin hotchpotch/herdr-tiny-fingers || true
-        fi
-        if ! "$herdrBin" plugin list --plugin persiyanov.reviewr --json 2>/dev/null | grep -Fq '"kind":"github"'; then
-          "$herdrBin" plugin unlink persiyanov.reviewr >/dev/null 2>&1 || true
-          installHerdrPlugin persiyanov/herdr-reviewr || true
+        if ! ${pkgs.bash}/bin/bash ${configDir}/herdr/install-plugins.sh \
+          "$herdrBin" ${configDir}/herdr/plugins.json; then
+          echo "warning: pinned Herdr plugins need reconciliation; inspect installed state before retrying" >&2
         fi
         "$herdrBin" server reload-config >/dev/null 2>&1 || true
       fi
@@ -150,110 +125,113 @@ in
 
     # cosmic-screenshot crashes on launch when CosmicPortal remembers Window mode
     # (NixOS/nixpkgs#409441). Reset only that broken persisted choice.
-    fixCosmicScreenshotPortalConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      portalScreenshot="$HOME/.config/cosmic/com.system76.CosmicPortal/v1/screenshot"
-      if [ -f "$portalScreenshot" ] && grep -q 'choice: Window' "$portalScreenshot"; then
-        ${pkgs.gnused}/bin/sed -i 's/choice: Window/choice: Rectangle/' "$portalScreenshot"
-        echo "Reset cosmic screenshot mode from Window to Rectangle (avoids crash loop)"
-      elif [ ! -f "$portalScreenshot" ]; then
-        mkdir -p "$(dirname "$portalScreenshot")"
-        cp ${configDir}/cosmic/portal-screenshot "$portalScreenshot"
-        echo "Installed default cosmic screenshot portal config"
-      fi
-    '';
+    fixCosmicScreenshotPortalConfig = lib.mkIf isGraphicalLinux (
+      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        portalScreenshot="$HOME/.config/cosmic/com.system76.CosmicPortal/v1/screenshot"
+        if [ -f "$portalScreenshot" ] && grep -q 'choice: Window' "$portalScreenshot"; then
+          ${pkgs.gnused}/bin/sed -i 's/choice: Window/choice: Rectangle/' "$portalScreenshot"
+          echo "Reset cosmic screenshot mode from Window to Rectangle (avoids crash loop)"
+        elif [ ! -f "$portalScreenshot" ]; then
+          mkdir -p "$(dirname "$portalScreenshot")"
+          cp ${configDir}/cosmic/portal-screenshot "$portalScreenshot"
+          echo "Installed default cosmic screenshot portal config"
+        fi
+      ''
+    );
   };
 
-  xdg.configFile = {
-    "cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom" = {
-      source =
-        if
-          builtins.elem hostName [
-            "andromeda"
-            "foundation"
-          ]
-        then
-          pkgs.writeText "cosmic-shortcuts-with-voice" (
-            builtins.replaceStrings
-              [
-                ''
-                  key: "space",
-                      ): Disable,''
-                "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Disable,"
-              ]
-              [
-                ''
-                  key: "space",
-                      ): Spawn("codex-voice interact"),
-                      (
-                          modifiers: [Super, Shift],
-                          key: "space",
-                      ): Spawn("codex-voice send"),
-                      (
-                          modifiers: [Super, Shift],
-                          key: "v",
-                      ): Spawn("voice-menu"),''
-                "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"codex-voice read\"),"
-              ]
-              (builtins.readFile "${configDir}/cosmic/shortcuts")
-          )
-        else
-          "${configDir}/cosmic/shortcuts";
-      force = true;
+  xdg.configFile =
+    lib.optionalAttrs isGraphicalLinux {
+      "cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom" = {
+        source =
+          if
+            builtins.elem hostName [
+              "andromeda"
+              "foundation"
+            ]
+          then
+            pkgs.writeText "cosmic-shortcuts-with-voice" (
+              builtins.replaceStrings
+                [
+                  ''
+                    key: "space",
+                        ): Disable,''
+                  "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Disable,"
+                ]
+                [
+                  ''
+                    key: "space",
+                        ): Spawn("codex-voice interact"),
+                        (
+                            modifiers: [Super, Shift],
+                            key: "space",
+                        ): Spawn("codex-voice send"),
+                        (
+                            modifiers: [Super, Shift],
+                            key: "v",
+                        ): Spawn("voice-menu"),''
+                  "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"codex-voice read\"),"
+                ]
+                (builtins.readFile "${configDir}/cosmic/shortcuts")
+            )
+          else
+            "${configDir}/cosmic/shortcuts";
+        force = true;
+      };
+      "cosmic/com.system76.CosmicComp/v1/autotile" = {
+        source = "${configDir}/cosmic/autotile";
+        force = true;
+      };
+      "cosmic/com.system76.CosmicComp/v1/autotile_behavior" = {
+        source = "${configDir}/cosmic/autotile_behavior";
+        force = true;
+      };
+      "cosmic/com.system76.CosmicComp/v1/active_hint" = {
+        source = "${configDir}/cosmic/active_hint";
+        force = true;
+      };
+      "cosmic/com.system76.CosmicComp/v1/focus_follows_cursor" = {
+        source = "${configDir}/cosmic/focus_follows_cursor";
+        force = true;
+      };
+      "cosmic/com.system76.CosmicComp/v1/cursor_follows_focus" = {
+        source = "${configDir}/cosmic/cursor_follows_focus";
+        force = true;
+      };
+      "cosmic/com.system76.CosmicPanel.Panel/v1" = {
+        source = "${configDir}/cosmic/panel";
+        recursive = true;
+        force = true;
+      };
+      "cosmic/com.system76.CosmicPanel.Dock/v1" = {
+        source = "${configDir}/cosmic/dock";
+        recursive = true;
+        force = true;
+      };
+      "cosmic/com.system76.CosmicPanel/v1/entries" = {
+        source = "${configDir}/cosmic/panel-entries";
+        force = true;
+      };
+      "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark" = {
+        source = "${configDir}/cosmic/theme-mode";
+        force = true;
+      };
+      "cosmic/com.system76.CosmicTheme.Dark/v1" = {
+        source = "${configDir}/cosmic/theme-dark";
+        recursive = true;
+        force = true;
+      };
+      "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
+    }
+    // lib.optionalAttrs isGraphicalLinux {
+      "mimeapps.list".force = true;
     };
-    "cosmic/com.system76.CosmicComp/v1/autotile" = {
-      source = "${configDir}/cosmic/autotile";
-      force = true;
-    };
-    "cosmic/com.system76.CosmicComp/v1/autotile_behavior" = {
-      source = "${configDir}/cosmic/autotile_behavior";
-      force = true;
-    };
-    "cosmic/com.system76.CosmicComp/v1/active_hint" = {
-      source = "${configDir}/cosmic/active_hint";
-      force = true;
-    };
-    "cosmic/com.system76.CosmicComp/v1/focus_follows_cursor" = {
-      source = "${configDir}/cosmic/focus_follows_cursor";
-      force = true;
-    };
-    "cosmic/com.system76.CosmicComp/v1/cursor_follows_focus" = {
-      source = "${configDir}/cosmic/cursor_follows_focus";
-      force = true;
-    };
-    "cosmic/com.system76.CosmicPanel.Panel/v1" = {
-      source = "${configDir}/cosmic/panel";
-      recursive = true;
-      force = true;
-    };
-    "cosmic/com.system76.CosmicPanel.Dock/v1" = {
-      source = "${configDir}/cosmic/dock";
-      recursive = true;
-      force = true;
-    };
-    "cosmic/com.system76.CosmicPanel/v1/entries" = {
-      source = "${configDir}/cosmic/panel-entries";
-      force = true;
-    };
-    "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark" = {
-      source = "${configDir}/cosmic/theme-mode";
-      force = true;
-    };
-    "cosmic/com.system76.CosmicTheme.Dark/v1" = {
-      source = "${configDir}/cosmic/theme-dark";
-      recursive = true;
-      force = true;
-    };
-    "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
-  }
-  // lib.optionalAttrs stdenv.isLinux {
-    "mimeapps.list".force = true;
-  };
 
-  xdg.dataFile = lib.optionalAttrs stdenv.isLinux {
+  xdg.dataFile = lib.optionalAttrs isGraphicalLinux {
     "applications/mimeapps.list".force = true;
   };
 
-  xdg.mimeApps = lib.mkIf stdenv.isLinux {
+  xdg.mimeApps = lib.mkIf isGraphicalLinux {
     enable = true;
     defaultApplications = existingMimeDefaults // lib.genAttrs imageMimeTypes (_: defaultImageViewer);
     associations.added = existingMimeAssociations;

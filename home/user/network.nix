@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  isGraphicalLinux,
   ...
 }:
 /*
@@ -29,7 +30,7 @@
   explicit passwd-file from the system secret so recovery does not depend
   on the agent race.
 */
-lib.mkIf pkgs.stdenv.isLinux (
+lib.mkIf isGraphicalLinux (
   let
     pythonEnv = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
 
@@ -329,6 +330,9 @@ lib.mkIf pkgs.stdenv.isLinux (
                     psk="$(${nmcli} -s -g 802-11-wireless-security.psk connection show "$conn" 2>/dev/null || true)"
                     if [[ -n "$psk" ]]; then
                       passwd_file="$(mktemp)"
+                      trap 'rm -f -- "$passwd_file"' EXIT
+                      trap 'exit 130' INT
+                      trap 'exit 143' TERM
                       chmod 600 "$passwd_file"
                       # passwd-file format: setting.property:value
                       printf '802-11-wireless-security.psk:%s\n' "$psk" >"$passwd_file"
@@ -336,6 +340,7 @@ lib.mkIf pkgs.stdenv.isLinux (
                       ${nmcli} -w 25 connection up "$conn" ifname "$dev" passwd-file "$passwd_file" \
                         >/dev/null 2>&1 || true
                       rm -f "$passwd_file"
+                      trap - EXIT INT TERM
                       return 0
                     fi
                   fi

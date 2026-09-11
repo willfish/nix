@@ -10,8 +10,9 @@ function clean(value) {
     : '';
 }
 
-export function displayLabel(ctx) {
-  const label = `pi · ${clean(ctx.thinkingLevel) || '?'} · ${clean(ctx.model?.id) || 'model unknown'}`;
+export function displayLabel(ctx, env = {}) {
+  const role = env.PI_TEAM_CHILD === '1' ? clean(env.PI_TEAM_ROLE) : '';
+  const label = `pi · ${role || clean(ctx.thinkingLevel) || '?'} · ${clean(ctx.model?.id) || 'model unknown'}`;
   const chars = [...label];
   return chars.length <= 80 ? label : `${chars.slice(0, 79).join('')}…`;
 }
@@ -61,7 +62,7 @@ export default function herdrModel(pi, options = {}) {
 
   async function update(_event, ctx) {
     if (!active) return;
-    label = displayLabel(ctx);
+    label = displayLabel(ctx, env);
     await report();
   }
 

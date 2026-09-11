@@ -1,0 +1,225 @@
+[
+  {
+    "name": "create-skill",
+    "kind": "process",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "superpowers",
+    "kind": "process",
+    "invocation": "process guardrail",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "using-superpowers",
+    "kind": "process",
+    "invocation": "process guardrail",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "systematic-debugging",
+    "kind": "process",
+    "invocation": "process guardrail",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "verification-before-completion",
+    "kind": "process",
+    "invocation": "process guardrail",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "writing-plans",
+    "kind": "process",
+    "invocation": "process guardrail",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "audiobook-library-import",
+    "kind": "shared",
+    "invocation": "reference-backed domain skill",
+    "hermes": false,
+    "references": {
+      "audiobook-library-import.md": "guides/audiobook-library-import.md",
+      "audiobookshelf-best-practices.md": "guides/audiobookshelf-best-practices.md"
+    }
+  },
+  {
+    "name": "browser-automation",
+    "kind": "shared",
+    "invocation": "reference-backed domain skill",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "chain-of-verification",
+    "kind": "shared",
+    "invocation": "process guardrail",
+    "hermes": false,
+    "references": {
+      "planning.md": "guides/planning.md"
+    }
+  },
+  {
+    "name": "code-review-workflow",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {
+      "reviews.md": "guides/reviews.md",
+      "voice.md": "guides/voice.md"
+    }
+  },
+  {
+    "name": "daily-notes",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {
+      "daily-notes.md": "guides/daily-notes.md"
+    }
+  },
+  {
+    "name": "diagramming",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {
+      "diagramming.md": "guides/diagramming.md",
+      "diagramming-how-to.md": "guides/diagramming-how-to.md"
+    }
+  },
+  {
+    "name": "github-pr-review",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "improve",
+    "kind": "shared",
+    "invocation": "user-invoked router/orchestrator",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "javascript-supply-chain-security",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {
+      "javascript-supply-chain-security.md": "guides/javascript-supply-chain-security.md"
+    }
+  },
+  {
+    "name": "latex-pdfs",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {
+      "pdfs.md": "guides/pdfs.md"
+    }
+  },
+  {
+    "name": "local-dev-environment",
+    "kind": "shared",
+    "invocation": "reference-backed domain skill",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "pi-token-mitm",
+    "kind": "shared",
+    "invocation": "reference-backed domain skill",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "pull-request-workflow",
+    "kind": "shared",
+    "invocation": "reference-backed domain skill",
+    "hermes": false,
+    "references": {
+      "prs.md": "guides/prs.md",
+      "pr-diagrams.md": "guides/pr-diagrams.md",
+      "pr-slack-roundups.md": "guides/pr-slack-roundups.md",
+      "pr-title-body.md": "guides/pr-title-body.md",
+      "git.md": "guides/git.md",
+      "voice.md": "guides/voice.md"
+    }
+  },
+  {
+    "name": "rspec-testing",
+    "kind": "shared",
+    "invocation": "reference-backed domain skill",
+    "hermes": false,
+    "references": {
+      "rspec.md": "guides/rspec.md",
+      "rspec-factories.md": "guides/rspec-factories.md",
+      "rspec-flakiness.md": "guides/rspec-flakiness.md",
+      "rspec-rails.md": "guides/rspec-rails.md",
+      "rspec-structure.md": "guides/rspec-structure.md",
+      "testing.md": "guides/testing.md"
+    }
+  },
+  {
+    "name": "skill-evaluation",
+    "kind": "shared",
+    "invocation": "user-invoked router/orchestrator",
+    "hermes": false,
+    "references": {
+      "plugin-eval.md": "references/plugin-eval/README.md",
+      "plugin-eval-chat-first-workflows.md": "references/plugin-eval/references/chat-first-workflows.md",
+      "plugin-eval-evaluation-result-schema.md": "references/plugin-eval/references/evaluation-result-schema.md",
+      "plugin-eval-observed-usage.md": "references/plugin-eval/references/observed-usage.md",
+      "plugin-eval-technical-design.md": "references/plugin-eval/references/technical-design.md"
+    }
+  },
+  {
+    "name": "skill-router",
+    "kind": "shared",
+    "invocation": "user-invoked router/orchestrator",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "teach",
+    "kind": "shared",
+    "invocation": "user-invoked router/orchestrator",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "terminal-demos",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {
+      "terminal-demos.md": "guides/terminal-demos.md"
+    }
+  },
+  {
+    "name": "tui-design",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {}
+  },
+  {
+    "name": "will-voice",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {
+      "voice.md": "guides/voice.md"
+    }
+  }
+]

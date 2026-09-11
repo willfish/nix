@@ -9,13 +9,13 @@ import extension, { displayLabel, sendMetadata } from '../home/config/pi/extensi
 const env = { HERDR_ENV: '1', HERDR_SOCKET_PATH: '/fake', HERDR_PANE_ID: 'w1:p1' };
 const ctx = { mode: 'tui', model: { id: 'gpt-test' }, thinkingLevel: 'high' };
 
-function harness() {
+function harness(overrides = {}) {
   const handlers = new Map();
   const reports = [];
   let heartbeat;
   let cancelled = 0;
   extension({ on: (name, fn) => handlers.set(name, fn) }, {
-    env,
+    env: { ...env, ...overrides },
     send: async (params) => { reports.push(params); },
     every: (fn, ms) => { assert.equal(ms, 5000); heartbeat = fn; return { unref() {} }; },
     cancel: () => { cancelled++; heartbeat = undefined; },
@@ -33,7 +33,37 @@ test('label preserves effort before long models and handles unknowns', () => {
   assert.equal(displayLabel({ model: { id: '\nfoo\u001b\u007f' } }), 'pi · ? · foo');
 });
 
-test('resources start only in the root TUI and events report live selections', async () => {
+test('team labels use the role only for children and retain safe fallbacks', () => {
+  assert.equal(displayLabel(ctx, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'scout' }), 'pi · scout · gpt-test');
+  assert.equal(displayLabel(ctx, { PI_TEAM_ROLE: 'scout' }), 'pi · high · gpt-test');
+  for (const role of [undefined, '', ' \n\u001b']) {
+    assert.equal(displayLabel(ctx, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: role }), 'pi · high · gpt-test');
+  }
+  assert.equal(displayLabel(ctx, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: '\nscout\u001b' }), 'pi · scout · gpt-test');
+  const label = displayLabel({ ...ctx, model: { id: '界'.repeat(100) } }, {
+    PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'security-reviewer',
+  });
+  assert.equal([...label].length, 80);
+  assert.ok(label.startsWith('pi · security-reviewer · '));
+  assert.ok(label.endsWith('…'));
+});
+
+test('team role survives model and effort changes, heartbeats and reloads', async () => {
+  const h = harness({ PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'scout' });
+  await h.handlers.get('session_start')({}, ctx);
+  assert.equal(h.reports.at(-1).display_agent, 'pi · scout · gpt-test');
+  const changed = { ...ctx, model: { id: 'other' }, thinkingLevel: 'low' };
+  await h.handlers.get('model_select')({}, changed);
+  await h.handlers.get('thinking_level_select')({}, changed);
+  await h.tick();
+  assert.equal(h.reports.at(-1).display_agent, 'pi · scout · other');
+  await h.handlers.get('session_shutdown')({ reason: 'reload' });
+  assert.equal(h.reports.at(-1).clear_display_agent, true);
+  await h.handlers.get('session_start')({ reason: 'reload' }, changed);
+  assert.equal(h.reports.at(-1).display_agent, 'pi · scout · other');
+});
+
+test('resources start only in TUI sessions and events report live selections', async () => {
   const h = harness();
   assert.equal(h.reports.length, 0);
   await h.handlers.get('session_start')({}, { ...ctx, mode: 'rpc', hasUI: true });

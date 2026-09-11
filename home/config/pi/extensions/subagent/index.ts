@@ -32,7 +32,7 @@ import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
 import { withSkills } from "./skills.js";
 import { TeamManager, teamAvailable } from "./team.js";
 import { registerTeamControls, DELEGATION_POLICY } from "./controls.js";
-import { Jobs } from "./jobs.js";
+import { Jobs, waitForProcess } from "./jobs.js";
 import { segmentResult, jobToolResult, registerParentBatchGuard } from "./job-results.js";
 
 const MAX_PARALLEL_TASKS = 8;
@@ -367,7 +367,9 @@ async function runSingleAgent(
 
 		const exitCode = await new Promise<number>((resolve) => {
 			const invocation = getPiInvocation(args);
+			const processGroup = process.platform === "linux" || process.platform === "darwin";
 			const proc = spawn(invocation.command, invocation.args, {
+				detached: processGroup,
 				cwd: cwd ?? defaultCwd,
 				shell: false,
 				stdio: ["ignore", "pipe", "pipe"],
@@ -422,26 +424,10 @@ async function runSingleAgent(
 				currentResult.stderr += data.toString();
 			});
 
-			proc.on("close", (code) => {
+			void waitForProcess(proc, { signal, processGroup, onAbort: () => { wasAborted = true; } }).then((code) => {
 				if (buffer.trim()) processLine(buffer);
-				resolve(code ?? 0);
+				resolve(code);
 			});
-
-			proc.on("error", () => {
-				resolve(1);
-			});
-
-			if (signal) {
-				const killProc = () => {
-					wasAborted = true;
-					proc.kill("SIGTERM");
-					setTimeout(() => {
-						if (!proc.killed) proc.kill("SIGKILL");
-					}, 5000);
-				};
-				if (signal.aborted) killProc();
-				else signal.addEventListener("abort", killProc, { once: true });
-			}
 		});
 
 		currentResult.exitCode = exitCode;

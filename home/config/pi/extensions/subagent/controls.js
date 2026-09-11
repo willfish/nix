@@ -86,10 +86,14 @@ export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = ()
       if (id === 'all') {
         const members = await team.list();
         if (jobs) for (const jobId of jobs.jobs.keys()) jobs.cancel(jobId);
+        const errors = [];
         for (const member of members) {
-          await team.close(member.id);
-          jobs?.memberClosed(member.id);
+          try {
+            await team.close(member.id);
+            jobs?.memberClosed(member.id);
+          } catch (error) { errors.push(error); }
         }
+        if (errors.length) throw new AggregateError(errors, `Could not close ${errors.length} team member(s): ${errors.map(error => error.message).join('; ')}`);
       } else {
         await team.close(id);
         jobs?.memberClosed(id);

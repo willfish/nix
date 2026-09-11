@@ -150,7 +150,9 @@ export class HerdrPanes {
       } catch (error) {
         try { await this.#close(paneId); }
         catch (cleanupError) {
-          throw new AggregateError([error, cleanupError], `Herdr open failed; cleanup failed for ${paneId}`);
+          throw Object.assign(new AggregateError([error, cleanupError], `Herdr open failed; cleanup failed for ${paneId}`), {
+            paneId, cleanupError: String(cleanupError?.message ?? cleanupError),
+          });
         }
         throw error;
       }

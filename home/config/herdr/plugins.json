@@ -1,0 +1,32 @@
+[
+  {
+    "id": "willfish.herdr-workspacex",
+    "owner": "willfish",
+    "repo": "herdr-workspacex",
+    "revision": "91aee80e8852ed3d7efb8633d15b6662324a535c"
+  },
+  {
+    "id": "willfish.herdr-navigator",
+    "owner": "willfish",
+    "repo": "herdr-navigator",
+    "revision": "3f9f186c63a0de0fbb66c13dc1f29dfcbcc4e67c"
+  },
+  {
+    "id": "herdr-navigator",
+    "owner": "willfish",
+    "repo": "herdr-agent-picker",
+    "revision": "b6a7bdab71bda7e0e27836f5cbeb139ade0a8a97"
+  },
+  {
+    "id": "hotchpotch.herdr-tiny-fingers",
+    "owner": "hotchpotch",
+    "repo": "herdr-tiny-fingers",
+    "revision": "2c817583fa1d5385fe4a95e2fd4cfa30fa4e915e"
+  },
+  {
+    "id": "persiyanov.reviewr",
+    "owner": "persiyanov",
+    "repo": "herdr-reviewr",
+    "revision": "6c304925142b983381e166333d3e9ce403121ef6"
+  }
+]

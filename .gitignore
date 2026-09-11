@@ -3,6 +3,7 @@
 /.pre-commit-config-nix.yaml
 /dump.rdb
 /plans/
+/secrets/.conform*
 
 __pycache__/
 *.pyc

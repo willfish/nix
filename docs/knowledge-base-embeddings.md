@@ -67,5 +67,22 @@ check `errors == 0` and `total_in_index == documents` in its summary. For a
 freshness check, a second embedding run should embed zero documents and skip
 all documents. Keep the backup until search and per-source coverage are verified.
 
+## Mirror repair
+
+Jira and Confluence syncs serialize writers and publish files/checkpoints
+atomically. Jira also revisits indexed documents that are missing or stale even
+when they fall outside the incremental watermark. Conflicting document identities
+are preserved for review, not overwritten.
+
+Incremental Slack history does not reliably rediscover old thread parents. After
+agreeing the history scope and API cost, use `knowledge-base slack-sync --full-reconcile`
+to rescan available history and refresh its threads. This is explicit, not part of
+the daily job, and does not propagate remote deletions or recover history no longer
+available from Slack.
+
+Embedding publication checks the document revision after inference. A concurrent
+edit causes an explicit error instead of installing an obsolete vector; retry the
+embedding/search operation after the writer settles.
+
 Configuration is in `home/user/knowledge-base.nix`; backend implementation is
 `home/config/llm/scripts/knowledge_base/qwen_embed.py`.

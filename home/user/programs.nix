@@ -1,10 +1,12 @@
-{ pkgs, lib, ... }:
-let
-  inherit (pkgs) stdenv;
-in
+{
+  pkgs,
+  lib,
+  isGraphicalLinux,
+  ...
+}:
 {
   programs = {
-    brave = lib.mkIf stdenv.isLinux {
+    brave = lib.mkIf isGraphicalLinux {
       enable = true;
 
       commandLineArgs = [
@@ -16,7 +18,7 @@ in
       ];
     };
 
-    google-chrome = lib.mkIf stdenv.isLinux {
+    google-chrome = lib.mkIf isGraphicalLinux {
       enable = true;
     };
 

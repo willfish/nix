@@ -48,6 +48,7 @@ export class TeamManager {
     return Promise.all([...this.records.values()].map(async (record) => ({
       id: record.id, agent: record.agent, paneId: record.paneId, cwd: record.cwd,
       pending: record.pending, ...await this.state(record),
+      ...(record.cleanupError ? { status: 'error', cleanupError: record.cleanupError } : {}),
     })));
   }
   get(id) {
@@ -58,6 +59,8 @@ export class TeamManager {
   }
   async read(id) {
     const record = this.get(id);
+    if (record.cleanupError) return { status: 'error', memberId: record.id, paneId: record.paneId,
+      cleanupError: record.cleanupError, text: 'Pane cleanup pending; close this member' };
     return await readJson(join(record.dir, 'last.json'), record.runId) ?? { status: 'running', text: '' };
   }
   async questions() {
@@ -74,6 +77,7 @@ export class TeamManager {
     // Closing an owned pane terminates its whole PTY, not just the launcher process.
     try { await this.panes.close(record.paneId); }
     catch (cause) {
+      record.cleanupError = String(cause?.message ?? cause);
       throw Object.assign(new Error(`Pane cleanup failed for ${record.id}: ${cause.message}`, { cause }), {
         memberId: record.id, cleanupError: cause.message,
       });
@@ -98,6 +102,7 @@ export class TeamManager {
       }
       // A split may have succeeded while its setup/cleanup failed before a record existed.
       for (const paneId of [...this.panes.owned]) {
+        if ([...this.records.values()].some(record => record.paneId === paneId)) continue;
         try { await this.panes.close(paneId); } catch (error) { errors.push(error); }
       }
       if (errors.length) throw new AggregateError(errors, 'Some team panes could not be closed');
@@ -146,7 +151,7 @@ export class TeamManager {
         let retired = false;
         for (const candidate of this.records.values()) {
           const state = await this.state(candidate);
-          if (candidate.pending || candidate.steering || candidate.retiring || state?.question || (!state?.idle && !state?.stopped)) continue;
+          if (candidate.cleanupError || candidate.pending || candidate.steering || candidate.retiring || state?.question || (!state?.idle && !state?.stopped)) continue;
           candidate.retiring = true; // Reserve before any await; send/steer cannot race retirement.
           try {
             if (!state?.stopped) {
@@ -167,7 +172,7 @@ export class TeamManager {
       const entry = { id: runId.slice(0, 8), runId, dir, agent, cwd, pending: true, closed: false };
       try {
         await prepareRun(dir, { runId, agent });
-        entry.paneId = await this.panes.open(cwd, { PI_TEAM_CHILD: '1' }, `pi: ${agent} [${entry.id}]`);
+        entry.paneId = await this.panes.open(cwd, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: agent }, `pi: ${agent} [${entry.id}]`);
         this.records.set(entry.id, entry);
         await atomicJson(join(dir, 'request.json'), envelope(runId, {
           parentPid: process.pid, paneId: entry.paneId, runId, agent,
@@ -177,6 +182,13 @@ export class TeamManager {
           text: launchCommand(launch), keys: ['Enter'] });
         return entry;
       } catch (error) {
+        // open() can allocate successfully before both setup and rollback fail.
+        if (!entry.paneId && error?.paneId && this.panes.owned.has(error.paneId)) {
+          entry.paneId = error.paneId;
+          entry.cleanupError = error.cleanupError;
+          this.records.set(entry.id, entry);
+        }
+        entry.pending = false;
         if (entry.paneId) await this.#close(entry);
         else await rm(dir, { recursive: true, force: true });
         throw error;
@@ -198,6 +210,7 @@ export class TeamManager {
   }
   async send(id, text, options = {}) {
     const record = this.get(id);
+    if (record.cleanupError) throw new Error('Pane cleanup pending; close this member');
     if (record.pending) throw new Error('Agent has a pending task; use steer');
     record.pending = true;
     let dispatched = false;
@@ -216,6 +229,7 @@ export class TeamManager {
     if (!['coordinator', 'human'].includes(source)) throw new Error('Invalid answer source');
     if (typeof text !== 'string' || !text.trim()) throw new Error('Answer text is required');
     const record = this.get(id);
+    if (record.cleanupError) throw new Error('Pane cleanup pending; close this member');
     if (record.pending) throw new Error('Agent already has a pending execution segment');
     record.pending = true;
     let dispatched = false;
@@ -239,6 +253,7 @@ export class TeamManager {
   async steer(id, text, options = {}) {
     if (options.signal?.aborted) throw new Error('Subagent was aborted');
     const record = this.get(id);
+    if (record.cleanupError) throw new Error('Pane cleanup pending; close this member');
     record.steering = (record.steering ?? 0) + 1;
     let dispatched = false;
     try {

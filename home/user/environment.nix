@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  isGraphicalLinux,
   ...
 }:
 let
@@ -17,11 +18,8 @@ let
 in
 {
   home.sessionVariables = {
-    BROWSER = "brave";
-    DEFAULT_BROWSER = "brave";
     EDITOR = "nvim";
     GIT_PAGER = "delta";
-    TERMINAL = "ghostty";
     # Work around ssh client rejecting Nix store ssh_config snippets
     # (e.g. systemd's 20-systemd-ssh-proxy.conf owned by nobody:0444).
     # Without this, git@github.com operations fail with "Bad owner or
@@ -38,6 +36,11 @@ in
     RUBYOPT = "--enable-yjit";
     VISUAL = "nvim";
     fish_greeting = "";
+  }
+  // lib.optionalAttrs (isGraphicalLinux || pkgs.stdenv.isDarwin) {
+    BROWSER = "brave";
+    DEFAULT_BROWSER = "brave";
+    TERMINAL = "ghostty";
   };
 
   home.sessionPath = [
@@ -45,12 +48,12 @@ in
     "$HOME/go/bin"
   ];
 
-  systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
+  systemd.user.sessionVariables = lib.mkIf isGraphicalLinux {
     PATH = graphicalSessionPath;
     SHELL = "/run/current-system/sw/bin/fish";
   };
 
-  home.activation.importGraphicalSessionEnvironment = lib.mkIf pkgs.stdenv.isLinux (
+  home.activation.importGraphicalSessionEnvironment = lib.mkIf isGraphicalLinux (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       systemdStatus=$(${pkgs.systemd}/bin/systemctl --user is-system-running 2>&1 || true)
 

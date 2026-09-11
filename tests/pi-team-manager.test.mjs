@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { TeamManager, CHILD_EXTENSION, launchCommand, shellQuote, teamAvailable } from '../home/config/pi/extensions/subagent/team.js';
 import { atomicJson, envelope, readJson } from '../home/config/pi/extensions/subagent/protocol.js';
+import { Jobs } from '../home/config/pi/extensions/subagent/jobs.js';
 
 async function until(predicate) {
   const deadline = Date.now() + 3000;
@@ -134,16 +135,31 @@ test('launch command safely quotes every argument and clears only stale Pi metad
   const launch = launchCommand({ command: process.execPath, args: ['-e', 'console.log(JSON.stringify({args:process.argv.slice(1),env:process.env}))', '--', ...args] });
   const stale = { PI_SESSION_ID: 'old', PI_SESSION_FILE: 'old', PI_PROVIDER: 'old', PI_MODEL: 'old', PI_REASONING_LEVEL: 'old' };
   const output = JSON.parse(execFileSync('/bin/sh', ['-c', launch], { encoding: 'utf8', env: {
-    ...process.env, ...stale, HERDR_PANE_ID: 'new-child', HERDR_SOCKET_PATH: '/socket', KEEP_ME: 'yes',
+    PATH: process.env.PATH, ...stale, HERDR_PANE_ID: 'new-child', HERDR_SOCKET_PATH: '/socket', KEEP_ME: 'yes',
+    PI_TEAM_ROLE: 'security-reviewer',
   } }));
   assert.deepEqual(output.args, args);
   for (const key of Object.keys(stale)) assert.equal(output.env[key], undefined);
   assert.equal(output.env.PI_TEAM_CHILD, '1');
+  assert.equal(output.env.PI_TEAM_ROLE, 'security-reviewer');
   assert.equal(output.env.HERDR_PANE_ID, 'new-child');
   assert.equal(output.env.HERDR_SOCKET_PATH, '/socket');
   assert.equal(output.env.KEEP_ME, 'yes');
   assert.throws(() => shellQuote('bad\0arg'), /Invalid shell argument/);
   assert.throws(() => shellQuote(123), /Invalid shell argument/);
+});
+
+test('allocated persona role reaches the launched child environment unchanged', async t => {
+  const f = await fixture(t);
+  await f.run({ agent: 'security-reviewer' });
+  const paneEnv = f.panes.opened[0].env;
+  assert.deepEqual(paneEnv, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'security-reviewer' });
+  const launch = launchCommand({ command: process.execPath,
+    args: ['-e', 'console.log(JSON.stringify({child:process.env.PI_TEAM_CHILD,role:process.env.PI_TEAM_ROLE}))'] });
+  const childEnv = JSON.parse(execFileSync('/bin/sh', ['-c', launch], {
+    encoding: 'utf8', env: { PATH: process.env.PATH, ...paneEnv },
+  }));
+  assert.deepEqual(childEnv, { child: '1', role: 'security-reviewer' });
 });
 
 test('availability requires interactive Herdr parent and refuses recursive children', () => {
@@ -161,7 +177,7 @@ test('startup creates private IPC, launches interactive child, retains result an
   assert.equal((await stat(record.dir)).mode & 0o777, 0o700);
   assert.equal((await readJson(join(record.dir, 'request.json'), record.runId)).agent, 'builder');
   assert.deepEqual(f.invocations, [['--extension', CHILD_EXTENSION, '--team-run', record.dir]]);
-  assert.deepEqual(f.panes.opened[0], { paneId: first.paneId, cwd: "/work/it's a project", env: { PI_TEAM_CHILD: '1' }, label: `pi: builder [${first.memberId}]` });
+  assert.deepEqual(f.panes.opened[0], { paneId: first.paneId, cwd: "/work/it's a project", env: { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder' }, label: `pi: builder [${first.memberId}]` });
   assert.deepEqual(f.panes.calls[0].params.keys, ['Enter']);
   assert.equal(f.panes.calls[0].params.text, launchCommand({ command: '/path with spaces/pi', args: ['--model', "model's name", ...f.invocations[0]] }));
   assert.equal(first.status, 'completed');
@@ -476,4 +492,71 @@ test('unacknowledged steering times out and closes the owned member', async (t) 
   await assert.rejects(f.manager.steer(member.memberId, 'ambiguous delivery'), /timed out/);
   assert.equal(f.manager.records.size, 0);
   assert.deepEqual(f.panes.closed, [member.paneId]);
+});
+
+
+for (const cancelDuringOpen of [false, true]) test(`allocated pane debt holds job capacity, cancelled=${cancelDuringOpen}`, async t => {
+  const f = await fixture(t, { capacity: 1 });
+  let release, entered;
+  const gate = new Promise(resolve => { release = resolve; });
+  const opening = new Promise(resolve => { entered = resolve; });
+  f.panes.open = async () => {
+    f.panes.owned.add('orphan'); entered(); await gate;
+    throw Object.assign(new Error('setup failed'), { paneId: 'orphan', cleanupError: 'denied' });
+  };
+  f.panes.closeError = new Error('denied');
+  const jobs = new Jobs({ capacity: 1 });
+  t.after(() => jobs.shutdown());
+  const id = jobs.start({ tasks: [{ agent: 'builder' }], run: (_task, _index, _previous, signal) => f.run({ signal }),
+    cancelMember: memberId => f.manager.close(memberId) });
+  await opening;
+  if (cancelDuringOpen) jobs.cancel(id);
+  release();
+  await until(() => jobs.snapshot(id).tasks[0].cleanupError);
+  const debt = jobs.snapshot(id).tasks[0].result.memberId;
+  assert.equal((await f.manager.list())[0].id, debt);
+  let launched = false;
+  const next = jobs.start({ tasks: [{ agent: 'next' }], run: async () => {
+    launched = true; return { status: 'completed', text: 'done' };
+  } });
+  await delay(10);
+  assert.equal(launched, false);
+  f.panes.closeError = undefined;
+  await f.manager.close(debt);
+  jobs.memberClosed(debt);
+  assert.equal((await jobs.wait(next)).status, 'completed');
+  assert.equal(launched, true);
+});
+
+test('allocated pane setup and cleanup failure retains member debt and capacity', async t => {
+  const f = await fixture(t, { capacity: 1 });
+  f.panes.open = async () => {
+    f.panes.owned.add('orphan');
+    throw Object.assign(new Error('setup and cleanup failed'), { paneId: 'orphan', cleanupError: 'close denied' });
+  };
+  f.panes.closeError = new Error('close denied');
+  let debt;
+  await assert.rejects(f.run(), error => {
+    debt = error.memberId;
+    assert.ok(debt);
+    assert.match(error.cleanupError, /close denied/);
+    return true;
+  });
+  const [member] = await f.manager.list();
+  assert.equal(member.id, debt);
+  assert.equal(member.paneId, 'orphan');
+  assert.equal(member.status, 'error');
+  assert.match(member.cleanupError, /close denied/);
+  assert.equal(member.pending, false);
+  assert.equal((await f.manager.read(debt)).cleanupError, 'close denied');
+  await assert.rejects(f.manager.send(debt, 'task'), /cleanup pending/);
+  await assert.rejects(f.manager.steer(debt, 'guidance'), /cleanup pending/);
+  await assert.rejects(f.manager.answer(debt, 'question', 'answer'), /cleanup pending/);
+  await assert.rejects(f.run(), /busy/);
+  await assert.rejects(f.manager.close(debt), /close denied/);
+  assert.equal((await f.manager.list()).length, 1);
+  f.panes.closeError = undefined;
+  await f.manager.close(debt);
+  assert.deepEqual(await f.manager.list(), []);
+  assert.equal(f.panes.owned.size, 0);
 });

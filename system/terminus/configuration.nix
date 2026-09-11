@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, immichPkgs, ... }:
 
 {
   system.stateVersion = "26.05";
@@ -16,6 +16,10 @@
 
   services.immich = {
     enable = true;
+    # The release-channel Immich 2 package is insecure. Keep the system and
+    # PostgreSQL on the release channel, with the server/ML pair from the
+    # existing locked unstable input. See the migration gate in host operations.
+    package = immichPkgs.immich;
     host = "0.0.0.0";
     port = 2283;
     openFirewall = true;

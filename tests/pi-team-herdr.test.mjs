@@ -201,6 +201,8 @@ test("failed open cleanup retains ownership for later retry", async () => {
   };
   await assert.rejects(state.panes.open("/repo", {}, "label"), (error) => {
     assert.ok(error instanceof AggregateError);
+    assert.equal(error.paneId, 'w1:p1');
+    assert.equal(error.cleanupError, 'close failed');
     assert.deepEqual(error.errors.map((e) => e.message), ["rename failed", "close failed"]);
     return true;
   });

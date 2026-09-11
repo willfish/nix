@@ -14,6 +14,8 @@ chmod 700 "$OUT_DIR"
 import asyncio
 import json
 import os
+import re
+import tempfile
 import sys
 import urllib.request
 from contextlib import asynccontextmanager
@@ -111,7 +113,10 @@ async def main():
     ) as ws:
         res = await cdp_call(ws, 1, "Storage.getCookies")
         for c in res.get("cookies") or []:
-            if c.get("name") == "d" and "slack" in c.get("domain", ""):
+            if c.get("name") == "d" and re.fullmatch(
+                r"\.?(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*slack\.com",
+                c.get("domain", ""), re.IGNORECASE,
+            ):
                 cookie_d = c.get("value")
                 break
     if not cookie_d or not str(cookie_d).startswith("xoxd-"):
@@ -167,15 +172,12 @@ async def main():
     if not xoxc:
         raise SystemExit("failed to find xoxc token from Slack client page")
 
-    OUT.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    OUT.write_text(
-        f"SLACK_COOKIE_D={cookie_d}\nSLACK_XOXC={xoxc}\n",
-        encoding="utf-8",
-    )
-    os.chmod(OUT, 0o600)
-    # Do not print secrets
-    print(f"wrote {OUT} (xoxc+cookie d)")
-    # quick auth check
+    # Literal key/value data, never shell syntax. Reject header/line injection.
+    if not re.fullmatch(r"xoxc-[A-Za-z0-9%._-]+", xoxc) or not re.fullmatch(
+        r"xoxd-[A-Za-z0-9%._/+=-]+", cookie_d
+    ):
+        raise SystemExit("invalid Slack credential format")
+    # Validate before replacing any previously working session.
     import urllib.request as u
 
     req = u.Request(
@@ -189,7 +191,20 @@ async def main():
     with u.urlopen(req, timeout=30) as resp:
         payload = json.loads(resp.read().decode())
     if not payload.get("ok"):
-        raise SystemExit(f"auth.test failed: {payload.get('error')}")
+        raise SystemExit("auth.test failed; previous session retained")
+    OUT.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(OUT.parent, 0o700)
+    fd, temporary = tempfile.mkstemp(prefix=".tokens-", dir=OUT.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(f"SLACK_COOKIE_D={cookie_d}\nSLACK_XOXC={xoxc}\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, OUT)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    print(f"wrote {OUT} (xoxc+cookie d)")
     print(
         f"auth ok user={payload.get('user')} team={payload.get('team')}"
     )
@@ -203,25 +218,28 @@ if [ "${SLACK_UPDATE_SOPS:-1}" = "1" ] && command -v sops >/dev/null 2>&1; then
   repo="${SLACK_DOTFILES_ROOT:-$HOME/.dotfiles}"
   secrets_file="$repo/secrets/env.yaml"
   if [ -r "$secrets_file" ] && [ -r "$OUT_FILE" ]; then
-    # shellcheck disable=SC1090
-    set -a
-    # shellcheck disable=SC1090
-    . "$OUT_FILE"
-    set +a
-    if [ -n "${SLACK_XOXC:-}" ] && [ -n "${SLACK_COOKIE_D:-}" ]; then
-      python3 - <<'PY'
-import json, os, subprocess, pathlib
+    "$PYTHON_BIN" - <<'PY'
+import json, os, re, subprocess, pathlib
 repo = pathlib.Path(os.environ.get("SLACK_DOTFILES_ROOT", pathlib.Path.home() / ".dotfiles"))
 secrets = repo / "secrets" / "env.yaml"
-for key in ("SLACK_XOXC", "SLACK_COOKIE_D"):
-    val = os.environ[key]
-    subprocess.check_call(
-        ["sops", "set", str(secrets), f'["{key}"]', json.dumps(val)],
-        cwd=repo,
+values = {}
+for line in pathlib.Path(os.environ["OUT_FILE"]).read_text().splitlines():
+    key, separator, value = line.partition("=")
+    if separator and key in ("SLACK_XOXC", "SLACK_COOKIE_D"):
+        values[key] = value
+for key, pattern in (
+    ("SLACK_XOXC", r"xoxc-[A-Za-z0-9%._-]+"),
+    ("SLACK_COOKIE_D", r"xoxd-[A-Za-z0-9%._/+=-]+"),
+):
+    if not re.fullmatch(pattern, values.get(key, "")):
+        raise SystemExit("invalid persisted Slack credentials")
+for key, val in values.items():
+    subprocess.run(
+        ["sops", "set", "--value-stdin", str(secrets), f'["{key}"]'],
+        input=json.dumps(val), text=True, check=True, cwd=repo,
     )
     print(f"sops updated {key}")
 PY
-      echo "note: run home-manager switch to re-render ~/.config/sops-nix/secrets"
-    fi
+    echo "note: run home-manager switch to re-render ~/.config/sops-nix/secrets"
   fi
 fi
