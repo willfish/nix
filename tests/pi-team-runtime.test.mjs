@@ -127,7 +127,7 @@ function assertSchemas(report) {
     assert.equal(schema.properties.skills.items.type, 'string');
   }
   assert.deepEqual(schemas.team.required, ['action']);
-  assert.deepEqual(schemas.team.properties.action.enum, ['list', 'read', 'send', 'steer', 'close']);
+  assert.deepEqual(schemas.team.properties.action.enum, ['list', 'read', 'send', 'steer', 'close', 'questions', 'answer', 'ask', 'wait', 'cancel']);
 }
 
 function assertSkillHistory(history, skill) {

@@ -32,6 +32,8 @@ import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
 import { withSkills } from "./skills.js";
 import { TeamManager, teamAvailable } from "./team.js";
 import { registerTeamControls, DELEGATION_POLICY } from "./controls.js";
+import { Jobs } from "./jobs.js";
+import { segmentResult, jobToolResult, registerParentBatchGuard } from "./job-results.js";
 
 const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
@@ -161,6 +163,11 @@ interface SingleResult {
 	stopReason?: string;
 	errorMessage?: string;
 	step?: number;
+	status?: string;
+	text?: string;
+	memberId?: string;
+	cleanupError?: string;
+	question?: { id: string; text: string; requiresUser: boolean; commandId: string };
 }
 
 interface SubagentDetails {
@@ -352,26 +359,7 @@ async function runSingleAgent(
 				invocation: (bridgeArgs: string[]) => getPiInvocation([...interactiveArgs, ...bridgeArgs]),
 				onProgress: (messages: Message[]) => { currentResult.messages = messages; emitUpdate(); },
 			});
-			currentResult.messages = result.messages ?? [];
-			currentResult.exitCode = result.status === "completed" ? 0 : 1;
-			currentResult.stopReason = result.stopReason;
-			currentResult.errorMessage = result.errorMessage;
-			for (const message of currentResult.messages) {
-				if (message.role !== "assistant") continue;
-				currentResult.usage.turns++;
-				const usage = message.usage;
-				if (usage) {
-					for (const key of ["input", "output", "cacheRead", "cacheWrite"] as const)
-						currentResult.usage[key] += usage[key] || 0;
-					currentResult.usage.cost += usage.cost?.total || 0;
-					currentResult.usage.contextTokens = usage.totalTokens || 0;
-				}
-			}
-			currentResult.messages.push({ role: "assistant", content: [{ type: "text",
-				text: `${result.text || result.errorMessage || "(no output)"}\n\nTeam member: ${result.memberId} (${agentName}); use team send/read/steer for follow-up.` }],
-			} as Message);
-			emitUpdate();
-			return currentResult;
+			return segmentResult({ ...currentResult, messages: [] }, result);
 		}
 
 		args.push(`Task: ${task}`);
@@ -462,6 +450,8 @@ async function runSingleAgent(
 	} catch (error) {
 		currentResult.exitCode = 1;
 		currentResult.errorMessage = error instanceof Error ? error.message : String(error);
+		currentResult.memberId = (error as any)?.memberId;
+		currentResult.cleanupError = (error as any)?.cleanupError;
 		currentResult.stopReason = signal?.aborted ? "aborted" : "error";
 		return currentResult;
 	} finally {
@@ -515,15 +505,23 @@ const SubagentParams = Type.Object({
 
 export default function (pi: ExtensionAPI) {
 	let team: TeamManager | undefined;
+	let jobs: Jobs | undefined;
+	const controls = registerTeamControls(pi, () => team, Type, StringEnum, () => jobs);
+	registerParentBatchGuard(pi, () => !!team);
 	pi.on("session_start", (_event, ctx) => {
-		if (teamAvailable(ctx)) team = new TeamManager();
+		if (teamAvailable(ctx)) {
+			team = new TeamManager();
+			jobs = new Jobs({ onChange: (snapshot: any) => controls.changed(snapshot) });
+		}
 	});
 	pi.on("session_shutdown", async () => {
+		controls.reset();
+		jobs?.shutdown();
+		jobs = undefined;
 		const previous = team;
 		team = undefined;
 		if (previous) await previous.shutdown();
 	});
-	registerTeamControls(pi, () => team, Type, StringEnum);
 	const registerSubagent: typeof pi.registerTool = (tool) => pi.registerTool({
 		...tool,
 		async execute(...args) {
@@ -618,6 +616,33 @@ export default function (pi: ExtensionAPI) {
 							details: makeDetails(hasChain ? "chain" : hasTasks ? "parallel" : "single")([]),
 						};
 				}
+			}
+
+			if (team && jobs) {
+				const runtime = team;
+				const registry = jobs;
+				const tasks = hasChain ? params.chain! : hasTasks ? params.tasks! : [{ agent: params.agent!, task: params.task!, cwd: params.cwd }];
+				if (params.tasks && tasks.length > MAX_PARALLEL_TASKS) throw new Error(`Too many parallel tasks. Max is ${MAX_PARALLEL_TASKS}.`);
+				const mode = hasChain ? "chain" : hasTasks ? "parallel" : "single";
+				const jobId = registry.start({
+					mode, tasks,
+					run: async (task: any, index: number, previous: string, jobSignal: AbortSignal) => {
+						const text = mode === "chain" ? task.task.replace(/\{previous\}/g, previous) : task.task;
+						const result = await runSingleAgent(ctx.cwd,
+							{ ...dispatchDefaults, skills: [...(params.skills ?? []), ...(task.skills ?? [])] },
+							agents, task.agent, text, task.cwd, mode === "chain" ? index + 1 : undefined,
+							jobSignal, undefined, makeDetails(mode));
+						return { ...result, status: result.status ?? (result.exitCode === 0 ? "completed" : "error"),
+							text: result.text ?? getResultOutput(result) };
+					},
+					resume: async (outcome: any, text: string, source: string, jobSignal: AbortSignal) =>
+						segmentResult(outcome, await runtime.answer(outcome.memberId, outcome.question.id, text, { source, signal: jobSignal })),
+					cancelMember: (id: string) => runtime.close(id),
+					health: (id: string) => runtime.health(id),
+				});
+				const snapshot = await registry.wait(jobId, { signal, timeoutMs: 30000 });
+				controls.visible(snapshot);
+				return jobToolResult(snapshot);
 			}
 
 			if (params.chain && params.chain.length > 0) {
@@ -840,6 +865,7 @@ export default function (pi: ExtensionAPI) {
 
 		renderResult(result, { expanded }, theme, _context) {
 			const details = result.details as SubagentDetails | undefined;
+			if ((details as any)?.job) return new Text(result.content.filter((part) => part.type === "text").map((part: any) => part.text).join("\n"), 0, 0);
 			if (!details || details.results.length === 0) {
 				const text = result.content[0];
 				return new Text(text?.type === "text" ? text.text : "(no output)", 0, 0);

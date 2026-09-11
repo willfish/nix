@@ -442,7 +442,9 @@ test('shutdown reports close failures and preserves ownership for a retry', asyn
   f.panes.closeError = new Error('transport unavailable');
   await assert.rejects(f.manager.shutdown(), (error) => {
     assert.ok(error instanceof AggregateError);
-    assert.ok(error.errors.every((item) => item.message === 'transport unavailable'));
+    assert.ok(error.errors.every((item) => item.message.includes('transport unavailable')));
+    assert.equal(error.errors[0].memberId, result.memberId);
+    assert.equal(error.errors[0].cleanupError, 'transport unavailable');
     return true;
   });
   assert.ok(f.panes.owned.has(result.paneId));

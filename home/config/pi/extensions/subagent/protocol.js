@@ -27,9 +27,9 @@ export async function prepareRun(dir, request) {
   await atomicJson(join(dir, 'request.json'), envelope(request.runId, { parentPid: process.pid, ...request }));
   await atomicJson(join(dir, 'lease.json'), envelope(request.runId, { updated: Date.now() }));
 }
-export async function command(dir, runId, kind, text) {
+export async function command(dir, runId, kind, text, extra = {}) {
   const id = randomUUID();
-  await atomicJson(join(dir, 'commands', `${id}.json`), envelope(runId, { id, kind, text, created: Date.now() }));
+  await atomicJson(join(dir, 'commands', `${id}.json`), envelope(runId, { ...extra, id, kind, text, created: Date.now() }));
   return id;
 }
 export function assistantResult(messages) {

@@ -60,14 +60,34 @@ export class TeamManager {
     const record = this.get(id);
     return await readJson(join(record.dir, 'last.json'), record.runId) ?? { status: 'running', text: '' };
   }
+  async questions() {
+    const members = await this.list();
+    return members.filter(member => member.question).map(member => ({ ...member.question, memberId: member.id }));
+  }
+  async health(id) {
+    const record = this.records.get(id);
+    if (!record || record.closed || !await this.panes.exists(record.paneId)) return false;
+    const state = await this.state(record);
+    return !!state && !state.stopped && Date.now() - state.updated <= 15000 && !!state.question;
+  }
   async #close(record) {
     // Closing an owned pane terminates its whole PTY, not just the launcher process.
-    await this.panes.close(record.paneId);
+    try { await this.panes.close(record.paneId); }
+    catch (cause) {
+      throw Object.assign(new Error(`Pane cleanup failed for ${record.id}: ${cause.message}`, { cause }), {
+        memberId: record.id, cleanupError: cause.message,
+      });
+    }
     record.closed = true;
     this.records.delete(record.id);
     await rm(record.dir, { recursive: true, force: true });
   }
-  close(id) { return this.#serialize(() => this.#close(this.get(id))); }
+  close(id) {
+    return this.#serialize(() => {
+      const record = this.records.get(id);
+      return record ? this.#close(record) : undefined;
+    });
+  }
   async shutdown() {
     this.stopped = true;
     clearInterval(this.leaseTimer);
@@ -126,7 +146,7 @@ export class TeamManager {
         let retired = false;
         for (const candidate of this.records.values()) {
           const state = await this.state(candidate);
-          if (candidate.pending || candidate.steering || candidate.retiring || (!state?.idle && !state?.stopped)) continue;
+          if (candidate.pending || candidate.steering || candidate.retiring || state?.question || (!state?.idle && !state?.stopped)) continue;
           candidate.retiring = true; // Reserve before any await; send/steer cannot race retirement.
           try {
             if (!state?.stopped) {
@@ -191,17 +211,45 @@ export class TeamManager {
       throw error;
     } finally { record.pending = false; }
   }
+  async answer(id, questionId, text, { source = 'coordinator', ...options } = {}) {
+    if (options.signal?.aborted) throw new Error('Subagent was aborted');
+    if (!['coordinator', 'human'].includes(source)) throw new Error('Invalid answer source');
+    if (typeof text !== 'string' || !text.trim()) throw new Error('Answer text is required');
+    const record = this.get(id);
+    if (record.pending) throw new Error('Agent already has a pending execution segment');
+    record.pending = true;
+    let dispatched = false;
+    try {
+      const state = await this.state(record);
+      const question = state?.question;
+      if (!question || question.id !== questionId || state.commandId) throw new Error('Stale or unsettled question');
+      if (question.requiresUser && source !== 'human') throw new Error('Question requires a human answer');
+      const commandId = await command(record.dir, record.runId, 'answer', text, {
+        questionId, questionCommandId: question.commandId, source,
+      });
+      dispatched = true;
+      const result = await this.#wait(record, `results/${commandId}.json`, options);
+      if (result.commandId !== commandId) throw new Error('Team result command mismatch');
+      return { ...result, memberId: record.id, paneId: record.paneId };
+    } catch (error) {
+      if (dispatched) await this.#cancelAndClose(record);
+      throw error;
+    } finally { record.pending = false; }
+  }
   async steer(id, text, options = {}) {
     if (options.signal?.aborted) throw new Error('Subagent was aborted');
     const record = this.get(id);
     record.steering = (record.steering ?? 0) + 1;
+    let dispatched = false;
     try {
+      if ((await this.state(record))?.question) throw new Error('Coordinator question pending; answer or cancel it first');
       const commandId = await command(record.dir, record.runId, 'steer', text);
+      dispatched = true;
       const result = await this.#wait(record, `results/${commandId}.json`, { ...options, timeoutMs: this.startupMs });
       return { ...result, memberId: record.id };
     } catch (error) {
       // Delivery is ambiguous after publication. Stop the child rather than leave failed guidance queued.
-      await this.#cancelAndClose(record);
+      if (dispatched) await this.#cancelAndClose(record);
       throw error;
     } finally { record.steering--; }
   }
