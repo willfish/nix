@@ -34,6 +34,8 @@
           trash = "[Gmail]/Trash";
           spam = "[Gmail]/Spam";
         };
+        # Gmail SMTP already files Sent; Himalaya must not IMAP-append a second copy.
+        message.send.save-copy = false;
       };
     };
   };
