@@ -272,7 +272,6 @@ def build_labels(entries, snapshots):
         if not pane:
             raise ValueError('Pi label requires a full pane identity')
         records.append((index, key, pane, metadata))
-    workspaces = Counter(meta.get('workspace') for _, _, _, meta in records)
     short_counts = Counter(pane.rsplit(':', 1)[-1] for _, _, pane, _ in records)
     full_counts = Counter(pane for _, _, pane, _ in records)
     # Stable digest lengths expand on a prefix collision, independent of row
@@ -295,37 +294,56 @@ def build_labels(entries, snapshots):
     digest_size = 6
     while len({h[:digest_size] for h in hashes.values()}) < len(hashes):
         digest_size += 1
+    prepared = {}
     for index, key, pane, metadata in records:
         row = rows[index]
         model, thinking = model_thinking(row, metadata)
-        workspace = metadata.get('workspace', '')
+        workspace, tab = metadata.get('workspace', ''), metadata.get('tab', '')
         pieces = ['pi']
         if workspace:
             pieces.append(workspace)
-            if workspaces[workspace] > 1 and metadata.get('tab'):
-                pieces.append(metadata['tab'])
+        if tab and tab != workspace:
+            pieces.append(tab)
         pieces.extend(part for part in (thinking, model) if part)
-        suffix = []
+        flags = []
         if row.get('selected'):
-            suffix.append('selected')
+            flags.append('selected')
         if row.get('team_child'):
-            suffix.append('team')
-        # Multiple rows always carry identity, including collisions caused by
-        # truncation.
-        if not workspace or len(records) > 1:
-            identity = pane if not workspace or short_counts[pane.rsplit(
+            flags.append('team')
+        prepared[index] = (' · '.join(pieces), flags,
+                           bool(workspace or tab), key, pane)
+
+    def render(index, with_identity):
+        body, flags, named, key, pane = prepared[index]
+        suffix = list(flags)
+        if with_identity:
+            identity = pane if not named or short_counts[pane.rsplit(
                 ':', 1)[-1]] > 1 else pane.rsplit(':', 1)[-1]
             if full_counts[pane] > 1:
                 identity += '@' + hashes[key, pane][:digest_size]
             suffix.append(identity)
         tail = (' · ' + ' · '.join(suffix)) if suffix else ''
-        body = ' · '.join(pieces)
-        row['full_label'] = body + tail
+        rows[index]['full_label'] = body + tail
         if display_width(tail) > 50:
-            # Unbounded/malicious pane IDs cannot fit in full. Keep a stable
-            # discriminator.
-            flags = [s for s in suffix[:-1]]
-            flags.append('@' + hashes[key, pane][:digest_size])
-            tail = ' · ' + ' · '.join(flags)
-        row['label'] = _truncate(body, max(0, 55 - display_width(tail))) + tail
-    return rows
+            # Keep the discriminator even when an identity cannot fit in full.
+            tail = ' · ' + ' · '.join(
+                [*flags, '@' + hashes[key, pane][:digest_size]])
+        rows[index]['label'] = _truncate(
+            body, max(0, 55 - display_width(tail))) + tail
+
+    # Selection is transient, so identical names need stable identities even
+    # when only one row currently carries the selected marker.
+    names = Counter(item[0] for item in prepared.values())
+    identified = {index for index, item in prepared.items()
+                  if not item[2] or names[item[0]] > 1}
+    while True:
+        for index in prepared:
+            render(index, index in identified)
+        counts = Counter(rows[index]['label'] for index in prepared)
+        collisions = {index for index in prepared
+                      if counts[rows[index]['label']] > 1} - identified
+        if not collisions:
+            return rows
+        # Adding a suffix shortens the available name width. Check again so
+        # truncation cannot introduce a new ambiguity with another row.
+        identified.update(collisions)

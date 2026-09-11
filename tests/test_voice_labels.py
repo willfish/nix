@@ -187,10 +187,65 @@ class LabelTests(unittest.TestCase):
         legacy = {'harness': 'grok', 'label': 'legacy', 'id': 'old'}
         rows = build_labels(
             [entry, legacy], {entry['socket_key']: self.state()})
-        self.assertEqual(rows[0]['label'], 'pi · dot · medium · gpt-6-astra')
+        self.assertEqual(rows[0]['label'],
+                         'pi · dot · shell · medium · gpt-6-astra')
         self.assertEqual(rows[1], legacy)
         self.assertEqual(rows[0]['id'], 'conversation')
         self.assertNotIn('label', entry)
+
+    def test_named_tab_is_kept_without_workspace_peers(self):
+        polling = row('w44:p1H', model='gpt-6-astra', thinking='medium')
+        other = row('w4D:p3')
+        panes = {
+            **parse_snapshot(payload(pane='w44:p1H',
+                                     workspace='frontend', tab='polling')),
+            **parse_snapshot(payload(pane='w4D:p3', tab='voice')),
+        }
+        state = SnapshotState(panes=panes)
+        for entries in ([polling], [polling, other]):
+            with self.subTest(count=len(entries)):
+                result = build_labels(entries, {polling['socket_key']: state})
+                self.assertEqual(result[0]['label'],
+                                 'pi · frontend · polling · medium · '
+                                 'gpt-6-astra')
+                self.assertNotIn('p1H', result[0]['full_label'])
+
+    def test_different_named_tabs_need_no_pane_suffix(self):
+        entries = [row('w44:p1H'), row('w44:p2N')]
+        panes = {
+            **parse_snapshot(payload(pane='w44:p1H',
+                                     workspace='frontend', tab='polling')),
+            **parse_snapshot(payload(pane='w44:p2N',
+                                     workspace='frontend', tab='stories')),
+        }
+        result = build_labels(entries, {
+            entries[0]['socket_key']: SnapshotState(panes=panes),
+        })
+        self.assertEqual([entry['label'] for entry in result],
+                         ['pi · frontend · polling',
+                          'pi · frontend · stories'])
+
+    def test_tab_without_workspace_still_provides_a_name(self):
+        entry = row()
+        result = build_labels([entry], {
+            entry['socket_key']: self.state(workspace='', tab='polling'),
+        })
+        self.assertEqual(result[0]['label'], 'pi · polling')
+
+    def test_truncated_names_still_get_unique_suffixes(self):
+        entries = [row(), row('w1:p2')]
+        panes = {
+            **parse_snapshot(payload(tab='long tab ' * 10 + 'polling')),
+            **parse_snapshot(payload(pane='w1:p2',
+                                     tab='long tab ' * 10 + 'stories')),
+        }
+        result = build_labels(entries, {
+            entries[0]['socket_key']: SnapshotState(panes=panes),
+        })
+        self.assertNotEqual(result[0]['label'], result[1]['label'])
+        for entry, suffix in zip(result, ('p1', 'p2')):
+            self.assertTrue(entry['label'].endswith(suffix))
+            self.assertLessEqual(display_width(entry['label']), 55)
 
     def test_full_pane_fallback_and_cross_server_discriminator(self):
         entries = [row(), row('w2:p1'), row(key=SocketKey('/b', 2, 3))]
@@ -233,7 +288,7 @@ class LabelTests(unittest.TestCase):
         state = SnapshotState(panes=parse_snapshot(data))
         self.assertEqual(
             build_labels([row()], {row()['socket_key']: state})[0]['label'],
-            'pi · dot · high · provider/model',
+            'pi · dot · shell · high · provider/model',
         )
 
 
