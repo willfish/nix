@@ -54,8 +54,8 @@ in
   # it, so the memory-constrained local Qwen profile never spawns subagent
   # processes. Agent definitions pin no model, so subagents run on whatever
   # Grok/OpenAI model the session is using.
-  home.file.".pi/agent/extensions/subagent".source =
-    "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent";
+  # Adapted pinned upstream example: interactive herdr teams and persona skills.
+  home.file.".pi/agent/extensions/subagent".source = ../config/pi/extensions/subagent;
   # Pinned upstream fuzzy history overlay. Enter restores without submitting.
   # Both launchers share code, but history/index/settings follow getAgentDir().
   home.file.".pi/agent/extensions/prompt-history".source = promptHistory;
@@ -63,6 +63,9 @@ in
   home.file.".pi/agent/agents/planner.md".source = ../config/pi/agents/planner.md;
   home.file.".pi/agent/agents/reviewer.md".source = ../config/pi/agents/reviewer.md;
   home.file.".pi/agent/agents/worker.md".source = ../config/pi/agents/worker.md;
+  home.file.".pi/agent/agents/architect.md".source = ../config/pi/agents/architect.md;
+  home.file.".pi/agent/agents/builder.md".source = ../config/pi/agents/builder.md;
+  home.file.".pi/agent/agents/sceptic.md".source = ../config/pi/agents/sceptic.md;
   home.file.".pi/agent/prompts/implement.md".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts/implement.md";
   home.file.".pi/agent/prompts/scout-and-plan.md".source =
