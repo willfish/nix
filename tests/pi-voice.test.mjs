@@ -614,7 +614,7 @@ if (existsSync(extensionPath)) {
     const f = await managed(t);
     await until(() => f.scheduler.timers.size);
     for (const fields of [{ bridge_id: 'old' }, { activation: f.target().activation - 1 }, { pid: process.pid + 1 },
-      { session: 'old' }, { token: 'old' }, { harness: 'grok' }, { bridge_id: undefined }, { activation: undefined }]) {
+      { session: 'old' }, { token: 'old' }, { harness: 'unsupported' }, { bridge_id: undefined }, { activation: undefined }]) {
       assert.equal((await f.request('stage', { text: 'no', ...fields })).ok, false);
       assert.equal((await f.request('submit', fields)).ok, false);
     }

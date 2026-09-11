@@ -43,7 +43,7 @@ def presentation(status):
     retained = bool(status.get("retained"))
     usable = connected and not blocked and not retained
     harness = public_label(status.get("harness") or "Codex", 30)
-    harness = {"codex": "Codex", "grok": "Grok", "pi": "Pi",
+    harness = {"codex": "Codex", "pi": "Pi",
                "qwen-pi": "Qwen Pi"}.get(harness, harness)
     glyph = "microphone"
     label, colour = {

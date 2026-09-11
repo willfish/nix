@@ -1,6 +1,8 @@
 # Local agent voice on Andromeda and Foundation
 
-One local recorder, tray and pair of speech engines serve Codex, Grok and Pi.
+One local recorder, tray and pair of speech engines serve Pi and Qwen Pi.
+Shared services and control commands retain the historical `codex-voice` name;
+they do not install or require the Codex CLI.
 Whisper small.en recognizes speech with Silero VAD; audio.cpp runs Qwen3-TTS
 0.6B with two pinned Samantha references. Andromeda uses CUDA for TTS and
 NVIDIA Vulkan for Whisper. Foundation uses Radeon Vulkan; its live microphone
@@ -19,25 +21,19 @@ The compatibility launchers remain available:
 
 | Launcher | Coding session |
 | --- | --- |
-| `codex-voice` | Existing Codex wrapper and provider configuration |
-| `grok-voice` | Existing Grok wrapper with local, in-process execution |
 | `pi-voice` | Normal Pi profile, providers and MCPs |
 | `qwen-pi-voice` | Existing local Qwen Pi profile, tuning and MCPs |
 
 Pass normal interactive options, for example `codex-voice resume SESSION_ID`
 or `pi-voice --continue`. Use `--` before options that conflict with a voice
-control command. Noninteractive print/RPC/agent modes are excluded. Grok uses
-`--no-leader` so its hooks inherit this launcher's token without a separate
-daemon. Codex and Grok still require their voice launchers; their ordinary
-launches and voice behavior are unchanged.
+control command. Noninteractive print/RPC/agent modes are excluded.
 
 Each attached session registers its process, pane and conversation. The first
 ready non-team Pi session is selected automatically only when selection has
 not yet been initialized. Selection stays sticky: new Pi sessions and keyboard
 focus never steal it. After the selected session disappears, another session
 is not silently chosen. Select a destination manually in the Agent Voice tray's
-**Voice session** dropdown or with **Super+Shift+V**. Codex and Grok voice
-launchers retain their existing launch-selection behavior.
+**Voice session** dropdown or with **Super+Shift+V**.
 
 Labels identify the harness, workspace/session and pane; hover for full details.
 Only the selected session receives dictation. **Show team members** reveals
@@ -45,7 +41,7 @@ Pi team children, which are hidden by default and never selected automatically.
 A manually selected child remains visible even with the toggle off and can
 receive dictation, but it is always silent: automatic speech and manual replay
 are disabled. Only ordinary Pi/orchestrator sessions speak for Pi teams.
-Codex, Grok, Pi and Qwen Pi share the same selector.
+Pi and Qwen Pi share the same selector.
 
 Switching sessions cancels recording/playback and preserves retained text in
 memory. Exiting one session cannot stop engines another registered session is
@@ -73,10 +69,8 @@ broadcasts to other registered sessions, including multiple sessions of the
 same harness.
 
 This decision tracks prompts prepared by voice, including subsequent edits.
-Codex and Grok do not expose authoritative editor contents, so entirely
-hand-typed prompts do not trigger automatic submission. Clearing their editor
-manually does not clear voice's tracked draft. Use the tray's Record more
-or `codex-voice record` to add more speech instead of sending a prepared prompt.
+Use the tray's Record more or `codex-voice record` to add more speech
+instead of sending a prepared prompt.
 
 ## Keyboard picker
 
@@ -135,9 +129,9 @@ The icon communicates the current state without repeating it in the menu:
 
 Recording, transcription and prepared dictation take priority over the agent
 activity indicator. Hover for the full status, selected session, microphone,
-mute/clipping warnings and model readiness. Pi/Grok lifecycle events update
+mute/clipping warnings and model readiness. Pi lifecycle events update
 activity promptly; bounded background reads confirm completion and refresh the
-selected process's status about once a second, including Codex and manually
+selected process's status about once a second, including manually
 submitted prompts.
 Slow or unavailable harnesses cannot block the menu or voice cancellation.
 Pi controller discovery and reconnection retry quietly in the background;
@@ -184,18 +178,14 @@ serialized until that happens to avoid overlapping GPU allocations.
 ## Conversation binding and adapters
 
 After `/new` or changing conversations, choose Rebind in the tray (or run
-`codex-voice rebind`). Pi/Grok report their new conversation as a candidate;
-voice keeps the old binding until you explicitly rebind. For Codex, Rebind
-can wait for the first completed reply from the new conversation. Delayed
-callbacks from the previous conversation are excluded after rebinding.
+`codex-voice rebind`). Pi reports its new conversation as a candidate;
+voice keeps the old binding until you explicitly rebind. Delayed callbacks
+from the previous conversation are excluded after rebinding.
 
 Codex uses its per-launch notification callback and Herdr's guarded paste and
 submit operations. The callback accepts only root CLI threads, checked through
 read-only `state_5.sqlite` metadata. Unsupported schemas fail closed for spoken
-replies. Grok's conditional command hooks report root-session lifecycle events;
-provisional Stop replies wait for Herdr's ready state before playback. Grok
-creates its conversation lazily, so the first dictation can be staged before
-its initial session event arrives.
+replies. This legacy adapter does not install the Codex CLI.
 
 Standard Pi discovers `pi-voice.js` from its managed extensions directory;
 `qwen-pi` explicitly loads the same extension because automatic discovery is
@@ -222,7 +212,7 @@ reply is counted after Markdown cleanup and keeps one voice across all chunks.
 Selections apply on the next playback and persist across service restarts.
 Use `codex-voice voice samantha`, `codex-voice voice data`, or another character
 ID for the same control from a terminal. `codex-voice status` lists the IDs.
-The choice is shared by Codex, Grok, Pi and Qwen Pi. Two prompt cache slots retain
+The choice is shared by Pi and Qwen Pi. Two prompt cache slots retain
 recent references without loading additional models. Previous saved Samantha
 modes migrate to the single Samantha selection.
 
@@ -240,7 +230,7 @@ launchers accept the same controls: `interact`, `record`, `send`, `read`, `stop`
 
 The complete written answer stays in the coding TUI. Automatic speech and manual
 replay consume only its final `## Summary` section, using the same shared
-controller for Codex, Grok, Pi and Qwen Pi. `Spoken summary`, `TL;DR` and `TLDR`
+controller for Pi and Qwen Pi. `Spoken summary`, `TL;DR` and `TLDR`
 are accepted aliases; plain colon labels, bold labels and Markdown headings work
 too. For example:
 
@@ -443,9 +433,8 @@ sessions and retries, absolute WAV expiry, late acknowledgements and rebinding.
 Primary-hotkey tests cover the record/transcribe/send flow, busy agents,
 in-progress transcription, cancellation and submission to one selected session.
 Pi tests exercise native staging, changed-editor rejection, final reply filtering
-and socket framing. Grok tests cover its installed hook schema and root events.
-Isolated installed-harness checks verify Pi extension loading and a real Grok
-TUI completion against a loopback mock. Physical microphone and listening trials
+and socket framing. Isolated installed-harness checks verify Pi extension loading.
+Physical microphone and listening trials
 are still needed to assess recognition and speech quality.
 Capture tests use real subprocess fixtures for startup timeout, cancellation,
 stalls, disconnects, partial PCM reads and file-write failures. Tray integration

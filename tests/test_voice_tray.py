@@ -237,14 +237,14 @@ class PresentationTests(unittest.TestCase):
 
     def test_context_shows_harness_microphone_and_model_loading(self):
         view = self.tray.presentation({
-            "pane": "p1", "harness": "Grok", "session_label": "dotfiles",
+            "pane": "p1", "harness": "Pi", "session_label": "dotfiles",
             "models": "loading", "microphone": {
                 "name": "USB microphone", "muted": True,
                 "preferred": "headset", "missing": True,
             },
         })
         context = " ".join(view["context"])
-        self.assertIn("Grok: dotfiles", context)
+        self.assertIn("Pi: dotfiles", context)
         self.assertIn("USB microphone", context)
         self.assertIn("muted", context)
         self.assertIn("preferred microphone unavailable", context)
@@ -299,10 +299,10 @@ class PresentationTests(unittest.TestCase):
 
     def test_responding_has_blue_dots_and_blocked_has_a_distinct_glyph(self):
         responding = self.tray.presentation({
-            "pane": "p1", "harness": "Grok", "responding": True,
+            "pane": "p1", "harness": "Pi", "responding": True,
             "agent_state": "working",
         })
-        self.assertEqual(responding["label"], "Grok is responding")
+        self.assertEqual(responding["label"], "Pi is responding")
         self.assertEqual((responding["colour"], responding["glyph"]),
                          ("blue", "dots"))
         self.assertNotIn("stop", responding["actions"])
@@ -621,7 +621,7 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 state.update(phase="idle", sessions=[
                     {"token": "first", "label": "pi: dotfiles",
                      "selected": True},
-                    {"token": "second", "label": "grok: notes"},
+                    {"token": "second", "label": "qwen-pi: notes"},
                 ])
                 await wait_until(
                     lambda: "select:second" in tray.view["actions"]
@@ -639,7 +639,7 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 sessions = [child.value for child in selector[2]]
                 self.assertEqual(
                     [row[1]["label"].value for row in sessions],
-                    ["pi: dotfiles", "grok: notes"],
+                    ["pi: dotfiles", "qwen-pi: notes"],
                 )
                 self.assertEqual(
                     [row[1]["toggle-state"].value for row in sessions], [1, 0]
@@ -661,7 +661,7 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 )
                 old_session = next(
                     row for row in sessions
-                    if row[1]["label"].value == "grok: notes"
+                    if row[1]["label"].value == "qwen-pi: notes"
                 )
                 await menu.call_event(
                     old_session[0], "clicked", Variant("i", 0), 0

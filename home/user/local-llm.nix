@@ -199,37 +199,6 @@ let
         --tools read,bash,edit,write,mcp,todo "$@"
     '';
   };
-  promptCapture = import ./prompt-capture.nix { inherit pkgs; };
-  qwenClaude = pkgs.writeShellApplication {
-    name = "qwen-claude";
-    text = ''
-      umask 077
-      export CLAUDE_CONFIG_DIR=${lib.escapeShellArg "${config.xdg.configHome}/local-llm/claude"}
-      mkdir -p "$CLAUDE_CONFIG_DIR"
-      unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
-      unset CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX CLAUDE_CODE_USE_FOUNDRY
-      export ANTHROPIC_AUTH_TOKEN
-      ANTHROPIC_AUTH_TOKEN="$(< ${lib.escapeShellArg apiKeyPath})"
-      export ANTHROPIC_BASE_URL=http://127.0.0.1:8081
-      export ANTHROPIC_MODEL=${modelAlias}
-      export ANTHROPIC_CUSTOM_MODEL_OPTION=${modelAlias}
-      export ANTHROPIC_DEFAULT_OPUS_MODEL=${modelAlias}
-      export ANTHROPIC_DEFAULT_SONNET_MODEL=${modelAlias}
-      export ANTHROPIC_DEFAULT_HAIKU_MODEL=${modelAlias}
-      export CLAUDE_CODE_SUBAGENT_MODEL=${modelAlias}
-      export CLAUDE_CODE_MAX_CONTEXT_TOKENS=${toString contextSize}
-      export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
-      export DISABLE_AUTOUPDATER=1
-      export NO_PROXY="localhost,127.0.0.1''${NO_PROXY:+,$NO_PROXY}"
-      export no_proxy="$NO_PROXY"
-
-      if [ -n "''${CAPTURE_PROMPTS-1}" ] && [ "''${CAPTURE_PROMPTS-1}" != "0" ]; then
-        export PROMPT_CAPTURE_UPSTREAM="$ANTHROPIC_BASE_URL"
-        exec ${promptCapture}/bin/prompt-capture qwen-claude -- ${pkgs.claude-code}/bin/claude "$@"
-      fi
-      exec ${pkgs.claude-code}/bin/claude "$@"
-    '';
-  };
   toolsPython = pkgs.python3.withPackages (ps: [
     ps.mcp
     ps.ddgs
@@ -368,7 +337,6 @@ in
 lib.mkIf (isRelay || isAndromeda) {
   home.packages = [
     qwenPi
-    qwenClaude
     fetchModel
     server
   ]

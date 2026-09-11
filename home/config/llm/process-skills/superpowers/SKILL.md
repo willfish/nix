@@ -8,7 +8,7 @@ metadata:
   short-description: "Agent harness - skills discipline, todo usage, verification, planning"
 ---
 
-# Superpowers Harness (Grok Native Version)
+# Superpowers Harness
 
 This skill enforces high-discipline agent behavior. It is the foundation for reliable, professional-grade work.
 
@@ -19,7 +19,7 @@ This skill enforces high-discipline agent behavior. It is the foundation for rel
 ### 1. Skills Before Action (The Non-Negotiable Rule)
 Before giving any response, taking any action, or asking clarifying questions on a non-trivial task:
 
-- Check whether any skill in `~/.grok/skills/`, project `.grok/skills/`, or the equivalent skills directory for the active tool applies.
+- Discover applicable skills through the active harness catalogue or `~/.agents/skills/` and project `.agents/skills/`.
 - If there is even a 1% chance a skill is relevant → invoke it (read its SKILL.md and follow it).
 - Announce clearly: "Using [skill-name] for this..."
 
@@ -82,7 +82,7 @@ Example:
 ## Reference Material
 
 Deeper supporting documents (original detailed references, additional examples, root-cause tracing techniques, etc.) live in:
-`~/.grok/skills/references/superpowers/`
+`~/.agents/references/superpowers/`
 
 The native process skills (`using-superpowers`, `superpowers`, `systematic-debugging`, `verification-before-completion`, `writing-plans`) are the primary, maintained versions. The references directory holds expanded upstream material (e.g. full `brainstorming`, `test-driven-development`).
 

@@ -280,7 +280,7 @@ class VoiceTests(unittest.TestCase):
     def test_session_menu_labels_use_harness_and_conversation_or_pane_id(self):
         self.app.register("token-1", self.target, "conversation-codex")
         self.app.register(
-            "token-2", dict(self.target, harness="grok", pane="w1:p3")
+            "token-2", dict(self.target, harness="qwen-pi", pane="w1:p3")
         )
         self.app.register(
             "token-3", dict(self.target, harness="pi", pane="w1:p4"),
@@ -289,7 +289,7 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(
             [(s["label"], s["selected"])
              for s in self.app.status()["sessions"]],
-            [("codex: conversation-codex", False), ("grok: w1:p3", False),
+            [("codex: conversation-codex", False), ("qwen-pi: w1:p3", False),
              ("pi: w1:p4", True)],
         )
 
@@ -1095,8 +1095,8 @@ class VoiceTests(unittest.TestCase):
         self.app.playback.join(1)
         self.assertEqual(self.audio.spoken, ["The tests passed."])
 
-    def test_pi_and_grok_replies_share_summary_only_playback(self):
-        for harness in ("pi", "grok"):
+    def test_pi_profiles_share_summary_only_playback(self):
+        for harness in ("pi", "qwen-pi"):
             with self.subTest(harness=harness):
                 self.app.register(harness, dict(self.target, harness=harness))
                 self.app.harness_event(harness, {

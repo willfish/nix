@@ -6,9 +6,9 @@ Shared guidance for CloudWatch and Grafana dashboard design, implementation and
 review. AWS API details below apply to CloudWatch, not automatically to Grafana.
 
 Source of truth: `home/config/llm/guides/dashboards.md` in the dotfiles repo.
-Home Manager publishes this directory under `~/.agents/guides`,
-`~/.codex/guides` and `~/.grok/guides`. Pi and other harnesses can read the
-shared `~/.agents/guides/dashboards.md`; do not maintain harness-specific copies.
+Home Manager publishes this directory under `~/.agents/guides`.
+Read the shared `~/.agents/guides/dashboards.md`; do not maintain
+harness-specific copies.
 
 AWS sources checked: 2026-09-10. Recheck when changing query features, sharing,
 service limits or dashboard APIs. Separate AWS requirements from our conventions.

@@ -74,8 +74,8 @@ class ActivityTests(unittest.TestCase):
             for harness, raw, expected in (
                 ("codex", "working", "working"),
                 ("codex", "done", "idle"),
-                ("grok", "blocked", "blocked"),
-                ("grok", "unknown", "unknown"),
+                ("legacy", "blocked", "blocked"),
+                ("legacy", "unknown", "unknown"),
                 ("pi", "working", "working"),
                 ("qwen-pi", "blocked", "blocked"),
             ):
@@ -94,7 +94,7 @@ class ActivityTests(unittest.TestCase):
     def test_native_activity_tracks_selection_and_blocked_state(self):
         del self.terminal.activity
         self.app.register(
-            "second", dict(self.target, pane="second", harness="grok"),
+            "second", dict(self.target, pane="second", harness="qwen-pi"),
             "conversation-second",
         )
         event = {
@@ -127,9 +127,9 @@ class ActivityTests(unittest.TestCase):
     def test_late_settled_event_cannot_clear_a_newer_turn(self):
         del self.terminal.activity
         self.app.register(
-            "first", dict(self.target, harness="grok"), "conversation-first"
+            "first", dict(self.target, harness="pi"), "conversation-first"
         )
-        event = {"harness": "grok", "session": "conversation-first"}
+        event = {"harness": "pi", "session": "conversation-first"}
         self.app.harness_event("first", dict(
             event, type="busy", turn="new-turn"
         ))
@@ -145,10 +145,10 @@ class ActivityTests(unittest.TestCase):
     def test_late_reply_keeps_new_activity_and_existing_reply_handling(self):
         del self.terminal.activity
         self.app.register(
-            "first", dict(self.target, harness="grok"), "conversation-first"
+            "first", dict(self.target, harness="pi"), "conversation-first"
         )
         self.app.harness_event("first", {
-            "harness": "grok", "session": "conversation-first",
+            "harness": "pi", "session": "conversation-first",
             "type": "busy", "turn": "new-turn",
         })
         self.assertTrue(self.app.notify("first", {
@@ -162,10 +162,10 @@ class ActivityTests(unittest.TestCase):
     def test_late_background_reply_cannot_clear_that_sessions_newer_turn(self):
         del self.terminal.activity
         self.app.register(
-            "first", dict(self.target, harness="grok"), "conversation-first"
+            "first", dict(self.target, harness="pi"), "conversation-first"
         )
         self.app.harness_event("first", {
-            "harness": "grok", "session": "conversation-first",
+            "harness": "pi", "session": "conversation-first",
             "type": "busy", "turn": "new-turn",
         })
         self.app.register("second", dict(self.target, pane="second"))
@@ -201,7 +201,8 @@ class ActivityTests(unittest.TestCase):
             )
         self.app.harness_event("first", {
             "harness": harness, "session": "conversation-first",
-            "type": "busy", "turn": "new-turn" if harness == "grok" else None,
+            "type": "busy",
+            "turn": "new-turn" if harness == "qwen-pi" else None,
         })
         self.assertTrue(self.app.status()["responding"])
         self.assertTrue(self.entered.wait(1))
@@ -233,12 +234,12 @@ class ActivityTests(unittest.TestCase):
         )
         self.assertEqual(self.app.reply, "Completed reply.")
 
-    def test_untagged_grok_settled_cannot_clear_a_known_new_turn(self):
+    def test_untagged_settled_cannot_clear_a_known_new_turn(self):
         self.assert_unordered_completion_waits_for_probe(
             lambda: self.app.harness_event("first", {
-                "harness": "grok", "session": "conversation-first",
+                "harness": "qwen-pi", "session": "conversation-first",
                 "type": "settled",
-            }), harness="grok",
+            }), harness="qwen-pi",
         )
 
     def test_background_probe_cannot_mark_another_session_as_responding(self):

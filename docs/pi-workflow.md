@@ -39,7 +39,7 @@ calls at startup or new npm dependencies.
 
 On Andromeda and Foundation, interactive `pi` and `qwen-pi` sessions in Herdr
 automatically attach to the shared voice controller. `pi-voice` and
-`qwen-pi-voice` remain compatibility commands. Codex and Grok are unchanged.
+`qwen-pi-voice` remain compatibility commands.
 The first ready non-team Pi session is selected once; later attachments and
 keyboard focus do not change that destination. Choose another session from
 the tray or **Super+Shift+V**, including after the selected session exits.

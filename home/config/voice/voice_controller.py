@@ -1170,7 +1170,7 @@ class Controller:
         ):
             self._set_activity(entry, "idle")
             return
-        # Pi has no shared run ID and some Grok hooks omit one. Such events
+        # Pi has no shared run ID. Such events
         # cannot establish ordering relative to a newer turn or status probe.
         self._set_activity(entry, entry.get("agent_state", "unknown"))
         entry["activity_checked"] = float("-inf")
@@ -1515,7 +1515,7 @@ class Controller:
             target = dict(entry["target"])
         if event.get("provisional"):
             def complete():
-                # A Grok Stop hook can continue the turn. Wait for Herdr's
+                # Provisional replies may continue the turn. Wait for Herdr's
                 # authoritative ready state without blocking the hook process.
                 for _ in range(40):
                     with self.lock:
@@ -2299,7 +2299,7 @@ def installed_pi_extension():
 
 
 def launcher_command(harness, args, directory, notify):
-    if harness not in ("codex", "grok", "pi", "qwen-pi"):
+    if harness not in ("codex", "pi", "qwen-pi"):
         raise RuntimeError("Unsupported voice harness")
     if harness in ("pi", "qwen-pi"):
         if any(arg in ("--print", "-p", "--mode")
@@ -2312,19 +2312,6 @@ def launcher_command(harness, args, directory, notify):
                 'The Pi voice launcher requires the installed voice extension')
         installed_pi_extension()
         return [harness, *args]
-    if harness == "grok":
-        forbidden = (
-            "--headless", "--print", "-p", "--leader", "--leader-socket",
-            "--single", "--prompt-file", "--prompt-json", "--json-schema",
-            "--output-format",
-        )
-        if (args[:1] and args[0] in ("agent", "leader", "wrap")) or any(
-            arg.split("=", 1)[0] in forbidden for arg in args
-        ):
-            raise RuntimeError(
-                "Grok voice requires a local interactive session"
-            )
-        return ["grok", "--no-leader", *args]
     if args[:1] == ["exec"]:
         raise RuntimeError("Voice launchers require an interactive session")
     return ["codex", "-c", f"notify={notify}", *args]
@@ -2443,7 +2430,7 @@ def main(args=None):
             return 0
         if args and args[0] in ("--help", "-h"):
             print(
-                "Usage: <codex|grok|pi|qwen-pi>-voice [options]\n"
+                "Usage: <codex|pi|qwen-pi>-voice [options]\n"
                 "       codex-voice interact|record|send|read|stop|status\n"
                 "       codex-voice retry|rebind|discard|append|replace\n"
                 "       codex-voice recover-copy|recover-stage"

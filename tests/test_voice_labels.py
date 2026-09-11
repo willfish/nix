@@ -184,7 +184,7 @@ class LabelTests(unittest.TestCase):
 
     def test_preferred_and_legacy_unchanged(self):
         entry = row(model={'id': 'gpt-6-astra'}, thinking='medium')
-        legacy = {'harness': 'grok', 'label': 'legacy', 'id': 'old'}
+        legacy = {'harness': 'legacy', 'label': 'legacy', 'id': 'old'}
         rows = build_labels(
             [entry, legacy], {entry['socket_key']: self.state()})
         self.assertEqual(rows[0]['label'],

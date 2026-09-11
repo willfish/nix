@@ -11,12 +11,6 @@ let
   imageDigest = "sha256:21532405da3e974a878335bd5734008f93c6066ac99dddda47e474cdc67a6351";
   image = "${imageRepo}:${imageTag}@${imageDigest}";
   containerName = "hindsight-mcp";
-  hindsightSource = pkgs.fetchFromGitHub {
-    owner = "vectorize-io";
-    repo = "hindsight";
-    rev = "e1014cc";
-    sha256 = "1lfmbzy8jgyys5n7g3s70zygybh9rkpzsdljgf9szqm42ydg690g";
-  };
 in
 {
   home.file.".local/bin/hindsight-mcp-start" = {
@@ -66,48 +60,5 @@ in
 
       ${pkgs.docker_29}/bin/docker stop ${containerName} >/dev/null 2>&1 || true
     '';
-  };
-
-  home.file.".hindsight/codex/scripts" = {
-    source = "${hindsightSource}/hindsight-integrations/codex/scripts";
-    recursive = true;
-  };
-
-  home.file.".hindsight/codex/settings.json" = {
-    source = "${hindsightSource}/hindsight-integrations/codex/settings.json";
-  };
-
-  home.file.".hindsight/codex.json" = {
-    force = true;
-    text = builtins.toJSON {
-      hindsightApiUrl = "http://127.0.0.1:8888";
-      bankId = "william-codex";
-      bankMission = "You are a coding assistant for William. Retain durable technical decisions, project context, debugging outcomes, repository conventions, and user preferences that help future sessions continue without re-explanation.";
-      retainMission = "Extract durable technical decisions, code patterns, debugging solutions, repository context, architecture choices, and stable user preferences. Ignore transient shell output, raw tool traces, routine status chatter, file search/list/read activity, facts that only say the user is working in a repository, secrets, tokens, credentials, and sensitive personal data. Do not retain commodity rates, duty rates, legal tariff values, or other time-sensitive public data unless the user explicitly asks to remember a classification outcome.";
-      autoRecall = false;
-      autoRetain = false;
-      retainMode = "chunked";
-      retainEveryNTurns = 10;
-      retainOverlapTurns = 1;
-      retainToolCalls = false;
-      recallBudget = "mid";
-      recallMaxTokens = 1200;
-      recallTimeout = 10;
-      dynamicBankId = true;
-      dynamicBankGranularity = [
-        "agent"
-        "project"
-      ];
-      bankIdPrefix = "william-";
-      agentName = "codex";
-      debug = false;
-    };
-  };
-
-  home.file.".codex/hooks.json" = {
-    force = true;
-    text = builtins.toJSON {
-      hooks = { };
-    };
   };
 }

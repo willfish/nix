@@ -68,4 +68,4 @@ Run the helper script in the repo:
 
 This produces PNGs in `docs/diagrams/rendered/`. Open them and run the **Diagram Review Checklist** before committing changes to the diagrams.
 
-This skill is available in Grok, Codex, and (when enabled) Gemini. The content is the same across all tools because it lives in the single-source `llm/guides/` directory.
+This skill uses the single-source `llm/guides/` directory, deployed under `~/.agents/guides/`.

@@ -8,7 +8,7 @@ metadata:
   short-description: "Write excellent, actionable implementation plans (TDD, small steps, clear handoff)"
 ---
 
-# Writing Plans (Grok Native)
+# Writing Plans
 
 Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
 
@@ -122,6 +122,6 @@ For subagent execution, the `superpowers` skill + `spawn_subagent` works very we
 ---
 
 The full original material (with additional examples) lives in:
-`~/.grok/skills/references/superpowers/skills/writing-plans/`
+`~/.agents/references/superpowers/skills/writing-plans/`
 
 This skill pairs extremely well with `enter_plan_mode`, `superpowers`, and `systematic-debugging`.

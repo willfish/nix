@@ -10,7 +10,7 @@ be in context, then point to skills for deeper task-specific procedure.
 - If a skill may apply, load its `SKILL.md` or invoke it before exploring,
   clarifying, planning, or editing.
 - If unsure which skill applies, use `skill-router`.
-- In Grok, descriptions are not enough: run `/skills <name>` or read the skill
+- Descriptions are not enough: use `/skill:<name>` in Pi or read the skill
   file directly.
 
 Minimum always-on algorithm:

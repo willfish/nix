@@ -88,39 +88,6 @@ let
       exec python3 ${voiceScripts}/voice_menu.py --config ${menuConfig} "$@"
     '';
   };
-  grokHooks = {
-    hooks = builtins.listToAttrs (
-      map
-        (event: {
-          name = event;
-          value = [
-            (
-              {
-                hooks = [
-                  {
-                    type = "command";
-                    command = "${voicePython}/bin/python3 ${voiceScripts}/grok_voice_hook.py";
-                    timeout = 3;
-                  }
-                ];
-              }
-              // lib.optionalAttrs (event == "Notification") {
-                matcher = "idle_prompt";
-              }
-            )
-          ];
-        })
-        [
-          "SessionStart"
-          "UserPromptSubmit"
-          "Stop"
-          "StopFailure"
-          "StopCancelled"
-          "Notification"
-          "SessionEnd"
-        ]
-    );
-  };
   modelSetup = pkgs.writeShellApplication {
     name = "codex-voice-models";
     runtimeInputs = [ pkgs.python3 ];
@@ -191,7 +158,6 @@ in
   config = lib.mkIf voiceSupported {
     home.packages = [
       voice
-      (makeVoice "grok")
       (makeVoice "pi")
       (makeVoice "qwen-pi")
       modelSetup
@@ -220,7 +186,6 @@ in
     };
     xdg.configFile."codex-voice/tts.json".source = ttsConfig;
     xdg.configFile."voice-menu/fuzzel.ini".source = menuConfig;
-    home.file.".grok/hooks/voice.json".text = builtins.toJSON grokHooks;
 
     systemd.user.services.codex-voice = {
       Unit.Description = "Agent voice hotkeys, tray and selected session";

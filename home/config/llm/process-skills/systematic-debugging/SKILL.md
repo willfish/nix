@@ -7,7 +7,7 @@ metadata:
   short-description: "Systematic root cause debugging (no fixes before investigation)"
 ---
 
-# Systematic Debugging (Grok Native)
+# Systematic Debugging
 
 **Iron Law:** NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST.
 
@@ -59,7 +59,7 @@ You **must** complete each phase before moving to the next.
    - Fix the *source*, not the symptom you first noticed.
 
 5. **Use supporting techniques when needed**
-   - See the raw reference material in `~/.grok/skills/references/superpowers/skills/systematic-debugging/` for advanced techniques (`root-cause-tracing.md`, `defense-in-depth.md`, `condition-based-waiting.md`).
+   - See the raw reference material in `~/.agents/references/superpowers/skills/systematic-debugging/` for advanced techniques (`root-cause-tracing.md`, `defense-in-depth.md`, `condition-based-waiting.md`).
 
 **Success criteria for Phase 1:** You can explain, in one clear sentence, the root cause and why the symptoms appear.
 
@@ -136,6 +136,6 @@ Use this skill. It will save you (and your future self) enormous amounts of time
 ---
 
 **Supporting reference material** lives in:
-`~/.grok/skills/references/superpowers/skills/systematic-debugging/`
+`~/.agents/references/superpowers/skills/systematic-debugging/`
 
 It contains the deeper original documents (`root-cause-tracing.md`, `defense-in-depth.md`, `condition-based-waiting.md`, test pressure examples, etc.). Read them when you need more detail than this skill provides.

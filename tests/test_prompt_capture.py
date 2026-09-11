@@ -130,8 +130,7 @@ class CaptureTests(unittest.TestCase):
         self.script = self.root / "capture.sh"
         self.script.write_text(
             SOURCE.read_text()
-            .replace("codex) port=8301", f"codex) port={self.port}")
-            .replace("qwen-claude) port=8305", f"qwen-claude) port={self.port}")
+            .replace("pi) port=8302", f"pi) port={self.port}")
         )
         self.env = dict(
             os.environ,
@@ -153,7 +152,7 @@ class CaptureTests(unittest.TestCase):
             os.killpg(proc.pid, signal.SIGKILL)
             proc.communicate(timeout=5)
 
-    def start(self, tool="codex"):
+    def start(self, tool="pi"):
         ready = self.root / "ready"
         proc = subprocess.Popen(
             [
@@ -212,7 +211,7 @@ class CaptureTests(unittest.TestCase):
         self.env["PROMPT_CAPTURE_UPSTREAM"] = (
             f"http://127.0.0.1:{server.server_port}"
         )
-        proc = self.start("qwen-claude")
+        proc = self.start()
         self.assertEqual(
             (self.root / "ready").read_text(), f"http://127.0.0.1:{self.port}"
         )
@@ -227,7 +226,7 @@ class CaptureTests(unittest.TestCase):
         conn.close()
         self.stop(proc)
         self.assertEqual(received, [("/v1/messages", body)])
-        log = (self.cdir / "qwen-claude.jsonl").read_text()
+        log = (self.cdir / "pi.jsonl").read_text()
         self.assertNotIn("secret", log)
         records = [json.loads(line) for line in log.splitlines()]
         usage = next(r for r in records if r["kind"] == "usage")
@@ -294,17 +293,17 @@ class CaptureTests(unittest.TestCase):
             worker.join(2)
         self.assertFalse(errors, errors)
         records = [json.loads(line) for line in
-                   (self.cdir / "codex.jsonl").read_text().splitlines()]
+                   (self.cdir / "pi.jsonl").read_text().splitlines()]
         captured = "".join(r["response_body"] for r in records
                            if r["kind"] == "response_chunk")
         self.assertEqual(captured, body.decode())
 
     def test_overlapping_capture_leaves_the_original_proxy_running(self):
         first = self.start()
-        pidfile = self.cdir / "codex.pid"
+        pidfile = self.cdir / "pi.pid"
         original_pid = pidfile.read_text()
         second = subprocess.run(
-            ["bash", str(self.script), "codex", "--", "true"],
+            ["bash", str(self.script), "pi", "--", "true"],
             env=self.env, capture_output=True, text=True, timeout=20,
         )
         self.assertNotEqual(second.returncode, 0)
@@ -319,16 +318,16 @@ class CaptureTests(unittest.TestCase):
     def test_private_files_and_certificate_only_trust_bundle(self):
         # Repair existing files when upgrading from the old helper.
         self.cdir.mkdir(mode=0o755)
-        for name in ("codex.jsonl", "codex-ca.pem", "codex-server.log"):
+        for name in ("pi.jsonl", "pi-ca.pem", "pi-server.log"):
             path = self.cdir / name
             path.touch(mode=0o644)
         self.start()
         self.assertEqual(self.cdir.stat().st_mode & 0o777, 0o700)
-        names = ("codex.jsonl", "codex-ca.pem", "codex-server.log", "codex.pid")
+        names = ("pi.jsonl", "pi-ca.pem", "pi-server.log", "pi.pid")
         for name in names:
             mode = (self.cdir / name).stat().st_mode & 0o777
             self.assertEqual(mode, 0o600, name)
-        bundle = (self.cdir / "codex-ca.pem").read_text()
+        bundle = (self.cdir / "pi-ca.pem").read_text()
         self.assertIn("BEGIN CERTIFICATE", bundle)
         self.assertNotIn("PRIVATE KEY", bundle)
 
@@ -337,7 +336,7 @@ class CaptureTests(unittest.TestCase):
             occupied.bind(("127.0.0.1", self.port))
             occupied.listen()
             result = subprocess.run(
-                ["bash", str(self.script), "codex", "--", "touch",
+                ["bash", str(self.script), "pi", "--", "touch",
                  str(self.root / "ran")],
                 env=self.env, capture_output=True, text=True, timeout=15,
             )
@@ -349,12 +348,12 @@ class CaptureTests(unittest.TestCase):
         first.kill()  # Leave the CLI and proxy alive, as after a wrapper crash.
         first.wait(timeout=5)
         blocked = subprocess.run(
-            ["bash", str(self.script), "codex", "--", "true"],
+            ["bash", str(self.script), "pi", "--", "true"],
             env=self.env, capture_output=True, text=True, timeout=10,
         )
         self.assertNotEqual(blocked.returncode, 0)
         stopped = subprocess.run(
-            ["bash", str(self.script), "stop", "codex"],
+            ["bash", str(self.script), "stop", "pi"],
             env=self.env, capture_output=True, text=True, timeout=15,
         )
         self.assertEqual(stopped.returncode, 0, stopped.stderr)

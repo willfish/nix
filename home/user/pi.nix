@@ -8,7 +8,7 @@
 }:
 let
   voiceSupported = import ./voice-supported.nix { inherit pkgs hostName; };
-  llmMcps = import ./llm-mcps.nix { inherit config lib; };
+  llmMcps = import ./llm-mcps.nix { inherit config; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
   promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
   promptCapture = import ./prompt-capture.nix { inherit pkgs; };
@@ -87,7 +87,7 @@ in
   home.file.".pi/agent/prompts/review.md".source = ../config/pi/prompts/review.md;
 
   # The adapter reads this shared path even with PI_CODING_AGENT_DIR set by
-  # qwen-pi. Credentials remain in the same runtime wrappers as Codex/Grok.
+  # qwen-pi. Credentials remain in the shared runtime MCP wrappers.
   home.file.".config/mcp/mcp.json".text = builtins.toJSON {
     mcpServers = llmMcps.piServers;
     settings = {

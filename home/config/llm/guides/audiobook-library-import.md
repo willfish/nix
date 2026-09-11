@@ -74,12 +74,12 @@ current library and item IDs by name and exact path before making API calls.
 Use existing tools first. Prefer the skill inventory script (no extra deps):
 
 ```bash
-# On Andromeda — status + candidates report
-python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+# On Andromeda: status + candidates report
+python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
   --format markdown -o /tmp/qbt-candidates.md
 
 # NUL list of transfer-ready relative names for rsync --from0
-python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
   --transfer-ready-only --format nul > /tmp/andromeda-audiobooks.list0
 ```
 
@@ -156,7 +156,7 @@ active or incomplete torrent must not be staged as if it were final.
 On Andromeda (or via SSH from another host):
 
 ```bash
-python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
   --format markdown
 ```
 
@@ -191,11 +191,11 @@ Use the skill script:
 
 ```bash
 # Markdown report (candidates / incomplete / missing)
-python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
   --format markdown -o /tmp/qbt-candidates.md
 
 # NUL-delimited relative names for transfer-ready only
-python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
   --transfer-ready-only --format nul > /tmp/andromeda-audiobooks.list0
 ```
 
@@ -217,13 +217,13 @@ When working **from Terminus**, pull the list over SSH:
 
 ```bash
 ssh andromeda \
-  'python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+  'python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
      --transfer-ready-only --format nul' \
   > /tmp/andromeda-audiobooks.list0
 ```
 
 (After `hmswitch` on Andromeda so the skill script is deployed under
-`~/.grok/skills/...`. From a checkout, point at the repo path instead.)
+`~/.agents/skills/...`. From a checkout, point at the repo path instead.)
 
 ## Phase 1b: Libation source (Andromeda)
 
@@ -335,12 +335,12 @@ names:
 
 ```bash
 # From Andromeda inventory names:
-python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
   --transfer-ready-only --format names \
   > /tmp/source-names.txt
 
-# On Terminus — check those names against all library roots:
-python3 ~/.grok/skills/audiobook-library-import/scripts/source_target_duplicate_check.py \
+# On Terminus: check those names against all library roots:
+python3 ~/.agents/skills/audiobook-library-import/scripts/source_target_duplicate_check.py \
   --sources-file /tmp/source-names.txt \
   --targets /srv/media/audiobooks \
             /srv/media/audiobooks-children \
@@ -353,10 +353,10 @@ Cross-host one-liner (run from a machine with SSH to both):
 
 ```bash
 ssh andromeda \
-  'python3 ~/.grok/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+  'python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
      --transfer-ready-only --format names' \
   | ssh terminus \
-  'python3 ~/.grok/skills/audiobook-library-import/scripts/source_target_duplicate_check.py \
+  'python3 ~/.agents/skills/audiobook-library-import/scripts/source_target_duplicate_check.py \
      --sources-file - \
      --targets /srv/media/audiobooks /srv/media/audiobooks-children \
                /srv/media/audiobooks-celine /srv/media/phone-audiobooks \

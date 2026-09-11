@@ -4,7 +4,7 @@
 # Built into a single executable by home/user/prompt-capture.nix, which
 # prepends the shell shebang and the MITMDUMP closure path. Modes:
 #
-#   prompt-capture <codex|pi|grok|claude|qwen-claude> -- <command> [args...]
+#   prompt-capture pi -- <command> [args...]
 #   prompt-capture stop <tool>
 #   prompt-capture logs <tool>
 set -euo pipefail
@@ -18,7 +18,7 @@ usage:
   prompt-capture stop <tool>                     stop a capture server left behind
   prompt-capture logs <tool>                     tail the capture file
 
-tools: codex | pi | grok | claude | qwen-claude
+tools: pi
 USAGE
   exit 2
 }
@@ -29,7 +29,7 @@ mode="$1"
 shift
 
 case "$mode" in
-codex | pi | grok | claude | qwen-claude)
+pi)
   tool="$mode"
   ;;
 stop | logs)
@@ -42,11 +42,7 @@ stop | logs)
 esac
 
 case "$tool" in
-codex) port=8301 ;;
 pi) port=8302 ;;
-grok) port=8303 ;;
-claude) port=8304 ;;
-qwen-claude) port=8305 ;;
 *) usage ;;
 esac
 
@@ -342,8 +338,8 @@ addons = [PromptCapture()]
 PYEOF
 
 proxy_args=()
-if [ "$tool" = "qwen-claude" ]; then
-  proxy_args=(--mode "reverse:${PROMPT_CAPTURE_UPSTREAM:-http://127.0.0.1:8081}")
+if [ -n "${PROMPT_CAPTURE_UPSTREAM:-}" ]; then
+  proxy_args=(--mode "reverse:$PROMPT_CAPTURE_UPSTREAM")
 fi
 
 PROMPT_CAPTURE_JSONL="$jsonl" \
@@ -380,7 +376,7 @@ fi
 # Combined trust store: system bundle plus the mitmproxy CA.
 cat /etc/ssl/certs/ca-bundle.crt "$ca" >"$cafile"
 
-if [ "$tool" = "qwen-claude" ]; then
+if [ -n "${PROMPT_CAPTURE_UPSTREAM:-}" ]; then
   export ANTHROPIC_BASE_URL="http://127.0.0.1:$port"
   export NO_PROXY="localhost,127.0.0.1${NO_PROXY:+,$NO_PROXY}"
   export no_proxy="$NO_PROXY"

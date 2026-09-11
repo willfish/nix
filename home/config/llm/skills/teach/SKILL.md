@@ -22,7 +22,7 @@ Treat a dedicated directory as the teaching workspace (the user will usually cre
 - `./lessons/*.html`: The primary teaching units. Short, self-contained, beautiful HTML files (`0001-<slug>.html` etc.) that deliver one tight win tied to the mission, with interactive elements (quizzes, steps) and links to references + primary sources.
 - `NOTES.md`: Scratchpad for user preferences, working notes, and teaching style adjustments.
 
-**Grok-specific workspace handling**: Ask the user for (or confirm) the target directory. Use `run_terminal_command` (or direct file tools) to `mkdir -p` subdirectories as needed. Use the `write` or `search_replace` tools to create and update the .md and .html artifacts in the workspace. When the user is working inside this repo or on dotfiles topics, consider also loading `local-dev-environment` for machine-specific context.
+**Workspace handling**: Ask the user for (or confirm) the target directory. Use `run_terminal_command` (or direct file tools) to `mkdir -p` subdirectories as needed. Use the `write` or `search_replace` tools to create and update the .md and .html artifacts in the workspace. When the user is working inside this repo or on dotfiles topics, consider also loading `local-dev-environment` for machine-specific context.
 
 ## Philosophy
 
@@ -108,13 +108,13 @@ See [references/GLOSSARY-FORMAT.md](./references/GLOSSARY-FORMAT.md) for the glo
 
 Capture user preferences about *how* they want to be taught ("I like concrete examples first", "hate multiple choice", "prefer I do the typing", "always include a failing example", etc.). Refer to these when designing future lessons.
 
-## Grok / This Dotfiles Harness Notes
+## Dotfiles Harness Notes
 
 - **Invocation**: Say "teach me how ...", "create lessons for ...", "/teach <topic>", or describe the learning goal. The description frontmatter makes this trigger naturally.
 - **Workspace creation**: The user (or you via tools) creates a fresh directory per major topic. One mission per workspace. Unrelated topics get separate workspaces.
 - **Composition**: When the topic touches Nix, Home Manager, shells, editors, or this machine, also consult the `local-dev-environment` skill. For diagrams or visuals inside lessons, the `diagramming` skill provides guidance and can generate Mermaid/D2/etc. that you embed.
 - **File operations**: Use the available file tools (`write`, `search_replace`, `read_file`) and `run_terminal_command` (for mkdir, xdg-open, ls of records, etc.) to manage the workspace state exactly as a human tutor would update a student's notebook and handouts.
-- **Multi-TUI**: Because this skill lives in the dotfiles source (`home/config/llm/skills/teach/`), Home Manager deploys it to `~/.grok/skills/`, `~/.codex/skills/`, and `~/.agents/skills/`. The workspace files themselves are portable.
+- **Multi-TUI**: Because this skill lives in the dotfiles source (`home/config/llm/skills/teach/`), Home Manager deploys it to `~/.agents/skills/`. The workspace files themselves are portable.
 - **Quality bar**: Follow the formats strictly. They exist so outputs stay consistent and reviewable even when switching models or TUIs.
 
 Start every new teaching engagement by ensuring `MISSION.md` exists and is concrete, then curating `RESOURCES.md` before generating the first lesson.

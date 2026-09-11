@@ -7,7 +7,7 @@ metadata:
   short-description: "Never claim success without fresh verification evidence"
 ---
 
-# Verification Before Completion (Grok Native)
+# Verification Before Completion
 
 Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
 
@@ -71,7 +71,7 @@ If you feel the urge to:
 
 → **Stop.** These are the moments where this skill exists to protect you from yourself.
 
-## Practical Tips for Grok
+## Practical Tips
 
 - Use `run_command` with the real command the project uses (e.g. `nix flake check`, `cargo test`, `npm test`, `home-manager build`, etc.).
 - For complex verification, use `todo_write` to track the verification steps themselves.
@@ -84,4 +84,4 @@ If you feel the urge to:
 
 This single habit, applied consistently, dramatically improves the quality and reliability of the work you produce.
 
-**Supporting material** (original detailed version) is available in `~/.grok/skills/references/superpowers/skills/verification-before-completion/`.
+**Supporting material** (original detailed version) is available in `~/.agents/references/superpowers/skills/verification-before-completion/`.
