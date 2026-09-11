@@ -4,7 +4,7 @@ This adapts the subagent example shipped with the pinned Pi 0.85.1 runtime. `ind
 
 ## Start a team
 
-In a standard Pi session inside herdr, ask:
+In a standard Pi session inside herdr, request only the roles that add distinct value. For a change needing design, implementation and independent review, for example:
 
 > Have the architect investigate the design, then give the builder an approved implementation task with explicit file ownership. Load local-dev-environment for Nix work. Ask the sceptic to review the resulting diff independently.
 
@@ -16,9 +16,16 @@ Personas are ordinary agent Markdown files:
 | --- | --- | --- |
 | architect | Read-only design and trade-offs | chain-of-verification |
 | builder | Implementation within assigned file ownership | verification-before-completion |
-| sceptic | Read-only independent review | code-review-workflow, verification-before-completion |
+| sceptic | Read-only independent review | code-review-workflow |
+| test-engineer | Minimal executable regressions derived from requirements | Task-specific only |
+| security-reviewer | Read-only analysis of a named trust boundary | Task-specific only |
+| domain-specialist | Source-backed business rules and acceptance examples | Task-specific only |
 
-Existing scout, planner, worker and reviewer definitions still work. Model and thinking level inherit from the coordinator unless the agent pins a model.
+Work solo unless delegation answers a distinct question or the user requests a team. These are available roles, not a checklist: use at most one general reviewer, adding specialists only for separate evidence or artifacts. Four panes are a capacity limit, not a staffing target. Assign non-overlapping ownership to the builder and test engineer.
+
+The domain specialist is for conflicting or unclear business rules. Use scout plus a domain skill for ordinary domain-code reconnaissance. Choose framework, domain and security skills for the task rather than loading them into every specialist. Role bodies load only when dispatched; normal Pi instructions and skill discovery still apply. Concise handoffs keep parent context focused.
+
+Existing scout, planner, worker and reviewer definitions still work. The latter three are compatibility roles, not additional team stages. Model and thinking level inherit from the coordinator unless the agent pins a model.
 
 ## Skills
 

@@ -66,6 +66,9 @@ in
   home.file.".pi/agent/agents/architect.md".source = ../config/pi/agents/architect.md;
   home.file.".pi/agent/agents/builder.md".source = ../config/pi/agents/builder.md;
   home.file.".pi/agent/agents/sceptic.md".source = ../config/pi/agents/sceptic.md;
+  home.file.".pi/agent/agents/test-engineer.md".source = ../config/pi/agents/test-engineer.md;
+  home.file.".pi/agent/agents/security-reviewer.md".source = ../config/pi/agents/security-reviewer.md;
+  home.file.".pi/agent/agents/domain-specialist.md".source = ../config/pi/agents/domain-specialist.md;
   home.file.".pi/agent/prompts/implement.md".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts/implement.md";
   home.file.".pi/agent/prompts/scout-and-plan.md".source =

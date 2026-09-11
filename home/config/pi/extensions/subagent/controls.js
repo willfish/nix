@@ -1,10 +1,11 @@
 const HELP = '/team list | read <id> | send <id> <task> | steer <id> <guidance> | close <id|all>';
-const GUIDANCE = `You coordinate a team of isolated specialists using subagent and team.
-Available personas include architect (design), builder (implementation), and sceptic (independent review), alongside scout/planner/worker/reviewer.
-Choose persona and task-specific skills explicitly, e.g. skills: ["rspec-testing"] for Ruby specs or ["local-dev-environment"] for Nix work. Persona defaults are loaded automatically in full.
-Use independent investigations before sharing conclusions. Route concrete evidence and questions through team send to retained members; team read also retrieves results of direct user conversations. Use team steer only for guidance that does not need its own awaited answer.
-Give builders explicit file ownership; do not let concurrent agents edit the same files. Subagents share filesystem access, not a sandbox. Do not invent consensus or treat repetition as independent evidence.
-The main session resolves disagreements and verifies the integrated result. Four interactive panes are retained; oldest idle members may be replaced at capacity. Close unused members explicitly.`;
+// Tool-level policy applies to both runners; retained-pane instructions remain herdr-only.
+export const DELEGATION_POLICY = 'Default to working solo unless a team is requested. Each delegation needs a distinct question or deliverable, scope, relevant skills and a stop condition. Use at most one general reviewer; add specialists only for separate evidence. Never launch every role or a fixed pipeline.';
+const GUIDANCE = `Roles: scout (code map), architect (design), builder (implementation), sceptic (correctness review). Optional specialists: test-engineer (executable regressions), security-reviewer (named trust boundary), domain-specialist (authoritative business rules and acceptance examples). planner/worker/reviewer remain compatibility roles, not extra reviewers.
+Use item-level skills for mixed teams; top-level skills load into every member. Defaults load in full. Do not preload unrelated workflows.
+Investigate independently before sharing conclusions. Give all editing agents disjoint file ownership. When a test-engineer is assigned, reserve its named test and fixture files; builders may own other tests. Shared filesystem access is not a sandbox.
+Reuse members through team send; team read includes direct user conversations, while team steer acknowledges guidance, not a completed answer. Request concise conclusions and evidence pointers, not copied source dumps.
+Resolve disagreements and verify the integrated result in the main session. Stop when sufficient evidence exists. Four panes are capacity, not a staffing target; close unused members.`;
 
 export function registerTeamControls(pi, getTeam, Type, StringEnum) {
   const execute = async ({ action, id, text }, signal) => {

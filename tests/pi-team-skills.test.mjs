@@ -99,7 +99,7 @@ test('real Pi frontmatter discovery retains strict skills and existing permissiv
           catch (error) { results.push({ declaration, error: error.message }); }
         }
         unlinkSync(target);
-        for (const role of ['architect', 'builder', 'sceptic']) {
+        for (const role of ['architect', 'builder', 'sceptic', 'test-engineer', 'security-reviewer', 'domain-specialist']) {
           writeFileSync(${JSON.stringify(projectDir)} + '/' + role + '.md', readFileSync(${JSON.stringify(personaDir)} + '/' + role + '.md'));
         }
         writeFileSync(${JSON.stringify(output)}, JSON.stringify({ results, personas: discoverAgents(${JSON.stringify(dir)}, 'project').agents, activeSkills: ctx.getSystemPromptOptions().skills, skillCommands: pi.getCommands().filter(command => command.source === 'skill') }));
@@ -125,8 +125,23 @@ test('real Pi frontmatter discovery retains strict skills and existing permissiv
   }
   const expected = {
     architect: ['chain-of-verification'], builder: ['verification-before-completion'],
-    sceptic: ['code-review-workflow', 'verification-before-completion'],
+    sceptic: ['code-review-workflow'],
+    'test-engineer': [], 'security-reviewer': [], 'domain-specialist': [],
   };
-  assert.equal(personas.length, 3);
+  assert.equal(personas.length, 6);
   for (const persona of personas) assert.deepEqual(persona.skills, expected[persona.name]);
+  const optional = personas.filter(persona => persona.skills.length === 0);
+  for (const persona of optional) {
+    // Empty defaults do not preload a framework/domain workflow or any other role's body.
+    const prompt = await withSkills(persona, [], activeSkills);
+    assert.equal(prompt, persona.systemPrompt);
+    for (const other of personas.filter(other => other !== persona)) assert.ok(!prompt.includes(other.systemPrompt));
+    const augmented = await withSkills(persona, ['fixture-skill'], activeSkills);
+    assert.ok(augmented.includes('Full fixture content'));
+    assert.equal((augmented.match(/## Loaded skill:/g) ?? []).length, 1);
+  }
+  for (const name of ['security-reviewer', 'domain-specialist', 'sceptic']) {
+    assert.ok(!personas.find(persona => persona.name === name).tools.some(tool => ['edit', 'write'].includes(tool)));
+  }
+  assert.ok(personas.find(persona => persona.name === 'test-engineer').tools.includes('edit'));
 });

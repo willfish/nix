@@ -116,6 +116,10 @@ async function probe(f, child = false) {
 function assertSchemas(report) {
   assert.equal(report.fatal, undefined);
   assert.deepEqual(report.tools.map(tool => tool.name).sort(), ['subagent', 'team']);
+  const description = report.tools.find(tool => tool.name === 'subagent').description;
+  assert.match(description, /Default to working solo/);
+  assert.match(description, /at most one general reviewer/);
+  assert.match(description, /Never launch every role or a fixed pipeline/);
   const schemas = Object.fromEntries(report.tools.map(tool => [tool.name, tool.parameters]));
   assert.equal(schemas.subagent.type, 'object');
   for (const schema of [schemas.subagent, schemas.subagent.properties.tasks.items, schemas.subagent.properties.chain.items]) {
