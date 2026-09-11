@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  readSopsSecret,
   ...
 }:
 let
@@ -30,7 +31,11 @@ in
 
   # Keep credentials and user settings writable and outside Home Manager.
   # qwen-pi has a separate local profile and does not use these models.
-  home.file.".pi/agent/models.json".source = ../config/pi/models.json;
+  home.file.".pi/agent/models.json".text = builtins.toJSON (
+    lib.recursiveUpdate (builtins.fromJSON (builtins.readFile ../config/pi/models.json)) {
+      providers.opencode-go.apiKey = "!${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.OPENCODE_GO_KEY.path}";
+    }
+  );
 
   home.file.".pi/agent/extensions/mcp".source = "${mcpAdapter}/lib/node_modules/pi-mcp-adapter";
   # Keep agent state reporting in sync with the pinned Herdr package.
