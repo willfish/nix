@@ -50,7 +50,8 @@ def speech_chunks(text, maximum=260, first=120):
 
 
 class LocalAudio:
-    def __init__(self, runtime, config):
+    def __init__(self, runtime, config, *, engines=None):
+        self.engines = engines
         self.runtime, self.config = runtime, config
         self.player = None
         self.lock = threading.Lock()
@@ -128,12 +129,16 @@ class LocalAudio:
     def _engine_name(engine):
         return "Whisper" if engine == "stt" else "Samantha TTS"
 
-    def wait_ready(self, engine, cancelled=None):
+    def readiness(self, engine, timeout):
+        return self.wait_ready(engine, timeout=timeout)
+
+    def wait_ready(self, engine, cancelled=None, timeout=None):
         cancelled = cancelled or threading.Event()
         if not self.config.get(f"{engine}_health_url"):
             return not cancelled.is_set()
         deadline = time.monotonic() + float(
-            self.config.get("readiness_timeout", 60)
+            self.config.get("readiness_timeout",
+                            60) if timeout is None else timeout
         )
         self._backend_state(engine, "loading")
         while not cancelled.is_set():
@@ -209,7 +214,8 @@ class LocalAudio:
             if self.player and self.player.poll() is None:
                 self.player.terminate()
 
-    def _request(self, operation, gate, cancelled):
+    def _request(self, operation, gate, cancelled, engine=None, manager=None,
+                 on_drained=None):
         """Cancel the caller while draining already submitted GPU work."""
         with self.lock:
             stopped = self.stopped
@@ -220,7 +226,20 @@ class LocalAudio:
             return cancelled.is_set() or stopped.is_set()
 
         def perform():
+            lease = None
             try:
+                owner = manager or self.engines
+                if owner and engine:
+                    lease = owner.acquire(engine)
+                    while not abandoned():
+                        try:
+                            lease.wait(timeout=.05)
+                            break
+                        except TimeoutError:
+                            if lease.ready.done():
+                                raise
+                    if abandoned():
+                        return
                 while not abandoned():
                     if gate.acquire(timeout=.05):
                         break
@@ -234,7 +253,17 @@ class LocalAudio:
             except Exception as exc:
                 outcome.append((False, exc))
             finally:
-                finished.set()
+                if lease:
+                    lease.release()
+                # No audio/gate lock is held across controller callbacks.
+                # Success is reported even if cancellation raced HTTP
+                # completion. Callers
+                # must bound callback shutdown; failures cannot strand waiters.
+                try:
+                    if on_drained and outcome and outcome[0][0]:
+                        on_drained(outcome[0][1])
+                finally:
+                    finished.set()
 
         threading.Thread(target=perform, daemon=True).start()
         while not finished.wait(.025):
@@ -306,7 +335,17 @@ class LocalAudio:
                 check=False,
             )
 
-    def transcribe(self, path, cancelled=None):
+    def transcribe_drained(self, path, cancelled, on_drained):
+        """Report each successful drained request once, including cancelled
+        work.
+
+        on_drained runs on the request worker without audio locks and must bound
+        shutdown waits. It must never stage text. Legacy adapters can omit
+        this method.
+        """
+        return self.transcribe(path, cancelled, on_drained=on_drained)
+
+    def transcribe(self, path, cancelled=None, *, on_drained=None):
         cancelled = cancelled or threading.Event()
         if not self.wait_ready("stt", cancelled):
             return ""
@@ -351,7 +390,8 @@ class LocalAudio:
             return result["text"]
 
         return self._request(
-            recognize, self.recognition_lock, cancelled
+            recognize, self.recognition_lock, cancelled, engine='stt',
+            on_drained=on_drained
         ) or ""
 
     def _synthesize(self, chunk, cancelled, voice_options):
@@ -370,7 +410,8 @@ class LocalAudio:
             )
             return self._http(request, "tts", 32 * 1024 * 1024)
 
-        data = self._request(synthesize, self.synthesis_lock, cancelled)
+        data = self._request(synthesize, self.synthesis_lock,
+                             cancelled, engine='tts')
         if data is None:
             return None
         with wave.open(io.BytesIO(data), "rb") as wav:

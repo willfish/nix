@@ -1,7 +1,7 @@
 # Pi workflow
 
 The shared Pi setup adds a small coding workflow to the existing
-[MCP integration](pi-mcp.md), [voice controls](codex-voice.md) and
+[MCP integration](pi-mcp.md), [voice controls](voice.md) and
 [local Qwen profile](local-llm.md). It works in `pi`, `pi-voice`, `qwen-pi`
 and `qwen-pi-voice`.
 
@@ -15,7 +15,7 @@ and `qwen-pi-voice`.
 The [official todo extension](https://github.com/earendil-works/pi/blob/v0.85.1/packages/coding-agent/examples/extensions/todo.ts)
 provides one model tool, `todo`, with list, add, toggle and clear actions. Each
 session keeps its own list. You can speak requests such as "track the remaining
-steps" or "read my todo list" through your normal voice launcher. `/todos` is
+steps" or "read my todo list" through your selected voice session. `/todos` is
 an interactive list; Escape closes it.
 
 Planning and review use Pi's built-in
@@ -32,8 +32,24 @@ change is ready to inspect. Small tasks can use Pi normally.
 
 Session naming (`/name`), navigation (`/tree`), resume (`/resume`) and compaction
 are already provided by Pi. The existing MCP adapter supplies your external
-integrations. The configuration keeps those facilities and adds no background
-services, model calls at startup or new npm dependencies.
+integrations. These workflow additions keep those facilities and add no model
+calls at startup or new npm dependencies.
+
+## Voice sessions
+
+On Andromeda and Foundation, interactive `pi` and `qwen-pi` sessions in Herdr
+automatically attach to the shared voice controller. `pi-voice` and
+`qwen-pi-voice` remain compatibility commands. Codex and Grok are unchanged.
+The first ready non-team Pi session is selected once; later attachments and
+keyboard focus do not change that destination. Choose another session from
+the tray or **Super+Shift+V**, including after the selected session exits.
+**Show team members** reveals otherwise hidden team children for manual selection.
+
+The controller starts at login. Speech backends load and warm on attachment,
+with loading/unavailable status in the tray; controller reconnection retries
+quietly. Lost-destination dictation stays retained for explicit copy, staging
+in a selected Pi editor, or discard. Recovery never auto-submits. See
+[voice controls](voice.md) for the recording/send hotkeys and recovery details.
 
 ## Session context budget
 
@@ -183,7 +199,8 @@ The shared Home Manager module deploys history search on every machine; Qwen
 receives it wherever the local-Qwen launcher is enabled.
 
 After switching Home Manager, start a new Pi session to load the additions.
-An existing plain Pi session can use `/reload`; existing Qwen sessions should
+An existing plain Pi session can use `/reload` once to load auto-attachment;
+existing Qwen sessions should
 be restarted because their explicit startup arguments changed. Authentication,
 model settings and session files remain writable and are not managed here.
 

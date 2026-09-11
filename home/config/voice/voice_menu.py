@@ -5,8 +5,8 @@ from functools import partial
 import subprocess
 import sys
 
-from codex_voice import call, desktop_notice
-from codex_voice_tray import presentation, public_label
+from voice_controller import call, desktop_notice
+from voice_tray import presentation, public_label, selected_session
 
 
 def rows_for(status, section):
@@ -23,10 +23,17 @@ def rows_for(status, section):
             if action.startswith("voice:") and enabled
         ]
     if section == "sessions":
+        selected_child = {
+            "select:" + row["token"]
+            for row in status.get("sessions", [])
+            if row.get("selected") and row.get("team_child")
+            and isinstance(row.get("token"), str)
+        }
         return [
-            (action, label)
+            (action, ("* " if action in selected_child else "") + label)
             for action, (label, enabled) in actions.items()
-            if action.startswith("select:") and enabled
+            if action.startswith("select:")
+            and (enabled or action in selected_child)
         ]
     rows = [
         ("menu:sessions", "Choose session"),
@@ -34,8 +41,10 @@ def rows_for(status, section):
     ]
     for action, (label, enabled) in actions.items():
         if enabled and not action.startswith(("voice:", "select:")):
-            if action == "auto-toggle":
-                label += ": " + ("on" if view["auto"] else "off")
+            toggle = {"auto-toggle": "auto",
+                "team-toggle": "show_team"}.get(action)
+            if toggle:
+                label += ": " + ("on" if view[toggle] else "off")
             rows.append((action, label))
     return rows
 
@@ -54,7 +63,7 @@ def pick(prompt, rows, config):
             "--log-level=error",
             "--log-no-syslog",
             "--prompt",
-            public_label(prompt, 80) + "> ",
+            public_label(prompt, 320) + "> ",
         ],
         input="\n".join(public_label(label) for _, label in rows) + "\n",
         text=True,
@@ -77,14 +86,6 @@ def pick(prompt, rows, config):
     return rows[index][0]
 
 
-def selected_session(status):
-    return [
-        (s.get("token"), s.get("id"))
-        for s in status.get("sessions", [])
-        if s.get("selected")
-    ]
-
-
 def run_menu(section="menu", *, request=call, picker):
     status = request({"action": "status"})
     while True:
@@ -99,8 +100,24 @@ def run_menu(section="menu", *, request=call, picker):
         prompt = {
             "menu": "Voice controls",
             "voices": f"Voice ({current})",
-            "sessions": "Other voice sessions",
+            "sessions": "Voice sessions",
         }[section]
+        view = presentation(status)
+        destination = status.get("recording_label") if status.get("phase") in (
+            "starting", "recording", "stopping", "transcribing"
+        ) or status.get("preparing_transcription") else None
+        destination = destination or status.get("session_label")
+        if destination and (
+            status.get("pane")
+            or status.get("connection_state") == "reconnecting"
+        ):
+            prompt += f" | {public_label(destination)} | {view['label']}"
+        else:
+            prompt += f" | {view['label']}"
+        if status.get("retained"):
+            prompt += " | Retained from " + public_label(
+                status.get("retained_source") or "Previous destination"
+            )
         action = picker(prompt, rows)
         if action is None:
             return
@@ -110,13 +127,42 @@ def run_menu(section="menu", *, request=call, picker):
             section = action.split(":", 1)[1]
             status = request({"action": "status"})
             continue
+        if action == "stop":
+            request({"action": action})
+            return
         fresh = request({"action": "status"})
-        enabled = presentation(fresh)["actions"].get(action, ("", False))[1]
+        fresh_view = presentation(fresh)
+        enabled = fresh_view["actions"].get(action, ("", False))[1]
+        if (
+            action.startswith("select:")
+            and action == fresh_view["selected_session"]
+        ):
+            if view["session_identities"].get(action) != fresh_view[
+                "session_identities"
+            ].get(action):
+                raise RuntimeError("That session changed; reopen the menu")
+            if not enabled:
+                return
         if not enabled:
             raise RuntimeError(
                 "That action is no longer available; reopen the menu"
             )
-        if not action.startswith(("voice:", "select:")):
+        if action.startswith("select:"):
+            old_identity = presentation(
+                status)["session_identities"].get(action)
+            if old_identity != presentation(fresh)["session_identities"].get(
+                action
+            ):
+                raise RuntimeError("That session changed; reopen the menu")
+        if action in (
+            "read",
+            "append",
+            "retry",
+            "discard",
+            "rebind",
+            "recover-stage",
+            "auto-toggle",
+        ):
             if selected_session(fresh) != selected_session(status):
                 raise RuntimeError(
                     "The selected session changed; reopen the menu"
@@ -127,6 +173,11 @@ def run_menu(section="menu", *, request=call, picker):
                 raise RuntimeError(
                     "The automatic playback setting changed; reopen the menu"
                 )
+        if action == "team-toggle" and bool(fresh.get("show_team")) != bool(
+            status.get("show_team")
+        ):
+            raise RuntimeError(
+                "The team visibility setting changed; reopen the menu")
         request({"action": action})
         return
 

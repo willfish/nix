@@ -40,6 +40,143 @@ def status():
 
 
 class MenuTests(unittest.TestCase):
+    def retained_pi(self):
+        from test_pi_voice_controller import ManagedTests
+        fixture = ManagedTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        target = fixture.target()
+        token = fixture.attach(target)
+        fixture.event(token, target)
+        fixture.app.retain_dictation("retained words", token, target)
+        return fixture, token, target
+
+    def test_sole_autoselected_pi_can_confirm_then_stage_without_submit(self):
+        import voice_controller as voice
+        fixture, token, _ = self.retained_pi()
+        before = fixture.app.status()
+        self.assertFalse(before["selection_explicit"])
+        self.assertEqual(len(before["sessions"]), 1)
+        self.assertNotIn("recover-stage", dict(menu.rows_for(before, "menu")))
+        label = before["sessions"][0]["label"]
+        self.assertEqual(menu.rows_for(before, "sessions"), [
+            (f"select:{token}", f"Confirm {label} for retained dictation")
+        ])
+        request = lambda message: voice.dispatch(fixture.app, message)
+        menu.run_menu("sessions", request=request,
+                      picker=Mock(return_value=f"select:{token}"))
+        self.assertTrue(fixture.app.status()["selection_explicit"])
+        self.assertEqual(fixture.terminal.text, [])
+        self.assertEqual(fixture.terminal.keys, [])
+        self.assertIn("recover-stage",
+                      dict(menu.rows_for(fixture.app.status(), "menu")))
+        menu.run_menu(request=request, picker=Mock(
+            return_value="recover-stage"))
+        self.assertEqual(fixture.terminal.text, ["retained words"])
+        self.assertEqual(fixture.terminal.keys, [])
+
+    def test_current_confirmation_rejects_reloaded_conversation(self):
+        fixture, token, target = self.retained_pi()
+        before = fixture.app.status()
+        replacement = fixture.target(session="replacement", activation=2)
+        replacement_token = fixture.attach(replacement)
+        fixture.event(replacement_token, replacement)
+        fresh = fixture.app.status()
+        self.assertNotEqual(before["sessions"][0]["id"],
+                            fresh["sessions"][0]["id"])
+        request = Mock(side_effect=[before, fresh])
+        with self.assertRaisesRegex(
+            RuntimeError, "no longer available|session changed"
+        ):
+            menu.run_menu("sessions", request=request,
+                          picker=Mock(return_value=f"select:{token}"))
+        self.assertEqual(request.call_count, 2)
+        self.assertFalse(fixture.app.selection_explicit)
+        self.assertEqual(fixture.terminal.text, [])
+        self.assertEqual(fixture.terminal.keys, [])
+
+    def test_current_confirmation_rejects_changed_identity_with_same_token(
+        self,
+    ):
+        old, fresh = status(), status()
+        for state in (old, fresh):
+            state.update(retained=True, selection_explicit=False)
+        fresh["sessions"][0]["id"] = "replacement"
+        request = Mock(side_effect=[old, fresh])
+        with self.assertRaisesRegex(RuntimeError, "session changed"):
+            menu.run_menu("sessions", request=request,
+                          picker=Mock(return_value="select:a"))
+        self.assertEqual(request.call_count, 2)
+
+    def test_replaced_conversation_with_same_token_cannot_be_selected(self):
+        fresh = status()
+        fresh["sessions"][1]["id"] = "replacement"
+        request = Mock(side_effect=[status(), fresh])
+        with self.assertRaisesRegex(RuntimeError, "session changed"):
+            menu.run_menu("sessions", request=request,
+                          picker=Mock(return_value="select:b"))
+        self.assertEqual(request.call_count, 2)
+
+    def test_label_refresh_does_not_change_identity(self):
+        fresh = status()
+        fresh["sessions"][1]["label"] = "renamed"
+        request = Mock(side_effect=[status(), fresh, {}])
+        menu.run_menu("sessions", request=request,
+                      picker=Mock(return_value="select:b"))
+        self.assertEqual(request.call_args.args[0], {"action": "select:b"})
+
+    def test_team_toggle_and_hidden_rows(self):
+        state = status()
+        state["sessions"][1]["team_child"] = True
+        self.assertEqual(menu.rows_for(state, "sessions"), [])
+        self.assertIn(("team-toggle", "Show team members: off"),
+                      menu.rows_for(state, "menu"))
+        request = Mock(return_value=state)
+        menu.run_menu(request=request, picker=Mock(return_value="team-toggle"))
+        self.assertEqual(request.call_args.args[0], {"action": "team-toggle"})
+
+    def test_selected_team_child_remains_visible_without_toggle(self):
+        state = status()
+        state["sessions"][0]["team_child"] = True
+        self.assertIn(("select:a", "* same label"),
+                      menu.rows_for(state, "sessions"))
+        request = Mock(return_value=state)
+        menu.run_menu("sessions", request=request,
+                      picker=Mock(return_value="select:a"))
+        self.assertTrue(
+            all(
+                call.args[0] == {"action": "status"}
+                for call in request.call_args_list
+            )
+        )
+
+    def test_recovery_stage_rechecks_selected_identity(self):
+        old, fresh = status(), status()
+        old["retained"] = fresh["retained"] = True
+        fresh["sessions"][0]["id"] = "replacement"
+        request = Mock(side_effect=[old, fresh])
+        with self.assertRaisesRegex(RuntimeError, "session changed"):
+            menu.run_menu(request=request, picker=Mock(
+                return_value="recover-stage"))
+
+    def test_stop_does_not_wait_for_fresh_status(self):
+        state = {**status(), "connection_state": "connecting"}
+        request = Mock(side_effect=[state, {}])
+        menu.run_menu(request=request, picker=Mock(return_value="stop"))
+        self.assertEqual(request.call_args_list[1].args[0], {"action": "stop"})
+
+    def test_prompt_identifies_pinned_destination_and_connection(self):
+        state = {
+            **status(),
+            "phase": "recording",
+            "recording_label": "pinned destination",
+            "session_label": "new destination",
+        }
+        picker = Mock(return_value=None)
+        menu.run_menu(request=Mock(return_value=state), picker=picker)
+        self.assertIn("pinned destination", picker.call_args.args[0])
+        self.assertNotIn("new destination", picker.call_args.args[0])
+
     def test_cancel_only_reads_status(self):
         request = Mock(return_value=status())
         menu.run_menu(request=request, picker=Mock(return_value=None))

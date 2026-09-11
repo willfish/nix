@@ -6,12 +6,7 @@
   ...
 }:
 let
-  enabled =
-    pkgs.stdenv.isLinux
-    && builtins.elem hostName [
-      "andromeda"
-      "foundation"
-    ];
+  voiceSupported = import ./voice-supported.nix { inherit pkgs hostName; };
   dataDir = "${config.home.homeDirectory}/.local/share/codex-voice";
   cudaTts = hostName == "andromeda";
   audio = pkgs.callPackage ./voice-audio-package.nix {
@@ -26,7 +21,7 @@ let
   voicePython = pkgs.python3.withPackages (ps: [ ps.dbus-next ]);
   voiceScripts = pkgs.runCommand "codex-voice-scripts" { } ''
     mkdir -p "$out"
-    cp ${../config/voice}/*.py ${../config/voice}/*.mjs "$out/"
+    cp ${../config/voice}/*.py "$out/"
   '';
   makeVoice =
     harness:
@@ -36,6 +31,7 @@ let
         voicePython
         pkgs.pipewire
         pkgs.wireplumber
+        pkgs.wl-clipboard
         pkgs.curl
         pkgs.libnotify
         pkgs.systemd
@@ -45,7 +41,7 @@ let
         export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
         export CODEX_VOICE_COMMAND="$0"
         export AGENT_VOICE_LAUNCH_KIND=${lib.escapeShellArg harness}
-        exec python3 ${voiceScripts}/codex_voice.py "$@"
+        exec python3 ${voiceScripts}/voice_controller.py "$@"
       '';
     };
   voice = makeVoice "codex";
@@ -192,7 +188,7 @@ let
   };
 in
 {
-  config = lib.mkIf enabled {
+  config = lib.mkIf voiceSupported {
     home.packages = [
       voice
       (makeVoice "grok")
@@ -228,6 +224,7 @@ in
 
     systemd.user.services.codex-voice = {
       Unit.Description = "Agent voice hotkeys, tray and selected session";
+      Install.WantedBy = [ "default.target" ];
       Service = common // {
         ExecStart = "${voice}/bin/codex-voice serve";
         RuntimeDirectory = "codex-voice";

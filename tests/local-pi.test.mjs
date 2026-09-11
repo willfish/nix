@@ -89,6 +89,33 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
 });
 
+test('voice installation and explicit Qwen loading share the supported-host predicate', () => {
+  const standard = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
+  const qwen = readFileSync(new URL('../home/user/local-llm.nix', import.meta.url), 'utf8');
+  const voice = readFileSync(new URL('../home/user/voice.nix', import.meta.url), 'utf8');
+  for (const source of [standard, qwen, voice]) {
+    assert.match(source, /voiceSupported = import \.\/voice-supported\.nix \{ inherit pkgs hostName; \};/);
+  }
+  assert.match(standard, /home\.file\."\.pi\/agent\/extensions\/pi-voice\.js" = lib\.mkIf voiceSupported \{\s*source = \.\.\/config\/pi\/extensions\/pi-voice\.js;\s*\};/);
+  assert.equal((standard.match(/home\.file\."\.pi\/agent\/extensions\/pi-voice\.js"/g) ?? []).length, 1);
+  assert.match(qwen, /lib\.optionalString voiceSupported "export PI_VOICE_HARNESS=qwen-pi"/);
+  assert.match(qwen, /lib\.optionalString voiceSupported "--extension \$\{config\.home\.homeDirectory\}\/\.pi\/agent\/extensions\/pi-voice\.js"/);
+  assert.equal((qwen.match(/\/extensions\/pi-voice\.js/g) ?? []).length, 1);
+  assert.match(voice, /config = lib\.mkIf voiceSupported/);
+});
+
+test('voice packages Python and clipboard support but starts only the controller at login', () => {
+  const source = readFileSync(new URL('../home/user/voice.nix', import.meta.url), 'utf8');
+  assert.match(source, /cp \$\{\.\.\/config\/voice\}\/\*\.py "\$out\/"/);
+  assert.ok(!source.includes('*.mjs'));
+  assert.match(source, /runtimeInputs = \[[\s\S]*?pkgs\.wl-clipboard[\s\S]*?\];/);
+  const controller = source.split('systemd.user.services.codex-voice = {')[1].split('systemd.user.services.codex-voice-stt')[0];
+  assert.match(controller, /Install\.WantedBy = \[ "default.target" \];/);
+  assert.match(controller, /RuntimeDirectoryMode = "0700";/);
+  assert.match(controller, /RuntimeDirectoryPreserve = "yes";/);
+  assert.equal((source.match(/WantedBy/g) ?? []).length, 1);
+});
+
 test('both profiles use the pinned upstream package, not the retired implementation', () => {
   const standard = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
   const qwen = readFileSync(new URL('../home/user/local-llm.nix', import.meta.url), 'utf8');

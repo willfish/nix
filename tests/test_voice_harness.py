@@ -81,6 +81,12 @@ class AdapterTests(unittest.TestCase):
             PiTerminal().insert(self.target, 'hello')
         self.assertEqual(self.requests[-1]['command'], 'stage')
 
+    def test_non_boolean_acknowledgement_is_uncertain(self):
+        self.server([self.status(), {'ok': 'unknown', 'result': {}}])
+        with self.assertRaises(DeliveryUncertain):
+            PiTerminal().insert(self.target, 'hello')
+        self.assertEqual(self.requests[-1]['command'], 'stage')
+
     def test_safe_rejection_is_distinct_from_lost_ack(self):
         self.server([
             self.status(), {'ok': False, 'error': 'Pi is busy'}

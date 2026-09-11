@@ -10,7 +10,8 @@ import unittest
 from unittest.mock import Mock, patch
 
 SOURCE = (
-    Path(__file__).resolve().parents[1] / "home/config/voice/codex_voice.py"
+    Path(__file__).resolve().parents[1] / \
+         "home/config/voice/voice_controller.py"
 )
 spec = importlib.util.spec_from_file_location(
     "voice_activity_controller", SOURCE

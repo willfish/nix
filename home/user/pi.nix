@@ -2,10 +2,12 @@
   config,
   lib,
   pkgs,
+  hostName,
   readSopsSecret,
   ...
 }:
 let
+  voiceSupported = import ./voice-supported.nix { inherit pkgs hostName; };
   llmMcps = import ./llm-mcps.nix { inherit config lib; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
   promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
@@ -37,6 +39,9 @@ in
     }
   );
 
+  home.file.".pi/agent/extensions/pi-voice.js" = lib.mkIf voiceSupported {
+    source = ../config/pi/extensions/pi-voice.js;
+  };
   home.file.".pi/agent/extensions/mcp".source = "${mcpAdapter}/lib/node_modules/pi-mcp-adapter";
   # Keep agent state reporting in sync with the pinned Herdr package.
   home.file.".pi/agent/extensions/herdr-agent-state.ts".source =

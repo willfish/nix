@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 MODULE = (
     Path(__file__).resolve().parents[1]
-    / "home/config/voice/codex_voice_tray.py"
+    / "home/config/voice/voice_tray.py"
 )
 
 
@@ -23,10 +23,109 @@ class PresentationTests(unittest.TestCase):
     def setUp(self):
         self.assertTrue(MODULE.exists(), "Voice tray is not implemented")
         spec = importlib.util.spec_from_file_location(
-            "codex_voice_tray", MODULE
+            "voice_tray", MODULE
         )
         self.tray = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.tray)
+
+    def test_team_filter_keeps_selected_child_and_full_labels(self):
+        rows = [
+            {"token": "a", "id": "1", "team_child": True, "selected": True},
+            {"token": "b", "id": "2", "team_child": True},
+            {
+                "token": "c",
+                "id": "3",
+                "label": "short",
+                "full_label": "x" * 200,
+            },
+        ]
+        view = self.tray.presentation({"sessions": rows})
+        self.assertFalse(view["show_team"])
+        self.assertIn("select:a", view["actions"])
+        self.assertNotIn("select:b", view["actions"])
+        self.assertEqual(view["full_labels"]["select:c"], "x" * 200)
+        shown = self.tray.presentation({"sessions": rows, "show_team": True})
+        self.assertIn("select:b", shown["actions"])
+        self.assertEqual(shown["selected_session"], view["selected_session"])
+
+    def test_recovery_is_explicit_and_stage_requires_ready_pi(self):
+        base = {"retained": True, "retained_source": "pi source", "pane": "p1"}
+        for harness, connection, allowed in (
+            ("pi", "ready", True), ("qwen-pi", "ready", True),
+            ("codex", "ready", False), ("pi", "reconnecting", False),
+        ):
+            view = self.tray.presentation(
+                {**base, "harness": harness, "connection_state": connection})
+            self.assertEqual(view["actions"]["recover-stage"][1], allowed)
+            self.assertIn("recover-copy", view["actions"])
+            self.assertIn("recover-discard", view["actions"])
+            self.assertIn("stop", view["actions"])
+            self.assertNotIn("send", view["actions"])
+            self.assertNotIn("append", view["actions"])
+            self.assertIn("pi source", str(view["context"]))
+
+    def test_retained_current_pi_requires_confirmation_before_staging(self):
+        base = {
+            "pane": "p1", "harness": "pi", "retained": True,
+            "selection_explicit": False,
+            "sessions": [{"token": "one", "id": "conversation",
+                          "label": "Pi: notes", "selected": True}],
+        }
+        view = self.tray.presentation(base)
+        self.assertEqual(view["actions"]["select:one"],
+                         ("Confirm Pi: notes for retained dictation", True))
+        self.assertFalse(view["actions"]["recover-stage"][1])
+        confirmed = self.tray.presentation({**base, "selection_explicit": True})
+        self.assertFalse(confirmed["actions"]["select:one"][1])
+        self.assertTrue(confirmed["actions"]["recover-stage"][1])
+        for changes in ({"phase": "recording"}, {"retained": False},
+                        {"harness": "codex"}):
+            with self.subTest(changes=changes):
+                self.assertFalse(self.tray.presentation({**base, **changes})[
+                    "actions"]["select:one"][1])
+
+    def test_confirmation_action_rechecks_current_conversation_identity(self):
+        from unittest.mock import Mock
+        old = {
+            "pane": "p1", "harness": "pi", "retained": True,
+            "selection_explicit": False,
+            "sessions": [{"token": "one", "id": "original",
+                          "label": "Pi: notes", "selected": True}],
+        }
+        for identity in ("original", "replacement"):
+            with self.subTest(identity=identity):
+                fresh = {
+                    **old, "sessions": [{**old["sessions"][0], "id": identity}]}
+                callback = Mock()
+                tray = self.tray.VoiceTray(lambda: fresh, callback)
+                self.addCleanup(tray.stop)
+                tray.view = self.tray.presentation(old)
+                tray.action("select:one")
+                self.assertTrue(tray.action_lock.acquire(timeout=1))
+                tray.action_lock.release()
+                if identity == "original":
+                    callback.assert_called_once_with("select:one")
+                else:
+                    callback.assert_not_called()
+
+    def test_loading_and_reconnecting_allow_stop_not_record_more(self):
+        view = self.tray.presentation(
+            {"pane": "p1", "connection_state": "reconnecting", "draft": True})
+        self.assertEqual(view["label"], "Reconnecting")
+        self.assertNotIn("append", view["actions"])
+        self.assertTrue(view["actions"]["stop"][1])
+        view = self.tray.presentation(
+            {
+                "pane": "new",
+                "session_label": "new",
+                "recording_label": "pinned",
+                "phase": "recording",
+                "preparing_transcription": True,
+            }
+        )
+        self.assertEqual(view["label"], "Preparing transcription")
+        self.assertIn("pinned", str(view["context"]))
+        self.assertTrue(view["actions"]["stop"][1])
 
     def test_starting_does_not_claim_recording_or_allow_send(self):
         view = self.tray.presentation({"pane": "p1", "phase": "starting"})
@@ -156,6 +255,7 @@ class PresentationTests(unittest.TestCase):
         view = self.tray.presentation({"pane": "p1", "auto": True})
         self.assertEqual(view["actions"], {
             "auto-toggle": ("Read replies aloud", True),
+            "team-toggle": ("Show team members", True),
         })
         self.assertTrue(view["auto"])
 
@@ -170,6 +270,22 @@ class PresentationTests(unittest.TestCase):
                 {key for key in view["actions"] if key.startswith("voice:")},
                 {"voice:" + key for key in voices},
             )
+
+    def test_child_silence_hides_replay_without_disabling_dictation(self):
+        for child in (False, True):
+            with self.subTest(child=child):
+                view = self.tray.presentation({
+                    'pane': 'p1', 'harness': 'pi', 'reply': 'Summary',
+                    'can_speak': not child, 'auto': True,
+                    'retained': True, 'selection_explicit': True,
+                    'sessions': [{'token': 'child', 'selected': True,
+                                  'team_child': child}],
+                })
+                self.assertEqual('read' in view['actions'], not child)
+                self.assertEqual('Team members are silent' in view['context'],
+                                 child)
+                self.assertTrue(view['auto'])
+                self.assertTrue(view['actions']['recover-stage'][1])
 
     def test_last_reply_can_be_replayed_only_when_usable(self):
         status = {"pane": "p1", "reply": "An answer"}
@@ -299,8 +415,9 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("clipping", " ".join(view["context"]))
 
     def test_cancel_reaches_real_controller_during_slow_terminal_paste(self):
-        source = MODULE.with_name("codex_voice.py")
-        spec = importlib.util.spec_from_file_location("codex_voice", source)
+        source = MODULE.with_name("voice_controller.py")
+        spec = importlib.util.spec_from_file_location(
+            "voice_controller", source)
         voice = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(voice)
         entered, release, stopped = (threading.Event() for _ in range(3))
@@ -353,7 +470,7 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(MODULE.exists(), "Voice tray is not implemented")
         spec = importlib.util.spec_from_file_location(
-            "codex_voice_tray", MODULE
+            "voice_tray", MODULE
         )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -461,9 +578,15 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 _, layout = await menu.call_get_layout(0, -1, [])
                 rows = [child.value for child in layout[2]]
                 labels = [row[1]["label"].value for row in rows]
-                self.assertEqual(labels, [
-                    "Voice session", "Read replies aloud", "Cancel recording",
-                ])
+                self.assertEqual(
+                    labels,
+                    [
+                        "Voice session",
+                        "Read replies aloud",
+                        "Show team members",
+                        "Cancel recording",
+                    ],
+                )
                 tooltip = (await item.get_tool_tip())[3]
                 for detail in ("00:12", "Pi: dotfiles", "Microphone: USB mic",
                                "Speech models loading"):

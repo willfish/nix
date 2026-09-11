@@ -6,6 +6,7 @@
   ...
 }:
 let
+  voiceSupported = import ./voice-supported.nix { inherit pkgs hostName; };
   isRelay = pkgs.stdenv.isDarwin && hostName == "relay";
   isAndromeda = pkgs.stdenv.isLinux && hostName == "andromeda";
   llamaCpp =
@@ -180,6 +181,7 @@ let
       umask 077
       export PI_CODING_AGENT_DIR=${lib.escapeShellArg piAgentDir}
       export PI_TELEMETRY=0
+      ${lib.optionalString voiceSupported "export PI_VOICE_HARNESS=qwen-pi"}
       exec ${pkgs.pi-coding-agent}/bin/pi \
         --offline --provider ${hostName} --model ${modelAlias} \
         --no-context-files --no-skills --no-extensions --no-prompt-templates --no-themes \
@@ -190,6 +192,7 @@ let
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-ui.js \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-model.js \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/prompt-history/index.ts \
+        ${lib.optionalString voiceSupported "--extension ${config.home.homeDirectory}/.pi/agent/extensions/pi-voice.js"} \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/plan-work.md \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/review.md \
         --system-prompt "$(< ${piSystemPrompt})" \

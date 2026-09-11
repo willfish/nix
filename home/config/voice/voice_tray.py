@@ -11,10 +11,23 @@ def public_label(value, limit=120):
     return "".join(char for char in text if char.isprintable())[:limit]
 
 
+def session_visible(row, show_team):
+    """Filter presentation only, never change the selected destination."""
+    return bool(row.get("selected") or show_team or not row.get("team_child"))
+
+
+def selected_session(status):
+    return [(row.get("token"), row.get("id"))
+            for row in status.get("sessions", []) if row.get("selected")]
+
+
 def presentation(status):
     """Return only public state, never dictated text or assistant replies."""
     phase = status.get("phase", "idle")
-    busy = phase in ("starting", "recording", "stopping", "transcribing")
+    preparing = bool(status.get("preparing_transcription"))
+    busy = preparing or phase in (
+        "starting", "recording", "stopping", "transcribing"
+    )
     selected = bool(status.get("pane"))
     ready = bool(status.get("draft") or status.get("pending"))
     pending = bool(status.get("pending"))
@@ -24,6 +37,11 @@ def presentation(status):
         status.get("agent_state") == "working"
     )
     blocked = status.get("agent_state") == "blocked"
+    connection = status.get(
+        "connection_state", "ready" if selected else "unselected")
+    connected = selected and connection == "ready"
+    retained = bool(status.get("retained"))
+    usable = connected and not blocked and not retained
     harness = public_label(status.get("harness") or "Codex", 30)
     harness = {"codex": "Codex", "grok": "Grok", "pi": "Pi",
                "qwen-pi": "Qwen Pi"}.get(harness, harness)
@@ -63,10 +81,34 @@ def presentation(status):
             colour, glyph = "orange", "blocked"
         elif selected and responding:
             label, colour, glyph = f"{harness} is responding", "blue", "dots"
+    if preparing:
+        label = "Preparing transcription"
+        colour = "amber"
+    elif (
+        not busy
+        and not speaking
+        and phase != "error"
+        and connection in ("connecting", "reconnecting")
+    ):
+        label, colour = connection.capitalize(), "amber"
+    elif not selected and not busy and not speaking and phase != "error":
+        label = "No voice session selected"
     context = []
-    if selected:
-        session = public_label(status.get("session_label") or status["pane"])
+    selected_row = next((row for row in status.get("sessions", [])
+                         if row.get("selected")), {})
+    destination = (
+        status.get("recording_label") if busy else None
+    ) or selected_row.get("full_label") or status.get("session_label")
+    if (
+        selected
+        or (busy and status.get("recording_label"))
+        or connection == "reconnecting"
+    ):
+        session = public_label(destination or status.get(
+            "pane") or "Previous destination", None)
         context.append(f"{harness}: {session}")
+        if connection != "ready":
+            context.append(connection.capitalize())
         if responding and glyph != "dots":
             context.append(f"{harness} is responding")
         elif blocked and label != f"{harness} needs your attention":
@@ -109,22 +151,39 @@ def presentation(status):
         "auto": bool(status.get("auto")),
         "selected_voice": status.get("selected_voice", "samantha"),
         "selected_session": None,
-        "actions": {"auto-toggle": ("Read replies aloud", True)},
+        "selection_identity": selected_session(status),
+        "session_identities": {},
+        "full_labels": {},
+        "show_team": bool(status.get("show_team", False)),
+        "actions": {
+            "auto-toggle": ("Read replies aloud", True),
+            "team-toggle": ("Show team members", True),
+        },
     }
     actions = view["actions"]
+    can_speak = status.get('can_speak', True)
+    if selected and not can_speak:
+        context.append('Team members are silent')
     for character, label in status.get("voices", {}).items():
         actions["voice:" + character] = (public_label(label), True)
-    if selected and not busy and not pending and not speaking \
-            and not responding and status.get("reply"):
+    if connected and not blocked and not busy and not pending and not speaking \
+            and not responding and can_speak and status.get("reply"):
         actions["read"] = ("Replay last reply", True)
-    if busy or speaking:
+    if (
+        busy
+        or speaking
+        or retained
+        or connection in ("connecting", "reconnecting")
+        or status.get("models") == "loading"
+    ):
         actions["stop"] = (
-            "Cancel transcription" if phase == "transcribing"
-            else "Cancel recording" if busy else "Stop speaking", True,
+            "Cancel transcription" if phase == "transcribing" or preparing
+            else "Cancel recording" if busy else "Stop speaking" if speaking
+            else "Stop", True,
         )
-    if selected and ready and not busy:
+    if usable and ready and not busy:
         actions["append"] = ("Record more", True)
-    if selected and retry and not busy:
+    if usable and retry and not busy:
         actions["retry"] = ("Retry transcription", True)
     if (pending or retry) and not busy:
         actions["discard"] = (
@@ -133,16 +192,40 @@ def presentation(status):
         )
     if selected and status.get("rebind_needed") and not busy:
         actions["rebind"] = ("Bind to current conversation", True)
+    if retained:
+        source = public_label(status.get("retained_source")
+                              or "Previous destination")
+        context.append(f"Retained dictation from {source}")
+        actions["recover-copy"] = ("Copy retained dictation", True)
+        actions["recover-stage"] = (
+            "Stage in selected Pi session",
+            connected and status.get("harness") in ("pi", "qwen-pi")
+            and status.get("selection_explicit", True)
+            and not busy and not blocked and not responding,
+        )
+        actions["recover-discard"] = ("Discard retained dictation", True)
     for session in status.get("sessions", []):
+        if not session_visible(session, view["show_team"]):
+            continue
         token = session.get("token")
         if not isinstance(token, str) or not token:
             continue
-        selected_session = bool(session.get("selected"))
-        if selected_session:
+        is_selected = bool(session.get("selected"))
+        if is_selected:
             view["selected_session"] = f"select:{token}"
+        view["session_identities"][f"select:{token}"] = (
+            token, session.get("id"))
+        view["full_labels"][f"select:{token}"] = public_label(
+            session.get("full_label") or session.get("label") or token, None
+        )
+        confirm = (is_selected and retained
+                   and status.get("harness") in ("pi", "qwen-pi")
+                   and not status.get("selection_explicit", True))
+        label = public_label(session.get("label") or token)
         view["actions"][f"select:{token}"] = (
-            public_label(session.get("label") or token),
-            not busy and not selected_session,
+            f"Confirm {label} for retained dictation" if confirm else label,
+            not busy and (not is_selected or confirm)
+            and session.get("connection_state", "ready") == "ready",
         )
     return view
 
@@ -311,24 +394,35 @@ def _interfaces(tray):
                 for i, label, enabled in rows
             ]
             for row in rows:
-                if tray.actions_by_id[row[0]] == "auto-toggle":
+                toggle = {
+                    "auto-toggle": "auto",
+                    "team-toggle": "show_team",
+                }.get(tray.actions_by_id[row[0]])
+                if toggle:
                     row[1].update({
                         "toggle-type": Variant("s", "checkmark"),
-                        "toggle-state": Variant("i", int(tray.view["auto"])),
+                        "toggle-state": Variant("i", int(tray.view[toggle])),
                     })
             sessions = [
-                Variant("(ia{sv}av)", [
-                    tray.action_id(action),
-                    {
-                        "label": Variant("s", label),
-                        "enabled": Variant("b", enabled),
-                        "toggle-type": Variant("s", "radio"),
-                        "toggle-state": Variant(
-                            "i", int(action == tray.view["selected_session"])
-                        ),
-                    },
-                    [],
-                ])
+                Variant(
+                    "(ia{sv}av)",
+                    [
+                        tray.action_id(action),
+                        {
+                            "label": Variant("s", label),
+                            "enabled": Variant("b", enabled),
+                            "accessible-desc": Variant(
+                                "s", tray.view["full_labels"].get(action, label)
+                            ),
+                            "toggle-type": Variant("s", "radio"),
+                            "toggle-state": Variant(
+                                "i",
+                                int(action == tray.view["selected_session"]),
+                            ),
+                        },
+                        [],
+                    ],
+                )
                 for action, (label, enabled) in tray.view["actions"].items()
                 if action.startswith("select:")
             ]
@@ -494,6 +588,8 @@ class VoiceTray:
         if locked and not self.action_lock.acquire(blocking=False):
             return
 
+        displayed = self.view
+
         def invoke():
             try:
                 if name == "stop":
@@ -501,6 +597,24 @@ class VoiceTray:
                     return
                 # Recheck live state because the displayed menu may be stale.
                 view = presentation(self.status_callback())
+                if name.startswith("select:"):
+                    if displayed["session_identities"].get(name) != view[
+                        "session_identities"
+                    ].get(name):
+                        return
+                elif name in (
+                    "read",
+                    "append",
+                    "retry",
+                    "rebind",
+                    "recover-stage",
+                    "discard",
+                ):
+                    if (
+                        displayed["selection_identity"]
+                        != view["selection_identity"]
+                    ):
+                        return
                 if view["actions"].get(name, ("", False))[1]:
                     self.action_callback(name)
             except Exception as exc:

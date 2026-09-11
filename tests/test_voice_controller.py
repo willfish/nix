@@ -20,7 +20,8 @@ from unittest.mock import patch
 
 MODULE = Path(os.environ.get(
     "VOICE_TEST_CONTROLLER",
-    Path(__file__).resolve().parents[1] / "home/config/voice/codex_voice.py",
+    Path(__file__).resolve().parents[1] / \
+         "home/config/voice/voice_controller.py",
 ))
 
 
@@ -135,7 +136,8 @@ class Audio:
 class VoiceTests(unittest.TestCase):
     def setUp(self):
         self.assertTrue(MODULE.exists(), "Voice controller is not implemented")
-        spec = importlib.util.spec_from_file_location("codex_voice", MODULE)
+        spec = importlib.util.spec_from_file_location(
+            "voice_controller", MODULE)
         self.voice = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.voice)
         self.tmp = tempfile.TemporaryDirectory()
@@ -184,6 +186,38 @@ class VoiceTests(unittest.TestCase):
         self.app.register("dead-token", dict(target, start="wrong-start-time"))
         self.assertFalse(restarted.restore())
         self.assertIsNone(restarted.status()["pane"])
+
+    def test_restart_adopts_resident_engine_and_last_restored_session_stops_it(
+        self,
+    ):
+        from voice_engines import EngineManager
+        from test_voice_engines import Queue
+        queue, commands = Queue(), []
+        manager = EngineManager(
+            readiness=lambda *a: self.fail('restart must not warm engines'),
+            runner=lambda engine, command, timeout: commands.append(
+                (engine, command)),
+            scheduler=queue, clock=lambda: 10000)
+        self.addCleanup(manager.close)
+        self.app.register(
+            'survivor',
+            dict(
+                self.target,
+                pid=os.getpid(),
+                start=self.voice.process_start(os.getpid()),
+            ),
+        )
+        restarted = self.voice.Controller(
+            Path(self.tmp.name), self.terminal, self.audio, lambda *a: None,
+            engines=manager)
+        self.assertTrue(restarted.restore())
+        manager.reconcile_startup(lambda engine, timeout: engine == 'stt')
+        queue.drain()
+        self.assertEqual(commands, [])
+        self.assertTrue(manager.state('stt').running)
+        restarted.unregister('survivor')
+        queue.drain()
+        self.assertEqual(commands, [('stt', 'stop')])
 
     def test_only_cli_root_threads_pass_the_notification_filter(self):
         root = Path(self.tmp.name)
@@ -256,7 +290,7 @@ class VoiceTests(unittest.TestCase):
             [(s["label"], s["selected"])
              for s in self.app.status()["sessions"]],
             [("codex: conversation-codex", False), ("grok: w1:p3", False),
-             ("pi: conversation-pi", True)],
+             ("pi: w1:p4", True)],
         )
 
     def test_harness_session_change_requires_explicit_rebind(self):
@@ -272,36 +306,62 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(self.app.thread, "pi-next")
         self.assertEqual(self.app.target["session"], "pi-next")
 
-    def test_launcher_keeps_wrappers_and_loads_pi_extension(self):
+    def test_launcher_keeps_wrappers_and_uses_installed_pi_extension_once(self):
         for harness in ("pi", "qwen-pi"):
-            command = self.voice.launcher_command(
-                harness, ["--continue"], Path(self.tmp.name), "notify"
-            )
-            self.assertEqual(command[0], harness)
-            self.assertIn("--extension", command)
-            self.assertTrue(any(s.endswith("pi_voice.mjs") for s in command))
-            self.assertEqual(command[-1], "--continue")
+            with patch.object(
+                self.voice, 'installed_pi_extension'
+            ) as installed:
+                command = self.voice.launcher_command(
+                    harness, ["--continue"], Path(self.tmp.name), "notify"
+                )
+            installed.assert_called_once_with()
+            self.assertEqual(command, [harness, '--continue'])
             with self.assertRaisesRegex(RuntimeError, "interactive"):
                 self.voice.launcher_command(
                     harness, ["--mode", "rpc"], Path(self.tmp.name), "notify"
                 )
 
+    def test_launcher_rejects_missing_or_disabled_pi_bridge(self):
+        with patch.object(
+            self.voice.Path, 'home', return_value=Path(self.tmp.name)
+        ):
+            with self.assertRaisesRegex(RuntimeError, 'hmswitch'):
+                self.voice.launcher_command(
+                    'pi', [], Path(self.tmp.name), 'notify')
+        for flag in ('--no-extensions', '-ne'):
+            with self.assertRaisesRegex(RuntimeError, 'requires.*extension'):
+                self.voice.launcher_command(
+                    'pi', [flag], Path(self.tmp.name), 'notify')
+
     def test_failed_launcher_cleans_up_without_stopping_other_sessions(self):
         for sessions in ([], [{"token": "another-session"}]):
-            with self.subTest(sessions=sessions), patch.dict(os.environ, {
-                "HERDR_ENV": "1", "HERDR_PANE_ID": "w1:p2",
-                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
-            }), patch.object(
-                self.voice, "runtime_dir", return_value=Path(self.tmp.name)
-            ), patch.object(
-                self.voice, "call", return_value={"sessions": sessions}
-            ), patch.object(self.voice.subprocess, "run"), patch.object(
-                self.voice.subprocess, "Popen",
-                side_effect=FileNotFoundError("Missing harness"),
-            ), patch.object(self.voice, "stop_engines") as stop:
+            with (
+                self.subTest(sessions=sessions),
+                patch.dict(
+                    os.environ,
+                    {
+                        "HERDR_ENV": "1",
+                        "HERDR_PANE_ID": "w1:p2",
+                        "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+                    },
+                ),
+                patch.object(
+                    self.voice, "runtime_dir", return_value=Path(self.tmp.name)
+                ),
+                patch.object(
+                    self.voice, "call", return_value={"sessions": sessions}
+                ),
+                patch.object(self.voice, 'installed_pi_extension'),
+                patch.object(self.voice.subprocess, "run") as service_commands,
+                patch.object(
+                    self.voice.subprocess,
+                    "Popen",
+                    side_effect=FileNotFoundError("Missing harness"),
+                ),
+            ):
                 with self.assertRaises(FileNotFoundError):
                     self.voice.launch([], "pi")
-                self.assertEqual(stop.call_count, int(not sessions))
+                service_commands.assert_not_called()
                 directories = [
                     path for path in Path(self.tmp.name).iterdir()
                     if path.is_dir()
@@ -679,6 +739,8 @@ class VoiceTests(unittest.TestCase):
             with patch.object(
                 self.voice.time, "monotonic", return_value=expiry + 1
             ):
+                with self.app.lock:
+                    self.app._expire_retry()  # Maintenance, never status I/O.
                 self.assertFalse(self.app.status()["retry"])
             self.assertFalse(path.exists())
 
@@ -697,6 +759,8 @@ class VoiceTests(unittest.TestCase):
         with patch.object(
             self.voice.time, "monotonic", return_value=expiry + 1
         ):
+            with self.app.lock:
+                self.app._expire_retry()
             self.assertEqual(self.app.status()["phase"], "error")
         self.assertFalse(path.exists())
         self.assertTrue(self.app.record_cancelled.is_set())
@@ -784,6 +848,127 @@ class VoiceTests(unittest.TestCase):
     def test_non_speech_markers_are_removed_from_real_dictation(self):
         self.app.stage("[BLANK_AUDIO] Check the tests. [MUSIC]", "token-1")
         self.assertEqual(self.terminal.text, ["Check the tests."])
+
+    def test_real_audio_drained_transcript_recovery(self):
+        from voice_audio import LocalAudio
+        from voice_engines import EngineManager
+        for action, previous, expected in (
+            ('lost', None, 'Late words'),
+            ('lost', 'Previous words', 'Previous words\nLate words'),
+            ('returned', None, 'Late words'),
+            ('contended', None, 'Late words'),
+            ('completed', 'Previous words', 'Previous words\nLate words'),
+            ('stop', None, None),
+            ('discard', None, None),
+            ('revision', None, None),
+            ('shutdown', None, None),
+        ):
+            with self.subTest(action=action, previous=previous):
+                self.app.recover_discard()
+                self.app.register('token-1', dict(self.target, harness='pi'))
+                audio = LocalAudio(Path(self.tmp.name), {
+                                   'stt_url': 'http://test/stt'})
+                manager = EngineManager(
+                    runner=lambda *a: None, readiness=lambda *a: True)
+                self.addCleanup(manager.close)
+                audio.engines = manager
+                audio.start_capture = self.audio.start_capture
+                audio.cue = lambda *a: None
+                self.app.audio = audio
+                self.app.engines = manager
+                self.app.pending = previous
+                entered, release, drained = (
+                    threading.Event() for _ in range(3))
+                original_transcribe = audio.transcribe_drained
+                def transcribe(path, cancelled, callback):
+                    def completed(text):
+                        try:
+                            if action == 'completed':
+                                entered.set()
+                                self.assertTrue(release.wait(2))
+                            # The real adapter must release both locks first.
+                            self.assertTrue(audio.lock.acquire(blocking=False))
+                            audio.lock.release()
+                            self.assertTrue(
+                                audio.recognition_lock.acquire(blocking=False))
+                            audio.recognition_lock.release()
+                            callback(text)
+                        finally:
+                            drained.set()
+                    result = original_transcribe(path, cancelled, completed)
+                    if action == 'returned':
+                        entered.set()
+                        self.assertTrue(release.wait(2))
+                    return result
+                audio.transcribe_drained = transcribe
+                def http(*args, **kwargs):
+                    if action not in ('returned', 'completed'):
+                        entered.set()
+                        self.assertTrue(release.wait(2))
+                    return io.BytesIO(b'{"text": "Late words"}')
+                # Lease count is the drain fence, not the cancelled controller
+                # worker.
+                with (
+                    patch(
+                        'voice_audio.urllib.request.urlopen', side_effect=http
+                    ),
+                    patch.object(
+                        self.app,
+                        'retain_dictation',
+                        wraps=self.app.retain_dictation,
+                    ) as retain,
+                ):
+                    self.start_recording()
+                    self.app.record()
+                    self.assertTrue(entered.wait(1))
+                    if action == 'stop':
+                        self.app.stop()
+                    else:
+                        with self.app.lock:
+                            self.app._remove_session('token-1')
+                        if action == 'discard':
+                            self.app.recover_discard()
+                        elif action == 'revision':
+                            self.app.recovery_revision += 1
+                        elif action == 'shutdown':
+                            self.app.attachments_closed = True
+                    if action != 'returned':
+                        self.app.worker.join(1)
+                        self.assertFalse(self.app.worker.is_alive())
+                    self.assertEqual(manager.state('stt').users,
+                                     0 if action == 'completed' else 1)
+                    if action == 'contended':
+                        with self.app.lock:
+                            release.set()
+                            self.assertFalse(drained.wait(.3))
+                        self.assertTrue(drained.wait(1))
+                    elif action == 'shutdown':
+                        # Shutdown need not release its controller lock to let
+                        # a late callback finish; there is no audio-lock cycle.
+                        with self.app.lock:
+                            release.set()
+                            self.assertTrue(drained.wait(.75))
+                    else:
+                        release.set()
+                        self.assertTrue(drained.wait(1))
+                    self.app.worker.join(1)
+                    attempts = [
+                        call
+                        for call in retain.call_args_list
+                        if call.args[0] and 'Late words' in call.args[0]
+                    ]
+                    self.assertEqual(
+                        len(attempts),
+                        1 if expected or action == 'revision' else 0,
+                    )
+                self.app.attachments_closed = False
+                retained = self.app.retained_dictation
+                self.assertEqual(retained.text if retained else None, expected)
+                self.assertEqual(manager.state('stt').users, 0)
+                self.assertEqual(self.terminal.text, [])
+                self.assertEqual(self.terminal.keys, [])
+                self.app.audio = self.audio
+                self.app.engines = None
 
     def test_cancel_during_transcription_discards_late_result(self):
         self.audio.transcribe_release.clear()

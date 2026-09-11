@@ -102,6 +102,49 @@ class RequestTests(unittest.TestCase):
         self.microphone.status.return_value = {"name": "Test microphone"}
         self.addCleanup(self.microphone_patch.stop)
 
+    def test_cancelled_request_holds_engine_until_gpu_worker_drains(self):
+        from concurrent.futures import Future
+        from unittest.mock import Mock
+        manager, lease = Mock(), Mock()
+        lease.ready = Future()
+        lease.ready.set_result(None)
+        lease.wait.side_effect = lease.ready.result
+        manager.acquire.return_value = lease
+        started, drain, cancelled = (
+            threading.Event(),
+            threading.Event(),
+            threading.Event(),
+        )
+        released = threading.Event()
+        lease.release.side_effect = released.set
+        def gpu():
+            started.set()
+            drain.wait(2)
+            return 'result'
+        with tempfile.TemporaryDirectory() as directory:
+            local = audio.LocalAudio(Path(directory), {}, engines=manager)
+            results = []
+            worker = threading.Thread(
+                target=lambda: results.append(
+                    local._request(
+                        gpu, threading.Lock(), cancelled, engine='stt'
+                    )
+                )
+            )
+            worker.start()
+            try:
+                self.assertTrue(started.wait(1))
+                cancelled.set()
+                worker.join(1)
+                self.assertEqual(results, [None])
+                lease.release.assert_not_called()
+            finally:
+                drain.set()
+                worker.join(2)
+            self.assertTrue(released.wait(1))
+            manager.acquire.assert_called_once_with('stt')
+            lease.release.assert_called_once()
+
     def test_capture_resolves_preferred_device_and_reports_current_name(self):
         with tempfile.TemporaryDirectory() as directory:
             local = audio.LocalAudio(Path(directory), {
