@@ -20,7 +20,10 @@ buildNpmPackage {
 
   # Upstream omitted six existing dev dependencies' registry integrity hashes.
   # Restore those hashes without changing any dependency versions or URLs.
-  patches = [ ./pi-mcp-adapter-lock.patch ];
+  patches = [
+    ./pi-mcp-adapter-lock.patch
+    ./pi-mcp-adapter-gateway-only.patch
+  ];
   npmDepsHash = "sha256-hYq5a4Y/IzcG70QhgdU+LJLDZfCe9kFAFj76VsmgFkw=";
   # npm needs to update cache entries shared by nested Pi dev dependencies.
   makeCacheWritable = true;

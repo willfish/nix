@@ -46,6 +46,9 @@ in
   home.file.".pi/agent/extensions/context-window.js".source =
     ../config/pi/extensions/context-window.js;
   home.file.".pi/agent/extensions/usage.js".source = ../config/pi/extensions/usage.js;
+  home.file.".pi/agent/extensions/skill-catalog".source = ../config/pi/extensions/skill-catalog;
+  home.file.".pi/agent/extensions/reading-policy.js".source =
+    ../config/pi/extensions/reading-policy.js;
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
@@ -85,6 +88,7 @@ in
     settings = {
       hostConfigDiscovery = "off";
       directTools = false;
+      namespaceTools = false;
       scriptMode = false;
       idleTimeout = 10;
       mcpFooterStatus = "compact";

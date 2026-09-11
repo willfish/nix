@@ -1,8 +1,14 @@
 """Offline MCP integration through the actual Pi runtime and local fixtures.
 
 PI_MCP_TEST_EXTENSION must name the packaged adapter's index.ts.
-PI_MCP_TEST_BIN optionally selects the Pi executable. No production MCP server,
-model, credential, or writable user configuration is used.
+PI_MCP_TEST_BIN optionally selects the packaged Pi executable (default: pi).
+Run with Python's standard library: python3 tests/pi-mcp-runtime.py -v
+The adapter must include settings.namespaceTools support for the gateway-only
+regression. Temporary profiles and whitelisted child environments avoid loading
+live authentication or configuration. Only a loopback model fixture and a
+local Python MCP process are used, with synthetic credentials and no hosted
+inference. For OS-enforced isolation, run the whole suite inside a network
+namespace with loopback enabled; both fixtures must share Pi's namespace.
 """
 
 import json
@@ -26,6 +32,7 @@ ACTIONS = {
     "call": {"tool": "fixture_echo", "args": {"text": "offline success"}},
     "error": {"tool": "fixture_fail", "args": {}},
     "recover": {"tool": "fixture_echo", "args": {"text": "recovered"}},
+    "refresh": {"refresh": True},
 }
 
 
@@ -117,7 +124,8 @@ class ModelHandler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         self.server.requests.append(body)
         messages = body["messages"]
-        if messages[-1]["role"] == "tool":
+        if messages[-1]["role"] == "tool" or getattr(
+            self.server, "final_only", False):
             delta = {"role": "assistant", "content": "Fixture turn complete."}
             finish = "stop"
         else:
@@ -126,6 +134,10 @@ class ModelHandler(BaseHTTPRequestHandler):
             )
             if isinstance(action, list):
                 action = "".join(x.get("text", "") for x in action)
+            tool_name, arguments = (
+                ("mcp", ACTIONS[action]) if action in ACTIONS
+                else (json.loads(action)["tool"], json.loads(action)["args"])
+            )
             delta = {
                 "role": "assistant",
                 "tool_calls": [
@@ -134,8 +146,8 @@ class ModelHandler(BaseHTTPRequestHandler):
                         "id": f"call_{len(self.server.requests)}",
                         "type": "function",
                         "function": {
-                            "name": "mcp",
-                            "arguments": json.dumps(ACTIONS[action]),
+                            "name": tool_name,
+                            "arguments": json.dumps(arguments),
                         },
                     }
                 ],
@@ -223,7 +235,7 @@ class PiClient:
             if predicate(event):
                 return observed
 
-    def prompt(self, action):
+    def prompt(self, action, tool_name="mcp"):
         self.send(type="prompt", id=action, message=action)
         events = self.until(lambda event: event.get("type") == "agent_end")
         failures = [
@@ -238,9 +250,9 @@ class PiClient:
             for event in events
             if event.get("type") == "tool_execution_end"
         ]
-        if len(results) != 1 or results[0].get("toolName") != "mcp":
+        if len(results) != 1 or results[0].get("toolName") != tool_name:
             raise AssertionError(
-                f"Expected one MCP execution, got {results}: "
+                f"Expected one {tool_name} execution, got {results}: "
                 f"{self.diagnostics()}"
             )
         return results[0]
@@ -263,6 +275,9 @@ class PiClient:
 
 
 class PiMcpRuntimeTest(unittest.TestCase):
+    namespace_tools = True
+    default_selection = False
+
     def test_actual_pi_discovers_calls_and_shuts_down_mcp(self):
         extension = Path(os.environ.get("PI_MCP_TEST_EXTENSION", ""))
         self.assertTrue(
@@ -300,6 +315,7 @@ class PiMcpRuntimeTest(unittest.TestCase):
                     },
                     "settings": {
                         "directTools": False,
+                        "namespaceTools": self.namespace_tools,
                         "scriptMode": False,
                         "hostConfigDiscovery": "off",
                     },
@@ -362,6 +378,16 @@ class PiMcpRuntimeTest(unittest.TestCase):
                     "--tools",
                     "read,bash,edit,write,mcp",
                 ]
+                if self.default_selection:
+                    command = command[:-2]
+                    reload_extension = directory / "reload.ts"
+                    reload_extension.write_text(
+                        'export default function(pi) { '
+                        'pi.registerCommand("fixture-reload", '
+                        '{handler: async (_args, ctx) => { '
+                        'await ctx.reload(); }}); }'
+                    )
+                    command += ["--extension", str(reload_extension)]
                 if isolated:
                     command += [
                         "--no-extensions",
@@ -432,6 +458,19 @@ class PiMcpRuntimeTest(unittest.TestCase):
                     self.assertIn(
                         "recovered", json.dumps(client.prompt("recover"))
                     )
+                    if self.default_selection:
+                        self.assertFalse(
+    client.prompt("refresh").get("isError"))
+                        client.send(
+    type="prompt",
+    id="reload",
+     message="/fixture-reload")
+                        client.until(
+                            lambda event: event.get("type") == "response"
+                            and event.get("id") == "reload")
+                        self.assertIn(
+    "recovered", json.dumps(
+        client.prompt("recover")))
                     for request in server.requests:
                         names = {
                             tool["function"]["name"]
@@ -452,13 +491,26 @@ class PiMcpRuntimeTest(unittest.TestCase):
                         time.sleep(0.05)
                     self.assertEqual(
                         [e["event"] for e in events],
-                        ["started", "called", "error", "called", "stopped"],
+                        (["started", "called", "error", "called", "stopped",
+                          "started", "called", "stopped"]
+                         if self.default_selection
+                         else ["started", "called", "error",
+                               "called", "stopped"]),
                     )
                 finally:
                     client.close()
                     server.shutdown()
                     server.server_close()
                     thread.join(timeout=5)
+
+
+class PiMcpGatewayOnlyRuntimeTest(PiMcpRuntimeTest):
+    """Disabling namespace registration must work without a CLI tool
+    allowlist.
+    """
+
+    namespace_tools = False
+    default_selection = True
 
 
 if __name__ == "__main__":

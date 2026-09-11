@@ -1,0 +1,24 @@
+diff --git a/namespace-tools.ts b/namespace-tools.ts
+--- a/namespace-tools.ts
++++ b/namespace-tools.ts
+@@ -78,7 +78,7 @@ function resolveNamespaceProxyTools(
+   existingDirectNames: Set<string>,
+   unavailableServers: ReadonlySet<string>,
+ ): NamespaceProxySpec[] {
+-  if (!config || !cache) return [];
++  if (!config || !cache || config.settings?.namespaceTools === false) return [];
+   return filterCollidingNamespaceProxyTools(
+     Object.keys(config.mcpServers)
+       .map((serverName) => namespaceProxyCandidate(config, cache, envOverride, existingDirectNames, serverName))
+diff --git a/types.ts b/types.ts
+--- a/types.ts
++++ b/types.ts
+@@ -571,6 +571,8 @@ export interface McpSettings {
+   idleTimeout?: number; // minutes, default 10, 0 to disable
+   requestTimeoutMs?: number; // milliseconds, overrides the SDK request timeout when > 0
+   directTools?: boolean;
++  /** Register per-server namespace proxy tools. Defaults to true; false leaves the mcp gateway unchanged. */
++  namespaceTools?: boolean;
+   /**
+    * Validate direct-tool inputs against the advertised schema after recovering
+    * one JSON string layer for object and array properties. Defaults to false.

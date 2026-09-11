@@ -91,6 +91,29 @@ jobs:
           MCP_TEST_HOME="$(nix eval --raw .#homeConfigurations.william-linux.activationPackage.outPath)" \
             nix develop --command python3 tests/native-mcp-runtime.py
 
+      - name: Run Pi payload budget and core regressions
+        run: |
+          set -euo pipefail
+          generation="${MCP_TEST_HOME:-$(nix eval --raw .#homeConfigurations.william-linux.activationPackage.outPath)}"
+          export PI_MCP_TEST_BIN="$generation/home-path/bin/pi"
+          export PI_SKILL_CATALOG_TEST_BIN="$PI_MCP_TEST_BIN"
+          export PI_MCP_TEST_EXTENSION="$generation/home-files/.pi/agent/extensions/mcp/index.ts"
+          export PI_SKILL_TEST_EXTENSION="$generation/home-files/.pi/agent/extensions/skill-catalog/index.ts"
+          export PI_HARNESS_TEST_HOME_FILES="$generation/home-files"
+          export PI_OFFLINE=1 PI_TELEMETRY=0 CAPTURE_PROMPTS=0
+          test -x "$PI_MCP_TEST_BIN"
+          test -f "$PI_MCP_TEST_EXTENSION"
+          test -f "$PI_SKILL_TEST_EXTENSION"
+          test -f "$generation/home-files/.pi/agent/extensions/reading-policy.js"
+          test -d "$PI_HARNESS_TEST_HOME_FILES/.agents/skills"
+          test -f "$PI_HARNESS_TEST_HOME_FILES/.pi/agent/AGENTS.md"
+          nix develop --command node --experimental-vm-modules --test \
+            tests/pi-skill-catalog.test.mjs \
+            tests/pi-reading-policy.test.mjs \
+            tests/pi-mcp-namespace-tools.test.mjs
+          nix develop --command python3 tests/pi-mcp-runtime.py -v
+          nix develop --command python3 tests/pi-harness-slim-runtime.py -v
+
   nixos-hosts:
     name: NixOS ${{ matrix.host }}
     runs-on: ubuntu-latest
