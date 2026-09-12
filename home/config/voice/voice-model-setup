@@ -108,7 +108,7 @@ def install(root, asset, check_only=False):
                 temporary = Path(target.name)
                 request = urllib.request.Request(
                     asset["url"],
-                    headers={"User-Agent": "codex-voice-model-setup"},
+                    headers={"User-Agent": "pi-voice-model-setup"},
                 )
                 with urllib.request.urlopen(request, timeout=30) as response:
                     while chunk := response.read(1024 * 1024):
@@ -148,7 +148,7 @@ def main():
         default=Path(
             os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")
         )
-        / "codex-voice",
+        / "pi-voice",
     )
     parser.add_argument(
         "--check-only",

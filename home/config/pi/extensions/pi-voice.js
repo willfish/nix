@@ -68,7 +68,7 @@ function privateRuntime(base) {
     }
   };
   check(base);
-  const runtime = join(base, 'codex-voice');
+  const runtime = join(base, 'pi-voice');
   try { mkdirSync(runtime, { mode: 0o700 }); } catch (error) { if (error.code !== 'EEXIST') throw error; }
   check(runtime);
   return runtime;
@@ -83,7 +83,7 @@ export function registerVoice(pi, env = process.env, options = {}) {
       || Number(env.AGENT_VOICE_LAUNCH_PID) !== process.ppid) return;
   } else if (env.HERDR_ENV !== '1' || !env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID) return;
   const base = env.XDG_RUNTIME_DIR || `/run/user/${process.getuid()}`;
-  const controller = env.AGENT_VOICE_SOCKET || join(base, 'codex-voice', 'control.sock');
+  const controller = env.AGENT_VOICE_SOCKET || join(base, 'pi-voice', 'control.sock');
   const transport = options.exchange || exchange;
   const schedule = options.setTimeout || setTimeout;
   const cancelTimer = options.clearTimeout || clearTimeout;
@@ -95,7 +95,7 @@ export function registerVoice(pi, env = process.env, options = {}) {
     const activation = globalThis[activationCounter] = (globalThis[activationCounter] ?? 0) + 1;
     const bridge_id = randomUUID();
     const session = ctx.sessionManager.getSessionId();
-    const path = legacy ? env.AGENT_VOICE_ADAPTER_SOCKET : join(base, 'codex-voice', `pi-${process.pid}-${bridge_id}.sock`);
+    const path = legacy ? env.AGENT_VOICE_ADAPTER_SOCKET : join(base, 'pi-voice', `pi-${process.pid}-${bridge_id}.sock`);
     let token = legacy ? env.AGENT_VOICE_TOKEN : undefined;
     let context = ctx, server, owned, timer, binding, closeResult;
     let closed = false, armed = false, staged = '', waiting = false, lastReply;

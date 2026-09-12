@@ -121,7 +121,7 @@ test('live Pi voice: startup, reload, new session, question guard and controller
   const dir = await mkdtemp(join(tmpdir(), 'piv-live-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const home = join(dir, 'home'), agent = join(home, '.pi', 'agent'), cwd = join(dir, 'project');
-  const runtime = join(dir, 'run'), controlDir = join(runtime, 'codex-voice');
+  const runtime = join(dir, 'run'), controlDir = join(runtime, 'pi-voice');
   await mkdir(join(agent, 'extensions'), { recursive: true });
   await mkdir(cwd);
   await mkdir(runtime, { mode: 0o700 });

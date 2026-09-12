@@ -278,7 +278,7 @@ if (existsSync(extensionPath)) {
   }
   async function managed(t, { respond, mode = 'tui', env = {}, prepare, register = registerVoice } = {}) {
     const directory = await mkdtemp(join(tmpdir(), 'piv-'));
-    const runtime = join(directory, 'codex-voice');
+    const runtime = join(directory, 'pi-voice');
     if (prepare) await prepare(directory, runtime);
     const scheduler = clock(), requests = [], hooks = {}, notices = [];
     let editor = '', idle = true, pending = false, session = 'managed-a';
@@ -747,7 +747,7 @@ if (existsSync(extensionPath)) {
   test('replacement before the listening callback is never chmodded or unlinked', async t => {
     const { readdirSync, unlinkSync, writeFileSync } = await import('node:fs');
     const directory = await mkdtemp(join(tmpdir(), 'piv-bind-'));
-    const runtime = join(directory, 'codex-voice'), hooks = {};
+    const runtime = join(directory, 'pi-voice'), hooks = {};
     const ctx = { mode: 'tui', hasUI: true, cwd: directory, isIdle: () => true, hasPendingMessages: () => false,
       sessionManager: { getSessionId: () => 'binding' }, ui: {} };
     registerVoice({ on: (name, fn) => { hooks[name] = fn; } }, {

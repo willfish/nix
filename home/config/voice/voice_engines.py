@@ -28,7 +28,7 @@ class EngineState:
 
 def systemctl(engine, command, timeout):
     subprocess.run(
-        ['systemctl', '--user', command, f'codex-voice-{engine}.service'],
+        ['systemctl', '--user', command, f'pi-voice-{engine}.service'],
         check=True,
         capture_output=True,
         timeout=timeout,
@@ -38,7 +38,7 @@ def systemctl(engine, command, timeout):
 def systemctl_active(engine, timeout):
     result = subprocess.run(
         ['systemctl', '--user', 'show', '--property=ActiveState', '--value',
-         f'codex-voice-{engine}.service'],
+         f'pi-voice-{engine}.service'],
         check=True, capture_output=True, text=True, timeout=timeout)
     state = result.stdout.strip()
     if state in ('inactive', 'failed'):

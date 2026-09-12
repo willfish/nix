@@ -1,9 +1,8 @@
 # Local agent voice on Andromeda
 
 One local recorder, tray and pair of speech engines serve Pi and Qwen Pi.
-Shared services and control commands retain the historical `codex-voice` name;
-they do not install or require the Codex CLI.
-Whisper small.en recognizes speech with Silero VAD; audio.cpp runs Qwen3-TTS
+The control command is `pi-voice`; units are `pi-voice`, `pi-voice-stt` and
+`pi-voice-tts`. Whisper small.en recognizes speech with Silero VAD; audio.cpp runs Qwen3-TTS
 0.6B with two pinned Samantha references. Andromeda uses CUDA for TTS and
 NVIDIA Vulkan for Whisper. Foundation gets Whisper dictation on the Radeon
 iGPU only; TTS stays off. macOS needs separate platform adapters.
@@ -24,7 +23,7 @@ The compatibility launchers remain available:
 | `pi-voice` | Normal Pi profile, providers and MCPs |
 | `qwen-pi-voice` | Existing local Qwen Pi profile, tuning and MCPs |
 
-Pass normal interactive options, for example `codex-voice resume SESSION_ID`
+Pass normal interactive options, for example `pi-voice resume SESSION_ID`
 or `pi-voice --continue`. Use `--` before options that conflict with a voice
 control command. Noninteractive print/RPC/agent modes are excluded.
 
@@ -69,7 +68,7 @@ broadcasts to other registered sessions, including multiple sessions of the
 same harness.
 
 This decision tracks prompts prepared by voice, including subsequent edits.
-Use the tray's Record more or `codex-voice record` to add more speech
+Use the tray's Record more or `pi-voice record` to add more speech
 instead of sending a prepared prompt.
 
 ## Keyboard picker
@@ -145,7 +144,7 @@ the PipeWire default.
 
 Recording works while the selected agent is busy. Valid text waits in memory
 until it can be safely delivered. A new recording appends to retained text by
-default. `codex-voice replace` replaces retained text only after valid
+default. `pi-voice replace` replaces retained text only after valid
 new speech, so silence or a failed start preserves previous words. Discard
 removes retained text and retry audio. Cancel does not remove text already
 pasted into a terminal editor; that prompt remains available for review.
@@ -178,14 +177,9 @@ serialized until that happens to avoid overlapping GPU allocations.
 ## Conversation binding and adapters
 
 After `/new` or changing conversations, choose Rebind in the tray (or run
-`codex-voice rebind`). Pi reports its new conversation as a candidate;
+`pi-voice rebind`). Pi reports its new conversation as a candidate;
 voice keeps the old binding until you explicitly rebind. Delayed callbacks
 from the previous conversation are excluded after rebinding.
-
-Codex uses its per-launch notification callback and Herdr's guarded paste and
-submit operations. The callback accepts only root CLI threads, checked through
-read-only `state_5.sqlite` metadata. Unsupported schemas fail closed for spoken
-replies. This legacy adapter does not install the Codex CLI.
 
 Standard Pi discovers `pi-voice.js` from its managed extensions directory;
 `qwen-pi` explicitly loads the same extension because automatic discovery is
@@ -210,8 +204,8 @@ newer reference for longer replies. This is intrinsic to Samantha; other
 characters use their own reference at every reply length. The complete spoken
 reply is counted after Markdown cleanup and keeps one voice across all chunks.
 Selections apply on the next playback and persist across service restarts.
-Use `codex-voice voice samantha`, `codex-voice voice data`, or another character
-ID for the same control from a terminal. `codex-voice status` lists the IDs.
+Use `pi-voice voice samantha`, `pi-voice voice data`, or another character
+ID for the same control from a terminal. `pi-voice status` lists the IDs.
 The choice is shared by Pi and Qwen Pi. Two prompt cache slots retain
 recent references without loading additional models. Previous saved Samantha
 modes migrate to the single Samantha selection.
@@ -221,7 +215,7 @@ Spock, Picard, Snape, Seven of Nine, Kryten, Holly, Loki and Vesper. These are
 experimental audition references, with source and transcript limitations
 recorded in [the catalogue](../home/config/voice/voices/catalogue.json).
 
-Spoken summaries play automatically. Use `codex-voice auto off` for manual playback,
+Spoken summaries play automatically. Use `pi-voice auto off` for manual playback,
 `auto on` to restore it, `stop` to cancel and `status` to inspect state. All four
 launchers accept the same controls: `interact`, `record`, `send`, `read`, `stop`,
 `status`, `retry`, `rebind`, `discard`, `append`, `replace` and `voice`.
@@ -271,16 +265,16 @@ manual playback.
 
 The existing service names remain for compatibility:
 
-- `codex-voice.service`: shared controller, hotkeys and tray.
-- `codex-voice-stt.service`: Whisper at `127.0.0.1:8178`.
-- `codex-voice-tts.service`: Qwen3 TTS at `127.0.0.1:8179`.
+- `pi-voice.service`: shared controller, hotkeys and tray.
+- `pi-voice-stt.service`: Whisper at `127.0.0.1:8178`.
+- `pi-voice-tts.service`: Qwen3 TTS at `127.0.0.1:8179`.
 
 The controller starts at login; implicit Pi use starts only the required
 backend. Explicit compatibility launchers still warm both engines. Models stop
 after 15 idle minutes measured from completed use, never during active work.
 Warm-up runs in the background. Ports must be available. The default models
-occupy about 2.93 GB in `~/.local/share/codex-voice/models`. Run
-`codex-voice-models` on a fresh host, and `codex-voice-models --check-only` to
+occupy about 2.93 GB in `~/.local/share/pi-voice/models`. Run
+`pi-voice-models` on a fresh host, and `pi-voice-models --check-only` to
 verify sizes and hashes. Silero VAD is also fetched with a fixed hash by Nix,
 so enabling it requires no extra setup. Inference uses local
 files without cloud speech APIs or runtime Python package downloads. Prompt
@@ -289,24 +283,24 @@ text still goes to the provider selected by the coding harness.
 The voice reference, transcript and provenance are in
 [`home/config/voice/voices`](../home/config/voice/voices/README.md). Runtime
 state, private adapter sockets and temporary recordings use
-`$XDG_RUNTIME_DIR/codex-voice`. Whisper's diagnostic journal can contain
+`$XDG_RUNTIME_DIR/pi-voice`. Whisper's diagnostic journal can contain
 recognized text; the TTS server disables request-body logging.
 
 Stop the services explicitly with:
 
 ```sh
-systemctl --user stop codex-voice.service codex-voice-stt.service codex-voice-tts.service
+systemctl --user stop pi-voice.service pi-voice-stt.service pi-voice-tts.service
 ```
 
 Inspect failures with:
 
 ```sh
-journalctl --user -u codex-voice -u codex-voice-stt -u codex-voice-tts -n 100
+journalctl --user -u pi-voice -u pi-voice-stt -u pi-voice-tts -n 100
 ```
 
 On Andromeda, pull the configuration, run `hmswitch`, then
-`codex-voice-models` and verify the microphone, NVIDIA Vulkan and playback.
-On Foundation, `hmswitch` then `codex-voice-models` installs Whisper only
+`pi-voice-models` and verify the microphone, NVIDIA Vulkan and playback.
+On Foundation, `hmswitch` then `pi-voice-models` installs Whisper only
 (about 500 MB). Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
 
 ## Voice choice and measured performance
@@ -333,7 +327,7 @@ model services resident:
 | Qwen3 after the prose request | About 2.69 GiB idle VRAM |
 | Qwen3 transient prose peak | About 5.95 GiB VRAM and 2.41 GiB GTT |
 
-These measure local inference, excluding Codex response time, hotkey dispatch
+These measure local inference, excluding model response time, hotkey dispatch
 and device startup. GPU logs and per-process DRM counters confirmed Vulkan
 execution for both services. A cold Qwen3 process took about 12.5 seconds
 including model, reference and shader setup. The first reference encoding
@@ -394,8 +388,8 @@ Samantha auditions were rejected before the GitHub reference was recovered.
 
 Experimental Qwen3 1.7B, dots.tts and PocketTTS assets are also available.
 They are not loaded by the services. The optional
-`codex-voice-models --experimental --check-only` verifies them. Audition files
-are in `~/.local/share/codex-voice/voices`, including
+`pi-voice-models --experimental --check-only` verifies them. Audition files
+are in `~/.local/share/pi-voice/voices`, including
 `qwen3-0.6b-samantha-preview.wav`, `qwen3-1.7b-samantha-preview.wav` and
 `qwen3-0.6b-samantha-prose-preview.wav`.
 
@@ -413,7 +407,7 @@ direnv exec . nix flake check
 Run all controller, recording, adapter and tray regressions with dbus-next:
 
 ```sh
-# The interpreter used by the installed codex-voice launcher includes dbus-next.
+# The interpreter used by the installed pi-voice launcher includes dbus-next.
 direnv exec . nix shell --impure --expr \
   'let f = builtins.getFlake (toString ./.);
    in f.nixosConfigurations.andromeda.pkgs.python3.withPackages

@@ -99,7 +99,7 @@ class LocalAudio:
                 return False
             raise RuntimeError(
                 f"{self._engine_name(engine)} health endpoint returned "
-                f"HTTP {exc.code}; check codex-voice-{engine}.service"
+                f"HTTP {exc.code}; check pi-voice-{engine}.service"
             ) from None
         except (OSError, urllib.error.URLError):
             return False
@@ -113,7 +113,7 @@ class LocalAudio:
             )
         if engine == "stt":
             return payload.get("status") == "ok"
-        model_id = self.config.get("tts_model", "codex-voice")
+        model_id = self.config.get("tts_model", "pi-voice")
         models = payload.get("data")
         if not isinstance(models, list):
             raise RuntimeError("Samantha TTS returned invalid model data")
@@ -122,7 +122,7 @@ class LocalAudio:
                 return model.get("loaded") is True
         raise RuntimeError(
             f"Samantha TTS model '{model_id}' is missing from the server; "
-            "check codex-voice-tts.service and model files"
+            "check pi-voice-tts.service and model files"
         )
 
     @staticmethod
@@ -146,7 +146,7 @@ class LocalAudio:
             if remaining <= 0:
                 error = RuntimeError(
                     f"{self._engine_name(engine)} model is not ready; "
-                    f"check codex-voice-{engine}.service and model files"
+                    f"check pi-voice-{engine}.service and model files"
                 )
                 self._backend_state(engine, "error", error)
                 raise error
@@ -287,14 +287,14 @@ class LocalAudio:
             exc.close()
             error = RuntimeError(
                 f"{name} request failed (HTTP {exc.code}); "
-                f"check codex-voice-{engine}.service"
+                f"check pi-voice-{engine}.service"
             )
             self._backend_state(engine, "error", error)
             raise error from None
         except urllib.error.URLError:
             error = RuntimeError(
                 f"{name} connection failed; "
-                f"check codex-voice-{engine}.service"
+                f"check pi-voice-{engine}.service"
             )
             self._backend_state(engine, "error", error)
             raise error from None
@@ -400,7 +400,7 @@ class LocalAudio:
                 self.config["tts_url"],
                 data=json.dumps(
                     {
-                        "model": self.config.get("tts_model", "codex-voice"),
+                        "model": self.config.get("tts_model", "pi-voice"),
                         "input": chunk,
                         "language": "English",
                         **voice_options,

@@ -147,11 +147,11 @@ in
                     [
                       ''
                         key: "space",
-                            ): Spawn("codex-voice interact"),
+                            ): Spawn("pi-voice interact"),
                             (
                                 modifiers: [Super, Shift],
                                 key: "space",
-                            ): Spawn("codex-voice send"),
+                            ): Spawn("pi-voice send"),
                             (
                                 modifiers: [Super, Shift],
                                 key: "v",
@@ -163,7 +163,7 @@ in
                 builtins.replaceStrings
                   [ "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Disable," ]
                   [
-                    "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"codex-voice read\"),"
+                    "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"pi-voice read\"),"
                   ]
                   withDictation
               else

@@ -42,9 +42,8 @@ def presentation(status):
     connected = selected and connection == "ready"
     retained = bool(status.get("retained"))
     usable = connected and not blocked and not retained
-    harness = public_label(status.get("harness") or "Codex", 30)
-    harness = {"codex": "Codex", "pi": "Pi",
-               "qwen-pi": "Qwen Pi"}.get(harness, harness)
+    harness = public_label(status.get("harness") or "Pi", 30)
+    harness = {"pi": "Pi", "qwen-pi": "Qwen Pi"}.get(harness, harness)
     glyph = "microphone"
     label, colour = {
         "idle": (
@@ -304,7 +303,7 @@ def _interfaces(tray):
 
         @readonly()
         def Id(self) -> "s":
-            return "codex-voice"
+            return "pi-voice"
 
         @readonly()
         def Title(self) -> "s":
@@ -656,7 +655,7 @@ class VoiceTray:
                 bus.export("/Menu", menu)
                 result = await asyncio.wait_for(
                     bus.request_name(
-                        "org.willfish.CodexVoice", NameFlag.DO_NOT_QUEUE
+                        "org.willfish.PiVoice", NameFlag.DO_NOT_QUEUE
                     ),
                     2,
                 )
@@ -703,7 +702,7 @@ class VoiceTray:
                                         interface=watcher,
                                         member="RegisterStatusNotifierItem",
                                         signature="s",
-                                        body=["org.willfish.CodexVoice"],
+                                        body=["org.willfish.PiVoice"],
                                     )
                                 ),
                                 2,

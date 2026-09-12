@@ -7,14 +7,12 @@ import threading
 import array
 import math
 import wave
-import sqlite3
 import os
 import io
 import json
 import subprocess
 import sys
 import time
-from contextlib import closing
 import unittest
 from unittest.mock import patch
 
@@ -45,12 +43,12 @@ class Terminal:
 
     def validate_target(self, target):
         if not self.alive:
-            raise RuntimeError("Selected Codex process has exited")
+            raise RuntimeError("Selected Pi process has exited")
 
     def validate(self, target):
         self.validate_target(target)
         if self.state not in ("idle", "done"):
-            raise RuntimeError("Codex is " + self.state)
+            raise RuntimeError("Pi is " + self.state)
 
     def insert(self, target, text):
         self.validate(target)
@@ -219,22 +217,6 @@ class VoiceTests(unittest.TestCase):
         queue.drain()
         self.assertEqual(commands, [('stt', 'stop')])
 
-    def test_only_cli_root_threads_pass_the_notification_filter(self):
-        root = Path(self.tmp.name)
-        with closing(sqlite3.connect(root / "state_5.sqlite")) as db:
-            db.execute(
-                "CREATE TABLE threads (id TEXT PRIMARY KEY, source TEXT)"
-            )
-            db.executemany(
-                "INSERT INTO threads VALUES (?, ?)",
-                [("root", "cli"), ("child", '{"subagent":{}}')],
-            )
-            db.commit()
-        self.assertTrue(self.voice.is_cli_thread("root", root))
-        self.assertFalse(self.voice.is_cli_thread("child", root))
-        self.assertFalse(self.voice.is_cli_thread("absent' OR 1=1 --", root))
-        self.assertFalse(self.voice.is_cli_thread("root", root / "missing"))
-
     def test_restart_preserves_thread_binding_and_completed_turns(self):
         target = dict(
             self.target,
@@ -278,7 +260,7 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(self.app.status()["pane"], "w1:p2")
 
     def test_session_menu_labels_use_harness_and_conversation_or_pane_id(self):
-        self.app.register("token-1", self.target, "conversation-codex")
+        self.app.register("token-1", self.target, "conversation-one")
         self.app.register(
             "token-2", dict(self.target, harness="qwen-pi", pane="w1:p3")
         )
@@ -289,7 +271,7 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(
             [(s["label"], s["selected"])
              for s in self.app.status()["sessions"]],
-            [("codex: conversation-codex", False), ("qwen-pi: w1:p3", False),
+            [("pi: w1:p2", False), ("qwen-pi: w1:p3", False),
              ("pi: w1:p4", True)],
         )
 
@@ -388,7 +370,13 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(self.app.pending, "New session words")
 
     def test_rebind_cannot_accept_delayed_old_conversation_reply(self):
-        self.app.notify("token-1", self.event())
+        self.app.harness_event("token-1", {
+            "harness": "pi", "type": "session", "session": "thread-1",
+        })
+        self.app.harness_event("token-1", {
+            "harness": "pi", "type": "session",
+            "session": "new-conversation",
+        })
         self.app.rebind()
         self.assertFalse(self.app.notify(
             "token-1", self.event(turn="late-old-turn")
@@ -825,7 +813,7 @@ class VoiceTests(unittest.TestCase):
         self.app.worker.join(1)
         self.assertEqual(self.terminal.text, [])
 
-    def test_silence_does_not_reach_whisper_or_codex(self):
+    def test_silence_does_not_reach_whisper_or_the_session(self):
         self.audio.silent = True
         self.start_recording()
         self.app.record()
@@ -1132,7 +1120,7 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(self.app.status()["phase"], "idle")
         self.assertFalse(self.app.status()["draft"])
 
-    def test_exited_codex_never_receives_dictation_or_enter(self):
+    def test_exited_session_never_receives_dictation_or_enter(self):
         self.terminal.alive = False
         with self.assertRaisesRegex(RuntimeError, "exited"):
             self.app.stage("Check the tests", "token-1")

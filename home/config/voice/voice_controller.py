@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Local speech and hotkeys for one explicitly selected Codex pane."""
+"""Local speech and hotkeys for one explicitly selected Pi pane."""
 
 import array
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import ExitStack, closing
+from contextlib import ExitStack
 import io
 import json
 import math
@@ -13,7 +13,6 @@ import re
 import signal
 import socket
 import socketserver
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -145,26 +144,6 @@ def process_start(pid):
         return None
 
 
-def is_cli_thread(thread_id, codex_home=None):
-    """Reject inherited subagent callbacks using installed Codex metadata.
-
-    This is deliberately a read-only, fail-closed adapter for schema version 5.
-    No transcript contents or unrelated thread records are read.
-    """
-    home = Path(
-        codex_home or os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))
-    )
-    try:
-        uri = (home / "state_5.sqlite").resolve().as_uri() + "?mode=ro"
-        with closing(sqlite3.connect(uri, uri=True, timeout=1)) as db:
-            row = db.execute(
-                "SELECT source FROM threads WHERE id = ?", (thread_id,)
-            ).fetchone()
-        return row == ("cli",)
-    except (OSError, sqlite3.Error):
-        return False
-
-
 class Herdr:
     def input_request(self, target, text):
         # pane.send_text is raw bytes. send_input observes bracketed-paste mode.
@@ -189,11 +168,11 @@ class Herdr:
                     raise ValueError("Mismatched response")
             except (OSError, ValueError) as exc:
                 raise DeliveryUncertain(
-                    "Could not confirm paste; check the selected Codex prompt "
+                    "Could not confirm paste; check the selected Pi prompt "
                     "and send it there if the dictation arrived"
                 ) from exc
         if "error" in response:
-            raise RuntimeError("Could not paste into the selected Codex pane")
+            raise RuntimeError("Could not paste into the selected Pi pane")
 
     def request(self, target, *args):
         env = dict(os.environ, HERDR_SOCKET_PATH=target["socket"])
@@ -217,7 +196,7 @@ class Herdr:
             raise RuntimeError("Invalid response from the Herdr pane") from exc
 
     def validate_target(self, target):
-        harness = target.get("harness", "codex")
+        harness = target.get("harness", "pi")
         if (
             not target.get("start")
             or process_start(target["pid"]) != target["start"]
@@ -280,8 +259,9 @@ class AgentTerminal:
         if (not target.get("start") or process_start(target["pid"])
                 != target["start"]):
             raise RuntimeError("Selected voice process has exited")
-        return self.pi if target.get("harness") in ("pi", "qwen-pi") \
-            else self.herdr
+        if target.get("harness") not in ("pi", "qwen-pi"):
+            raise RuntimeError("Only Pi sessions support voice")
+        return self.pi
 
     def validate_target(self, target):
         return self._adapter(target).validate_target(target)
@@ -419,7 +399,7 @@ class Controller:
             try:
                 self.audio.cue(frequency)
             except Exception:
-                print("Codex voice: sound cue unavailable", file=sys.stderr)
+                print("Pi voice: sound cue unavailable", file=sys.stderr)
 
         threading.Thread(target=play, daemon=True).start()
 
@@ -965,7 +945,7 @@ class Controller:
                 self.record_cancelled.voice_target_lost = True
             self.stop(target_lost=lost)
             target = dict(target, token=token)
-            target.setdefault("harness", "codex")
+            target.setdefault("harness", "pi")
             target["session"] = thread
             self.sessions[token] = {
                 "target": target, "thread": thread, "turns": set(turns),
@@ -1020,11 +1000,6 @@ class Controller:
                 raise RuntimeError("Select a voice session first")
             self.stop()
             candidate = self.sessions[self.token].get("candidate")
-            if self.target["harness"] == "codex" and candidate == self.thread:
-                excluded = self.sessions[self.token].setdefault("excluded", [])
-                if self.thread:
-                    excluded.append(self.thread)
-                candidate = None
             self.thread = candidate
             self.target = dict(self.target, session=candidate)
             self.sessions[self.token]["target"] = self.target
@@ -1166,7 +1141,7 @@ class Controller:
         if turn and active and turn != active:
             return
         if turn and (
-            turn == active or entry["target"].get("harness", "codex") == "codex"
+            turn == active
         ):
             self._set_activity(entry, "idle")
             return
@@ -1235,7 +1210,7 @@ class Controller:
                     else None
                 ),
                 "harness": (
-                    self.target.get("harness", "codex") if self.target else None
+                    self.target.get("harness", "pi") if self.target else None
                 ),
                 "agent_state": agent_state,
                 "responding": agent_state == "working",
@@ -1264,14 +1239,14 @@ class Controller:
                         "model": entry['target'].get('model'),
                         "thinking": entry['target'].get('thinking'),
                         "selected": token == self.token,
-                        "harness": entry["target"].get("harness", "codex"),
+                        "harness": entry["target"].get("harness", "pi"),
                         "team_child": entry['target'].get('team_child', False),
                         "connection_state": entry.get(
                             'connection_state', 'ready'
                         ),
                         "id": entry.get("thread") or entry["target"]["pane"],
                         "label": (
-                            entry["target"].get("harness", "codex")
+                            entry["target"].get("harness", "pi")
                             + ": "
                             + (
                                 entry['target']['pane']
@@ -1637,7 +1612,7 @@ class Controller:
                     "Still transcribing; wait for the dictation to appear"
                 )
             if not self.target:
-                raise RuntimeError("Start codex-voice in a Herdr pane first")
+                raise RuntimeError("Select a Pi voice session first")
             previous = self.pending
             self.stop(discard=False)
             self.draft = False
@@ -1715,7 +1690,7 @@ class Controller:
         try:
             if lease is None and self.engines:
                 lease = self.engines.acquire('stt')
-            # Readiness can be transiently unknown while Codex redraws. Check
+            # Readiness can be transiently unknown while Pi redraws. Check
             # identity now and enforce idle/done only when delivering text.
             self._probe_managed(target)
             self.terminal.validate_target(target)
@@ -2103,7 +2078,7 @@ class Controller:
 def runtime_dir():
     runtime = (
         Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
-        / "codex-voice"
+        / "pi-voice"
     )
     runtime.mkdir(mode=0o700, parents=True, exist_ok=True)
     return runtime
@@ -2117,7 +2092,7 @@ def desktop_notice(title, detail=""):
                 "notify-send",
                 "--app-name=Agent Voice",
                 "--expire-time=4000",
-                "--hint=string:x-canonical-private-synchronous:codex-voice",
+                "--hint=string:x-canonical-private-synchronous:pi-voice",
                 title,
                 detail,
             ],
@@ -2208,7 +2183,7 @@ def serve(runtime, config):
             dispatch(app, {"action": action})
         except Exception as exc:
             app.report_error(exc)
-            desktop_notice("Codex voice", str(exc))
+            desktop_notice("Pi voice", str(exc))
 
     tray = VoiceTray(app.status, tray_action)
     path = runtime / "control.sock"
@@ -2224,7 +2199,7 @@ def serve(runtime, config):
             except Exception as exc:
                 response = {"ok": False, "error": str(exc)}
                 app.report_error(exc)
-                desktop_notice("Codex voice", str(exc))
+                desktop_notice("Pi voice", str(exc))
             self.wfile.write(json.dumps(response).encode() + b"\n")
 
     class Server(socketserver.ThreadingUnixStreamServer):
@@ -2272,7 +2247,7 @@ def call(request, start=True):
     path = runtime_dir() / "control.sock"
     if start:
         subprocess.run(
-            ["systemctl", "--user", "start", "codex-voice.service"],
+            ["systemctl", "--user", "start", "pi-voice.service"],
             check=True,
             timeout=15,
         )
@@ -2285,7 +2260,7 @@ def call(request, start=True):
                 break
             except (FileNotFoundError, ConnectionRefusedError):
                 if not start or attempt == 39:
-                    raise RuntimeError("Codex voice service is unavailable")
+                    raise RuntimeError("Pi voice service is unavailable")
                 time.sleep(0.05)
         sock.sendall(json.dumps(request).encode() + b"\n")
         with sock.makefile("rb") as incoming:
@@ -2304,25 +2279,21 @@ def installed_pi_extension():
 
 
 def launcher_command(harness, args, directory, notify):
-    if harness not in ("codex", "pi", "qwen-pi"):
+    if harness not in ("pi", "qwen-pi"):
         raise RuntimeError("Unsupported voice harness")
-    if harness in ("pi", "qwen-pi"):
-        if any(arg in ("--print", "-p", "--mode")
-               or arg.startswith(("--mode=", "--print=")) for arg in args):
-            raise RuntimeError("Voice launchers require an interactive session")
-        if harness == 'pi' and any(
-            arg in ('--no-extensions', '-ne') for arg in args
-        ):
-            raise RuntimeError(
-                'The Pi voice launcher requires the installed voice extension')
-        installed_pi_extension()
-        return [harness, *args]
-    if args[:1] == ["exec"]:
+    if any(arg in ("--print", "-p", "--mode")
+           or arg.startswith(("--mode=", "--print=")) for arg in args):
         raise RuntimeError("Voice launchers require an interactive session")
-    return ["codex", "-c", f"notify={notify}", *args]
+    if harness == 'pi' and any(
+        arg in ('--no-extensions', '-ne') for arg in args
+    ):
+        raise RuntimeError(
+            'The Pi voice launcher requires the installed voice extension')
+    installed_pi_extension()
+    return [harness, *args]
 
 
-def launch(args, harness="codex"):
+def launch(args, harness="pi"):
     if os.environ.get("HERDR_ENV") != "1" or not os.environ.get(
         "HERDR_PANE_ID"
     ):
@@ -2330,7 +2301,7 @@ def launch(args, harness="codex"):
             "Run the voice launcher inside the Herdr pane you want to use"
         )
     token = uuid.uuid4().hex
-    executable = os.environ.get("CODEX_VOICE_COMMAND", "codex-voice")
+    executable = os.environ.get("PI_VOICE_COMMAND", "pi-voice")
     notify = json.dumps([executable, "notify", token])
     directory = runtime_dir() / token
     command = launcher_command(harness, args, directory, notify)
@@ -2385,21 +2356,10 @@ def main(args=None):
     try:
         if args and args[0] == "serve":
             config_path = os.environ.get(
-                "CODEX_VOICE_CONFIG",
-                str(Path.home() / ".config/codex-voice/config.json"),
+                "PI_VOICE_CONFIG",
+                str(Path.home() / ".config/pi-voice/config.json"),
             )
             serve(runtime_dir(), json.loads(Path(config_path).read_text()))
-            return 0
-        if args and args[0] == "notify":
-            if len(args) != 3:
-                return 2
-            # Callbacks must not start services or hold up a completed turn.
-            event = json.loads(args[2])
-            if is_cli_thread(event.get("thread-id")):
-                call(
-                    {"action": "notify", "token": args[1], "event": event},
-                    start=False,
-                )
             return 0
         if args and args[0] in (
             "interact",
@@ -2422,11 +2382,11 @@ def main(args=None):
             request = {"action": args[0]}
             if args[0] == "auto":
                 if len(args) != 2 or args[1] not in ("on", "off"):
-                    raise RuntimeError("Usage: codex-voice auto on|off")
+                    raise RuntimeError("Usage: pi-voice auto on|off")
                 request["enabled"] = args[1] == "on"
             if args[0] == "voice":
                 if len(args) != 2:
-                    raise RuntimeError("Usage: codex-voice voice CHARACTER")
+                    raise RuntimeError("Usage: pi-voice voice CHARACTER")
                 request["action"] = "voice:" + args[1]
             response = call(request)
             if args[0] in ("status", "auto", "voice"):
@@ -2435,28 +2395,27 @@ def main(args=None):
             return 0
         if args and args[0] in ("--help", "-h"):
             print(
-                "Usage: <codex|pi|qwen-pi>-voice [options]\n"
-                "       codex-voice interact|record|send|read|stop|status\n"
-                "       codex-voice retry|rebind|discard|append|replace\n"
-                "       codex-voice recover-copy|recover-stage"
+                "Usage: <pi|qwen-pi>-voice [options]\n"
+                "       pi-voice interact|record|send|read|stop|status\n"
+                "       pi-voice retry|rebind|discard|append|replace\n"
+                "       pi-voice recover-copy|recover-stage"
                 "|recover-discard\n"
-                "       codex-voice auto on|off\n"
-                "       codex-voice voice CHARACTER\n\n"
+                "       pi-voice auto on|off\n"
+                "       pi-voice voice CHARACTER\n\n"
                 "Super+Space: record/stop/send draft. "
                 "Super+Shift+Space: send. "
                 "Super+R: read/stop.\n"
-                "Run inside Herdr. Prefix Codex options with -- "
-                "if they conflict.\n"
+                "Run inside Herdr. Prefix conflicting options with --.\n"
                 "Stop background engines: systemctl --user stop "
-                "codex-voice{,-stt,-tts}.service"
+                "pi-voice{,-stt,-tts}.service"
             )
             return 0
         return launch(
             args[1:] if args[:1] == ["--"] else args,
-            os.environ.get("AGENT_VOICE_LAUNCH_KIND", "codex"),
+            os.environ.get("AGENT_VOICE_LAUNCH_KIND", "pi"),
         )
     except Exception as exc:
-        print(f"codex-voice: {exc}", file=sys.stderr)
+        print(f"pi-voice: {exc}", file=sys.stderr)
         return 1
 
 

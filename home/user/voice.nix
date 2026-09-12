@@ -9,7 +9,7 @@ let
   voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   voiceStt = voiceFeatures.stt;
   voiceTts = voiceFeatures.tts;
-  dataDir = "${config.home.homeDirectory}/.local/share/codex-voice";
+  dataDir = "${config.home.homeDirectory}/.local/share/pi-voice";
   cudaTts = voiceTts;
   audio = pkgs.callPackage ./voice-audio-package.nix {
     cudaSupport = cudaTts;
@@ -21,7 +21,7 @@ let
   };
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
   voicePython = pkgs.python3.withPackages (ps: [ ps.dbus-next ]);
-  voiceScripts = pkgs.runCommand "codex-voice-scripts" { } ''
+  voiceScripts = pkgs.runCommand "pi-voice-scripts" { } ''
     mkdir -p "$out"
     cp ${../config/voice}/*.py "$out/"
   '';
@@ -41,12 +41,12 @@ let
       ];
       text = ''
         export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
-        export CODEX_VOICE_COMMAND="$0"
+        export PI_VOICE_COMMAND="$0"
         export AGENT_VOICE_LAUNCH_KIND=${lib.escapeShellArg harness}
         exec python3 ${voiceScripts}/voice_controller.py "$@"
       '';
     };
-  voice = makeVoice "codex";
+  voice = makeVoice "pi";
   # Match the managed COSMIC Macchiato/Lavender palette, without changing
   # the user's application launcher or requiring another background service.
   menuConfig = pkgs.writeText "voice-menu-fuzzel.ini" ''
@@ -91,7 +91,7 @@ let
     '';
   };
   modelSetup = pkgs.writeShellApplication {
-    name = "codex-voice-models";
+    name = "pi-voice-models";
     runtimeInputs = [ pkgs.python3 ];
     text = ''
       exec python3 ${../config/voice/voice-model-setup} ${
@@ -122,7 +122,7 @@ let
       inherit (voice) reference_text;
     };
   }) (builtins.fromJSON (builtins.readFile ../config/voice/voices/catalogue.json));
-  ttsConfig = (pkgs.formats.json { }).generate "codex-voice-tts.json" {
+  ttsConfig = (pkgs.formats.json { }).generate "pi-voice-tts.json" {
     host = "127.0.0.1";
     port = 8179;
     backend = if cudaTts then "cuda" else "vulkan";
@@ -134,7 +134,7 @@ let
     busy_timeout_ms = 30000;
     models = [
       {
-        id = "codex-voice";
+        id = "pi-voice";
         family = "qwen3_tts";
         path = "${dataDir}/models/Qwen3-TTS-12Hz-0.6B-Base-GGUF/qwen3-tts-12hz-0.6b-base-q8_0.gguf";
         task = "tts";
@@ -162,12 +162,11 @@ in
   config = lib.mkIf voiceStt {
     home.packages = [
       voice
-      (makeVoice "pi")
       modelSetup
       voiceMenu
     ]
     ++ lib.optionals voiceTts [ (makeVoice "qwen-pi") ];
-    xdg.configFile."codex-voice/config.json".text = builtins.toJSON (
+    xdg.configFile."pi-voice/config.json".text = builtins.toJSON (
       {
         stt_url = "http://127.0.0.1:8178/inference";
         stt_health_url = "http://127.0.0.1:8178/health";
@@ -175,7 +174,7 @@ in
         tts_health_url = "http://127.0.0.1:8179/v1/models";
         tts_enabled = voiceTts;
         readiness_timeout = 60;
-        stt_prompt = "NixOS, Home Manager, Herdr, Codex, Grok, Qwen, Pi, Andromeda, Foundation, Terminus, Relay, dotfiles, GitHub, MCP.";
+        stt_prompt = "NixOS, Home Manager, Herdr, Grok, Qwen, Pi, Andromeda, Foundation, Terminus, Relay, dotfiles, GitHub, MCP.";
         preferred_microphone =
           if hostName == "andromeda" then
             "alsa_input.usb-Razer_Inc_Razer_Kiyo_Pro_Ultra-02.analog-stereo"
@@ -193,39 +192,44 @@ in
         };
       }
     );
-    xdg.configFile."codex-voice/tts.json" = lib.mkIf voiceTts { source = ttsConfig; };
+    xdg.configFile."pi-voice/tts.json" = lib.mkIf voiceTts { source = ttsConfig; };
     xdg.configFile."voice-menu/fuzzel.ini".source = menuConfig;
 
-    systemd.user.services.codex-voice = {
+    systemd.user.services.pi-voice = {
       Unit.Description = "Agent voice hotkeys, tray and selected session";
       Install.WantedBy = [ "default.target" ];
       Service = common // {
-        ExecStart = "${voice}/bin/codex-voice serve";
-        RuntimeDirectory = "codex-voice";
+        ExecStart = "${voice}/bin/pi-voice serve";
+        RuntimeDirectory = "pi-voice";
         RuntimeDirectoryMode = "0700";
         # Home Manager upgrades may use separate stop/start jobs.
         RuntimeDirectoryPreserve = "yes";
         KillMode = "control-group";
       };
     };
-    systemd.user.services.codex-voice-stt = {
+    systemd.user.services.pi-voice-stt = {
       Unit.Description = "Local Whisper speech recognition on the GPU";
       Service = common // {
         ExecStart = "${whisper}/bin/whisper-server --host 127.0.0.1 --port 8178 -m ${dataDir}/models/ggml-small.en.bin -t 4 -l en --vad --vad-model ${vadModel} --suppress-nst";
         Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}" ];
       };
     };
-    systemd.user.services.codex-voice-tts = lib.mkIf voiceTts {
+    systemd.user.services.pi-voice-tts = lib.mkIf voiceTts {
       Unit.Description = "Local character speech synthesis on the GPU";
       Service = common // {
-        ExecStart = "${audio}/bin/audiocpp_server --config ${config.home.homeDirectory}/.config/codex-voice/tts.json --no-ui";
+        ExecStart = "${audio}/bin/audiocpp_server --config ${config.home.homeDirectory}/.config/pi-voice/tts.json --no-ui";
         Environment = lib.optionals (!cudaTts) [
           "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}"
         ];
       };
     };
-    home.activation.codexVoiceDirectories = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      install -d -m 0700 "${dataDir}" "${dataDir}/models" "${dataDir}/voices"
+    home.activation.piVoiceDirectories = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      ${pkgs.systemd}/bin/systemctl --user stop codex-voice.service codex-voice-stt.service codex-voice-tts.service >/dev/null 2>&1 || true
+      oldData="$HOME/.local/share/codex-voice"
+      if [ -e "$oldData" ] && [ ! -e ${lib.escapeShellArg dataDir} ]; then
+        ${pkgs.coreutils}/bin/mv "$oldData" ${lib.escapeShellArg dataDir}
+      fi
+      install -d -m 0700 ${lib.escapeShellArg dataDir} ${lib.escapeShellArg "${dataDir}/models"} ${lib.escapeShellArg "${dataDir}/voices"}
     '';
   };
 }

@@ -47,7 +47,7 @@ than 50 words. This rule is internal to Samantha, not a separate menu choice.
 The count uses the complete spoken reply after Markdown cleanup. Every chunk
 uses that one selection. Other characters use their own reference regardless
 of reply length. Selections apply to the next playback, including replay, and
-persist across restarts in `~/.local/share/codex-voice/voice-mode`.
+persist across restarts in `~/.local/share/pi-voice/voice-mode`.
 Old saved values `auto`, `current` and `newer` resolve to Samantha.
 
 [The character catalogue](catalogue.json) records pinned source URLs, SHA-256

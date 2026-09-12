@@ -19,7 +19,7 @@ let
   effectiveStdenv = if cudaSupport then cudaPackages.backendStdenv else stdenv;
 in
 effectiveStdenv.mkDerivation {
-  pname = "codex-voice-audio";
+  pname = "pi-voice-audio";
   version = "0-unstable-2026-09-07";
 
   src = fetchFromGitHub {
@@ -90,7 +90,7 @@ effectiveStdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Local GPU speech synthesis runtime for Codex voice";
+    description = "Local GPU speech synthesis runtime for Pi voice";
     homepage = "https://github.com/0xShug0/audio.cpp";
     license = lib.licenses.mit;
     platforms = lib.platforms.linux;

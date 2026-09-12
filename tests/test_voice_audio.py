@@ -200,7 +200,7 @@ class RequestTests(unittest.TestCase):
 
         def respond(path, body):
             checks.append(path)
-            model = {"id": "codex-voice", "loaded": len(checks) > 1}
+            model = {"id": "pi-voice", "loaded": len(checks) > 1}
             return 200, json.dumps({"data": [model]}).encode()
 
         with server(respond) as url, tempfile.TemporaryDirectory() as directory:
@@ -218,7 +218,7 @@ class RequestTests(unittest.TestCase):
             local = audio.LocalAudio(Path(directory), {
                 "tts_health_url": url, "readiness_timeout": 1,
             })
-            with self.assertRaisesRegex(RuntimeError, "codex-voice.*missing"):
+            with self.assertRaisesRegex(RuntimeError, "pi-voice.*missing"):
                 local.wait_ready("tts")
 
     def test_status_refreshes_health_without_waiting_for_slow_response(self):

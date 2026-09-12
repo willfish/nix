@@ -72,24 +72,17 @@ class ActivityTests(unittest.TestCase):
         terminal.pi = Mock()
         with patch.object(voice, "process_start", return_value="2"):
             for harness, raw, expected in (
-                ("codex", "working", "working"),
-                ("codex", "done", "idle"),
-                ("legacy", "blocked", "blocked"),
-                ("legacy", "unknown", "unknown"),
                 ("pi", "working", "working"),
+                ("pi", "done", "idle"),
                 ("qwen-pi", "blocked", "blocked"),
             ):
                 with self.subTest(harness=harness, state=raw):
-                    native = harness in ("pi", "qwen-pi")
-                    adapter = terminal.pi if native else terminal.herdr
-                    adapter.validate_target.return_value = {
-                        "state" if native else "agent_status": raw,
-                    }
+                    terminal.pi.validate_target.return_value = {"state": raw}
                     self.assertEqual(terminal.activity(dict(
                         self.target, harness=harness
                     )), expected)
-                    adapter.submit_guarded.assert_not_called()
-                    adapter.insert_guarded.assert_not_called()
+                    terminal.pi.submit_guarded.assert_not_called()
+                    terminal.pi.insert_guarded.assert_not_called()
 
     def test_native_activity_tracks_selection_and_blocked_state(self):
         del self.terminal.activity
@@ -259,22 +252,6 @@ class ActivityTests(unittest.TestCase):
         self.wait_for(lambda: not self.app.activity_inflight)
         self.assertEqual(self.app.status()["agent_state"], "unknown")
         self.assertIsNone(self.app.status()["error"])
-
-    def test_codex_completion_clears_responding_without_a_probe(self):
-        del self.terminal.activity
-        self.app.register(
-            "first", dict(self.target, harness="codex"), "conversation-first"
-        )
-        self.app.harness_event("first", {
-            "harness": "codex", "session": "conversation-first",
-            "type": "busy",
-        })
-        self.assertTrue(self.app.status()["responding"])
-        self.assertTrue(self.app.notify("first", {
-            "type": "agent-turn-complete", "thread-id": "conversation-first",
-            "turn-id": "turn-one", "last-assistant-message": "All done.",
-        }))
-        self.assertEqual(self.app.status()["agent_state"], "idle")
 
     def test_rebinding_drops_old_conversation_activity(self):
         del self.terminal.activity

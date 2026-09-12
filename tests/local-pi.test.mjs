@@ -109,7 +109,7 @@ test('voice packages Python and clipboard support but starts only the controller
   assert.match(source, /cp \$\{\.\.\/config\/voice\}\/\*\.py "\$out\/"/);
   assert.ok(!source.includes('*.mjs'));
   assert.match(source, /runtimeInputs = \[[\s\S]*?pkgs\.wl-clipboard[\s\S]*?\];/);
-  const controller = source.split('systemd.user.services.codex-voice = {')[1].split('systemd.user.services.codex-voice-stt')[0];
+  const controller = source.split('systemd.user.services.pi-voice = {')[1].split('systemd.user.services.pi-voice-stt')[0];
   assert.match(controller, /Install\.WantedBy = \[ "default.target" \];/);
   assert.match(controller, /RuntimeDirectoryMode = "0700";/);
   assert.match(controller, /RuntimeDirectoryPreserve = "yes";/);

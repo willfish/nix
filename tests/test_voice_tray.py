@@ -52,7 +52,7 @@ class PresentationTests(unittest.TestCase):
         base = {"retained": True, "retained_source": "pi source", "pane": "p1"}
         for harness, connection, allowed in (
             ("pi", "ready", True), ("qwen-pi", "ready", True),
-            ("codex", "ready", False), ("pi", "reconnecting", False),
+            ("unknown", "ready", False), ("pi", "reconnecting", False),
         ):
             view = self.tray.presentation(
                 {**base, "harness": harness, "connection_state": connection})
@@ -79,7 +79,7 @@ class PresentationTests(unittest.TestCase):
         self.assertFalse(confirmed["actions"]["select:one"][1])
         self.assertTrue(confirmed["actions"]["recover-stage"][1])
         for changes in ({"phase": "recording"}, {"retained": False},
-                        {"harness": "codex"}):
+                        {"harness": "unknown"}):
             with self.subTest(changes=changes):
                 self.assertFalse(self.tray.presentation({**base, **changes})[
                     "actions"]["select:one"][1])
@@ -394,7 +394,7 @@ class PresentationTests(unittest.TestCase):
     def test_sessions_are_individually_selectable_and_rebind_is_available(self):
         view = self.tray.presentation({
             "pane": "p1", "sessions": [
-                {"token": "one", "label": "Codex: dotfiles",
+                {"token": "one", "label": "Pi: dotfiles",
                  "selected": True},
                 {"token": "two", "label": "Pi: notes", "selected": False},
             ],
@@ -402,7 +402,7 @@ class PresentationTests(unittest.TestCase):
         self.assertNotIn("rebind", view["actions"])
         self.assertFalse(view["actions"]["select:one"][1])
         self.assertTrue(view["actions"]["select:two"][1])
-        self.assertEqual(view["actions"]["select:one"][0], "Codex: dotfiles")
+        self.assertEqual(view["actions"]["select:one"][0], "Pi: dotfiles")
         self.assertEqual(view["actions"]["select:two"][0], "Pi: notes")
         self.assertEqual(view["selected_session"], "select:one")
 
@@ -680,7 +680,7 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 )
                 self.assertFalse(selected_row[1]["enabled"].value)
                 state["sessions"] = [
-                    {"token": "third", "label": "codex: third"},
+                    {"token": "third", "label": "pi: third"},
                 ]
                 await wait_until(
                     lambda: "select:third" in tray.view["actions"]
