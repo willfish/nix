@@ -11,7 +11,6 @@ let
     "hermes"
     "local-llm"
     "local-assistant-tools"
-    "dotfiles-secrets"
   ];
   check = condition: message: lib.assertMsg condition "Headless Darwin: ${message}";
 in
@@ -34,17 +33,54 @@ assert check (builtins.all (
   && s.ProgramArguments != [ ]
 ) unprivileged) "unprivileged boot jobs not fully specified";
 assert check (
-  daemons.dotfiles-secrets.serviceConfig.KeepAlive.SuccessfulExit == false
+  daemons.sops-install-secrets.serviceConfig.KeepAlive.SuccessfulExit == false
+  && daemons.sops-install-secrets.serviceConfig.UserName == "root"
 ) "failed secret provisioning must retry";
 assert check (
   daemons.hermes.serviceConfig.EnvironmentVariables.HERMES_CRON_TIMEOUT == "7200"
 ) "Hermes cron timeout changed";
 assert check (lib.hasInfix "chrome-headless-shell" home.home.sessionVariables.CHROME_PATH)
   "browser runtime must be pinned headless shell";
-assert check (lib.hasInfix "Refusing handover" c.system.activationScripts.preActivation.text)
+assert check
+  (lib.hasInfix "darwin-preflight --target" c.system.activationScripts.preActivation.text)
   "unsafe automatic service takeover";
-assert check (lib.hasInfix "darwin-secrets provision" home.home.activation.sops-nix.data)
-  "home activation must provision synchronously";
+assert check (lib.hasInfix "darwin-secrets wait" home.home.activation.sops-nix.data)
+  "home activation must wait for native secrets";
+assert check (home.home.activation ? markDarwinReady) "missing completed-home gate";
+assert check (
+  c.environment.etc."dotfiles/home-generation".text == "${home.home.activationPackage}\n"
+) "system must pin its matching home generation";
+assert check (
+  c.sops.age.sshKeyPaths == [ "/Users/william/.ssh/id_ed25519" ]
+  && !c.sops.age.generateKey
+  && c.sops.gnupg.sshKeyPaths == [ ]
+) "shared identity changed";
+assert check (
+  builtins.attrNames c.sops.secrets == builtins.attrNames home.sops.secrets
+) "native and home secret groups differ";
+assert check (builtins.all (
+  name:
+  c.sops.secrets.${name}.owner == "william"
+  && c.sops.secrets.${name}.mode == "0400"
+  && c.sops.secrets.${name}.path == home.sops.secrets.${name}.path
+) (builtins.attrNames c.sops.secrets)) "secret ownership or paths changed";
+assert check (
+  c.sops.templates."hermes.env".path == home.sops.templates."hermes.env".path
+  && c.sops.templates."hermes.env".owner == "william"
+) "Hermes template mismatch";
+assert check (
+  daemons.dotfiles-health.serviceConfig.StartInterval == 300
+  && daemons.dotfiles-health.serviceConfig.LowPriorityIO
+  && !daemons.dotfiles-health.serviceConfig.KeepAlive
+) "local monitoring policy";
+assert check (!(daemons ? reboot) && c.time.timeZone == null) "reboot or timezone policy changed";
+assert check (
+  !(lib.hasInfix "AuthorizedKeysFile none" c.services.openssh.extraConfig)
+  && !(lib.hasInfix "PasswordAuthentication no" c.services.openssh.extraConfig)
+) "SSH access changed";
+assert check (
+  !c.system.defaults.CustomSystemPreferences."/Library/Preferences/com.apple.SoftwareUpdate".AutomaticallyInstallMacOSUpdates
+) "unattended OS upgrades enabled";
 assert check (
   home.home.activation.setupLaunchAgents.data == ""
 ) "graphical launchd activation remains";

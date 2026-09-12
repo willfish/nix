@@ -1,157 +1,198 @@
 # Headless macOS nodes
 
 Use nix-darwin for system services and Home Manager for the user's CLI and agent
-configuration. Required services must run without a graphical login. Apple’s
-login window and WindowServer are not disabled. Safari remains the built-in
-browser for occasional local use; no Safari package is installed by Nix.
-SSH uses the connecting machine's terminal, so Ghostty is not needed on the node.
+configuration. Required services must not depend on a graphical login. Apple's
+login window and WindowServer remain intact. Safari remains built in; Nix does
+not install it. Ghostty, Brave, AeroSpace and their desktop configuration are
+excluded from the headless profile. SSH uses the connecting machine's terminal.
 
 ## Ownership
 
-- `system/darwin/headless.nix`: native SSH, power policy, system launchd jobs,
-  file limits and Tailscale. `system/darwin/relay.nix` supplies node identity.
-- `flake.nix`: register nodes in `darwinHosts`. Each gets a Darwin system and a
-  `william@<node>` home. `william-darwin` remains Relay's compatibility alias.
-- Home Manager: Pi, shell, email/accounting tools and documents. The headless
-  profile excludes Ghostty, Brave, AeroSpace and their desktop configuration,
-  including visible-browser MCP wrappers.
-- Private config: selected secrets and their shared SSH-derived age identity.
-  Nothing changes the existing decryption authority or rotates credentials.
+| Layer | Configuration |
+|---|---|
+| Node identity | `darwinHosts` in `flake.nix`, `system/darwin/relay.nix` |
+| Server composition | `system/darwin/headless.nix` |
+| Application jobs and dependencies | `services.nix` |
+| Native SSH and login policy | `access.nix` |
+| Power and updates | `power.nix`, `maintenance.nix` |
+| Local health and log retention | `monitoring.nix` |
+| Preflight, configuration diff and deployment | `activation.nix` |
+| Encrypted data and native SOPS integration | Private `nix-config` input |
+| CLI tools, Pi, accounting/email and agent configuration | Home Manager |
 
-Hermes, local inference and assistant tools are system LaunchDaemons running as
-`william`, not root. Each waits for the private provisioner's readiness marker,
-which must match both the current boot and secret installer. A failed provision
-invalidates readiness. Startup retries are bounded per attempt and launchd
-retries failed jobs. This gates startup, not live credential rotation: restart
-consumers explicitly after changes when they retain credentials in memory.
+Each registered node gets `darwinConfigurations.<node>` and
+`homeConfigurations."william@<node>"`. `william-darwin` remains Relay's alias.
+Determinate owns Nix and its configuration (`nix.enable = false`). Keep existing
+SSH authentication, accounts, timezone, documentation and rollback tools. There
+is no wholesale SrvOS import, broader Nix trust, automatic account migration or
+new per-host decryption identity.
 
-The root-only jobs are Tailscale and the global file-limit adjustment. Preserve
-Tailscale's existing state and socket paths during handover. Do not run competing
-Homebrew and nix-darwin instances against the same state.
+## Startup contract
 
-Determinate retains ownership of Nix and its configuration (`nix.enable = false`).
-The headless `hmswitch` path does not rewrite Nix caches or install system plists.
-System changes require a separate `darwin-rebuild`. Existing cache settings are
-preserved, not newly managed by nix-darwin.
+1. System jobs wait for the Nix volume before invoking store executables.
+2. Native `sops-nix.darwinModules.sops` installs selected secrets as root, with
+   files owned by the existing service user. Explicit key paths retain the shared
+   SSH-derived age identity; neither recipients nor ciphertext change.
+3. A thin runtime adapter serializes native boot/activation installs and publishes
+   `/var/db/dotfiles/secrets-ready.json` only after success. This file contains
+   boot identity and manifest path, not secrets. Failed installs invalidate it;
+   the boot job retries. Build validation uses the unwrapped upstream installer.
+4. Home Manager waits for native readiness, retargets its compatibility symlink
+   to `/run/secrets`, and marks its generation ready only after all activation
+   steps finish. Old plaintext generations are not erased.
+5. Hermes, inference and assistant tools run unprivileged with explicit
+   environments. They await both current native secrets and the completed home
+   generation pinned by the system configuration.
 
-Accounting wrappers use the hash-pinned Playwright Chromium headless shell from
-the existing nixpkgs input. No browser download is performed at service startup.
-`CHROME_PATH` and `PLAYWRIGHT_BROWSERS_PATH` are explicit in the gateway and managed
-wrappers. Telegram bot/MCP integrations remain; a desktop client is not required.
-Interactive authentication challenges still require an approved human workflow,
-not an automatic fallback to a visible browser or bypass of an authorization gate.
+**Deploy system and home as a pair whenever the home generation changes.** The
+home guard rejects a mismatched installed system. Otherwise a standalone home
+update could leave boot jobs expecting an older generation. `hmswitch` does not
+install or restart system services; use it after the matching system deployment.
+A system-only change whose home generation is unchanged does not require a new
+home activation. Readiness gates startup, not live credential rotation: restart
+credential-caching consumers explicitly when necessary.
+
+Accounting wrappers use pinned Playwright Chromium headless shell with explicit
+`CHROME_PATH` and `PLAYWRIGHT_BROWSERS_PATH`. No startup browser downloads occur.
+Telegram bot/MCP integrations remain; no desktop client is required. Human
+account-authentication gates remain in force, with no automatic GUI fallback.
+
+## Local operations policy
+
+`darwin-health` reports service state, readiness, memory-page counters and swap.
+It does not print raw launchd environments or read secret contents. It does not
+contact an external telemetry service or open a listener. Socket-activated SSH
+is checked for a loaded job, not continuous process activity; this is not an
+end-to-end SSH, browser or model request test.
+
+A low-priority system job runs every five minutes. It records protected status
+in `/var/db/dotfiles/health.json` and maintains only allowlisted logs in
+`/var/log/dotfiles`. Logs exceeding 5 MiB are copy-truncated, retaining two tail
+archives of at most 5 MiB each. Logs can grow between checks; concurrent writes
+during truncation can be lost. This avoids signalling services that cannot reopen
+stdout. It is operational retention, not a lossless audit trail. No old user logs,
+credentials, browser sessions, backups or unrelated caches are deleted.
+
+Update checks are enabled daily; automatic downloads, app updates and macOS
+upgrades are disabled by this profile. Existing Apple security/config-data policy
+is left unchanged. Managed-device policies may take precedence. There are no
+scheduled reboots, automatic erases, Nix GC or new optimisation jobs. Keep OS
+upgrades, restarts and any broader maintenance policy explicitly approved.
+
+The managed Hermes weekly updater is check-only when `HERMES_SYSTEM_SERVICE=1`.
+It cannot apply an update that might recreate the old user-managed gateway.
+Apply Hermes runtime updates and restart its system service during approved
+maintenance; the legacy workstation updater retains its existing behaviour.
 
 ## Build without activation
 
-On Relay, use native macOS SSH via `ssh william@relay.local`, not Tailscale SSH.
-Verify an unfamiliar LAN host key through an already trusted connection or local
-console. Do not disable host-key verification.
+Use native macOS SSH: `ssh william@relay.local`, not Tailscale SSH. Verify an
+unfamiliar host key through a trusted connection or local console.
 
 ```bash
 cd ~/.dotfiles
 direnv exec . nix build --no-link .#darwinConfigurations.relay.system
 direnv exec . nix build --no-link '.#homeConfigurations."william@relay".activationPackage'
-direnv exec . nix build --no-link .#checks.aarch64-darwin.headless-darwin
+direnv exec . nix flake check
 ```
 
-A separate staging checkout allows native builds without changing the active
-checkout. Builds do not activate either configuration. Linux can run the
-`headless-darwin` and `host-capabilities` evaluation checks, but cannot establish
-macOS runtime or pre-login compatibility.
+Use a Git-tracked staging checkout for remote builds, excluding `.direnv` and
+other local state from the flake source. Builds activate nothing. Linux can check
+configuration boundaries and offline logic; native builds and synthetic browser
+tests still do not establish pre-login operation.
 
-## First handover: explicit maintenance approval required
+## First handover: separate maintenance approval required
 
 Arrange native LAN SSH, a second session and local recovery access. Keep the
-current graphical session until the system service handover is verified. Do not
-combine this step with a logout, reboot, credential cleanup or Nix replacement.
-Administrative commands require interactive sudo authorization; do not introduce
-blanket passwordless sudo.
+current graphical session during this handover. Do not combine it with logout,
+reboot, credential cleanup or Nix replacement. Sudo remains interactive, without
+blanket passwordless authorization.
 
-1. Recheck clean checkouts, pinned inputs and built target paths. Record the
-   current home/system generation, relevant service state and current memory
-   pressure/swap. Save old service definitions and rollback references in a
-   protected directory outside Git (directory mode 0700, files 0600).
-2. Disable and unload the old user jobs, then archive their plists so a later
-   graphical login cannot start duplicates:
-   `ai.hermes.gateway`, `org.nix-community.home.sops-nix`,
+1. Verify clean checkouts, pinned inputs and both built targets. Save current
+   home/system references, job definitions and enabled states in a protected
+   directory outside Git. Directory mode 0700 and file mode 0600 are appropriate.
+2. Disable/unload and archive the old user jobs so a later GUI login cannot start
+   duplicates: `ai.hermes.gateway`, `org.nix-community.home.sops-nix`,
    `org.nix-community.home.local-llm`, and
-   `org.nix-community.home.local-assistant-tools`. Inspect both loaded state and
-   installed definitions. Preserve Hermes data, browser sessions and all keys.
-3. Unload and archive the unmanaged system plists `io.tailscale.tailscaled` and
-   `limit.maxfiles`. Stopping Tailscale can disconnect overlay sessions: do this
-   through native LAN SSH. Do not delete its state. Inventory old OpenClaw,
-   Homebrew and Docker definitions separately before approving their removal.
-4. Activate the exact system built as the SSH user, without making root fetch
-   private inputs. The pinned nix-darwin supports `activate` from its built
-   system path. After verifying the target path, register that generation with
-   `sudo "$(command -v nix-env)" -p /nix/var/nix/profiles/system --set "$system"`,
-   then run `sudo "$system/sw/bin/darwin-rebuild" activate`, where `system` is
-   the output of `direnv exec . nix build --no-link --print-out-paths
-   .#darwinConfigurations.relay.system`. Profile registration precedes activation;
-   restore the previous profile too if activation fails. Do not fetch an unpinned
-   installer or copy a private SSH key into root's home.
-5. Run the checkout's updated wrapper, not the old deployed wrapper:
-   `direnv exec . bash home/config/bin/hmswitch`. It chooses `william@relay` and
-   does not manage system services. Its activation guard requires the matching
-   system secret job to be installed first. Do not bypass the guard.
-6. Check all required services, the selected secrets, MCP configuration and
-   actual local model/browser operation before considering logout.
+   `org.nix-community.home.local-assistant-tools`.
+3. Unload/archive the unmanaged `io.tailscale.tailscaled` and `limit.maxfiles`
+   system definitions. Retire `org.nixos.dotfiles-secrets` too if an earlier
+   custom-provisioner version was deployed. Preserve Tailscale state. Its restart
+   can interrupt overlay access, so remain on native LAN SSH. Inventory old
+   OpenClaw, Homebrew and Docker definitions separately before removing anything.
+4. Build as the SSH user and capture the exact system output. Run its read-only
+   preflight, then, only with deployment approval, its deploy command:
 
-System activation refuses to take over while the four old graphical jobs remain
-installed or loaded, or while the unmanaged system plist files remain. Home
-activation refuses to proceed without the matching system secret job. These
-checks are intentional; a routine switch must not silently interrupt automation.
+   ```bash
+   system=$(direnv exec . nix build --no-link --print-out-paths .#darwinConfigurations.relay.system)
+   sudo "$system/sw/bin/darwin-preflight" --target "$system"
+   sudo "$system/sw/bin/darwin-deploy" "$system"
+   ```
 
-### Rollback
+   Preflight checks identity, account, private-key permissions, required runtime
+   files, legacy jobs and secret-path ownership, and shows a metadata-only policy
+   diff. It does not stop services. The deploy command repeats preflight under a
+   lock before changing the system profile. It uses the installed Nix CLI and
+   the built target's `darwin-rebuild activate`, without fetching private inputs
+   as root. Never copy an SSH private key into root's home as a shortcut.
+5. Run `direnv exec . bash home/config/bin/hmswitch` from the updated checkout.
+   Application jobs may be waiting for this matching home to finish. The wrapper
+   neither recreates the unmanaged system plists nor changes Nix cache settings.
+6. Inspect `darwin-health` and perform functional checks before considering logout.
 
-Before deployment, retain the old home generation and job definitions, including
-their disabled-state inventory. For a failed handover, stop the new jobs before
-restoring old definitions. Restore the previous Darwin generation if one exists;
-for the first installation, use the documented nix-darwin uninstall/recovery path
-rather than assuming an older Darwin generation exists. Restore the old home
-and plists, then restore each job's previous enabled state. Do not start two
-Hermes gateways or two Tailscale daemons. Keep native SSH reachable throughout.
+An unmanaged directory at the old secret-symlink path is a blocker, not permission
+to delete it. Never bypass preflight or the matching-generation guard merely to
+make a switch succeed.
 
-The compatibility `hmswitch` path in an old generation can recreate the unmanaged
-system jobs. Do not run it alongside the new system services.
+### Recovery
 
-## Runtime acceptance, each disruption separately approved
+`darwin-deploy` saves system/home generation references under
+`/var/db/dotfiles/rollouts` before profile registration. On failure, it attempts to
+restore the previous system profile pointer, provided another deployment has not
+changed it. For a first install it removes only its newly registered pointer.
 
-- Native SSH and sudo-based administration work without a desktop login.
-- Home Manager's active generation matches the intended target.
-- `check.py --runtime --groups coding accounting email telegram` passes from the
-  private checkout without printing secret values; only selected secrets render.
-- `org.nixos.dotfiles-secrets` exits successfully. Hermes, local inference and
-  assistant tools run under the intended unprivileged account in system launchd.
-- Pi and agent-browser remain available; MCP servers are GitHub, NixOS and
-  Telegram. No visible-Brave registration or AeroSpace configuration remains.
-- A synthetic headless page renders without accessing real accounts. Perform a
-  local model request and verify GPU offload, not just a healthy HTTP listener.
-- After an approved logout, then an independently approved reboot, repeat the
-  checks before any graphical login. Test service restart/network recovery too.
-- Compare idle memory pressure and swap at equivalent workload and model state.
-  Do not sum RSS or count reclaimable filesystem cache as wasted RAM.
+**This is not a transactional rollback of macOS or running services.** Activation
+may already have changed jobs or `/etc`. Inspect the saved references and restore
+the previous system, home and archived job definitions deliberately. Stop new
+jobs before restoring old ones; never run two Hermes gateways or Tailscale
+instances. Restore previous enabled states, retain native SSH, and use local
+recovery when necessary. First-time installation has no previous Darwin system;
+retain the nix-darwin uninstall/recovery route and the original home/plists.
 
-A browser launched over SSH while the desktop remains logged in does not prove
-pre-login operation. Similarly, successful builds do not prove GPU or keychain
-access from a system daemon.
+## Acceptance after deployment
 
-## Adding a node
+Each disruption requires separate approval. Verify services with the graphical
+session still present, then after an approved logout, and again after an approved
+reboot before any graphical login:
 
-The registry currently targets Apple Silicon. Create a per-host module importing
-`headless.nix`, set its hostname and register it in `darwinHosts`. The shared home constructor assigns the
-`automation` role. Keep per-node hardware/model differences explicit rather than
-copying Relay's whole configuration. Add that home to capability regressions.
+- Native SSH and sudo administration work; active system/home match the targets.
+- Private `check.py --runtime --groups coding accounting email telegram` validates
+  selected values/permissions without printing them. Native SOPS succeeds and the
+  three application jobs run as the intended unprivileged user.
+- Pi and agent-browser remain available; MCPs are GitHub, NixOS and Telegram.
+- An offline synthetic browser page renders. A real local inference request
+  succeeds with GPU offload, not just a healthy listener.
+- Restart/network recovery works. Health snapshots advance without exposing
+  credentials. Compare memory pressure and swap at equivalent workload/model
+  state, not by summing RSS or treating reclaimable cache as wasted memory.
 
-Initial provisioning still requires macOS setup, an existing `william` account,
-native Remote Login, a compatible Nix installation and secure access to both
-private repositories. Provision the approved shared decryption identity outside
-Git. Decide FileVault policy explicitly: an encrypted disk can require local
-preboot unlocking after power loss; this configuration does not bypass it.
+## New nodes and upstream references
 
-Hermes currently uses the existing `.hermes/hermes-agent/venv` installation and
-mutable job/configuration state. A new node must provision that runtime and its
-approved jobs before enabling the gateway. Do not copy Relay's credentials,
-caches or job state wholesale. This is declarative service management, not a
-complete bare-metal macOS or Hermes installer. Privacy grants, secure bootstrap,
-OS updates and boot-time acceptance remain separate operational steps.
+The registry currently targets Apple Silicon. Add a node module importing
+`headless.nix`, register it in `darwinHosts`, and extend capability regressions.
+Keep hardware/model differences explicit. Bootstrap macOS, the existing account,
+native Remote Login, compatible Nix and secure repository/key access separately.
+Decide FileVault policy explicitly: this configuration cannot bypass preboot
+unlocking after power loss.
+
+Hermes still uses its existing mutable `.hermes/hermes-agent/venv` runtime and
+approved job state. Provision those and required model files before deployment;
+do not copy another node's credentials/caches wholesale. This is not a bare-metal
+macOS or Hermes installer. Privacy grants and OS management remain separate.
+
+The patterns are informed by [SrvOS](https://github.com/nix-community/srvos/tree/ee2f679bdc7324f90dc73c0f22f2d5fab25b1b33/darwin),
+[Nix Community's Mac builders](https://github.com/nix-community/infra/tree/6d9ddcdfc42fc0d449fc620de9ed1115b2ba994d/modules/darwin),
+and native sops-nix already pinned by this flake. Their automatic reboots,
+restrictive SSH-key lookup, broader Nix trust and destructive CI cleanup are not
+copied. Determinate's ephemeral provisioning is a useful future MDM reference,
+not authorization to adopt its autologin or erase workflow.

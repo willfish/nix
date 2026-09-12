@@ -73,13 +73,33 @@ in
     );
     home.activation.requireDarwinSystem = lib.mkIf cfg.darwinSystemServices (
       lib.hm.dag.entryBefore [ "writeBoundary" ] ''
-        if ! /usr/bin/grep -Fq \
-          ${lib.escapeShellArg "${config.privateConfig.darwinSecretsPackage}/bin/darwin-secrets"} \
-          /Library/LaunchDaemons/org.nixos.dotfiles-secrets.plist; then
-          echo "Activate the matching nix-darwin system through the approved handover before this home." >&2
+        if [ "$(cat /etc/dotfiles/home-generation 2>/dev/null)" != "$newGenPath" ]; then
+          echo "Deploy the matching Darwin system before changing this home generation." >&2
+          exit 1
+        fi
+        /bin/launchctl print system/org.nixos.sops-install-secrets >/dev/null
+        ${config.privateConfig.darwinSecretsPackage}/bin/darwin-secrets wait --timeout 0
+        if [ -e "$HOME/.config/sops-nix/secrets" ] && [ ! -L "$HOME/.config/sops-nix/secrets" ]; then
+          echo "Refusing to replace an unmanaged secret directory; inspect it during handover." >&2
           exit 1
         fi
       ''
+    );
+    home.activation.invalidateDarwinReady = lib.mkIf cfg.darwinSystemServices (
+      lib.hm.dag.entryBetween [ "linkGeneration" "installPackages" ] [ "writeBoundary" ] ''
+        rm -f ${lib.escapeShellArg "${config.xdg.stateHome}/dotfiles/home-ready"}
+      ''
+    );
+    home.activation.markDarwinReady = lib.mkIf cfg.darwinSystemServices (
+      lib.hm.dag.entryAfter
+        (builtins.filter (name: name != "markDarwinReady") (builtins.attrNames config.home.activation))
+        ''
+          state=${lib.escapeShellArg "${config.xdg.stateHome}/dotfiles"}
+          mkdir -p -m 0700 "$state"
+          ready=$(mktemp "$state/.home-ready.XXXXXX")
+          printf '%s\n' "$newGenPath" > "$ready"
+          mv -f "$ready" "$state/home-ready"
+        ''
     );
     dotfiles.capabilities = lib.mapAttrs (_: lib.mkDefault) {
       work = full;
