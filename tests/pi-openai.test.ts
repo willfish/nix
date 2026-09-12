@@ -42,15 +42,14 @@ test('Pi settings defaults enable quiet startup without clobbering user keys', (
 });
 test('Home Manager wires OpenCode Go and OpenRouter keys onto built-in catalogs', () => {
   const pi = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
-  const secrets = readFileSync(new URL('../home/user/secrets.nix', import.meta.url), 'utf8');
-  assert.match(secrets, /"OPENCODE_API_KEY"/);
+  const flake = readFileSync(new URL('../flake.nix', import.meta.url), 'utf8');
+  assert.match(flake, /nix-config\.homeModules\.default/);
   assert.doesNotMatch(pi, /sopsApiKey "OPENCODE_API_KEY"/);
   for (const name of ['OPENCODE_GO_KEY', 'OPENROUTER_API_KEY']) {
-    assert.match(secrets, new RegExp(`"${name}"`));
     assert.match(pi, new RegExp(`sopsApiKey "${name}"`));
   }
   for (const name of ['PI_OPENAI_CODEX_REFRESH', 'PI_OPENAI_CODEX_ACCOUNT_ID']) {
-    assert.match(secrets, new RegExp(`"${name}"`));
+    assert.match(pi, new RegExp(name));
   }
   const { providers } = JSON.parse(readFileSync(modelsPath));
   assert.equal(providers.opencode, undefined);

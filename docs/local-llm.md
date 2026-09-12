@@ -253,10 +253,15 @@ into Pi's prompt. Do not paste that URL into chat. Then copy the refresh token
 and account id into sops without printing them:
 
 ```sh
+cd "${NIX_CONFIG_ROOT:-$HOME/Repositories/nix-config}"
 # values via stdin; do not put tokens on the command line
 printf '%s' '"REFRESH"' | sops set secrets/env.yaml --value-stdin '["PI_OPENAI_CODEX_REFRESH"]'
 printf '%s' '"ACCOUNT"' | sops set secrets/env.yaml --value-stdin '["PI_OPENAI_CODEX_ACCOUNT_ID"]'
 ```
+
+Commit and push the encrypted changes in the private checkout. In `~/.dotfiles`,
+run `direnv exec . nix flake update nix-config`, build the affected Home Manager
+configuration, then `hmswitch`. A switch alone uses the previously pinned secrets.
 
 Home Manager activation seeds `openai-codex` OAuth into `auth.json` when that
 provider is missing or is still an API key, and removes a leftover `openai` API

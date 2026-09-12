@@ -56,10 +56,6 @@
 
   services.openssh = {
     enable = true;
-    authorizedKeysFiles = [
-      ".ssh/authorized_keys"
-      "/run/secrets/ssh/authorized_keys.d/%u"
-    ];
     settings.PasswordAuthentication = false;
     settings.KbdInteractiveAuthentication = false;
   };

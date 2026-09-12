@@ -213,14 +213,14 @@ async def main():
 asyncio.run(main())
 PY
 
-# Optionally re-import into sops when running inside ~/.dotfiles checkout
+# Optionally re-import into the private configuration checkout.
 if [ "${SLACK_UPDATE_SOPS:-1}" = "1" ] && command -v sops >/dev/null 2>&1; then
-  repo="${SLACK_DOTFILES_ROOT:-$HOME/.dotfiles}"
+  repo="${NIX_CONFIG_ROOT:-${SLACK_DOTFILES_ROOT:-$HOME/Repositories/nix-config}}"
   secrets_file="$repo/secrets/env.yaml"
   if [ -r "$secrets_file" ] && [ -r "$OUT_FILE" ]; then
     "$PYTHON_BIN" - <<'PY'
 import json, os, re, subprocess, pathlib
-repo = pathlib.Path(os.environ.get("SLACK_DOTFILES_ROOT", pathlib.Path.home() / ".dotfiles"))
+repo = pathlib.Path(os.environ.get("NIX_CONFIG_ROOT") or os.environ.get("SLACK_DOTFILES_ROOT") or pathlib.Path.home() / "Repositories" / "nix-config")
 secrets = repo / "secrets" / "env.yaml"
 values = {}
 for line in pathlib.Path(os.environ["OUT_FILE"]).read_text().splitlines():
@@ -240,6 +240,6 @@ for key, val in values.items():
     )
     print(f"sops updated {key}")
 PY
-    echo "note: run home-manager switch to re-render ~/.config/sops-nix/secrets"
+    echo "note: commit/push nix-config, then in ~/.dotfiles update its input, build and hmswitch"
   fi
 fi

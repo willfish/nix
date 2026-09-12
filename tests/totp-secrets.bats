@@ -113,6 +113,33 @@ assert json.loads((root / "sops.argv").read_text()) == [
 PY
 }
 
+@test "import defaults to the private checkout and honours its override" {
+  unset DOTFILES_SECRETS_ENV NIX_CONFIG_ROOT
+  export HOME="$TOTP_TEST_DIR/home"
+  mkdir -p "$HOME/Repositories/nix-config/secrets"
+  printf '{}\n' > "$HOME/Repositories/nix-config/secrets/env.yaml"
+  run bash "$TOTP_TEST_DIR/totp-sops-import" FIXTURE "$SOPS_NIX_SECRETS_DIR/TOTP_FIXTURE_SECRET"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"nix flake update nix-config"* ]]
+  python3 -c 'import json, os; from pathlib import Path; assert json.loads((Path(os.environ["TOTP_TEST_DIR"]) / "sops.argv").read_text())[2] == str(Path.home() / "Repositories/nix-config/secrets/env.yaml")'
+
+  export NIX_CONFIG_ROOT="$TOTP_TEST_DIR/private checkout"
+  mkdir -p "$NIX_CONFIG_ROOT/secrets"
+  printf '{}\n' > "$NIX_CONFIG_ROOT/secrets/env.yaml"
+  run bash "$TOTP_TEST_DIR/totp-sops-import" FIXTURE "$SOPS_NIX_SECRETS_DIR/TOTP_FIXTURE_SECRET"
+  [ "$status" -eq 0 ]
+  python3 -c 'import json, os; from pathlib import Path; assert json.loads((Path(os.environ["TOTP_TEST_DIR"]) / "sops.argv").read_text())[2] == str(Path(os.environ["NIX_CONFIG_ROOT"]) / "secrets/env.yaml")'
+  assert_no_seed_in_arguments
+}
+
+@test "missing private checkout fails without writing secrets" {
+  unset DOTFILES_SECRETS_ENV
+  run env NIX_CONFIG_ROOT="$TOTP_TEST_DIR/missing" bash "$TOTP_TEST_DIR/totp-sops-import" FIXTURE "$SOPS_NIX_SECRETS_DIR/TOTP_FIXTURE_SECRET"
+  [ "$status" -eq 66 ]
+  [ ! -e "$TOTP_TEST_DIR/sops.argv" ]
+  [[ "$output" != *"$TOTP_TEST_SEED"* ]]
+}
+
 @test "rejected imports do not write secrets or disclose them" {
   run env TOTP_TEST_REJECT=1 bash "$TOTP_TEST_DIR/totp-sops-import" FIXTURE "$SOPS_NIX_SECRETS_DIR/TOTP_FIXTURE_SECRET"
   [ "$status" -eq 65 ]

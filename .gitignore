@@ -3,7 +3,9 @@
 /.pre-commit-config-nix.yaml
 /dump.rdb
 /plans/
-/secrets/.conform*
+# Secret sources and recipient policy belong in the private configuration repo.
+/secrets/
+/.sops.yaml
 
 __pycache__/
 *.pyc
