@@ -253,7 +253,9 @@ lib.mkIf isGraphicalLinux (
         Type = "simple";
         Restart = "on-failure";
         RestartSec = 3;
-        # Pin nmcli via store path (service closure only; not added to profile PATH).
+        # Use the NixOS NetworkManager CLI, not Home Manager's package. HM
+        # nixpkgs has been newer than the running daemon (nmcli 1.56 vs NM
+        # 1.54), which spams "versions don't match" on every probe.
         ExecStart = lib.getExe (
           pkgs.writeShellApplication {
             name = "wifi-auto-reconnect";
@@ -264,7 +266,7 @@ lib.mkIf isGraphicalLinux (
             ];
             text =
               let
-                nmcli = lib.getExe' pkgs.networkmanager "nmcli";
+                nmcli = "/run/current-system/sw/bin/nmcli";
               in
               ''
                 set -euo pipefail
@@ -354,8 +356,13 @@ lib.mkIf isGraphicalLinux (
                 try_reconnect
 
                 ${nmcli} monitor | while IFS= read -r line; do
+                  # p2p-dev-* flaps "disconnected"/"unavailable" constantly and
+                  # is not the STA interface we can repair with connection up.
                   case "$line" in
-                    *disconnected*|*Disconnect*|*failed*|*Failed*|*unavailable*)
+                    p2p-*|*p2p-dev*)
+                      continue
+                      ;;
+                    *": disconnected"*|*": failed"*)
                       # Let wpa_supplicant finish ignore-list / scan settle.
                       sleep 5
                       try_reconnect

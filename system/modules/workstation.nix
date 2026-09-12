@@ -8,6 +8,11 @@
     127.0.0.1 host.docker.internal
   '';
 
+  # MT7925 / NM create a wifi-p2p device that flaps disconnected and logs
+  # IPv4 forwarding errors. It is unused here and was waking the Wi-Fi
+  # reconnect helper on every state change.
+  networking.networkmanager.unmanaged = [ "interface-name:p2p-dev-*" ];
+
   services.printing.enable = true;
   services.mullvad-vpn = {
     enable = true;
