@@ -8,36 +8,34 @@
 }:
 let
   catalogue = import ./themes/palettes.nix;
-  theme =
-    catalogue.${
-      if hostName != null && builtins.hasAttr hostName catalogue then hostName else "andromeda"
-    };
+  defaultHost =
+    if hostName != null && builtins.hasAttr hostName catalogue then hostName else "andromeda";
+  theme = catalogue.${defaultHost};
+  runtime = import ./themes/runtime.nix {
+    inherit
+      config
+      lib
+      pkgs
+      catalogue
+      defaultHost
+      ;
+  };
   render = import ./themes/render.nix { inherit lib; };
-  cosmic = import ./themes/cosmic.nix { inherit pkgs theme; };
   piThemes = lib.genAttrs [ "light" "dark" ] (
     mode: pkgs.writeText "host-${mode}.json" (builtins.toJSON (render.pi "host-${mode}" theme.${mode}))
   );
-  cosmicFiles = lib.listToAttrs (
-    map
-      (name: {
-        name = "cosmic/com.system76.CosmicTheme.${name}/v1";
-        value = {
-          source = "${cosmic}/cosmic/com.system76.CosmicTheme.${name}/v1";
-          recursive = true;
-          force = true;
-        };
-      })
-      [
-        "Dark"
-        "Light"
-        "Dark.Builder"
-        "Light.Builder"
-      ]
-  );
+  piFile = mode: if isGraphicalLinux then runtime.file "host-${mode}.json" else piThemes.${mode};
 in
 {
   _module.args.hostTheme = theme;
-  _module.args.piThemeArgs = "--theme ${piThemes.light} --theme ${piThemes.dark} --use-theme host-light/host-dark";
+  _module.args.herdrThemeFile = if isGraphicalLinux then runtime.file "herdr.toml" else null;
+  _module.args.piThemeArgs =
+    if isGraphicalLinux then
+      "--theme ${runtime.state}/active/host-light.json --theme ${runtime.state}/active/host-dark.json --use-theme host-light/host-dark"
+    else
+      "--theme ${piThemes.light} --theme ${piThemes.dark} --use-theme host-light/host-dark";
+
+  home.packages = lib.optionals isGraphicalLinux [ runtime.package ];
 
   # These applications have native runtime light/dark selection. Do not let a
   # second theming module replace their paired configuration with a fixed theme.
@@ -67,29 +65,43 @@ in
       }
       {
         name = "themes/host-dark";
-        path = pkgs.writeText "ghostty-dark" (render.ghostty theme.dark);
+        path =
+          if isGraphicalLinux then
+            runtime.file "ghostty-dark"
+          else
+            pkgs.writeText "ghostty-dark" (render.ghostty theme.dark);
       }
       {
         name = "themes/host-light";
-        path = pkgs.writeText "ghostty-light" (render.ghostty theme.light);
+        path =
+          if isGraphicalLinux then
+            runtime.file "ghostty-light"
+          else
+            pkgs.writeText "ghostty-light" (render.ghostty theme.light);
       }
     ];
-    ".pi/agent/themes/host-dark.json".source = piThemes.dark;
-    ".pi/agent/themes/host-light.json".source = piThemes.light;
-    ".config/nvim/host-palettes.json".text = builtins.toJSON {
-      dark = lib.mapAttrs (_: c: "#${c}") theme.dark;
-      light = lib.mapAttrs (_: c: "#${c}") theme.light;
-    };
+    ".pi/agent/themes/host-dark.json".source = piFile "dark";
+    ".pi/agent/themes/host-light.json".source = piFile "light";
+    ".config/nvim/host-palettes.json" =
+      if isGraphicalLinux then
+        {
+          source = runtime.file "host-palettes.json";
+        }
+      else
+        {
+          text = builtins.toJSON {
+            dark = lib.mapAttrs (_: c: "#${c}") theme.dark;
+            light = lib.mapAttrs (_: c: "#${c}") theme.light;
+          };
+        };
     ".config/nvim/lua/host-theme.lua".source = ../config/nvim/host-theme.lua;
   };
 
-  xdg.configFile = lib.mkIf isGraphicalLinux (
-    cosmicFiles
-    // {
-      # COSMIC exports both variants and applies GTK/Qt when the mode changes.
-      "cosmic/com.system76.CosmicTk/v1/apply_theme_global".text = "true";
-    }
-  );
+  xdg.configFile = lib.mkIf isGraphicalLinux {
+    "theme-menu/catalogue.json".source = runtime.manifest;
+    # COSMIC exports both variants and applies GTK/Qt when the mode changes.
+    "cosmic/com.system76.CosmicTk/v1/apply_theme_global".text = "true";
+  };
 
   gtk = lib.mkIf isGraphicalLinux {
     enable = true;
@@ -105,6 +117,11 @@ in
   };
 
   home.activation = {
+    applySelectedPalette = lib.mkIf isGraphicalLinux (
+      lib.hm.dag.entryAfter [ "linkGeneration" "writableCosmicMode" ] ''
+        run ${runtime.package}/bin/theme-menu --reapply
+      ''
+    );
     rememberCosmicMode = lib.mkIf isGraphicalLinux (
       lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] ''
         cosmicModePath="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"

@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 import pty
 import select
-import shutil
 import struct
 import subprocess
 import tempfile
@@ -36,11 +35,22 @@ class PiThemeRuntimeTest(unittest.TestCase):
                 text=True,
             )
         )
-        cls.binary = os.environ.get("PI_THEME_TEST_BIN") or shutil.which("pi")
+        cls.binary = os.environ.get("PI_THEME_TEST_BIN")
         if not cls.binary:
-            raise RuntimeError(
-                "Pi must be available for the offline theme regression"
-            )
+            # The user launcher injects host themes before these fixtures. Theme
+            # collisions would silently test its palette instead of our files.
+            package = subprocess.check_output(
+                [
+                    "nix",
+                    "build",
+                    "--no-link",
+                    "--print-out-paths",
+                    str(ROOT)
+                    + "#homeConfigurations.william-linux.pkgs.pi-coding-agent",
+                ],
+                text=True,
+            ).strip()
+            cls.binary = str(Path(package) / "bin/pi")
 
     def run_pair(self, columns, override=False):
         with tempfile.TemporaryDirectory(prefix="pi-theme-test-") as directory:
@@ -153,6 +163,19 @@ class PiThemeRuntimeTest(unittest.TestCase):
         for columns in (50, 140):
             with self.subTest(columns=columns):
                 self.run_pair(columns)
+
+    def test_next_launch_loads_changed_palette_with_the_same_theme_names(self):
+        original = self.themes
+        self.themes = json.loads(json.dumps(original))
+        # The startup header uses muted; the footer repainted on mode changes
+        # uses dim. Both are rendered from base04 in a real palette bundle.
+        for token in ("muted", "dim"):
+            self.themes["light"]["colors"][token] = "#cc88aa"
+            self.themes["dark"]["colors"][token] = "#88aacc"
+        try:
+            self.run_pair(90)
+        finally:
+            self.themes = original
 
     def test_explicit_theme_overrides_pair_without_saving(self):
         self.run_pair(90, override=True)

@@ -12,17 +12,11 @@ theme_value() {
   FLAKE_ROOT="$FLAKE_ROOT" HERDR_CONFIGURATION="$configuration" HERDR_THEME_KEY="$key" \
     nix eval --impure --raw --expr '
       let
-        flake = builtins.getFlake (builtins.getEnv "FLAKE_ROOT");
+        profiles = import (builtins.getEnv "FLAKE_ROOT" + "/tests/host-theme-config.nix");
         configuration = builtins.getEnv "HERDR_CONFIGURATION";
         key = builtins.getEnv "HERDR_THEME_KEY";
-        source = flake.homeConfigurations.${configuration}.config.home.file.".config/herdr/config.toml".source;
-        config =
-          if builtins.isPath source || builtins.isString source then
-            builtins.fromTOML (builtins.readFile source)
-          else
-            builtins.fromJSON source.value;
       in
-        config.theme.${key}
+        profiles.${configuration}.theme.${key}
     '
 }
 

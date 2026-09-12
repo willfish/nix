@@ -4,6 +4,7 @@
   hostName ? null,
   isGraphicalLinux,
   hostTheme,
+  herdrThemeFile,
   ...
 }:
 let
@@ -65,7 +66,9 @@ let
 in
 {
   home.file = {
-    ".config/herdr/config.toml" = sourceFile herdrConfigFile;
+    ".config/herdr/config.toml" = sourceFile (
+      if herdrThemeFile != null then herdrThemeFile else herdrConfigFile
+    );
     ".config/herdr/plugins/config/herdr-navigator/config.toml" =
       sourceFile "${configDir}/herdr/agent-picker.toml";
   }

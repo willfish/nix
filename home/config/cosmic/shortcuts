@@ -259,6 +259,10 @@
         key: "t",
     ): Disable,
     (
+        modifiers: [Super, Shift],
+        key: "t",
+    ): Spawn("theme-menu"),
+    (
         modifiers: [
             Super,
         ],

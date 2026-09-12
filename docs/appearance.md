@@ -5,6 +5,33 @@ and a warm, lower-brightness light variant. Host identity is independent of mode
 Andromeda uses Rosé Pine, Foundation Tokyo Night, Starfish Solarized, Terminus
 Catppuccin, and Relay Gruvbox. Unknown hosts use Andromeda's palette.
 
+## Choosing a palette
+
+On graphical Linux, **Super+Shift+T** opens `theme-menu`, a Fuzzel popup like the
+voice menu. Choose Rosé Pine, Tokyo Night, Solarized, Catppuccin or Gruvbox.
+The current selection is marked with `*`; Escape leaves it unchanged.
+
+**Host default** is the initial selection and follows the host mapping above.
+Named selections are local overrides, preserved across Home Manager switches.
+Selecting Host default clears the override. Neither selection changes light/dark
+mode or the host's declarative palette.
+
+The command also accepts `default`, `rose-pine`, `tokyo-night`, `solarized`,
+`catppuccin` or `gruvbox`, for example `theme-menu rose-pine`.
+`theme-menu --reapply` restores generated files for the saved selection.
+
+The picker updates COSMIC's desktop and GTK/Qt exports, reloads Ghostty through
+its Linux D-Bus action and reloads the addressed Herdr server. Neovim instances
+started after installing this configuration detect changes within about a second.
+Restart older Neovim instances once to install the watcher. Existing Pi sessions
+need restarting for named palette changes: its upstream watcher does not watch
+these launcher-loaded files. Light/dark changes still propagate without restart.
+
+If a reload fails, the notification gives the manual fallback. Additional Herdr
+servers need their own `herdr server reload-config` with the relevant socket
+selected. A remote host keeps its own palette; this popup does not change remote
+configuration. macOS and headless hosts retain their declarative host palettes.
+
 ## Choosing a mode
 
 Use **COSMIC Settings → Desktop → Appearance** on Linux, or the system appearance
@@ -30,6 +57,14 @@ appearance reports; older multiplexers may require a restart or an explicit Pi
 ## Ownership
 
 - `home/user/appearance.nix` wires the palette into Home Manager.
+- `home/user/themes/runtime.nix` builds the graphical Linux palette catalogue.
+  The picker keeps its selection and active application files under
+  `~/.local/state/theme-menu/`. Home Manager links application configuration to
+  those stable writable files and reapplies the selected bundle after activation.
+- `home/config/appearance/theme_menu.py` owns runtime selection and COSMIC theme
+  files. It leaves COSMIC mode and unrelated desktop settings untouched. Palette
+  writes are individually atomic, with rollback on write failure; there is no
+  cross-application transaction, so live updates may briefly arrive separately.
 - `home/user/themes/render.nix` generates Herdr, Ghostty and Pi colours.
 - `home/user/themes/cosmic.py` produces ThemeBuilder inputs. The pinned
   `cosmic-settings appearance import` CLI builds complete themes in an isolated
@@ -54,7 +89,9 @@ behavioral gate against the built generation; it includes palette contrast,
 host ownership, mode migration, and Pi PTY light/dark switching at narrow/wide
 sizes. `nix flake check` covers formatting and module checks.
 
-For a live smoke test, switch dark → light → dark in system settings with Pi
-inside Herdr. Check the terminal background, Herdr borders, Pi text and desktop
+For a live smoke test, select each named palette and return to Host default.
+Check that Escape cancels, the current selection is marked and a Home Manager
+switch preserves a named override. Switch dark → light → dark in system settings
+with Pi inside Herdr. Check the terminal background, Herdr borders, Pi text and desktop
 controls together. Verify remote propagation separately before assuming every
 SSH or nested-multiplexer path supports it.
