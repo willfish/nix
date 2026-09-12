@@ -55,13 +55,15 @@ using. After the last session leaves, engines stop once active work has drained.
 
 Super is the Windows key. Transcription is staged for review; recording never
 automatically presses Enter. Capture starts only after microphone samples
-arrive and stops after three minutes. Silence, punctuation-only output and
-non-speech markers are skipped. Silero VAD adds speech detection beyond the
-initial quiet-audio gate, while a small vocabulary prompt helps with names
-such as Herdr, Qwen, NixOS and the configured hosts.
+arrive and stops after three minutes. A pause, or thirty seconds of
+uninterrupted speech, flushes a slice into the Pi prompt while recording
+continues, so earlier words are kept if the take hits the limit. Silence,
+punctuation-only output and non-speech markers are skipped. Silero VAD adds
+speech detection beyond the initial quiet-audio gate, while a small vocabulary
+prompt helps with names such as Herdr, Qwen, NixOS and the configured hosts.
 
-The usual flow uses Super+Space three times: record, stop and transcribe, then
-send. Wait for the green ready state before the third press. Retained dictation
+The usual flow uses Super+Space to start, stop, then send. Text may already be
+in the prompt before you stop. Wait for the green ready state before sending. Retained dictation
 is delivered and sent when the selected agent is ready; a busy agent leaves
 those words retained. The hotkey applies across all four launchers and never
 broadcasts to other registered sessions, including multiple sessions of the

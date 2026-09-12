@@ -1632,11 +1632,64 @@ class Controller:
             )
             self.worker.start()
 
+    def _capture_failed(self, capture, code):
+        return (
+            code not in (0, -signal.SIGINT)
+            or getattr(capture, "error", None)
+        )
+
+    def _recording_slices(self, capture, path, cancelled, temps):
+        from voice_capture import write_pcm16_wav
+
+        drain = getattr(capture, "drain_chunks", None)
+        wait_progress = getattr(capture, "wait_progress", None)
+        if drain is None or wait_progress is None:
+            code = capture.wait(timeout=185)
+            if self._capture_failed(capture, code):
+                raise RuntimeError(
+                    getattr(capture, "error", None)
+                    or "Microphone capture failed"
+                )
+            yield path
+            return
+        finished = False
+        index = 0
+        while not cancelled.is_set():
+            for samples in drain():
+                index += 1
+                chunk_path = path.with_name(f"{path.stem}-{index}.wav")
+                write_pcm16_wav(chunk_path, samples)
+                temps.append(chunk_path)
+                yield chunk_path
+            if finished:
+                return
+            if capture.poll() is not None:
+                code = capture.wait(timeout=1)
+                if self._capture_failed(capture, code):
+                    raise RuntimeError(
+                        getattr(capture, "error", None)
+                        or "Microphone capture failed"
+                    )
+                finished = True
+                continue
+            wait_progress(0.2)
+
     def _record(self, path, token, target, cancelled, previous=None,
                 mode="append", retry=False, deadline=None):
         capture = None
         lease = getattr(cancelled, 'engine_lease', None)
         recovered = False
+        temps = []
+        spoken = []
+        staged_any = False
+        held = previous if previous and mode == "append" else ""
+
+        def current_text():
+            parts = []
+            if previous and mode == "append":
+                parts.append(previous)
+            parts.extend(spoken)
+            return "\n".join(part for part in parts if part)
 
         def recover(text, *, combined=False, drained=False):
             nonlocal recovered
@@ -1711,55 +1764,135 @@ class Controller:
                     self.phase = "recording"
                 self._cue(880)
                 self.notice(
-                    "Recording", "Press Super+Space to stop; maximum 3 minutes"
+                    "Recording",
+                    "Speech is added to the prompt as you pause; "
+                    "Super+Space stops; maximum 3 minutes",
                 )
-                code = capture.wait(timeout=185)
-                if code not in (0, -signal.SIGINT) or getattr(
-                    capture, "error", None
-                ):
-                    raise RuntimeError(
-                        getattr(capture, "error", None)
-                        or "Microphone capture failed"
-                    )
-            with self.lock:
+            slices = [path] if retry else self._recording_slices(
+                capture, path, cancelled, temps
+            )
+            finished_capture = retry
+            text = ""
+            staged = False
+            for slice_path in slices:
                 if cancelled.is_set():
-                    return
-                self.capture = None
-                self.phase = "transcribing"
-            self._cue(660)
-            if not has_audio(path):
-                text = ""
-            else:
+                    break
+                if not finished_capture and (
+                    capture is None or capture.poll() is not None
+                ):
+                    with self.lock:
+                        if cancelled.is_set():
+                            break
+                        self.capture = None
+                        self.phase = "transcribing"
+                    self._cue(660)
+                    finished_capture = True
+                if not has_audio(slice_path):
+                    continue
                 try:
                     if not self._await_engine(lease, cancelled):
+                        recover("\n".join(spoken))
                         return
+
+                    def drained(raw):
+                        piece = dictation_text(raw)
+                        extra = spoken + ([piece] if piece else [])
+                        recover(
+                            "\n".join(extra), drained=True
+                        )
+
                     transcribe_drained = getattr(
-                        self.audio, 'transcribe_drained', None)
+                        self.audio, "transcribe_drained", None
+                    )
                     if transcribe_drained is not None:
                         result = transcribe_drained(
-                            path,
-                            cancelled,
-                            lambda text: recover(text, drained=True),
+                            slice_path, cancelled, drained
                         )
                     else:
-                        result = self.audio.transcribe(path, cancelled)
-                    text = dictation_text(result)
+                        result = self.audio.transcribe(slice_path, cancelled)
+                    piece = dictation_text(result or "")
                 except Exception:
                     with self.lock:
                         if not cancelled.is_set() and token == self.token:
                             self.retry_lease = lease
                             lease = None
                             self.retry_audio = (
-                                path, token, target,
+                                slice_path, token, target,
                                 deadline or time.monotonic() + 120,
-                                previous, mode,
+                                held, mode,
                             )
                     raise
-            with self.lock:
-                if cancelled.is_set() or token != self.token:
-                    recover(text)
-                    return
-            if not text and previous:
+                if not piece:
+                    continue
+                spoken.append(piece)
+                if staged_any:
+                    outgoing = piece
+                    held = piece
+                else:
+                    held = f"{held}\n{piece}" if held else piece
+                    outgoing = held
+                text = current_text()
+                still_recording = (
+                    capture is not None and capture.poll() is None
+                )
+                try:
+                    staged = self.stage(
+                        outgoing, token, cancelled, finish=not still_recording
+                    )
+                except DeliveryUncertain:
+                    with self.lock:
+                        # A lost acknowledgement is different from a failed
+                        # connection. Never paste or press Enter again blindly.
+                        if token == self.token and not cancelled.is_set():
+                            self.pending = None
+                            self.draft = False
+                    raise
+                except RuntimeError as exc:
+                    with self.lock:
+                        if cancelled.is_set() or token != self.token:
+                            recover("\n".join(spoken))
+                            return
+                        if text and not has_control_characters(text):
+                            self.pending = held
+                            if not still_recording:
+                                self.phase = "draft"
+                            self.notice(
+                                "Dictation retained",
+                                f"{exc}. Press Send when the agent is ready.",
+                            )
+                            continue
+                    raise
+                if staged:
+                    staged_any = True
+                    held = ""
+                elif (
+                    text
+                    and getattr(cancelled, "delivery_outcome", None)
+                    != "accepted"
+                ):
+                    with self.lock:
+                        if token != self.token or cancelled.is_set():
+                            recover("\n".join(spoken))
+                            return
+            if cancelled.is_set():
+                recover("\n".join(spoken))
+                return
+            if not retry:
+                with self.lock:
+                    if token != self.token:
+                        recover("\n".join(spoken))
+                        return
+                    self.capture = None
+                    if staged_any or self.pending or previous:
+                        self.phase = "draft"
+                    elif spoken:
+                        self.phase = "transcribing"
+                    else:
+                        self.phase = "idle"
+                if not finished_capture:
+                    self._cue(660)
+            text = current_text()
+            if not spoken and previous:
                 with self.lock:
                     if cancelled.is_set() or token != self.token:
                         return
@@ -1767,48 +1900,14 @@ class Controller:
                     self.phase = "draft"
                 self.notice("No new speech", "Previous dictation retained")
                 return
-            if text and previous and mode == "append":
-                text = previous + "\n" + text
-            try:
-                staged = self.stage(text, token, cancelled)
-            except DeliveryUncertain:
+            if staged_any:
                 with self.lock:
-                    # A lost acknowledgement is different from a failed
-                    # connection. Never paste or press Enter again blindly.
                     if token == self.token and not cancelled.is_set():
-                        self.pending = None
-                        self.draft = False
-                raise
-            except RuntimeError as exc:
-                with self.lock:
-                    if cancelled.is_set() or token != self.token:
-                        recover(text, combined=True)
-                        return
-                    # Keep a valid transcript when the pane is temporarily
-                    # busy/unreachable. Never paste it into another session.
-                    if text and not has_control_characters(text):
-                        self.pending = text
                         self.phase = "draft"
-                        self.notice(
-                            "Dictation retained",
-                            f"{exc}. Press Send when the agent is ready.",
-                        )
-                        return
-                raise
-            if (
-                not staged
-                and text
-                and getattr(cancelled, 'delivery_outcome', None) != 'accepted'
-            ):
-                with self.lock:
-                    if token != self.token or cancelled.is_set():
-                        recover(text, combined=True)
-                        return
-            if staged:
                 self.notice(
                     "Dictation ready", "Press Super+Space again to send"
                 )
-            else:
+            elif not spoken:
                 self.notice("No speech detected", "Nothing was inserted")
         except Exception as exc:
             with self.lock:
@@ -1829,8 +1928,14 @@ class Controller:
                         lease.release()
                     if self.active_retry and self.active_retry[2] is cancelled:
                         self.active_retry = None
-                    if not self.retry_audio or self.retry_audio[0] != path:
+                    retry_path = (
+                        self.retry_audio[0] if self.retry_audio else None
+                    )
+                    if retry_path != path:
                         path.unlink(missing_ok=True)
+                    for extra in temps:
+                        if extra != retry_path:
+                            extra.unlink(missing_ok=True)
                     if self.record_cancelled is cancelled:
                         self.capture = None
                         self.record_started = None
@@ -1940,7 +2045,7 @@ class Controller:
                 else:
                     self.recovery_uncertain = True
 
-    def stage(self, text, token, cancelled=None):
+    def stage(self, text, token, cancelled=None, *, finish=True):
         with self.lock:
             self._require_ready(token)
             if not self.target or token != self.token:
@@ -1951,7 +2056,8 @@ class Controller:
             if not text:
                 self.draft = False
                 self.pending = None
-                self.phase = "idle"
+                if finish:
+                    self.phase = "idle"
                 return False
             if has_control_characters(text):
                 raise RuntimeError(
@@ -1996,7 +2102,8 @@ class Controller:
                 return False
             self.draft = True
             self.pending = None
-            self.phase = "draft"
+            if finish:
+                self.phase = "draft"
             self.error = None
             return True
 

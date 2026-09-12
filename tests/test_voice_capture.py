@@ -1,5 +1,6 @@
 """Exercise capture lifecycle with real producers, without opening a mic."""
 
+import array
 import importlib.util
 from pathlib import Path
 import signal
@@ -53,6 +54,58 @@ class CaptureTests(unittest.TestCase):
         target_at = commands[0].index("--target")
         self.assertEqual(commands[0][target_at + 1],
                          "alsa_input.usb-microphone")
+
+    def test_chunker_splits_on_pause_and_at_the_force_limit(self):
+        chunker = self.module.SpeechChunker(
+            silence_frames=5, force_frames=20, lookback_frames=10
+        )
+        voiced = array.array("h", [4000] * (8 * 320))
+        self.assertEqual(chunker.push(voiced), [])
+        silence = array.array("h", [0] * (5 * 320))
+        split = chunker.push(silence)
+        self.assertEqual(len(split), 1)
+        self.assertEqual(len(split[0]), 8 * 320)
+        self.assertIsNone(chunker.flush())
+
+        forced = self.module.SpeechChunker(
+            silence_frames=50, force_frames=10, lookback_frames=4
+        )
+        long_voiced = array.array("h", [4000] * (12 * 320))
+        out = forced.push(long_voiced)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(len(out[0]), 10 * 320)
+        remainder = forced.flush()
+        self.assertEqual(len(remainder), 2 * 320)
+
+    def test_pause_emits_a_chunk_before_capture_ends(self):
+        capture = self.capture(
+            "import os, signal, sys, time\n"
+            "signal.signal(signal.SIGINT, lambda *_: sys.exit(0))\n"
+            "frame = b'\\x00\\x20' * 320\n"
+            "quiet = b'\\x00\\x00' * 320\n"
+            "os.write(1, frame * 10)\n"
+            "time.sleep(0.05)\n"
+            "os.write(1, quiet * 40)\n"
+            "time.sleep(0.05)\n"
+            "os.write(1, frame * 10)\n"
+            "time.sleep(10)\n"
+        )
+        self.assertTrue(capture.wait_ready(2))
+        chunks = []
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            chunks.extend(capture.drain_chunks())
+            if chunks:
+                break
+            capture.wait_progress(0.05)
+        self.assertTrue(chunks)
+        self.assertIsNone(capture.poll())
+        self.assertEqual(len(chunks[0]), 10 * 320)
+        capture.close()
+        self.assertEqual(capture.wait(1), 0)
+        rest = capture.drain_chunks()
+        self.assertTrue(rest)
+        self.assertEqual(len(rest[0]), 10 * 320)
 
     def test_clipping_is_visible_for_saturated_audio(self):
         capture = self.capture(

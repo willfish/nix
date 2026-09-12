@@ -397,6 +397,81 @@ class VoiceTests(unittest.TestCase):
         self.assertFalse(self.app.status()["recording"])
         self.assertFalse(self.app.status()["transcribing"])
 
+    def test_finished_chunks_are_staged_while_recording(self):
+        class LiveCapture(Capture):
+            def __init__(self):
+                super().__init__()
+                self._chunks = []
+                self._progress = threading.Event()
+
+            def drain_chunks(self):
+                chunks, self._chunks = self._chunks, []
+                if not chunks and self.poll() is None:
+                    self._progress.clear()
+                return chunks
+
+            def wait_progress(self, timeout=None):
+                if self.done.is_set():
+                    self._progress.set()
+                    return True
+                return self._progress.wait(timeout)
+
+            def emit(self, samples):
+                self._chunks.append(samples)
+                self._progress.set()
+
+        live = LiveCapture()
+        texts = iter(["First slice.", "Second slice."])
+        voiced = array.array(
+            "h", (int(4000 * math.sin(i / 10)) for i in range(16000))
+        )
+
+        def start_capture(path):
+            with wave.open(str(path), "wb") as wav:
+                wav.setnchannels(1)
+                wav.setsampwidth(2)
+                wav.setframerate(16000)
+                wav.writeframes(b"\0\0" * 1600)
+            self.audio.capture = live
+            return live
+
+        def transcribe(path, cancelled=None):
+            self.audio.transcriptions += 1
+            return next(texts)
+
+        with (
+            patch.object(
+                self.audio, "start_capture", side_effect=start_capture
+            ),
+            patch.object(self.audio, "transcribe", side_effect=transcribe),
+        ):
+            self.app.record()
+            deadline = time.monotonic() + 1
+            while time.monotonic() < deadline:
+                if self.app.status()["recording"]:
+                    break
+                time.sleep(0.005)
+            else:
+                self.fail(f"Capture did not become ready: {self.app.status()}")
+            live.emit(voiced)
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                if self.terminal.text:
+                    break
+                time.sleep(0.01)
+            self.assertEqual(self.terminal.text, ["First slice."])
+            self.assertTrue(self.app.status()["recording"])
+            live.emit(voiced)
+            live.returncode = 0
+            live.done.set()
+            live._progress.set()
+            self.app.worker.join(2)
+        self.assertEqual(
+            self.terminal.text, ["First slice.", "Second slice."]
+        )
+        self.assertFalse(self.app.status()["recording"])
+        self.assertTrue(self.app.status()["draft"])
+
     def test_primary_hotkey_records_then_transcribes_then_sends(self):
         def press():
             return self.voice.dispatch(self.app, {"action": "interact"})

@@ -13,11 +13,109 @@ import time
 import wave
 
 
-SAMPLE_LIMIT = 16000 * 180
+RATE = 16000
+SAMPLE_LIMIT = RATE * 180
+FRAME = 320
+VOICED_RMS = 200
+SILENCE_FRAMES = 30
+FORCE_FRAMES = 30 * RATE // FRAME
+LOOKBACK_FRAMES = 2 * RATE // FRAME
+MIN_VOICED_FRAMES = 8
+
+
+def write_pcm16_wav(path, samples, rate=RATE):
+    with wave.open(str(path), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(rate)
+        wav.writeframes(
+            samples.tobytes() if isinstance(samples, array.array) else samples
+        )
+
+
+class SpeechChunker:
+    """Split PCM on pauses, or at 30 seconds if speech does not pause."""
+
+    def __init__(
+        self,
+        frame=FRAME,
+        silence_frames=SILENCE_FRAMES,
+        force_frames=FORCE_FRAMES,
+        lookback_frames=LOOKBACK_FRAMES,
+    ):
+        self.frame = frame
+        self.silence_frames = silence_frames
+        self.force_frames = force_frames
+        self.lookback_frames = lookback_frames
+        self._pending = array.array("h")
+
+    def push(self, samples):
+        if samples:
+            self._pending.extend(samples)
+        emitted = []
+        while True:
+            chunk = self._cut(final=False)
+            if chunk is None:
+                return emitted
+            emitted.append(chunk)
+
+    def flush(self):
+        return self._cut(final=True)
+
+    def _frames(self):
+        count = len(self._pending) // self.frame
+        voiced = []
+        for index in range(count):
+            start = index * self.frame
+            window = self._pending[start:start + self.frame]
+            energy = sum(sample * sample for sample in window)
+            rms = math.sqrt(energy / len(window))
+            voiced.append(rms >= VOICED_RMS)
+        return voiced
+
+    def _take(self, end_sample, drop_through=None):
+        chunk = self._pending[:end_sample]
+        keep = end_sample if drop_through is None else drop_through
+        self._pending = self._pending[keep:]
+        return chunk or None
+
+    def _cut(self, final):
+        voiced = self._frames()
+        if not voiced:
+            if final and self._pending:
+                chunk, self._pending = self._pending, array.array("h")
+                return chunk
+            return None
+        seen = 0
+        silence = 0
+        for index, is_voiced in enumerate(voiced):
+            if is_voiced:
+                seen += 1
+                silence = 0
+                continue
+            silence += 1
+            if seen >= MIN_VOICED_FRAMES and silence >= self.silence_frames:
+                speech_end = (index + 1 - silence) * self.frame
+                drop_through = (index + 1) * self.frame
+                return self._take(speech_end, drop_through)
+        if len(voiced) >= self.force_frames:
+            split = self.force_frames
+            start = max(0, split - self.lookback_frames)
+            for index in range(split - 1, start - 1, -1):
+                if not voiced[index]:
+                    split = index + 1
+                    break
+            if split < MIN_VOICED_FRAMES:
+                split = self.force_frames
+            return self._take(split * self.frame)
+        if final:
+            chunk, self._pending = self._pending, array.array("h")
+            return chunk or None
+        return None
 
 
 class PipeWireCapture:
-    def __init__(self, path, command=None, target=None):
+    def __init__(self, path, command=None, target=None, chunker=None):
         self.level = 0.0
         self._clipped_until = 0.0
         self.started_at = None
@@ -31,6 +129,10 @@ class PipeWireCapture:
         self._process = None
         self._returncode = None
         self._frames = 0
+        self._chunker = chunker or SpeechChunker()
+        self._chunks = []
+        self._chunk_lock = threading.Lock()
+        self._progress = threading.Event()
         try:
             self._wav = wave.open(str(path), "wb")
             self._wav.setnchannels(1)
@@ -97,6 +199,8 @@ class PipeWireCapture:
                 self.level = min(1.0, math.sqrt(
                     sum(sample * sample for sample in samples) / len(samples)
                 ) / 32768)
+                for chunk in self._chunker.push(samples):
+                    self._queue_chunk(chunk)
                 if self.started_at is None:
                     self.started_at = time.monotonic()
                     self._ready.set()
@@ -144,6 +248,10 @@ class PipeWireCapture:
                     self._returncode = self._process.poll()
                 if self.started_at is None and self.error is None:
                     self.error = "Microphone stopped before producing samples"
+                remainder = self._chunker.flush()
+                if remainder:
+                    self._queue_chunk(remainder)
+                self._progress.set()
                 self._done.set()
                 self._ready.set()
 
@@ -158,6 +266,22 @@ class PipeWireCapture:
         if self.error:
             raise RuntimeError(self.error)
         return self.started_at is not None
+
+    def _queue_chunk(self, samples):
+        with self._chunk_lock:
+            self._chunks.append(samples)
+            self._progress.set()
+
+    def drain_chunks(self):
+        with self._chunk_lock:
+            chunks = self._chunks
+            self._chunks = []
+            if not chunks and not self._done.is_set():
+                self._progress.clear()
+            return chunks
+
+    def wait_progress(self, timeout=None):
+        return self._progress.wait(timeout)
 
     def wait(self, timeout=None):
         if not self._done.wait(timeout):
