@@ -12,7 +12,7 @@ let
   image = "${imageRepo}:${imageTag}@${imageDigest}";
   containerName = "hindsight-mcp";
 in
-{
+lib.mkIf config.dotfiles.capabilities.memory {
   home.file.".local/bin/hindsight-mcp-start" = {
     executable = true;
     text = ''

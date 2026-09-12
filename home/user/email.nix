@@ -4,7 +4,7 @@
   readSopsSecret,
   ...
 }:
-{
+lib.mkIf config.dotfiles.capabilities.email {
   accounts.email.accounts.gmail = {
     primary = true;
     address = "william.michael.fish@gmail.com";

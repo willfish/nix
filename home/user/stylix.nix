@@ -1,4 +1,6 @@
 {
+  config,
+  lib,
   pkgs,
   hostTheme,
   ...
@@ -33,6 +35,8 @@
 
     # Paired, runtime-switchable targets are owned by appearance.nix.
   };
+
+  dconf.enable = lib.mkIf (!config.dotfiles.capabilities.desktop) false;
 
   programs.nix-index = {
     enable = true;
