@@ -2187,7 +2187,12 @@ def serve(runtime, config):
     from voice_tray import VoiceTray
 
     audio = LocalAudio(runtime, config)
-    engines = EngineManager(readiness=audio.readiness)
+    engines = EngineManager(
+        readiness=audio.readiness,
+        engines=(
+            ('stt', 'tts') if config.get('tts_enabled', True) else ('stt',)
+        ),
+    )
     audio.engines = engines
     app = Controller(
         runtime, AgentTerminal(), audio, desktop_notice,

@@ -8,7 +8,7 @@
 let
   inherit (pkgs) stdenv;
   configDir = ../config;
-  voiceSupported = import ./voice-supported.nix { inherit pkgs hostName; };
+  voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   mkHerdrTheme = darkName: lightName: {
     name = darkName;
     auto_switch = true;
@@ -145,30 +145,40 @@ in
     lib.optionalAttrs isGraphicalLinux {
       "cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom" = {
         source =
-          if voiceSupported then
+          if voiceFeatures.stt then
             pkgs.writeText "cosmic-shortcuts-with-voice" (
-              builtins.replaceStrings
-                [
-                  ''
-                    key: "space",
-                        ): Disable,''
-                  "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Disable,"
-                ]
-                [
-                  ''
-                    key: "space",
-                        ): Spawn("codex-voice interact"),
-                        (
-                            modifiers: [Super, Shift],
-                            key: "space",
-                        ): Spawn("codex-voice send"),
-                        (
-                            modifiers: [Super, Shift],
-                            key: "v",
-                        ): Spawn("voice-menu"),''
-                  "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"codex-voice read\"),"
-                ]
-                (builtins.readFile "${configDir}/cosmic/shortcuts")
+              let
+                withDictation =
+                  builtins.replaceStrings
+                    [
+                      ''
+                        key: "space",
+                            ): Disable,''
+                    ]
+                    [
+                      ''
+                        key: "space",
+                            ): Spawn("codex-voice interact"),
+                            (
+                                modifiers: [Super, Shift],
+                                key: "space",
+                            ): Spawn("codex-voice send"),
+                            (
+                                modifiers: [Super, Shift],
+                                key: "v",
+                            ): Spawn("voice-menu"),''
+                    ]
+                    (builtins.readFile "${configDir}/cosmic/shortcuts");
+              in
+              if voiceFeatures.tts then
+                builtins.replaceStrings
+                  [ "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Disable," ]
+                  [
+                    "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"codex-voice read\"),"
+                  ]
+                  withDictation
+              else
+                withDictation
             )
           else
             "${configDir}/cosmic/shortcuts";

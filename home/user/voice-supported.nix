@@ -1,3 +1,15 @@
 { pkgs, hostName }:
-# Voice needs Andromeda's NVIDIA/CUDA stack. Foundation is AMD and stays off.
-pkgs.stdenv.isLinux && hostName == "andromeda"
+let
+  linux = pkgs.stdenv.isLinux;
+in
+{
+  # Whisper dictation on Vulkan. Andromeda uses NVIDIA; Foundation uses Radeon.
+  stt =
+    linux
+    && builtins.elem hostName [
+      "andromeda"
+      "foundation"
+    ];
+  # Qwen3 TTS needs Andromeda's CUDA stack.
+  tts = linux && hostName == "andromeda";
+}

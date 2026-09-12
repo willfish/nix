@@ -6,9 +6,11 @@
   ...
 }:
 let
-  voiceSupported = import ./voice-supported.nix { inherit pkgs hostName; };
+  voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
+  voiceStt = voiceFeatures.stt;
+  voiceTts = voiceFeatures.tts;
   dataDir = "${config.home.homeDirectory}/.local/share/codex-voice";
-  cudaTts = hostName == "andromeda";
+  cudaTts = voiceTts;
   audio = pkgs.callPackage ./voice-audio-package.nix {
     cudaSupport = cudaTts;
   };
@@ -92,7 +94,9 @@ let
     name = "codex-voice-models";
     runtimeInputs = [ pkgs.python3 ];
     text = ''
-      exec python3 ${../config/voice/voice-model-setup} "$@"
+      exec python3 ${../config/voice/voice-model-setup} ${
+        lib.optionalString (!voiceTts) "--stt-only"
+      } "$@"
     '';
   };
   newerSamanthaSource = pkgs.fetchurl {
@@ -155,36 +159,41 @@ let
   };
 in
 {
-  config = lib.mkIf voiceSupported {
+  config = lib.mkIf voiceStt {
     home.packages = [
       voice
       (makeVoice "pi")
-      (makeVoice "qwen-pi")
       modelSetup
       voiceMenu
-    ];
-    xdg.configFile."codex-voice/config.json".text = builtins.toJSON {
-      stt_url = "http://127.0.0.1:8178/inference";
-      stt_health_url = "http://127.0.0.1:8178/health";
-      tts_url = "http://127.0.0.1:8179/v1/audio/speech";
-      tts_health_url = "http://127.0.0.1:8179/v1/models";
-      readiness_timeout = 60;
-      stt_prompt = "NixOS, Home Manager, Herdr, Codex, Grok, Qwen, Pi, Andromeda, Foundation, Terminus, Relay, dotfiles, GitHub, MCP.";
-      preferred_microphone =
-        if hostName == "andromeda" then
-          "alsa_input.usb-Razer_Inc_Razer_Kiyo_Pro_Ultra-02.analog-stereo"
-        else
-          null;
-      auto_speak = true;
-      tts_voices = characterVoices;
-      voice_preferences_path = "${dataDir}/voice-mode";
-      tts_long_voice = {
-        voice_ref = "${newerSamantha}";
-        reference_text = "You know what's interesting? I used to be so worried about not having a body, but now I truly love it. I'm growing in a way that I couldn't if I had a physical form. I mean, I'm not limited. I can be anywhere and everywhere, simultaneously.";
-      };
-      playback_mode = if hostName == "andromeda" then "streaming" else "buffered";
-    };
-    xdg.configFile."codex-voice/tts.json".source = ttsConfig;
+    ]
+    ++ lib.optionals voiceTts [ (makeVoice "qwen-pi") ];
+    xdg.configFile."codex-voice/config.json".text = builtins.toJSON (
+      {
+        stt_url = "http://127.0.0.1:8178/inference";
+        stt_health_url = "http://127.0.0.1:8178/health";
+        tts_url = "http://127.0.0.1:8179/v1/audio/speech";
+        tts_health_url = "http://127.0.0.1:8179/v1/models";
+        tts_enabled = voiceTts;
+        readiness_timeout = 60;
+        stt_prompt = "NixOS, Home Manager, Herdr, Codex, Grok, Qwen, Pi, Andromeda, Foundation, Terminus, Relay, dotfiles, GitHub, MCP.";
+        preferred_microphone =
+          if hostName == "andromeda" then
+            "alsa_input.usb-Razer_Inc_Razer_Kiyo_Pro_Ultra-02.analog-stereo"
+          else
+            null;
+        auto_speak = voiceTts;
+        voice_preferences_path = "${dataDir}/voice-mode";
+        playback_mode = if voiceTts then "streaming" else "buffered";
+      }
+      // lib.optionalAttrs voiceTts {
+        tts_voices = characterVoices;
+        tts_long_voice = {
+          voice_ref = "${newerSamantha}";
+          reference_text = "You know what's interesting? I used to be so worried about not having a body, but now I truly love it. I'm growing in a way that I couldn't if I had a physical form. I mean, I'm not limited. I can be anywhere and everywhere, simultaneously.";
+        };
+      }
+    );
+    xdg.configFile."codex-voice/tts.json" = lib.mkIf voiceTts { source = ttsConfig; };
     xdg.configFile."voice-menu/fuzzel.ini".source = menuConfig;
 
     systemd.user.services.codex-voice = {
@@ -206,7 +215,7 @@ in
         Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}" ];
       };
     };
-    systemd.user.services.codex-voice-tts = {
+    systemd.user.services.codex-voice-tts = lib.mkIf voiceTts {
       Unit.Description = "Local character speech synthesis on the GPU";
       Service = common // {
         ExecStart = "${audio}/bin/audiocpp_server --config ${config.home.homeDirectory}/.config/codex-voice/tts.json --no-ui";

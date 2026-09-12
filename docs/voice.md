@@ -5,12 +5,12 @@ Shared services and control commands retain the historical `codex-voice` name;
 they do not install or require the Codex CLI.
 Whisper small.en recognizes speech with Silero VAD; audio.cpp runs Qwen3-TTS
 0.6B with two pinned Samantha references. Andromeda uses CUDA for TTS and
-NVIDIA Vulkan for Whisper. Foundation is excluded: it is AMD and does not have
-the CUDA stack. macOS needs separate platform adapters.
+NVIDIA Vulkan for Whisper. Foundation gets Whisper dictation on the Radeon
+iGPU only; TTS stays off. macOS needs separate platform adapters.
 
 ## Launch and select a session
 
-On Andromeda, interactive `pi` and `qwen-pi` sessions inside
+On Andromeda, and for dictation on Foundation, interactive `pi` sessions inside
 Herdr attach automatically. The lightweight controller and tray start at
 login. Speech models load on use: Whisper for dictation and TTS for playback.
 Print, RPC and noninteractive sessions do not attach. After installing this
@@ -74,7 +74,7 @@ instead of sending a prepared prompt.
 
 ## Keyboard picker
 
-On Andromeda, **Super+Shift+V** opens `voice-menu`, a short-lived
+On Andromeda and Foundation, **Super+Shift+V** opens `voice-menu`, a short-lived
 Fuzzel popup. Type to fuzzy-filter, use Up/Down, press Enter to choose, or Escape
 to close without changing anything. Mouse input is disabled. Choose **session**
 or **voice**, or select one of the same contextual actions exposed by the tray.
@@ -306,7 +306,8 @@ journalctl --user -u codex-voice -u codex-voice-stt -u codex-voice-tts -n 100
 
 On Andromeda, pull the configuration, run `hmswitch`, then
 `codex-voice-models` and verify the microphone, NVIDIA Vulkan and playback.
-Foundation, Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
+On Foundation, `hmswitch` then `codex-voice-models` installs Whisper only
+(about 500 MB). Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
 
 ## Voice choice and measured performance
 

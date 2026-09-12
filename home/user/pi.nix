@@ -7,7 +7,7 @@
   ...
 }:
 let
-  voiceSupported = import ./voice-supported.nix { inherit pkgs hostName; };
+  voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   llmMcps = import ./llm-mcps.nix { inherit config; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
   promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
@@ -39,7 +39,7 @@ in
     }
   );
 
-  home.file.".pi/agent/extensions/pi-voice.js" = lib.mkIf voiceSupported {
+  home.file.".pi/agent/extensions/pi-voice.js" = lib.mkIf voiceFeatures.stt {
     source = ../config/pi/extensions/pi-voice.js;
   };
   home.file.".pi/agent/extensions/mcp".source = "${mcpAdapter}/lib/node_modules/pi-mcp-adapter";

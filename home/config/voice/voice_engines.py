@@ -87,7 +87,8 @@ class EngineLease:
 class EngineManager:
     def __init__(self, *, readiness, runner=systemctl, clock=time.monotonic,
                  scheduler=None, readiness_scheduler=None, call_later=_later,
-                 idle_timeout=900, readiness_timeout=60, command_timeout=10):
+                 idle_timeout=900, readiness_timeout=60, command_timeout=10,
+                 engines=('stt', 'tts')):
         self.runner, self.readiness, self.clock = runner, readiness, clock
         self.call_later = call_later
         self.idle_timeout = idle_timeout
@@ -102,7 +103,11 @@ class EngineManager:
         self._worker = scheduler or ThreadPoolExecutor(max_workers=1)
         self._readers = readiness_scheduler or ThreadPoolExecutor(max_workers=4)
         self._lock = threading.RLock()
-        self._states = {engine: EngineState() for engine in ('stt', 'tts')}
+        engines = tuple(engines)
+        unknown = any(engine not in ('stt', 'tts') for engine in engines)
+        if not engines or unknown:
+            raise ValueError('invalid engines')
+        self._states = {engine: EngineState() for engine in engines}
         self._leases = set()
         self._idle_timers = {}
         self._queued_stops = set()
@@ -264,14 +269,14 @@ class EngineManager:
                     state.error = f'{lease.engine}: idle scheduler: {exc}'
                 self.sweep()
 
-    def warm(self, engines=('stt', 'tts'), *, timeout=60):
+    def warm(self, engines=None, *, timeout=60):
         """Temporary leases released on readiness/error or wall-clock timeout.
 
         Legacy launchers may warm both. Implicit dictation/speech should acquire
         only their backend. Do not wait for these leases on the controller
         thread.
         """
-        engines = tuple(engines)
+        engines = tuple(self._states if engines is None else engines)
         if timeout <= 0 or any(
             engine not in self._states for engine in engines
         ):
