@@ -27,6 +27,8 @@ class PiAuthMergeTest(unittest.TestCase):
             str(self.auth),
             "--drop",
             "openai",
+            "--drop",
+            "opencode",
             "--oauth-provider",
             "openai-codex",
             "--refresh-file",
@@ -45,6 +47,7 @@ class PiAuthMergeTest(unittest.TestCase):
             json.dumps(
                 {
                     "openai": {"type": "api_key", "key": "sk-test"},
+                    "opencode": {"type": "api_key", "key": "oc-test"},
                     "xai": {"type": "oauth", "refresh": "keep"},
                 }
             )
@@ -52,6 +55,7 @@ class PiAuthMergeTest(unittest.TestCase):
         )
         merged = self.run_merge()
         self.assertNotIn("openai", merged)
+        self.assertNotIn("opencode", merged)
         self.assertEqual(merged["xai"]["refresh"], "keep")
         self.assertEqual(merged["openai-codex"]["type"], "oauth")
         self.assertEqual(merged["openai-codex"]["refresh"], "refresh-token")

@@ -261,7 +261,9 @@ printf '%s' '"ACCOUNT"' | sops set secrets/env.yaml --value-stdin '["PI_OPENAI_C
 Home Manager activation seeds `openai-codex` OAuth into `auth.json` when that
 provider is missing or is still an API key, and removes a leftover `openai` API
 key. Existing OAuth on a host is left alone so token refresh keeps working.
-After `hmswitch`, other hosts can use Astra without a browser login:
+OpenCode Zen is not attached, so it does not appear in `/model`. OpenCode Go
+and OpenRouter remain. After `hmswitch`, other hosts can use Astra without a
+browser login:
 
 ```sh
 pi --provider openai-codex --model gpt-6-astra --thinking medium

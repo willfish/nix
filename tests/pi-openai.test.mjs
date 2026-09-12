@@ -35,13 +35,17 @@ test('Pi settings defaults enable quiet startup without clobbering user keys', (
   assert.match(pi, /--drop openai/);
   assert.match(pi, /PI_OPENAI_CODEX_REFRESH/);
   assert.match(pi, /extensions\/goal\.js/);
+  assert.match(pi, /--drop opencode/);
+  assert.doesNotMatch(pi, /extensions\/astra-subscription\.js/);
   const appearance = readFileSync(new URL('../home/user/appearance.nix', import.meta.url), 'utf8');
   assert.doesNotMatch(appearance, /piEditorPadding/);
 });
-test('Home Manager wires OpenCode and OpenRouter keys onto built-in catalogs', () => {
+test('Home Manager wires OpenCode Go and OpenRouter keys onto built-in catalogs', () => {
   const pi = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
   const secrets = readFileSync(new URL('../home/user/secrets.nix', import.meta.url), 'utf8');
-  for (const name of ['OPENCODE_API_KEY', 'OPENCODE_GO_KEY', 'OPENROUTER_API_KEY']) {
+  assert.match(secrets, /"OPENCODE_API_KEY"/);
+  assert.doesNotMatch(pi, /sopsApiKey "OPENCODE_API_KEY"/);
+  for (const name of ['OPENCODE_GO_KEY', 'OPENROUTER_API_KEY']) {
     assert.match(secrets, new RegExp(`"${name}"`));
     assert.match(pi, new RegExp(`sopsApiKey "${name}"`));
   }

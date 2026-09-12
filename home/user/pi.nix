@@ -41,7 +41,8 @@ in
   home.file.".pi/agent/models.json".text = builtins.toJSON (
     lib.recursiveUpdate (builtins.fromJSON (builtins.readFile ../config/pi/models.json)) {
       # Built-in catalogs stay intact; these keys only make the models available.
-      providers.opencode.apiKey = sopsApiKey "OPENCODE_API_KEY";
+      # OpenCode Zen is omitted on purpose: its Astra entry looks like ChatGPT
+      # subscription Astra and 401s with this account.
       providers.opencode-go.apiKey = sopsApiKey "OPENCODE_GO_KEY";
       providers.openrouter.apiKey = sopsApiKey "OPENROUTER_API_KEY";
     }
@@ -119,6 +120,7 @@ in
     ${pkgs.python3}/bin/python3 ${../config/pi/merge-auth.py} \
       "$HOME/.pi/agent/auth.json" \
       --drop openai \
+      --drop opencode \
       --oauth-provider openai-codex \
       --refresh-file ${lib.escapeShellArg config.sops.secrets.PI_OPENAI_CODEX_REFRESH.path} \
       --account-file ${lib.escapeShellArg config.sops.secrets.PI_OPENAI_CODEX_ACCOUNT_ID.path}
