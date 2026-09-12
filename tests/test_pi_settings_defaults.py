@@ -9,6 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "home/config/pi/merge-settings.py"
 DEFAULTS = ROOT / "home/config/pi/settings-defaults.json"
+KEYBINDINGS = ROOT / "home/config/pi/keybindings-defaults.json"
 
 
 class PiSettingsDefaultsTest(unittest.TestCase):
@@ -33,6 +34,8 @@ class PiSettingsDefaultsTest(unittest.TestCase):
         defaults = json.loads(DEFAULTS.read_text())
         self.assertEqual(defaults["quietStartup"], True)
         self.assertEqual(defaults["editorPaddingX"], 1)
+        keybindings = json.loads(KEYBINDINGS.read_text())
+        self.assertEqual(keybindings["app.session.rename"], "ctrl+shift+r")
 
     def test_creates_settings_when_missing(self):
         merged = self.run_merge()

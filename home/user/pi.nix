@@ -112,5 +112,8 @@ in
     ${pkgs.python3}/bin/python3 ${../config/pi/merge-settings.py} \
       ${../config/pi/settings-defaults.json} \
       "$HOME/.pi/agent/settings.json"
+    ${pkgs.python3}/bin/python3 ${../config/pi/merge-settings.py} \
+      ${../config/pi/keybindings-defaults.json} \
+      "$HOME/.pi/agent/keybindings.json"
   '';
 }

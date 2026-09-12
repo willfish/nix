@@ -26,9 +26,12 @@ test('Pi settings defaults enable quiet startup without clobbering user keys', (
   const defaults = JSON.parse(readFileSync(new URL('../home/config/pi/settings-defaults.json', import.meta.url)));
   assert.equal(defaults.quietStartup, true);
   assert.equal(defaults.editorPaddingX, 1);
+  const keybindings = JSON.parse(readFileSync(new URL('../home/config/pi/keybindings-defaults.json', import.meta.url)));
+  assert.equal(keybindings['app.session.rename'], 'ctrl+shift+r');
   const pi = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
   assert.match(pi, /merge-settings\.py/);
   assert.match(pi, /settings-defaults\.json/);
+  assert.match(pi, /keybindings-defaults\.json/);
   const appearance = readFileSync(new URL('../home/user/appearance.nix', import.meta.url), 'utf8');
   assert.doesNotMatch(appearance, /piEditorPadding/);
 });
