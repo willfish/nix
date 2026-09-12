@@ -30,6 +30,29 @@ For a typical larger change: use `/plan-work <task>`, discuss the proposal,
 then ask Pi to implement and keep its todos updated. Use `/review` when the
 change is ready to inspect. Small tasks can use Pi normally.
 
+## High-level goals
+
+`/goal` keeps a durable objective in the current session and continues working
+until that objective is true. Use it when you want the agent held to a stated
+end state rather than to whatever is convenient to finish this turn.
+
+```text
+/goal Keep agents honest: every completion claim is independently audited.
+/goal status
+/goal pause
+/goal resume
+/goal verify
+/goal clear
+```
+
+The objective is injected as untrusted task data. Automatic continuation keeps
+the original scope intact. The implementing session cannot mark the goal
+complete on its own: a completion claim starts a fresh `pi --print` process with
+no extensions, using read/bash only, and the sceptic-style auditor must return
+`PASS` against current worktree evidence. A `FAIL` leaves the goal active and
+feeds the objections into the next continuation. `/goal verify` runs that audit
+on demand. The isolated Qwen profile does not load this extension.
+
 Session naming (`/name`), navigation (`/tree`), resume (`/resume`) and compaction
 are already provided by Pi. The existing MCP adapter supplies your external
 integrations. These workflow additions keep those facilities and add no model

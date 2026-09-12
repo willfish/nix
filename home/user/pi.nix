@@ -62,6 +62,7 @@ in
   home.file.".pi/agent/extensions/skill-catalog".source = ../config/pi/extensions/skill-catalog;
   home.file.".pi/agent/extensions/reading-policy.js".source =
     ../config/pi/extensions/reading-policy.js;
+  home.file.".pi/agent/extensions/goal.js".source = ../config/pi/extensions/goal.js;
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
@@ -108,12 +109,18 @@ in
     };
   };
 
-  home.activation.piSettingsDefaults = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+  home.activation.piSettingsDefaults = lib.hm.dag.entryAfter [ "sops-nix" ] ''
     ${pkgs.python3}/bin/python3 ${../config/pi/merge-settings.py} \
       ${../config/pi/settings-defaults.json} \
       "$HOME/.pi/agent/settings.json"
     ${pkgs.python3}/bin/python3 ${../config/pi/merge-settings.py} \
       ${../config/pi/keybindings-defaults.json} \
       "$HOME/.pi/agent/keybindings.json"
+    ${pkgs.python3}/bin/python3 ${../config/pi/merge-auth.py} \
+      "$HOME/.pi/agent/auth.json" \
+      --drop openai \
+      --oauth-provider openai-codex \
+      --refresh-file ${lib.escapeShellArg config.sops.secrets.PI_OPENAI_CODEX_REFRESH.path} \
+      --account-file ${lib.escapeShellArg config.sops.secrets.PI_OPENAI_CODEX_ACCOUNT_ID.path}
   '';
 }

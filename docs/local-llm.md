@@ -241,48 +241,39 @@ direnv exec . node --test tests/local-pi.test.mjs
 ### OpenAI / Astra in Pi
 
 Use plain `pi` for cloud models, not the isolated `qwen-pi` profile.
-Home Manager deploys credential-free Astra definitions to
-`~/.pi/agent/models.json` on all machines. Pi 0.75.4's built-in catalogue does
-not include Astra, so these entries make the exact `gpt-6-astra` model selectable.
-They do not grant account access, and a live Astra response still needs login
-and the account's model entitlement.
+Home Manager deploys a credential-free ChatGPT subscription definition for
+`openai-codex/gpt-6-astra` to `~/.pi/agent/models.json` on all machines. The
+billed OpenAI API overlay is not shipped. Account access still needs a ChatGPT
+Plus/Pro login, stored as OAuth in `~/.pi/agent/auth.json`.
 
-For ChatGPT subscription access:
-
-1. Run `pi` and enter `/login`.
-2. Choose **ChatGPT Plus/Pro (Codex Subscription)** and complete the browser login.
-3. Use `/model` and choose `openai-codex/gpt-6-astra`, or restart with:
-
-   ```sh
-   pi --provider openai-codex --model gpt-6-astra --thinking medium
-   ```
-
-Over SSH, open Pi's login URL in the browser on your desktop. If the browser
-cannot reach the callback on the SSH host, paste the full final redirect URL
-into Pi's authorization prompt in the terminal. Do not paste that URL or its
-code into chat. Pi supports this manual fallback; no credential copying from
-Codex is needed. Log in separately on each machine. Tokens live in Pi's private
-`~/.pi/agent/auth.json` and are not managed by Home Manager.
-
-For separately billed OpenAI API access, choose **OpenAI** in `/login` and enter
-an API key, or supply `OPENAI_API_KEY` in the environment. Then use:
+On a machine that is not yet logged in, run `pi`, enter `/login`, and choose
+**ChatGPT Plus/Pro (Codex Subscription)**. Over SSH, open the login URL on the
+desktop; if the browser cannot reach the callback, paste the final redirect URL
+into Pi's prompt. Do not paste that URL into chat. Then copy the refresh token
+and account id into sops without printing them:
 
 ```sh
-pi --provider openai --model gpt-6-astra --thinking medium
+# values via stdin; do not put tokens on the command line
+printf '%s' '"REFRESH"' | sops set secrets/env.yaml --value-stdin '["PI_OPENAI_CODEX_REFRESH"]'
+printf '%s' '"ACCOUNT"' | sops set secrets/env.yaml --value-stdin '["PI_OPENAI_CODEX_ACCOUNT_ID"]'
 ```
 
-OpenAI API billing is separate from ChatGPT subscription usage. Cloud requests
-send prompts and tool results to OpenAI, unlike the local Qwen profile.
-The [official Astra model page](https://developers.openai.com/api/docs/models/gpt-6-astra)
-documents a 1,050,000-token API context window. The subscription entry uses a
-conservative 272,000-token client limit pending account-specific verification.
-This pinned Pi exposes reasoning through `xhigh`, not Astra's additional `max`
-level. Off/minimal are disabled for Astra. API cost estimates use standard
-short-context rates; Pi 0.75.4 does not model Astra's higher rates above 272K
-input tokens, so its long-context cost display can underestimate the bill.
-See [OpenAI authentication](https://learn.chatgpt.com/docs/auth) for the
-subscription/API distinction. No live Astra inference is claimed until login
-has been completed and tested.
+Home Manager activation seeds `openai-codex` OAuth into `auth.json` when that
+provider is missing or is still an API key, and removes a leftover `openai` API
+key. Existing OAuth on a host is left alone so token refresh keeps working.
+After `hmswitch`, other hosts can use Astra without a browser login:
+
+```sh
+pi --provider openai-codex --model gpt-6-astra --thinking medium
+```
+
+If two hosts refresh the same grant concurrently, one may need `/login` again
+and a sops update of the refresh token. Cloud requests still send prompts and
+tool results to OpenAI. The subscription entry uses a conservative 272,000-token
+client limit; `/context` can raise that per session. This pinned Pi exposes
+reasoning through `xhigh`, not Astra's additional `max` level. Off/minimal are
+disabled for Astra. See [OpenAI authentication](https://learn.chatgpt.com/docs/auth)
+for the subscription/API distinction.
 
 ## Install and activate
 

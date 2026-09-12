@@ -1,29 +1,5 @@
 {
   "providers": {
-    "openai": {
-      "models": [
-        {
-          "id": "gpt-6-astra",
-          "name": "GPT-6 Astra (OpenAI API)",
-          "api": "openai-responses",
-          "reasoning": true,
-          "thinkingLevelMap": {
-            "off": null,
-            "minimal": null,
-            "xhigh": "xhigh"
-          },
-          "input": ["text", "image"],
-          "contextWindow": 1050000,
-          "maxTokens": 128000,
-          "cost": {
-            "input": 10,
-            "output": 50,
-            "cacheRead": 1,
-            "cacheWrite": 12.5
-          }
-        }
-      ]
-    },
     "openai-codex": {
       "models": [
         {
