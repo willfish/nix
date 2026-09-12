@@ -18,6 +18,18 @@ stdenv.mkDerivation rec {
 
   sourceRoot = "${src.name}/dkms/src";
 
+  # Linux 7.2 flattened ieee80211_mgmt.u.action and renamed EML delay caps.
+  postPatch = ''
+    substituteInPlace mt76_connac_mac.c \
+      --replace-fail 'mgmt->u.action.u.addba_req.action_code' 'mgmt->u.action.action_code' \
+      --replace-fail 'mgmt->u.action.u.addba_req.capab' 'mgmt->u.action.addba_req.capab'
+    substituteInPlace mt7925/mac.c \
+      --replace-fail 'mgmt->u.action.u.addba_req.action_code' 'mgmt->u.action.action_code'
+    substituteInPlace mt7925/mcu.c \
+      --replace-fail 'IEEE80211_EML_CAP_EMLSR_PADDING_DELAY' 'IEEE80211_EML_CAP_EML_PADDING_DELAY' \
+      --replace-fail 'IEEE80211_EML_CAP_EMLSR_TRANSITION_DELAY' 'IEEE80211_EML_CAP_EML_TRANSITION_DELAY'
+  '';
+
   nativeBuildInputs = kernel.moduleBuildDependencies;
 
   makeFlags = [
