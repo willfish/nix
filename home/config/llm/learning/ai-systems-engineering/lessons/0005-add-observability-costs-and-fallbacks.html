@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-lesson="0005">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -130,24 +130,6 @@ Portfolio proof:
 
     <p class="footer">Bring back the ops sheet. The final lesson packages the project into marketable proof.</p>
   </main>
-  <script>
-    document.getElementById("score").addEventListener("click", () => {
-      const value = document.getElementById("draft").value.toLowerCase();
-      const terms = ["span", "metric", "latency", "cost", "token", "error", "fallback", "budget", "review", "confidence"];
-      const hits = terms.filter((term) => value.includes(term)).length;
-      const result = document.getElementById("result");
-      result.className = "result";
-      if (hits >= 8) {
-        result.textContent = `${hits}/10 ops concerns present. This is ready to become a README operations section.`;
-        result.classList.add("good");
-      } else if (hits >= 5) {
-        result.textContent = `${hits}/10 ops concerns present. Add budget thresholds and failure-specific fallbacks.`;
-        result.classList.add("warn");
-      } else {
-        result.textContent = `${hits}/10 ops concerns present. The system is not yet observable enough to own.`;
-        result.classList.add("bad");
-      }
-    });
-  </script>
+  <script type="module" src="../quiz.ts"></script>
 </body>
 </html>

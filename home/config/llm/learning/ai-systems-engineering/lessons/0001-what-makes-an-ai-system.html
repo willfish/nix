@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-lesson="0001">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -311,72 +311,6 @@ Portfolio proof:</textarea>
 
     <p class="footer">When you complete the exercise, paste the one-pager back into the teaching session. That is evidence for the next learning record and determines the next lesson.</p>
   </main>
-
-  <script>
-    const template = `System:
-User outcome:
-Tools:
-State and memory:
-Eval cases:
-Guardrails:
-Human review:
-Observability:
-Cost and latency budget:
-Fallbacks:
-Portfolio proof:`;
-
-    document.getElementById("check-quiz").addEventListener("click", () => {
-      const chosen = document.querySelector("input[name='q1']:checked");
-      const result = document.getElementById("quiz-result");
-      result.className = "result";
-      if (!chosen) {
-        result.textContent = "Choose an answer first.";
-        result.classList.add("warn");
-        return;
-      }
-      if (chosen.value === "b") {
-        result.textContent = "Correct. It names the workflow, tool boundary, state, human review, evals, observability, and fallback behavior.";
-        result.classList.add("good");
-      } else {
-        result.textContent = "Not quite. That answer describes useful AI feature work, but it does not show enough production ownership.";
-        result.classList.add("bad");
-      }
-    });
-
-    document.getElementById("reset").addEventListener("click", () => {
-      document.getElementById("onepager").value = template;
-      const result = document.getElementById("score-result");
-      result.className = "result";
-      result.textContent = "Template reset. Fill in the draft, then score it.";
-    });
-
-    document.getElementById("score").addEventListener("click", () => {
-      const value = document.getElementById("onepager").value.toLowerCase();
-      const result = document.getElementById("score-result");
-      const checks = [
-        ["tools", "tool"],
-        ["state and memory", "state"],
-        ["eval cases", "eval"],
-        ["guardrails", "guardrail"],
-        ["human review", "human"],
-        ["observability", "observ"],
-        ["cost and latency budget", "latency"],
-        ["fallbacks", "fallback"],
-        ["portfolio proof", "portfolio"]
-      ];
-      const hits = checks.filter(([, needle]) => value.includes(needle)).length;
-      result.className = "result";
-      if (hits >= 7) {
-        result.textContent = `Phase 3 shape: ${hits}/9 concerns are present. Now make each line concrete enough that another engineer could challenge it.`;
-        result.classList.add("good");
-      } else if (hits >= 4) {
-        result.textContent = `Bridge to Phase 3: ${hits}/9 concerns are present. Add the missing operational pieces before treating this as a systems design.`;
-        result.classList.add("warn");
-      } else {
-        result.textContent = `Still mostly feature-shaped: ${hits}/9 concerns are present. Start by adding evals, observability, human review, and fallbacks.`;
-        result.classList.add("bad");
-      }
-    });
-  </script>
+  <script type="module" src="../quiz.ts"></script>
 </body>
 </html>

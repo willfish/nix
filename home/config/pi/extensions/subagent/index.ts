@@ -29,11 +29,11 @@ import {
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
-import { withSkills } from "./skills.js";
-import { TeamManager, teamAvailable } from "./team.js";
-import { registerTeamControls, DELEGATION_POLICY } from "./controls.js";
-import { Jobs, waitForProcess } from "./jobs.js";
-import { segmentResult, jobToolResult, registerParentBatchGuard } from "./job-results.js";
+import { withSkills } from "./skills.ts";
+import { TeamManager, teamAvailable } from "./team.ts";
+import { registerTeamControls, DELEGATION_POLICY } from "./controls.ts";
+import { Jobs, waitForProcess } from "./jobs.ts";
+import { segmentResult, jobToolResult, registerParentBatchGuard } from "./job-results.ts";
 
 const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;

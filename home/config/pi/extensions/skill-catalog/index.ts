@@ -1,6 +1,6 @@
 import { formatSkillsForPrompt, type ExtensionAPI, type Skill } from '@earendil-works/pi-coding-agent';
 import { Type } from 'typebox';
-import { searchCatalog, replaceSkillAdvertisement } from './catalog.js';
+import { searchCatalog, replaceSkillAdvertisement } from './catalog.ts';
 
 export default function skillCatalog(pi: ExtensionAPI) {
   let skills: Skill[] | undefined;

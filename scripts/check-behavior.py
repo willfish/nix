@@ -75,8 +75,9 @@ def main() -> int:
         print(f"Unexpected Python skips: {unexpected}", file=sys.stderr)
         return 1
     node = subprocess.run([
-        "node", "--experimental-vm-modules", "--test", "--test-reporter=tap",
-        *map(str, sorted((ROOT / "tests").glob("*.test.mjs"))),
+        "node", "--experimental-vm-modules",
+        "--experimental-strip-types", "--test", "--test-reporter=tap",
+        *map(str, sorted((ROOT / "tests").glob("*.test.ts"))),
     ], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     print(node.stdout, end="", flush=True)
     skipped = unexpected_node_skips(node.stdout)

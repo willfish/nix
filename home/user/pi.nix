@@ -48,22 +48,22 @@ in
     }
   );
 
-  home.file.".pi/agent/extensions/pi-voice.js" = lib.mkIf voiceFeatures.stt {
-    source = ../config/pi/extensions/pi-voice.js;
+  home.file.".pi/agent/extensions/pi-voice.ts" = lib.mkIf voiceFeatures.stt {
+    source = ../config/pi/extensions/pi-voice.ts;
   };
   home.file.".pi/agent/extensions/mcp".source = "${mcpAdapter}/lib/node_modules/pi-mcp-adapter";
   # Keep agent state reporting in sync with the pinned Herdr package.
   home.file.".pi/agent/extensions/herdr-agent-state.ts".source =
     "${pkgs.herdr.src}/src/integration/assets/pi/herdr-agent-state.ts";
-  home.file.".pi/agent/extensions/herdr-ui.js".source = ../config/pi/extensions/herdr-ui.js;
-  home.file.".pi/agent/extensions/herdr-model.js".source = ../config/pi/extensions/herdr-model.js;
-  home.file.".pi/agent/extensions/context-window.js".source =
-    ../config/pi/extensions/context-window.js;
-  home.file.".pi/agent/extensions/usage.js".source = ../config/pi/extensions/usage.js;
+  home.file.".pi/agent/extensions/herdr-ui.ts".source = ../config/pi/extensions/herdr-ui.ts;
+  home.file.".pi/agent/extensions/herdr-model.ts".source = ../config/pi/extensions/herdr-model.ts;
+  home.file.".pi/agent/extensions/context-window.ts".source =
+    ../config/pi/extensions/context-window.ts;
+  home.file.".pi/agent/extensions/usage.ts".source = ../config/pi/extensions/usage.ts;
   home.file.".pi/agent/extensions/skill-catalog".source = ../config/pi/extensions/skill-catalog;
-  home.file.".pi/agent/extensions/reading-policy.js".source =
-    ../config/pi/extensions/reading-policy.js;
-  home.file.".pi/agent/extensions/goal.js".source = ../config/pi/extensions/goal.js;
+  home.file.".pi/agent/extensions/reading-policy.ts".source =
+    ../config/pi/extensions/reading-policy.ts;
+  home.file.".pi/agent/extensions/goal.ts".source = ../config/pi/extensions/goal.ts;
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";

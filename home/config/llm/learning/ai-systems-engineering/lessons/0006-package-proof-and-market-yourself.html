@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-lesson="0006">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -125,24 +125,6 @@ Profile/CV bullet:
 
     <p class="footer">When this draft is complete, paste it back into the teaching session. It should create the next learning record and drive the next project lesson.</p>
   </main>
-  <script>
-    document.getElementById("score").addEventListener("click", () => {
-      const value = document.getElementById("draft").value.toLowerCase();
-      const terms = ["problem", "architecture", "workflow", "tools", "state", "eval", "guardrail", "human", "fallback", "trace", "metric", "cost", "tradeoff", "cv"];
-      const hits = terms.filter((term) => value.includes(term)).length;
-      const result = document.getElementById("result");
-      result.className = "result";
-      if (hits >= 11) {
-        result.textContent = `${hits}/14 proof elements present. This can become a credible public case study after you replace placeholders with implementation evidence.`;
-        result.classList.add("good");
-      } else if (hits >= 7) {
-        result.textContent = `${hits}/14 proof elements present. Add operational evidence and tradeoffs before publishing.`;
-        result.classList.add("warn");
-      } else {
-        result.textContent = `${hits}/14 proof elements present. This still reads like a claim rather than evidence.`;
-        result.classList.add("bad");
-      }
-    });
-  </script>
+  <script type="module" src="../quiz.ts"></script>
 </body>
 </html>

@@ -146,7 +146,7 @@ let
     builtins.toJSON {
       defaultProvider = hostName;
       defaultModel = modelAlias;
-      # pi-qwen.js sends this level as Qwen's chat-template reasoning effort.
+      # pi-qwen.ts sends this level as Qwen's chat-template reasoning effort.
       defaultThinkingLevel = "medium";
       enableInstallTelemetry = false;
       compaction = {
@@ -187,14 +187,14 @@ let
         --offline --provider ${hostName} --model ${modelAlias} \
         --no-context-files --no-skills --no-extensions --no-prompt-templates --no-themes \
         ${piThemeArgs} \
-        --extension ${../config/local-llm/pi-qwen.js} \
+        --extension ${../config/local-llm/pi-qwen.ts} \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/mcp/index.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/todo.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-agent-state.ts \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-ui.js \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-model.js \
+        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-ui.ts \
+        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-model.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/prompt-history/index.ts \
-        ${lib.optionalString voiceFeatures.stt "--extension ${config.home.homeDirectory}/.pi/agent/extensions/pi-voice.js"} \
+        ${lib.optionalString voiceFeatures.stt "--extension ${config.home.homeDirectory}/.pi/agent/extensions/pi-voice.ts"} \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/plan-work.md \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/review.md \
         --system-prompt "$(< ${piSystemPrompt})" \

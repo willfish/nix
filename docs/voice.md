@@ -181,7 +181,7 @@ After `/new` or changing conversations, choose Rebind in the tray (or run
 voice keeps the old binding until you explicitly rebind. Delayed callbacks
 from the previous conversation are excluded after rebinding.
 
-Standard Pi discovers `pi-voice.js` from its managed extensions directory;
+Standard Pi discovers `pi-voice.ts` from its managed extensions directory;
 `qwen-pi` explicitly loads the same extension because automatic discovery is
 disabled. Auto-attachment is limited to supported hosts and interactive Herdr
 sessions. It uses native editor APIs for staging and
@@ -396,7 +396,7 @@ are in `~/.local/share/pi-voice/voices`, including
 ## Development checks
 
 ```sh
-direnv exec . node --test tests/*.test.mjs
+direnv exec . node --test tests/*.test.ts
 direnv exec . nix build \
   '.#homeConfigurations."william@andromeda".activationPackage' --no-link
 direnv exec . nix build \

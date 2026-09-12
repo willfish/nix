@@ -142,7 +142,7 @@ messages remain compatible with the stock UI.
 Policy and transport tests:
 
 ```sh
-direnv exec . node --experimental-strip-types --test tests/local-chat-compaction*.test.mjs
+direnv exec . node --experimental-strip-types --test tests/local-chat-compaction*.test.ts
 ```
 
 ## Lean local agent in Pi
@@ -235,7 +235,7 @@ at the production limit. The summary also suggested an unrequested next step,
 so successful recall does not establish complete summary fidelity.
 
 ```sh
-direnv exec . node --test tests/local-pi.test.mjs
+direnv exec . node --test tests/local-pi.test.ts
 ```
 
 ### OpenAI / Astra in Pi

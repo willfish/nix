@@ -28,9 +28,9 @@ class PiGoalCardRuntimeTest(unittest.TestCase):
         self.assertTrue(binary, "Pi is required for offline card verification")
         files = os.environ.get("PI_HARNESS_TEST_HOME_FILES")
         source = (
-            Path(files) / ".pi/agent/extensions/goal.js"
+            Path(files) / ".pi/agent/extensions/goal.ts"
             if files
-            else ROOT / "home/config/pi/extensions/goal.js"
+            else ROOT / "home/config/pi/extensions/goal.ts"
         )
         for mode, theme, columns in [
             ("regular", "dark", 40),

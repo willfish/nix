@@ -2271,7 +2271,7 @@ def call(request, start=True):
 
 
 def installed_pi_extension():
-    path = Path.home() / '.pi/agent/extensions/pi-voice.js'
+    path = Path.home() / '.pi/agent/extensions/pi-voice.ts'
     if not path.is_file():
         raise RuntimeError(
             'The Pi voice extension is not installed; run hmswitch first')

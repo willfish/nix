@@ -89,19 +89,19 @@ Herdr layout edits use positional paths and are not transactional across clients
 
 ## Implementation boundaries
 
-- `skills.js`: strict declarations and prompt composition.
-- `herdr.js`: bounded socket calls, explicit pane ownership and subtree ratios.
-- `protocol.js`: private atomic command/result files.
-- `child.js`: readiness, typed questions, validated answer delivery, settlement, retirement and coordinator lease.
-- `team.js`: parent lifecycle, answer transport and retained sessions.
-- `jobs.js`: session-owned scheduling, question tracking, continuation and cancellation capacity.
-- `job-results.js`: honest waiting/result rendering, segment usage and parent batch guards.
-- `controls.js`: coordinator tool, slash command and collaboration guidance.
+- `skills.ts`: strict declarations and prompt composition.
+- `herdr.ts`: bounded socket calls, explicit pane ownership and subtree ratios.
+- `protocol.ts`: private atomic command/result files.
+- `child.ts`: readiness, typed questions, validated answer delivery, settlement, retirement and coordinator lease.
+- `team.ts`: parent lifecycle, answer transport and retained sessions.
+- `jobs.ts`: session-owned scheduling, question tracking, continuation and cancellation capacity.
+- `job-results.ts`: honest waiting/result rendering, segment usage and parent batch guards.
+- `controls.ts`: coordinator tool, slash command and collaboration guidance.
 
 ## Checks
 
 ```sh
-direnv exec . node --test tests/pi-*.test.mjs tests/local-pi.test.mjs
+direnv exec . node --test tests/pi-*.test.ts tests/local-pi.test.ts
 # Optional live test: temporary owned panes, local mock model, no paid requests.
-direnv exec . env PI_TEAM_LIVE_TEST=1 node --test --test-concurrency=1 tests/pi-team-runtime.test.mjs tests/pi-team-question-runtime.test.mjs
+direnv exec . env PI_TEAM_LIVE_TEST=1 node --test --test-concurrency=1 tests/pi-team-runtime.test.ts tests/pi-team-question-runtime.test.ts
 ```

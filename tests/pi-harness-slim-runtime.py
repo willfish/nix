@@ -79,7 +79,7 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
             "--extension", str(extension.resolve()),
             "--no-prompt-templates", "--no-themes",
             "--extension", str(Path(__file__).resolve().parents[1]
-                               / "home/config/pi/extensions/reading-policy.js")]
+                               / "home/config/pi/extensions/reading-policy.ts")]
         self.env = {
             "PATH": os.environ.get("PATH", os.defpath), "HOME": self.temp.name,
             "PI_CODING_AGENT_DIR": str(self.profile), "PI_OFFLINE": "1",
@@ -230,7 +230,7 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
         # Exercise the production guidance hook in real Pi, supplying only team
         # availability. This does not claim to cover Herdr sockets or the TUI.
         controls = Path(__file__).resolve(
-        ).parents[1] / "home/config/pi/extensions/subagent/controls.js"
+        ).parents[1] / "home/config/pi/extensions/subagent/controls.ts"
         extension = self.root / "team-guidance.ts"
         extension.write_text(
             f"import {{ registerTeamControls }} from {
@@ -255,7 +255,7 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
     def test_team_preload_uses_unchanged_registry_after_catalogue_replacement(
         self):
         skills_module = Path(__file__).resolve(
-        ).parents[1] / "home/config/pi/extensions/subagent/skills.js"
+        ).parents[1] / "home/config/pi/extensions/subagent/skills.ts"
         preload = self.root / "team-preload.ts"
         preload.write_text(
             f"import {{ withSkills }} from {json.dumps(str(skills_module))};\n"

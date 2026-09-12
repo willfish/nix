@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-lesson="0003">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -140,24 +140,6 @@ Why this should or should not be exposed through MCP:</textarea>
 
     <p class="footer">Bring back the contracts. The next lesson turns them into eval and guardrail cases.</p>
   </main>
-  <script>
-    document.getElementById("score").addEventListener("click", () => {
-      const value = document.getElementById("draft").value.toLowerCase();
-      const terms = ["schema", "output", "auth", "trace", "approval", "failure", "mcp", "effect"];
-      const hits = terms.filter((term) => value.includes(term)).length;
-      const result = document.getElementById("result");
-      result.className = "result";
-      if (hits >= 7) {
-        result.textContent = `${hits}/8 boundary concerns present. Next, write evals that prove the model uses these tools correctly.`;
-        result.classList.add("good");
-      } else if (hits >= 4) {
-        result.textContent = `${hits}/8 boundary concerns present. Add stricter schemas, risk handling, and trace fields.`;
-        result.classList.add("warn");
-      } else {
-        result.textContent = `${hits}/8 boundary concerns present. This is still too loose to operate safely.`;
-        result.classList.add("bad");
-      }
-    });
-  </script>
+  <script type="module" src="../quiz.ts"></script>
 </body>
 </html>

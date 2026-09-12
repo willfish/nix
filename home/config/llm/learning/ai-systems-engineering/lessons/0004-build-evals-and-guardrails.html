@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-lesson="0004">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -127,24 +127,6 @@ Cases still missing:
 
     <p class="footer">Bring back the eval matrix. The next lesson adds traces, metrics, latency, cost, and fallback decisions.</p>
   </main>
-  <script>
-    document.getElementById("score").addEventListener("click", () => {
-      const value = document.getElementById("draft").value.toLowerCase();
-      const terms = ["input", "expected", "tool", "guardrail", "grader", "golden", "edge", "adversarial", "fallback", "human"];
-      const hits = terms.filter((term) => value.includes(term)).length;
-      const result = document.getElementById("result");
-      result.className = "result";
-      if (hits >= 8) {
-        result.textContent = `${hits}/10 eval concerns present. Now turn these into runnable checks or a table in your project README.`;
-        result.classList.add("good");
-      } else if (hits >= 5) {
-        result.textContent = `${hits}/10 eval concerns present. Add adversarial, human review, and fallback cases.`;
-        result.classList.add("warn");
-      } else {
-        result.textContent = `${hits}/10 eval concerns present. This is not enough evidence to market production reliability.`;
-        result.classList.add("bad");
-      }
-    });
-  </script>
+  <script type="module" src="../quiz.ts"></script>
 </body>
 </html>

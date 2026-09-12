@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-lesson="0002">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -128,24 +128,6 @@ What this proves for my portfolio:</textarea>
 
     <p class="footer">Bring the completed workflow spec back to the teaching session. The next lesson turns its tools into contracts.</p>
   </main>
-  <script>
-    document.getElementById("score").addEventListener("click", () => {
-      const value = document.getElementById("draft").value.toLowerCase();
-      const terms = ["node", "state", "tool", "interrupt", "resume", "failure", "approval", "output"];
-      const hits = terms.filter((term) => value.includes(term)).length;
-      const result = document.getElementById("result");
-      result.className = "result";
-      if (hits >= 7) {
-        result.textContent = `${hits}/8 workflow concerns present. Now make each line specific enough to implement.`;
-        result.classList.add("good");
-      } else if (hits >= 4) {
-        result.textContent = `${hits}/8 workflow concerns present. Add the missing production behavior before coding.`;
-        result.classList.add("warn");
-      } else {
-        result.textContent = `${hits}/8 workflow concerns present. This still reads like an idea, not a workflow spec.`;
-        result.classList.add("bad");
-      }
-    });
-  </script>
+  <script type="module" src="../quiz.ts"></script>
 </body>
 </html>

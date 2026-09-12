@@ -86,7 +86,7 @@ class PiRuntimeTests(unittest.TestCase):
                 worker.start()
                 master, slave = pty.openpty()
                 parents = Path(__file__).resolve().parents[1]
-                extension = parents / 'home/config/pi/extensions/herdr-model.js'
+                extension = parents / 'home/config/pi/extensions/herdr-model.ts'
                 child = subprocess.Popen([
                     os.environ['PI_HERDR_TEST_BIN'],
                     '--offline', '--no-extensions',

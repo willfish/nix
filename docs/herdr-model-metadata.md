@@ -33,7 +33,7 @@ bounded to half a second; metadata failure must never block agent work.
 Tests:
 
 ```sh
-direnv exec . node --test tests/pi-herdr-model.test.mjs
+direnv exec . node --test tests/pi-herdr-model.test.ts
 direnv exec . env PI_HERDR_TEST_BIN=pi python3 -m unittest discover -s tests -p test_herdr_pi_runtime.py
 ```
 
