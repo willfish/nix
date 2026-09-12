@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location(
@@ -32,6 +33,15 @@ class BehavioralGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(ValueError, "immutable"):
                 gate.configure(Path(tmp))
+
+    def test_theme_fixtures_use_the_candidate_binary_not_user_launcher(self):
+        home = Path("/nix/store/fixture-home-manager-generation")
+        with patch.object(Path, "resolve", return_value=home), \
+                patch.object(Path, "is_file", return_value=True), \
+                patch.dict(os.environ):
+            gate.configure(home)
+            self.assertEqual(
+                os.environ["PI_THEME_TEST_BIN"], str(home / "home-path/bin/pi"))
 
     def test_editor_secret_leftovers_are_ignored_without_creating_them(self):
         result = subprocess.run(
