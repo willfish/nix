@@ -57,8 +57,11 @@ class HostThemeConfigTest(unittest.TestCase):
             with self.subTest(profile=name):
                 self.assertEqual(profile["cosmic"], graphical)
                 self.assertTrue(profile["writableMode"])
-                if graphical:
-                    self.assertFalse(profile["gtkFixed"])
+                self.assertFalse(profile["stylixAutoEnable"])
+                self.assertFalse(profile["gtkFixed"])
+                self.assertEqual(profile["gtkEnable"], graphical)
+                if not graphical:
+                    self.assertEqual(profile["dconfSettings"], [])
 
     def test_picker_catalogue_defaults_and_activation(self):
         expected = {

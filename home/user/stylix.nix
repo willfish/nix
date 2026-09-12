@@ -6,7 +6,10 @@
 {
   stylix = {
     enable = true;
-    autoEnable = true;
+    # Only theme software this home actually uses. autoEnable would also
+    # configure GNOME, Hyprland, Firefox, and other apps that are not installed,
+    # and unused GTK/GNOME targets write dconf that breaks headless activation.
+    autoEnable = false;
     polarity = "dark";
     base16Scheme = hostTheme.dark;
 
@@ -25,7 +28,8 @@
       };
     };
 
-    targets.gnome.enable = false;
+    targets.font-packages.enable = true;
+    targets.fontconfig.enable = true;
 
     # Paired, runtime-switchable targets are owned by appearance.nix.
   };
