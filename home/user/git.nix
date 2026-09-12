@@ -1,4 +1,9 @@
-{ pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   gitWithWorktreeDirenv = pkgs.writeShellScriptBin "git" ''
     set -euo pipefail
@@ -283,7 +288,7 @@ in
       };
 
       help.autocorrect = 1;
-      web.browser = "brave";
+      web.browser = lib.mkIf config.dotfiles.capabilities.desktop "brave";
       init.defaultBranch = "main";
       merge.conflictstyle = "zdiff3";
 

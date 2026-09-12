@@ -13,6 +13,7 @@ USAGE
 }
 
 flake="${HMSWITCH_FLAKE:-$HOME/.dotfiles}"
+darwin_system_services=false
 
 sync_darwin_nix_config() {
   local source target
@@ -122,8 +123,18 @@ case "$(uname -s)" in
   Darwin)
     # Bootstrap Home Manager before the system launchd limit is installed.
     ulimit -n 65536
+    host="$(short_hostname | tr '[:upper:]' '[:lower:]')"
     configuration="william-darwin"
-    sync_darwin_nix_config
+    home_names=$(nix eval --json "$flake#homeConfigurations" --apply builtins.attrNames)
+    if printf '%s\n' "$home_names" | grep -Fq "\"william@$host\""; then
+      configuration="william@$host"
+    fi
+    darwin_system_services=$(nix eval --json "$flake#homeConfigurations.\"$configuration\".config.dotfiles.darwinSystemServices")
+    case "$darwin_system_services" in
+      true) ;; # System changes require a separate, approved darwin-rebuild.
+      false) sync_darwin_nix_config ;;
+      *) echo "hmswitch: invalid Darwin service ownership" >&2; exit 1 ;;
+    esac
     ;;
   Linux)
     host="$(short_hostname | tr '[:upper:]' '[:lower:]')"
@@ -144,7 +155,7 @@ esac
 
 nh home switch "$flake" --configuration "$configuration" "$@"
 
-if [ "$(uname -s)" = Darwin ]; then
+if [ "$(uname -s)" = Darwin ] && [ "$darwin_system_services" = false ]; then
   sync_darwin_file_limits
   sync_darwin_tailscale_service
 fi

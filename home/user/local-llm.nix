@@ -8,7 +8,7 @@
 }:
 let
   voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
-  isRelay = pkgs.stdenv.isDarwin && hostName == "relay";
+  isAutomationDarwin = pkgs.stdenv.isDarwin && config.dotfiles.role == "automation";
   isAndromeda = pkgs.stdenv.isLinux && hostName == "andromeda";
   llamaCpp =
     if isAndromeda then
@@ -306,7 +306,7 @@ let
         --alias ${modelAlias} \
         --host ${if isAndromeda then "127.0.0.1" else "0.0.0.0"} --port 8081 \
         --api-key-file ${lib.escapeShellArg apiKeyPath} \
-        ${lib.optionalString isRelay "--ui-mcp-proxy --ui-config-file ${uiConfig} --path ${chatUi}"} \
+        ${lib.optionalString isAutomationDarwin "--ui-mcp-proxy --ui-config-file ${uiConfig} --path ${chatUi}"} \
         --ctx-size ${toString contextSize} --parallel 1 \
         --n-gpu-layers 99 --flash-attn on \
         ${lib.optionalString isAndromeda "--fit off --batch-size 512 --ubatch-size 128"} \
@@ -336,13 +336,13 @@ let
     '';
   };
 in
-lib.mkIf (isRelay || isAndromeda) {
+lib.mkIf (isAutomationDarwin || isAndromeda) {
   home.packages = [
     qwenPi
     fetchModel
     server
   ]
-  ++ lib.optionals isRelay [
+  ++ lib.optionals isAutomationDarwin [
     pkgs.llama-cpp
     chat
     chatKey
@@ -385,7 +385,7 @@ lib.mkIf (isRelay || isAndromeda) {
     ${pkgs.coreutils}/bin/install -m 0600 ${piSettings} "$piSettingsPath"
   '';
 
-  home.activation.configureLocalHermes = lib.mkIf isRelay (
+  home.activation.configureLocalHermes = lib.mkIf isAutomationDarwin (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       if [ -x ${lib.escapeShellArg "${config.home.homeDirectory}/.local/bin/hermes"} ]; then
         ${profilePython}/bin/python3 ${../config/local-llm/hermes_profile.py} \
@@ -400,8 +400,13 @@ lib.mkIf (isRelay || isAndromeda) {
     ''
   );
 
-  launchd.agents.local-llm = lib.mkIf isRelay {
-    enable = true;
+  dotfiles.darwinDaemons = lib.mkIf (isAutomationDarwin && config.dotfiles.darwinSystemServices) {
+    local-llm = config.launchd.agents.local-llm.config;
+    local-assistant-tools = config.launchd.agents.local-assistant-tools.config;
+  };
+
+  launchd.agents.local-llm = lib.mkIf isAutomationDarwin {
+    enable = !config.dotfiles.darwinSystemServices;
     config = {
       ProgramArguments = [ "${server}/bin/local-llm-server" ];
       RunAtLoad = true;
@@ -413,8 +418,8 @@ lib.mkIf (isRelay || isAndromeda) {
     };
   };
 
-  launchd.agents.local-assistant-tools = lib.mkIf isRelay {
-    enable = true;
+  launchd.agents.local-assistant-tools = lib.mkIf isAutomationDarwin {
+    enable = !config.dotfiles.darwinSystemServices;
     config = {
       ProgramArguments = [ "${assistantTools}/bin/local-assistant-tools" ];
       RunAtLoad = true;

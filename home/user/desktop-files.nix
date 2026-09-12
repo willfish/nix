@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   hostName ? null,
@@ -72,7 +73,7 @@ in
     ".config/herdr/plugins/config/herdr-navigator/config.toml" =
       sourceFile "${configDir}/herdr/agent-picker.toml";
   }
-  // lib.optionalAttrs stdenv.isDarwin {
+  // lib.optionalAttrs (stdenv.isDarwin && config.dotfiles.capabilities.desktop) {
     ".aerospace.toml" = sourceFile "${configDir}/aerospace/aerospace.toml";
   };
 

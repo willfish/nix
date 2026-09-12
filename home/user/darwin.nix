@@ -1,11 +1,12 @@
 {
+  config,
   lib,
   pkgs,
   ...
 }:
-{
-  # Relay is a Darwin server: keep Aqua logged in for LaunchAgents, but
-  # re-apply headless-lean defaults and disable indexing/AI/Photos agents.
+lib.mkIf (!config.dotfiles.darwinSystemServices) {
+  # Legacy Darwin homes only: retain their Aqua-dependent LaunchAgents and
+  # desktop trimming. Headless nodes use nix-darwin system jobs instead.
   home.file.".local/share/dotfiles-system/limit.maxfiles.plist" = lib.mkIf pkgs.stdenv.isDarwin {
     text = ''
       <?xml version="1.0" encoding="UTF-8"?>

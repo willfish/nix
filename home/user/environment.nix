@@ -37,9 +37,14 @@ in
     VISUAL = "nvim";
     fish_greeting = "";
   }
-  // lib.optionalAttrs (isGraphicalLinux || pkgs.stdenv.isDarwin) {
-    BROWSER = "brave";
-    DEFAULT_BROWSER = "brave";
+  //
+    lib.optionalAttrs
+      (isGraphicalLinux || (pkgs.stdenv.isDarwin && config.dotfiles.capabilities.desktop))
+      {
+        BROWSER = "brave";
+        DEFAULT_BROWSER = "brave";
+      }
+  // lib.optionalAttrs config.dotfiles.capabilities.localTerminal {
     TERMINAL = "ghostty";
   };
 
