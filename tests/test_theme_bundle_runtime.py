@@ -27,7 +27,7 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
                 "--no-link",
                 "--print-out-paths",
                 str(ROOT)
-                + '#homeConfigurations.william-linux.config.xdg.configFile.'
+                + "#homeConfigurations.william-linux.config.xdg.configFile."
                 '"theme-menu/catalogue.json".source',
                 str(ROOT) + "#homeConfigurations.william-linux.pkgs.fuzzel",
                 str(ROOT) + "#homeConfigurations.william-linux.pkgs.ghostty",
@@ -124,7 +124,7 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
                                 result.returncode, 0, result.stderr
                             )
                             return subprocess.CompletedProcess(
-                                args, 0, "0\n", ""
+                                args, 0, "1\n", ""
                             )
 
                         with patch.object(

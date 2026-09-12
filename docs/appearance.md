@@ -34,8 +34,12 @@ configuration. macOS and headless hosts retain their declarative host palettes.
 
 ## Choosing a mode
 
-Use **COSMIC Settings → Desktop → Appearance** on Linux, or the system appearance
-setting on macOS. Dark is the initial default; sunrise/sunset switching is off.
+In **Super+Shift+T**, the first action switches to light or dark mode, whichever
+is not currently active. It leaves your selected palette unchanged. You can also
+run `theme-menu light` or `theme-menu dark`, or use
+**COSMIC Settings → Desktop → Appearance**. These controls share the same setting.
+On macOS, use the system appearance setting.
+Dark is the initial default; sunrise/sunset switching is off.
 Home Manager preserves the selected COSMIC mode rather than pinning it to dark.
 
 Ghostty follows system appearance. Herdr follows the terminal and passes its

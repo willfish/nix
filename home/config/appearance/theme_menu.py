@@ -99,25 +99,42 @@ class Themes:
                 atomic_write(selection_path, previous_selection)
             raise
 
+    @property
+    def mode_file(self):
+        return self.config / "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
+
+    def is_light(self):
+        return (
+            self.mode_file.exists()
+            and self.mode_file.read_text().strip() == "false"
+        )
+
+    def set_mode(self, mode):
+        if mode not in ("light", "dark"):
+            raise ValueError(f"Unknown appearance mode: {mode}")
+        atomic_write(
+            self.mode_file, b"false\n" if mode == "light" else b"true\n"
+        )
+
     def choose(self):
         current = self.selection()
+        light = self.is_light()
+        target_mode = "dark" if light else "light"
         palettes = self.catalogue["palettes"]
         keys = [
+            target_mode,
             "default",
             *sorted(palettes, key=lambda key: palettes[key]["label"]),
         ]
         labels = [
+            f"Switch to {target_mode} mode",
             f"Host default ({self.resolve('default')['label']})",
-            *[palettes[key]["label"] for key in keys[1:]],
+            *[palettes[key]["label"] for key in keys[2:]],
         ]
         rows = [
             f"{'*' if key == current else ' '} {label}"
             for key, label in zip(keys, labels)
         ]
-        mode_file = (
-            self.config / "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
-        )
-        light = mode_file.exists() and mode_file.read_text().strip() == "false"
         colours = (
             self.resolve(current)
             .get("nvim", {})
@@ -260,7 +277,7 @@ def main():
     parser.add_argument(
         "palette",
         nargs="?",
-        help="default or a palette ID; omit for the popup",
+        help="light, dark, default or a palette ID; omit for the popup",
     )
     args = parser.parse_args()
     try:
@@ -282,17 +299,27 @@ def main():
                 selected = controller.choose()
             if selected is None:
                 return 0
-            controller.apply(selected)
-            warnings = [] if args.no_reload else reload_apps()
+            if selected in ("light", "dark"):
+                controller.set_mode(selected)
+                title, label = "Appearance mode", f"{selected.title()} mode"
+                # COSMIC and terminals propagate mode changes natively. Do not
+                # rewrite the palette or disturb explicit application overrides.
+                warnings = []
+            else:
+                controller.apply(selected)
+                title, label = (
+                    "Theme selected",
+                    controller.resolve(selected)["label"],
+                )
+                warnings = [] if args.no_reload else reload_apps()
         for warning in warnings:
             print(f"theme-menu: {warning}", file=sys.stderr)
         if not args.reapply and not args.no_reload:
             subprocess.run(
                 [
                     "notify-send",
-                    "Theme selected",
-                    controller.resolve(selected)["label"]
-                    + ("\n" + "\n".join(warnings) if warnings else ""),
+                    title,
+                    label + ("\n" + "\n".join(warnings) if warnings else ""),
                 ],
                 check=False,
                 timeout=5,

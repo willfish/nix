@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -142,6 +143,82 @@ class ThemeMenuTest(unittest.TestCase):
                         self.controller.choose()
                 self.assertFalse((self.state / "selection").exists())
 
+    def test_mode_action_matches_current_setting_and_keeps_palette(self):
+        self.controller.apply("rose-pine")
+        before = (self.state / "active/host-palettes.json").read_bytes()
+        for current, target in (
+            (None, "light"),
+            ("light", "dark"),
+            ("dark", "light"),
+        ):
+            if current:
+                self.controller.set_mode(current)
+            with patch.object(menu.subprocess, "run") as run:
+                run.return_value.returncode = 0
+                run.return_value.stdout = "0\n"
+                self.assertEqual(self.controller.choose(), target)
+                self.assertEqual(
+                    run.call_args.kwargs["input"].splitlines()[0],
+                    f"  Switch to {target} mode",
+                )
+            self.controller.set_mode(target)
+            self.assertEqual(self.controller.is_light(), target == "light")
+            self.assertEqual(self.controller.selection(), "rose-pine")
+            self.assertEqual(
+                (self.state / "active/host-palettes.json").read_bytes(), before
+            )
+
+    def test_mode_action_is_explicit_even_if_settings_change_while_open(self):
+        self.controller.set_mode("dark")
+        with patch.object(menu.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = "0\n"
+            action = self.controller.choose()
+        self.controller.set_mode("light")
+        self.controller.set_mode(action)
+        self.assertTrue(self.controller.is_light())
+
+    def test_invalid_mode_and_failed_write_preserve_previous_mode(self):
+        self.controller.set_mode("light")
+        with self.assertRaises(ValueError):
+            self.controller.set_mode("unknown")
+        with patch.object(menu, "atomic_write", side_effect=OSError("full")):
+            with self.assertRaises(OSError):
+                self.controller.set_mode("dark")
+        self.assertTrue(self.controller.is_light())
+
+    def test_cli_mode_dispatch_notifies_without_reloading_or_changing_palette(
+        self,
+    ):
+        self.controller.apply("rose-pine")
+        catalogue = self.root / "catalogue.json"
+        catalogue.write_text(json.dumps(self.catalogue))
+        with (
+            patch.object(
+                menu.sys,
+                "argv",
+                [
+                    "theme-menu",
+                    "--catalogue",
+                    str(catalogue),
+                    "--state",
+                    str(self.state),
+                    "light",
+                ],
+            ),
+            patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.config)}),
+            patch.object(menu, "reload_apps") as reload_apps,
+            patch.object(menu.subprocess, "run") as run,
+        ):
+            self.assertEqual(menu.main(), 0)
+            reload_apps.assert_not_called()
+            self.assertEqual(
+                run.call_args.args[0],
+                ["notify-send", "Appearance mode", "Light mode"],
+            )
+        self.assertTrue(self.controller.is_light())
+        self.assertEqual(self.controller.selection(), "rose-pine")
+
     def test_missing_cosmic_directory_aborts_before_writes(self):
         directory = (
             Path(self.palettes["rose-pine"]["cosmic"])
@@ -188,7 +265,7 @@ class ThemeMenuTest(unittest.TestCase):
         self.controller.apply("rose-pine")
         with patch.object(menu.subprocess, "run") as run:
             run.return_value.returncode = 0
-            run.return_value.stdout = "0\n"
+            run.return_value.stdout = "1\n"
             self.assertEqual(self.controller.choose(), "default")
             self.assertIn("* rose-pine", run.call_args.kwargs["input"])
             self.assertIn(
