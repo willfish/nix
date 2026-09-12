@@ -22,3 +22,25 @@ test('Astra registry exists with separate subscription and API routes', () => {
     assert.ok(model.contextWindow >= 272000);
   }
 });
+test('Pi settings defaults enable quiet startup without clobbering user keys', () => {
+  const defaults = JSON.parse(readFileSync(new URL('../home/config/pi/settings-defaults.json', import.meta.url)));
+  assert.equal(defaults.quietStartup, true);
+  assert.equal(defaults.editorPaddingX, 1);
+  const pi = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
+  assert.match(pi, /merge-settings\.py/);
+  assert.match(pi, /settings-defaults\.json/);
+  const appearance = readFileSync(new URL('../home/user/appearance.nix', import.meta.url), 'utf8');
+  assert.doesNotMatch(appearance, /piEditorPadding/);
+});
+test('Home Manager wires OpenCode and OpenRouter keys onto built-in catalogs', () => {
+  const pi = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
+  const secrets = readFileSync(new URL('../home/user/secrets.nix', import.meta.url), 'utf8');
+  for (const name of ['OPENCODE_API_KEY', 'OPENCODE_GO_KEY', 'OPENROUTER_API_KEY']) {
+    assert.match(secrets, new RegExp(`"${name}"`));
+    assert.match(pi, new RegExp(`sopsApiKey "${name}"`));
+  }
+  const { providers } = JSON.parse(readFileSync(modelsPath));
+  assert.equal(providers.opencode, undefined);
+  assert.equal(providers['opencode-go'], undefined);
+  assert.equal(providers.openrouter, undefined);
+});

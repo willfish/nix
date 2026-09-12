@@ -127,19 +127,5 @@ in
         mv -f "$modeDir/.auto_switch.new" "$modeDir/auto_switch"
       ''
     );
-    piEditorPadding = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-      ${pkgs.python3}/bin/python3 - <<'PY'
-      import json, os
-      from pathlib import Path
-      path = Path.home() / ".pi/agent/settings.json"
-      settings = json.loads(path.read_text()) if path.exists() else {}
-      if "editorPaddingX" not in settings:
-          settings["editorPaddingX"] = 1
-          temporary = path.with_suffix(".json.tmp")
-          temporary.write_text(json.dumps(settings, indent=2) + "\n")
-          temporary.chmod(0o600)
-          os.replace(temporary, path)
-      PY
-    '';
   };
 }

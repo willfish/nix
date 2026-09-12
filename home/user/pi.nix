@@ -13,6 +13,9 @@ let
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
   promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
   promptCapture = import ./prompt-capture.nix { inherit pkgs; };
+  sopsApiKey =
+    name:
+    "!${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.${name}.path}";
 in
 {
   # Follow terminal appearance with the host's theme pair. Explicit CLI theme
@@ -32,11 +35,15 @@ in
     '';
   };
 
-  # Keep credentials and user settings writable and outside Home Manager.
+  # Keep credentials and user settings writable. Fill missing declared defaults
+  # only; /settings remains the owner of keys that already exist.
   # qwen-pi has a separate local profile and does not use these models.
   home.file.".pi/agent/models.json".text = builtins.toJSON (
     lib.recursiveUpdate (builtins.fromJSON (builtins.readFile ../config/pi/models.json)) {
-      providers.opencode-go.apiKey = "!${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.OPENCODE_GO_KEY.path}";
+      # Built-in catalogs stay intact; these keys only make the models available.
+      providers.opencode.apiKey = sopsApiKey "OPENCODE_API_KEY";
+      providers.opencode-go.apiKey = sopsApiKey "OPENCODE_GO_KEY";
+      providers.openrouter.apiKey = sopsApiKey "OPENROUTER_API_KEY";
     }
   );
 
@@ -100,4 +107,10 @@ in
       mcpFooterStatus = "compact";
     };
   };
+
+  home.activation.piSettingsDefaults = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    ${pkgs.python3}/bin/python3 ${../config/pi/merge-settings.py} \
+      ${../config/pi/settings-defaults.json} \
+      "$HOME/.pi/agent/settings.json"
+  '';
 }
