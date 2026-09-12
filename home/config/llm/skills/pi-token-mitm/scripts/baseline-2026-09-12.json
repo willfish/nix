@@ -1,0 +1,28 @@
+{
+  "run_id": "20260912T104853-77612",
+  "captured_at": "2026-09-12 09:49 UTC",
+  "model": "grok-4.6",
+  "provider": "xai",
+  "request_count": 7,
+  "input_tokens": 40964,
+  "cached_tokens": 29824,
+  "output_tokens": 522,
+  "cost_usd": 0.040324,
+  "tools_advertised": [
+    "read",
+    "bash",
+    "edit",
+    "write",
+    "team",
+    "subagent",
+    "skill_catalog",
+    "mcp",
+    "todo"
+  ],
+  "unique_calls": {
+    "skill_catalog": 1,
+    "mcp": 1,
+    "write": 1,
+    "bash": 1
+  }
+}
