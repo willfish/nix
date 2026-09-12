@@ -4,6 +4,8 @@
   ...
 }:
 {
+  # Relay is a Darwin server: keep Aqua logged in for LaunchAgents, but
+  # re-apply headless-lean defaults and disable indexing/AI/Photos agents.
   home.file.".local/share/dotfiles-system/limit.maxfiles.plist" = lib.mkIf pkgs.stdenv.isDarwin {
     text = ''
       <?xml version="1.0" encoding="UTF-8"?>
@@ -57,4 +59,60 @@
           </plist>
         '';
       };
+
+  home.activation.relayServerTrim = lib.mkIf pkgs.stdenv.isDarwin (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      defaults=/usr/bin/defaults
+      launchctl=/bin/launchctl
+      killall=/usr/bin/killall
+
+      "$defaults" write com.apple.assistant.support "Assistant Enabled" -bool false
+      "$defaults" write com.apple.Siri StatusMenuVisible -bool false
+      "$defaults" write com.apple.Siri VoiceTriggerUserEnabled -bool false
+      "$defaults" write com.apple.Siri SiriPrefStashedStatusMenuVisible -bool false
+      "$defaults" write com.apple.CloudSubscriptionFeatures.gm GMSignedUp -bool false
+      "$defaults" write com.apple.universalaccess reduceMotion -bool true
+      "$defaults" write com.apple.universalaccess reduceTransparency -bool true
+      "$defaults" write com.apple.WindowManager StandardHideWidgets -bool true
+      "$defaults" write com.apple.WindowManager StageManagerHideWidgets -bool true
+      "$defaults" write com.apple.WindowManager EnableStandardClickToShowDesktop -bool false
+      "$defaults" write com.apple.loginwindow TALLogoutSavesState -bool false
+      "$defaults" write com.apple.SubmitDiagInfo AutoSubmit -bool false
+      "$defaults" write com.apple.CrashReporter DialogType none
+      "$defaults" write com.apple.NetworkBrowser DisableAirDrop -bool true
+      "$defaults" -currentHost write com.apple.coreservices.useractivityd ActivityAdvertisingAllowed -bool false
+      "$defaults" -currentHost write com.apple.coreservices.useractivityd ActivityReceivingAllowed -bool false
+      "$defaults" write com.apple.photoanalysisd EnableAutomaticAnalysis -bool false
+
+      uid="$(id -u)"
+      domain="gui/$uid"
+      for label in \
+        com.apple.photoanalysisd \
+        com.apple.mediaanalysisd \
+        com.apple.knowledgeconstructiond \
+        com.apple.spotlightknowledged \
+        com.apple.spotlightknowledged.updater \
+        com.apple.spotlightknowledged.importer \
+        com.apple.intelligenceplatformd \
+        com.apple.intelligencecontextd \
+        com.apple.intelligencetasksd \
+        com.apple.intelligenceflowd \
+        com.apple.Siri.agent \
+        com.apple.SiriTTSTrainingAgent \
+        com.apple.GameController.gamecontrolleragentd \
+        com.apple.wallpaper.agent \
+        com.apple.homed \
+        homebrew.mxcl.ollama
+      do
+        "$launchctl" disable "$domain/$label" >/dev/null 2>&1 || true
+      done
+
+      for app in "Brave Browser" "System Settings" Safari Photos Music Mail Messages Calendar Notes Preview "Activity Monitor"
+      do
+        "$killall" -TERM "$app" >/dev/null 2>&1 || true
+      done
+
+      /usr/bin/mdutil -a -i off >/dev/null 2>&1 || true
+    ''
+  );
 }
