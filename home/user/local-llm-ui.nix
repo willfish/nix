@@ -17,6 +17,9 @@ pkgs.stdenvNoCC.mkDerivation {
     cp ${../config/local-llm/compaction.ts} tools/ui/src/lib/local-compaction/compaction.ts
     cp ${../config/local-llm/compaction-transport.ts} tools/ui/src/lib/local-compaction/compaction-transport.ts
     cp ${../config/local-llm/compaction-browser.ts} tools/ui/src/lib/local-compaction/compaction-browser.ts
+    substituteInPlace tools/ui/src/lib/local-compaction/compaction-browser.ts \
+      --replace-fail "from './compaction.ts'" "from './compaction'" \
+      --replace-fail "from './compaction-transport.ts'" "from './compaction-transport'"
   '';
   buildPhase = ''
     runHook preBuild
