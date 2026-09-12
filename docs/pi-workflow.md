@@ -32,12 +32,13 @@ change is ready to inspect. Small tasks can use Pi normally.
 
 ## High-level goals
 
-`/goal` keeps a durable objective in the current session and continues working
-until that objective is true. Use it when you want the agent held to a stated
-end state rather than to whatever is convenient to finish this turn.
+`/goal` preserves a user-owned objective and requires independent review before
+accepting completion. State follows the active session branch and survives
+compaction. The isolated Qwen profile does not load this extension.
 
 ```text
-/goal Keep agents honest: every completion claim is independently audited.
+/goal Document the login error contract in docs/login.md.
+/goal edit
 /goal status
 /goal pause
 /goal resume
@@ -45,13 +46,78 @@ end state rather than to whatever is convenient to finish this turn.
 /goal clear
 ```
 
-The objective is injected as untrusted task data. Automatic continuation keeps
-the original scope intact. The implementing session cannot mark the goal
-complete on its own: a completion claim starts a fresh `pi --print` process with
-no extensions, using read/bash only, and the sceptic-style auditor must return
-`PASS` against current worktree evidence. A `FAIL` leaves the goal active and
-feeds the objections into the next continuation. `/goal verify` runs that audit
-on demand. The isolated Qwen profile does not load this extension.
+Use `/goal edit` to put explicit acceptance criteria on separate lines. Each
+nonempty line is an audit item; every clause and referenced requirement still
+needs evidence. Only user commands change the objective. Editing increments its
+revision, clears old audit evidence and pauses it. `/goal set <objective>` also
+allows literal objectives beginning with command words such as `pause`.
+
+### Completion and evidence
+
+A final completion marker requests an audit; it does not mark the goal complete.
+A fresh Pi process receives the contract, not the implementing conversation.
+It loads no extensions, skills, context files or prompt templates and exposes
+only `read`, `grep`, `find` and `ls`, never `bash`, `write` or `edit`.
+
+The auditor must return structured evidence for every contract item. The
+extension checks coverage, verdict consistency, audit identity, goal revision,
+successful read-only inspection and successful process exit. Invalid, partial,
+failed or stale responses cannot complete a goal. Reports remain available in
+`/goal status` and session entries.
+
+Each audit has a compact card in the transcript showing elapsed time, the auditor
+model and its latest file/tool inspection. Click the card to expand it in Pi's
+fullscreen mode. In either terminal mode, use Pi's tool-output expansion binding
+(default Ctrl+O) to expand or collapse details globally. The last twelve tool
+activities are retained without raw file contents, search patterns, or model
+reasoning. After exit, the card keeps its verdict, requirement counts and
+expandable evidence. Cancelled or interrupted audits are labelled explicitly,
+never presented as successful reviews. Use `/goal pause` to cancel a running
+audit; the editor stays available while it works.
+
+Cards are TUI-only session entries, not messages sent to the model. Heartbeats
+update the live display without appending transcript entries every second.
+
+- `PASS`: every item has direct supporting evidence; the goal becomes complete.
+- `FAIL`: at least one requirement is demonstrably unmet. An active goal can
+  continue with the objections, within its remaining allowance.
+- `UNVERIFIED`: evidence is missing or requires unavailable capabilities. Work
+  stops for inspection, rather than looping until the auditor agrees. Transport
+  errors, timeouts and malformed reports also leave completion unverified.
+
+**Read-only review cannot prove everything.** The auditor cannot rerun tests,
+check live services or prove a push reached GitHub. Saved logs and the worker's
+assertions are not independent runtime verification. Such requirements remain
+unverified; inspect them separately rather than weakening the contract to get a
+PASS. This is model judgment with reduced self-justification, not a truth oracle
+or an operating-system sandbox. Read tools still have the process's filesystem
+access, and concurrent external edits are not locked out by an audit.
+
+### Control and limits
+
+`/goal pause` cancels the auditor and prevents new goal continuations. It does
+not abort implementation work already running; use Escape to stop that too.
+Escape stops goal automation without another confirmation. Pending human
+questions and the agent's explicit waiting marker pause immediately. An ordinary
+answer does not automatically resume a paused goal: use `/goal resume`.
+
+Each start or explicit resume allows ten automatic continuations and three audit
+attempts. The initial start/resume turn is separate from the ten continuations.
+An audit has a three-minute timeout and a bounded output buffer. These are
+scheduling limits, not token or billing caps on a long model/tool turn. Editing
+and `/goal verify` do not reset allowances. Inspect progress before resuming.
+
+`/goal verify` requires an idle session and does not restart implementation when
+a paused goal fails review. New input or agent work cancels an in-flight audit.
+Edits, replacements, pause, clear, tree navigation and session shutdown invalidate
+old audit results. Restored unfinished goals require explicit resume; legacy
+completion claims require a new audit. A completed goal stays closed on resume.
+
+This keeps the isolated-auditor idea without installing another task supervisor
+alongside the existing team system. Self-grading goal trackers offer useful
+accounting but do not provide this completion gate. More comprehensive systems
+such as [GLLA](https://github.com/DraconDev/pi-goal-list-loop-audit) also own task
+queues, recovery and worker supervision, which remain separate here.
 
 Session naming (`/name`), navigation (`/tree`), resume (`/resume`) and compaction
 are already provided by Pi. The existing MCP adapter supplies your external
