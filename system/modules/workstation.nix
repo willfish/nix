@@ -64,6 +64,13 @@
   services.spice-vdagentd.enable = true;
   services.displayManager.cosmic-greeter.enable = true;
   services.desktopManager.cosmic.enable = true;
+  # COSMIC enables acpid. It aborts after netlink ENOBUFS during input
+  # hotplug storms (common on Framework lid/dock events) and NixOS ships
+  # the unit without Restart=, which leaves the system degraded.
+  systemd.services.acpid.serviceConfig = {
+    Restart = "on-failure";
+    RestartSec = "5s";
+  };
   services.xserver = {
     enable = true;
     xkb.layout = "us";
