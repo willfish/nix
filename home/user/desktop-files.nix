@@ -8,6 +8,7 @@
 let
   inherit (pkgs) stdenv;
   configDir = ../config;
+  voiceSupported = import ./voice-supported.nix { inherit pkgs hostName; };
   mkHerdrTheme = darkName: lightName: {
     name = darkName;
     auto_switch = true;
@@ -144,12 +145,7 @@ in
     lib.optionalAttrs isGraphicalLinux {
       "cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom" = {
         source =
-          if
-            builtins.elem hostName [
-              "andromeda"
-              "foundation"
-            ]
-          then
+          if voiceSupported then
             pkgs.writeText "cosmic-shortcuts-with-voice" (
               builtins.replaceStrings
                 [

@@ -1,16 +1,16 @@
-# Local agent voice on Andromeda and Foundation
+# Local agent voice on Andromeda
 
 One local recorder, tray and pair of speech engines serve Pi and Qwen Pi.
 Shared services and control commands retain the historical `codex-voice` name;
 they do not install or require the Codex CLI.
 Whisper small.en recognizes speech with Silero VAD; audio.cpp runs Qwen3-TTS
 0.6B with two pinned Samantha references. Andromeda uses CUDA for TTS and
-NVIDIA Vulkan for Whisper. Foundation uses Radeon Vulkan; its live microphone
-and playback checks remain pending. macOS needs separate platform adapters.
+NVIDIA Vulkan for Whisper. Foundation is excluded: it is AMD and does not have
+the CUDA stack. macOS needs separate platform adapters.
 
 ## Launch and select a session
 
-On Andromeda and Foundation, interactive `pi` and `qwen-pi` sessions inside
+On Andromeda, interactive `pi` and `qwen-pi` sessions inside
 Herdr attach automatically. The lightweight controller and tray start at
 login. Speech models load on use: Whisper for dictation and TTS for playback.
 Print, RPC and noninteractive sessions do not attach. After installing this
@@ -74,7 +74,7 @@ instead of sending a prepared prompt.
 
 ## Keyboard picker
 
-On Andromeda and Foundation, **Super+Shift+V** opens `voice-menu`, a short-lived
+On Andromeda, **Super+Shift+V** opens `voice-menu`, a short-lived
 Fuzzel popup. Type to fuzzy-filter, use Up/Down, press Enter to choose, or Escape
 to close without changing anything. Mouse input is disabled. Choose **session**
 or **voice**, or select one of the same contextual actions exposed by the tray.
@@ -140,8 +140,8 @@ The tray distinguishes connecting/reconnecting from speech-model loading or
 unavailability. Warm-up is backend work, not a model prompt or spoken reply.
 
 Andromeda prefers the Razer Kiyo Pro Ultra's stable device
-name, with a visible fallback to PipeWire's default if absent. Foundation uses
-the default microphone. Speakers follow the PipeWire default.
+name, with a visible fallback to PipeWire's default if absent. Speakers follow
+the PipeWire default.
 
 Recording works while the selected agent is busy. Valid text waits in memory
 until it can be safely delivered. A new recording appends to retained text by
@@ -264,8 +264,8 @@ reload mechanism before summaries appear. Old unlabelled replies are not read.
 Speech prefers sentence and clause boundaries with a shorter first phrase and
 a 260-character maximum.
 Andromeda synthesizes one chunk ahead during playback through one continuous
-PipeWire stream. Foundation prepares the entire reply before playback. These
-are complete-reply playback modes, not live reading of unfinished model text.
+PipeWire stream. These are complete-reply playback modes, not live reading of
+unfinished model text.
 Recording interrupts speech; a reply completing during recording waits for
 manual playback.
 
@@ -282,7 +282,7 @@ Warm-up runs in the background. Ports must be available. The default models
 occupy about 2.93 GB in `~/.local/share/codex-voice/models`. Run
 `codex-voice-models` on a fresh host, and `codex-voice-models --check-only` to
 verify sizes and hashes. Silero VAD is also fetched with a fixed hash by Nix,
-so enabling it requires no extra setup on Foundation. Inference uses local
+so enabling it requires no extra setup. Inference uses local
 files without cloud speech APIs or runtime Python package downloads. Prompt
 text still goes to the provider selected by the coding harness.
 
@@ -304,9 +304,9 @@ Inspect failures with:
 journalctl --user -u codex-voice -u codex-voice-stt -u codex-voice-tts -n 100
 ```
 
-On Foundation, pull the configuration, run `hmswitch`, then
-`codex-voice-models` and verify the microphone, Radeon Vulkan and playback.
-Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
+On Andromeda, pull the configuration, run `hmswitch`, then
+`codex-voice-models` and verify the microphone, NVIDIA Vulkan and playback.
+Foundation, Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
 
 ## Voice choice and measured performance
 
@@ -356,8 +356,8 @@ Inference remains sequential in both playback modes. On Andromeda, one worker
 prepares the next chunk while the current PCM is written to the playback pipe;
 pipe backpressure bounds the amount of queued audio. In buffered mode, all PCM
 samples are joined before playback. The `playback_mode` setting in
-`home/user/voice.nix` selects `streaming` for Andromeda and `buffered` for
-Foundation. Neither mode loads another model onto the GPU.
+`home/user/voice.nix` selects `streaming` for Andromeda. Neither mode loads
+another model onto the GPU.
 
 The initial RTX 5090 verification on 2026-09-08 used NVIDIA 595.99.02 and both
 speech services on NVIDIA Vulkan. For the same 237-character sample, warmed-up
@@ -378,8 +378,7 @@ on Blackwell and a patch to the pinned audio.cpp decoder. When an utterance
 needs a different decoder shape, the patch releases the previous graph and
 its CUDA graph cache before allocating the replacement. This prevents the
 temporary overlap that caused allocation failures while Qwen was resident.
-Matching decoder graphs remain cached. Foundation retains Vulkan without
-this CUDA-specific patch. See [local Qwen](local-llm.md) for the shared memory
+Matching decoder graphs remain cached. See [local Qwen](local-llm.md) for the shared memory
 budget and measured context configuration.
 
 The larger model is not a universal English voice-cloning improvement:
