@@ -1,5 +1,6 @@
 {
   pkgs,
+  hostTheme,
   ...
 }:
 {
@@ -7,7 +8,7 @@
     enable = true;
     autoEnable = true;
     polarity = "dark";
-    base16Scheme = "${pkgs.base16-schemes}/share/themes/rose-pine.yaml";
+    base16Scheme = hostTheme.dark;
 
     fonts = {
       monospace = {
@@ -26,11 +27,7 @@
 
     targets.gnome.enable = false;
 
-    targets.neovim = {
-      enable = true;
-      transparentBackground.main = true;
-      transparentBackground.signColumn = true;
-    };
+    # Paired, runtime-switchable targets are owned by appearance.nix.
   };
 
   programs.nix-index = {

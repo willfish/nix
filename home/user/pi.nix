@@ -4,6 +4,7 @@
   pkgs,
   hostName,
   readSopsSecret,
+  piThemeArgs,
   ...
 }:
 let
@@ -14,8 +15,8 @@ let
   promptCapture = import ./prompt-capture.nix { inherit pkgs; };
 in
 {
-  # Wrapper around the Home Manager pi package. Default behaviour is
-  # unchanged; with CAPTURE_PROMPTS set it runs behind a local mitmproxy that
+  # Follow terminal appearance with the host's theme pair. Explicit CLI theme
+  # flags take precedence. With CAPTURE_PROMPTS set, run behind mitmproxy that
   # logs every request/response to $XDG_STATE_HOME/prompt-capture/pi.jsonl.
   home.file.".local/bin/pi" = {
     executable = true;
@@ -24,10 +25,10 @@ in
       set -euo pipefail
 
       if [ -n "''${CAPTURE_PROMPTS:-}" ] && [ "''${CAPTURE_PROMPTS:-}" != "0" ]; then
-        exec ${promptCapture}/bin/prompt-capture pi -- ${pkgs.pi-coding-agent}/bin/pi "$@"
+        exec ${promptCapture}/bin/prompt-capture pi -- ${pkgs.pi-coding-agent}/bin/pi ${piThemeArgs} "$@"
       fi
 
-      exec ${pkgs.pi-coding-agent}/bin/pi "$@"
+      exec ${pkgs.pi-coding-agent}/bin/pi ${piThemeArgs} "$@"
     '';
   };
 

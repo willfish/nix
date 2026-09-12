@@ -46,6 +46,7 @@ def configure(home: Path) -> None:
         "PI_MCP_TEST_BIN": str(binary), "PI_TEAM_TEST_BIN": str(binary),
         "PI_CONTEXT_TEST_BIN": str(binary), "PI_HERDR_TEST_BIN": str(binary),
         "PI_SESSION_TEST_BIN": str(binary),
+        "PI_THEME_TEST_BIN": str(files / ".local/bin/pi"),
         "PI_SKILL_CATALOG_TEST_BIN": str(binary),
         "PI_MCP_TEST_EXTENSION": str(required[1]),
         "PI_SKILL_TEST_EXTENSION": str(required[2]),

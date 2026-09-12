@@ -41,12 +41,6 @@ in
           set -g @thumbs-key 'Space'
         '';
       }
-      {
-        plugin = rose-pine;
-        extraConfig = ''
-          set -g @rose_pine_variant 'moon'
-        '';
-      }
     ];
     extraConfig = ''
       set-option -g default-terminal 'tmux-256color'
@@ -65,6 +59,14 @@ in
       set-option -g renumber-windows on
 
       set -g status-position top
+      # Use the host terminal's adaptive ANSI palette, not a fixed RGB theme.
+      set -g status-style 'fg=default,bg=default'
+      set -g message-style 'fg=colour4,bg=default'
+      set -g pane-border-style 'fg=colour8'
+      set -g pane-active-border-style 'fg=colour4'
+      set -g window-status-style 'fg=colour8,bg=default'
+      set -g window-status-current-style 'fg=colour4,bg=default,bold'
+      set -g mode-style 'reverse'
 
       bind-key -T copy-mode-vi v send-keys -X begin-selection
       bind-key -T copy-mode-vi C-v send-keys -X rectangle-toggle

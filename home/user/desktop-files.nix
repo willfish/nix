@@ -3,31 +3,20 @@
   pkgs,
   hostName ? null,
   isGraphicalLinux,
+  hostTheme,
   ...
 }:
 let
   inherit (pkgs) stdenv;
   configDir = ../config;
   voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
-  mkHerdrTheme = darkName: lightName: {
-    name = darkName;
-    auto_switch = true;
-    dark_name = darkName;
-    light_name = lightName;
+  renderTheme = import ./themes/render.nix { inherit lib; };
+  herdrTheme = hostTheme.herdr // {
+    custom = {
+      light = renderTheme.herdr hostTheme.light;
+      dark = renderTheme.herdr hostTheme.dark;
+    };
   };
-  defaultHerdrTheme = mkHerdrTheme "rose-pine" "rose-pine-dawn";
-  herdrThemes = {
-    andromeda = defaultHerdrTheme;
-    foundation = mkHerdrTheme "tokyo-night" "tokyo-night-day";
-    starfish = mkHerdrTheme "solarized" "solarized-light";
-    terminus = mkHerdrTheme "catppuccin" "catppuccin-latte";
-    relay = mkHerdrTheme "gruvbox" "gruvbox-light";
-  };
-  herdrTheme =
-    if hostName != null && builtins.hasAttr hostName herdrThemes then
-      herdrThemes.${hostName}
-    else
-      defaultHerdrTheme;
   herdrConfig = builtins.fromTOML (builtins.readFile "${configDir}/herdr/config.toml");
   herdrConfigFile = (pkgs.formats.toml { }).generate "herdr-config.toml" (
     lib.recursiveUpdate herdrConfig { theme = herdrTheme; }
@@ -216,15 +205,6 @@ in
       };
       "cosmic/com.system76.CosmicPanel/v1/entries" = {
         source = "${configDir}/cosmic/panel-entries";
-        force = true;
-      };
-      "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark" = {
-        source = "${configDir}/cosmic/theme-mode";
-        force = true;
-      };
-      "cosmic/com.system76.CosmicTheme.Dark/v1" = {
-        source = "${configDir}/cosmic/theme-dark";
-        recursive = true;
         force = true;
       };
       "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";

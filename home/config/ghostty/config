@@ -4,21 +4,18 @@ font-family = "JetBrainsMono Nerd Font"
 font-size = 12
 scrollback-limit = 10_000
 window-theme = ghostty
-theme = light:Catppuccin Latte,dark:Catppuccin Mocha
+# The host's generated light/dark pair is appended by appearance.nix.
 clipboard-read = allow
 clipboard-paste-protection = false
 window-decoration = false
-window-padding-x = 0
-window-padding-y = 0
+window-padding-x = 10
+window-padding-y = 8
 confirm-close-surface = false
 quit-after-last-window-closed = true
 
-# Transparency
-background-opacity = 0.8
-background-blur-radius = 20
+# Keep text contrast stable, especially on the warm light theme.
+background-opacity = 1
 
 keybind = super+i=inspector:toggle
 keybind = ctrl+enter=unbind
 gtk-single-instance = false
-
-# custom-shader = ghostty-shaders/cursor_trail.glsl

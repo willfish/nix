@@ -3,6 +3,7 @@
   lib,
   pkgs,
   hostName,
+  piThemeArgs,
   ...
 }:
 let
@@ -185,6 +186,7 @@ let
       exec ${pkgs.pi-coding-agent}/bin/pi \
         --offline --provider ${hostName} --model ${modelAlias} \
         --no-context-files --no-skills --no-extensions --no-prompt-templates --no-themes \
+        ${piThemeArgs} \
         --extension ${../config/local-llm/pi-qwen.js} \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/mcp/index.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/todo.ts \
