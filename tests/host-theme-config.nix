@@ -25,7 +25,7 @@ let
     {
       inherit (herdr) theme;
       stylix = c.lib.stylix.colors.base00;
-      ghostty = toString files.".config/ghostty".source;
+      ghostty = if files ? ".config/ghostty" then toString files.".config/ghostty".source else null;
       pi = files.".local/bin/pi".text;
       nvim =
         if runtime then selected.nvim else builtins.fromJSON files.".config/nvim/host-palettes.json".text;

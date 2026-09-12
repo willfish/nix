@@ -93,7 +93,7 @@ in
       desktop = full;
       playwright = full;
       headlessBrowser = interactive;
-      localTerminal = interactive;
+      localTerminal = interactive && !headlessDarwin;
       development = full;
       documents = interactive;
       nas = cfg.role == "nas";

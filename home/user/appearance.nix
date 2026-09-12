@@ -53,33 +53,35 @@ in
 
   home.file = {
     # Keep ownership of the existing directory symlink for a clean HM migration.
-    ".config/ghostty".source = pkgs.linkFarm "host-ghostty" [
-      {
-        name = "config";
-        path = pkgs.writeText "ghostty-config" (
-          builtins.readFile ../config/ghostty/config
-          + ''
-            theme = light:host-light,dark:host-dark
-          ''
-        );
-      }
-      {
-        name = "themes/host-dark";
-        path =
-          if isGraphicalLinux then
-            runtime.file "ghostty-dark"
-          else
-            pkgs.writeText "ghostty-dark" (render.ghostty theme.dark);
-      }
-      {
-        name = "themes/host-light";
-        path =
-          if isGraphicalLinux then
-            runtime.file "ghostty-light"
-          else
-            pkgs.writeText "ghostty-light" (render.ghostty theme.light);
-      }
-    ];
+    ".config/ghostty" = lib.mkIf (!pkgs.stdenv.isDarwin || config.dotfiles.capabilities.localTerminal) {
+      source = pkgs.linkFarm "host-ghostty" [
+        {
+          name = "config";
+          path = pkgs.writeText "ghostty-config" (
+            builtins.readFile ../config/ghostty/config
+            + ''
+              theme = light:host-light,dark:host-dark
+            ''
+          );
+        }
+        {
+          name = "themes/host-dark";
+          path =
+            if isGraphicalLinux then
+              runtime.file "ghostty-dark"
+            else
+              pkgs.writeText "ghostty-dark" (render.ghostty theme.dark);
+        }
+        {
+          name = "themes/host-light";
+          path =
+            if isGraphicalLinux then
+              runtime.file "ghostty-light"
+            else
+              pkgs.writeText "ghostty-light" (render.ghostty theme.light);
+        }
+      ];
+    };
     ".pi/agent/themes/host-dark.json".source = piFile "dark";
     ".pi/agent/themes/host-light.json".source = piFile "light";
     ".config/nvim/host-palettes.json" =

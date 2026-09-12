@@ -51,6 +51,14 @@ class HostThemeConfigTest(unittest.TestCase):
                 )
                 self.assertIn('"$@"', profile["pi"])
 
+    def test_headless_mac_omits_ghostty_but_preserves_linux_palettes(self):
+        for name, profile in self.profiles.items():
+            with self.subTest(profile=name):
+                if name == "william-darwin":
+                    self.assertIsNone(profile["ghostty"])
+                else:
+                    self.assertIsInstance(profile["ghostty"], str)
+
     def test_cosmic_owns_only_graphical_linux(self):
         for name, profile in self.profiles.items():
             graphical = name not in ("william@terminus", "william-darwin")

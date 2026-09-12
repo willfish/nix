@@ -2,8 +2,9 @@
 
 Use nix-darwin for system services and Home Manager for the user's CLI and agent
 configuration. Required services must run without a graphical login. Apple’s
-login window and WindowServer are not disabled. Ghostty and its configuration
-remain available for occasional local maintenance, without automatic launch.
+login window and WindowServer are not disabled. Safari remains the built-in
+browser for occasional local use; no Safari package is installed by Nix.
+SSH uses the connecting machine's terminal, so Ghostty is not needed on the node.
 
 ## Ownership
 
@@ -11,8 +12,9 @@ remain available for occasional local maintenance, without automatic launch.
   file limits and Tailscale. `system/darwin/relay.nix` supplies node identity.
 - `flake.nix`: register nodes in `darwinHosts`. Each gets a Darwin system and a
   `william@<node>` home. `william-darwin` remains Relay's compatibility alias.
-- Home Manager: Pi, shell, email/accounting tools, documents and Ghostty. The
-  headless profile excludes Brave, AeroSpace and visible-browser MCP wrappers.
+- Home Manager: Pi, shell, email/accounting tools and documents. The headless
+  profile excludes Ghostty, Brave, AeroSpace and their desktop configuration,
+  including visible-browser MCP wrappers.
 - Private config: selected secrets and their shared SSH-derived age identity.
   Nothing changes the existing decryption authority or rotates credentials.
 
