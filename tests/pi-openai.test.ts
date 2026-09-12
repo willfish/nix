@@ -23,6 +23,8 @@ test('Astra registry ships only the ChatGPT subscription route', () => {
 });
 test('Pi settings defaults enable quiet startup without clobbering user keys', () => {
   const defaults = JSON.parse(readFileSync(new URL('../home/config/pi/settings-defaults.json', import.meta.url)));
+  assert.equal(defaults.defaultProvider, 'xai');
+  assert.equal(defaults.defaultModel, 'grok-4.6');
   assert.equal(defaults.quietStartup, true);
   assert.equal(defaults.editorPaddingX, 1);
   const keybindings = JSON.parse(readFileSync(new URL('../home/config/pi/keybindings-defaults.json', import.meta.url)));
@@ -31,6 +33,8 @@ test('Pi settings defaults enable quiet startup without clobbering user keys', (
   assert.match(pi, /merge-settings\.py/);
   assert.match(pi, /merge-auth\.py/);
   assert.match(pi, /settings-defaults\.json/);
+  assert.match(pi, /jq/);
+  assert.match(pi, /pi-models\.json/);
   assert.match(pi, /keybindings-defaults\.json/);
   assert.match(pi, /--drop openai/);
   assert.match(pi, /PI_OPENAI_CODEX_REFRESH/);

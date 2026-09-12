@@ -32,6 +32,8 @@ class PiSettingsDefaultsTest(unittest.TestCase):
 
     def test_declared_defaults_include_quiet_startup(self):
         defaults = json.loads(DEFAULTS.read_text())
+        self.assertEqual(defaults["defaultProvider"], "xai")
+        self.assertEqual(defaults["defaultModel"], "grok-4.6")
         self.assertEqual(defaults["quietStartup"], True)
         self.assertEqual(defaults["editorPaddingX"], 1)
         keybindings = json.loads(KEYBINDINGS.read_text())
@@ -39,6 +41,8 @@ class PiSettingsDefaultsTest(unittest.TestCase):
 
     def test_creates_settings_when_missing(self):
         merged = self.run_merge()
+        self.assertEqual(merged["defaultProvider"], "xai")
+        self.assertEqual(merged["defaultModel"], "grok-4.6")
         self.assertEqual(merged["quietStartup"], True)
         self.assertEqual(merged["editorPaddingX"], 1)
         mode = stat.S_IMODE(self.settings.stat().st_mode)

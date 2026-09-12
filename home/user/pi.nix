@@ -16,6 +16,14 @@ let
   sopsApiKey =
     name:
     "!${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.${name}.path}";
+  # Preserve the source document's layout; builtins.toJSON would minify it.
+  piModelsJson = pkgs.runCommand "pi-models.json" { src = ../config/pi/models.json; } ''
+    ${pkgs.jq}/bin/jq \
+      --arg go ${lib.escapeShellArg (sopsApiKey "OPENCODE_GO_KEY")} \
+      --arg openrouter ${lib.escapeShellArg (sopsApiKey "OPENROUTER_API_KEY")} \
+      '.providers["opencode-go"].apiKey = $go | .providers.openrouter.apiKey = $openrouter' \
+      "$src" > "$out"
+  '';
 in
 {
   # Follow terminal appearance with the host's theme pair. Explicit CLI theme
@@ -38,15 +46,10 @@ in
   # Keep credentials and user settings writable. Fill missing declared defaults
   # only; /settings remains the owner of keys that already exist.
   # qwen-pi has a separate local profile and does not use these models.
-  home.file.".pi/agent/models.json".text = builtins.toJSON (
-    lib.recursiveUpdate (builtins.fromJSON (builtins.readFile ../config/pi/models.json)) {
-      # Built-in catalogs stay intact; these keys only make the models available.
-      # OpenCode Zen is omitted on purpose: its Astra entry looks like ChatGPT
-      # subscription Astra and 401s with this account.
-      providers.opencode-go.apiKey = sopsApiKey "OPENCODE_GO_KEY";
-      providers.openrouter.apiKey = sopsApiKey "OPENROUTER_API_KEY";
-    }
-  );
+  # Built-in catalogs stay intact; these keys only make the models available.
+  # OpenCode Zen is omitted on purpose: its Astra entry looks like ChatGPT
+  # subscription Astra and 401s with this account.
+  home.file.".pi/agent/models.json".source = piModelsJson;
 
   home.file.".pi/agent/extensions/pi-voice.ts" = lib.mkIf voiceFeatures.stt {
     source = ../config/pi/extensions/pi-voice.ts;

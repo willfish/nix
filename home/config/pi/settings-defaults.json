@@ -1,4 +1,6 @@
 {
+  "defaultProvider": "xai",
+  "defaultModel": "grok-4.6",
   "quietStartup": true,
   "editorPaddingX": 1
 }
