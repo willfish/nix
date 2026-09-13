@@ -379,7 +379,7 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
   home.activation.configureLocalPi = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     piSettingsPath=${lib.escapeShellArg "${piAgentDir}/settings.json"}
     ${pkgs.coreutils}/bin/mkdir -p ${lib.escapeShellArg piAgentDir}
-    if [ -e "$piSettingsPath" ] && ! ${pkgs.coreutils}/bin/cmp -s ${piSettings} "$piSettingsPath"; then
+    if [ -e "$piSettingsPath" ] && ! ${pkgs.diffutils}/bin/cmp -s ${piSettings} "$piSettingsPath"; then
       ${pkgs.coreutils}/bin/cp -p "$piSettingsPath" "$piSettingsPath.before-home-manager-$(${pkgs.coreutils}/bin/date +%Y%m%d%H%M%S)"
     fi
     ${pkgs.coreutils}/bin/install -m 0600 ${piSettings} "$piSettingsPath"

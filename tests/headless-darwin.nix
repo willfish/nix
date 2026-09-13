@@ -16,6 +16,8 @@ let
 in
 assert check (!c.nix.enable) "must not take ownership of Determinate Nix";
 assert check c.services.openssh.enable "native SSH must stay enabled";
+assert check (lib.hasInfix "diffutils" home.home.activation.configureLocalPi.data)
+  "Pi settings comparison must use the package that provides cmp";
 assert check (c.networking.hostName == "relay") "wrong node identity";
 assert check (
   c.power.sleep.computer == "never" && c.power.restartAfterPowerFailure
@@ -35,6 +37,7 @@ assert check (builtins.all (
 assert check (
   daemons.sops-install-secrets.serviceConfig.KeepAlive.SuccessfulExit == false
   && daemons.sops-install-secrets.serviceConfig.UserName == "root"
+  && daemons.sops-install-secrets.serviceConfig.Umask == 18
 ) "failed secret provisioning must retry";
 assert check (
   daemons.hermes.serviceConfig.EnvironmentVariables.HERMES_CRON_TIMEOUT == "7200"
