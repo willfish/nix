@@ -20,7 +20,7 @@ Read task-relevant commands in `docs/nixos-host-operations.md` for builds, switc
 
 After `.nix` edits under `home/user/`, and before switching, build `nix build .#homeConfigurations.<attr>.activationPackage`. Select `william-darwin` on macOS, `william-linux` for generic Linux, or `william@<host>`; bare `william` is Linux, never use on macOS. Use `hmswitch` for activation. Direct nh syntax: `nh home switch . --configuration <attr>`, NOT `nh home switch '.#william-darwin'`. After Home Manager module changes activate and verify before committing, subject to task authorization.
 
-Run `nix flake check` for flake.nix or major module changes. System rebuild: `nh os switch` or `sudo nixos-rebuild switch --flake .`. Verify added packages exist in inputs/nixpkgs. Never commit secrets/private data; use agenix/equivalent or keep outside git.
+Run `nix flake check` for flake.nix or major module changes. System rebuild: `nh os switch` or `sudo nixos-rebuild switch --flake .`. Verify added packages exist in inputs/nixpkgs. Never commit secrets/private data
 
 Brave debugging is configured in programs.nix on port 9222; probe `/json/version`. Use browser MCP first, prefer evaluate_script to snapshots for extraction. For GitHub use MCP first, then gh rather than scraping.
 
