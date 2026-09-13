@@ -57,8 +57,8 @@ let
       pname = "herdr-navigator.nvim";
       owner = "willfish";
       repo = "herdr-navigator.nvim";
-      rev = "cee526fac56a2a3065fcdc285f845fc5e2838cce";
-      hash = "sha256-CgmNAu6XB2Nl66AwpEzbWl0rzDKNq+Sn40ClQ7EEpTo=";
+      rev = "e6b05e6f99b4f99df42cd7e78ae33a066351138d";
+      hash = "sha256-VPWckjDgb0nqxAAuyP4VVpDlRwuFNTdq/zAg+iNjxMw=";
     };
     vim-angry = buildPlugin {
       pname = "vim-angry";
@@ -95,13 +95,18 @@ let
       rev = "03e38404e6f728289da14417204b731d9c19ea72";
       hash = "sha256-mqPmmQPd17/twz+28U7A1tV0/PFn5x+yDwU8qMurEjw=";
     };
-    vim-textobj-xmlattr = buildPlugin {
-      pname = "vim-textobj-xmlattr";
-      owner = "whatyouhide";
-      repo = "vim-textobj-xmlattr";
-      rev = "694a297f1d75fd527e87da9769f3c6519a87ebb1";
-      hash = "sha256-+91FVP95oh00flINdltqx6qJuijYo56tHIh3J098G2Q=";
-    };
+    vim-textobj-xmlattr =
+      (buildPlugin {
+        pname = "vim-textobj-xmlattr";
+        owner = "whatyouhide";
+        repo = "vim-textobj-xmlattr";
+        rev = "f08f3d2761c94d1bef2f28f10bc14bcd537f2679";
+        hash = "sha256-0K7IysN+2H+WiFT5MxHumk17UQA1J085Jc52m/NGHfM=";
+      }).overrideAttrs
+        (_: {
+          # Upstream committed its Ruby test environment; it is not plugin runtime.
+          postPatch = "rm -rf vendor .bundle";
+        });
   };
 
   pluginMap = {

@@ -20,13 +20,13 @@ let
 in
 effectiveStdenv.mkDerivation {
   pname = "pi-voice-audio";
-  version = "0-unstable-2026-09-07";
+  version = "0.7.4-unstable-2026-09-13";
 
   src = fetchFromGitHub {
     owner = "0xShug0";
     repo = "audio.cpp";
-    rev = "a10738ad6622c3bb76bf459d6aae483cd2d8e87b";
-    hash = "sha256-+VrxrXEqnsMOYaFhf7TkwIs2Bmcrim2Mv4KR92F9EWg=";
+    rev = "ff1bcc4555ff99c4383329b0b21b52a18cc8b3cd";
+    hash = "sha256-7By5roiz87eFCRvN/aFkO35cS0odJsKzWzVXrLSYX7c=";
   };
 
   # Avoid overlapping decoder arenas when speech shares VRAM with local Qwen.

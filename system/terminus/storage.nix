@@ -1,4 +1,6 @@
 _: {
+  boot.zfs.forceImportRoot = false;
+
   services.zfs.autoScrub = {
     enable = true;
     pools = [ "tank" ];

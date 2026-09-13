@@ -3,13 +3,13 @@
     "id": "willfish.herdr-workspacex",
     "owner": "willfish",
     "repo": "herdr-workspacex",
-    "revision": "91aee80e8852ed3d7efb8633d15b6662324a535c"
+    "revision": "ed9ff1c45342412be4a6345ca6a7aa01e969a409"
   },
   {
     "id": "willfish.herdr-navigator",
     "owner": "willfish",
     "repo": "herdr-navigator",
-    "revision": "3f9f186c63a0de0fbb66c13dc1f29dfcbcc4e67c"
+    "revision": "6fe572538a86287a8076e0580bbe217c369f8c24"
   },
   {
     "id": "herdr-navigator",
@@ -21,12 +21,12 @@
     "id": "hotchpotch.herdr-tiny-fingers",
     "owner": "hotchpotch",
     "repo": "herdr-tiny-fingers",
-    "revision": "2c817583fa1d5385fe4a95e2fd4cfa30fa4e915e"
+    "revision": "2270f872d22297806a92f72ddb76b10f5983fce0"
   },
   {
     "id": "persiyanov.reviewr",
     "owner": "persiyanov",
     "repo": "herdr-reviewr",
-    "revision": "6c304925142b983381e166333d3e9ce403121ef6"
+    "revision": "4c090225af706bf3aaa24b39fea890a72994f40f"
   }
 ]

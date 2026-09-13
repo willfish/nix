@@ -8,23 +8,23 @@
 }:
 buildNpmPackage {
   pname = "pi-mcp-adapter";
-  version = "2.32.1-unstable-2026-09-08";
+  version = "2.33.0-unstable-2026-09-13";
 
-  # Includes upstream's Pi 0.85 compatibility update after the 2.32.1 tag.
+  # Includes post-release OAuth and live metadata fixes.
   src = fetchFromGitHub {
     owner = "nicobailon";
     repo = "pi-mcp-adapter";
-    rev = "8243eba3421e301c88c047444f34ab7d5d57163e";
-    hash = "sha256-Z+Nc7aQJFnZKYAe6yQN0CFwYuekNahAcFRg+dDBpRVU=";
+    rev = "464337bc9be7e0806756812d206d9ca0a7be1d5e";
+    hash = "sha256-Jlzo/5A5qWl/sNc8z9jXLYdw8u3n1u/CuFpOKmatfoI=";
   };
 
-  # Upstream omitted six existing dev dependencies' registry integrity hashes.
-  # Restore those hashes without changing any dependency versions or URLs.
+  # Restore missing registry integrity before applying compatible security fixes.
   patches = [
     ./pi-mcp-adapter-lock.patch
+    ./pi-mcp-adapter-security.patch
     ./pi-mcp-adapter-gateway-only.patch
   ];
-  npmDepsHash = "sha256-hYq5a4Y/IzcG70QhgdU+LJLDZfCe9kFAFj76VsmgFkw=";
+  npmDepsHash = "sha256-0RnuypCZ3B16JYq840MlhHRE0bPeVOrvsJv7UAVVly4=";
   # npm needs to update cache entries shared by nested Pi dev dependencies.
   makeCacheWritable = true;
   npmFlags = [ "--ignore-scripts" ];

@@ -13,10 +13,10 @@ diff --git a/namespace-tools.ts b/namespace-tools.ts
 diff --git a/types.ts b/types.ts
 --- a/types.ts
 +++ b/types.ts
-@@ -571,6 +571,8 @@ export interface McpSettings {
+@@ -591,6 +591,8 @@ export interface McpSettings {
    idleTimeout?: number; // minutes, default 10, 0 to disable
    requestTimeoutMs?: number; // milliseconds, overrides the SDK request timeout when > 0
-   directTools?: boolean;
+   directTools?: boolean | "search";
 +  /** Register per-server namespace proxy tools. Defaults to true; false leaves the mcp gateway unchanged. */
 +  namespaceTools?: boolean;
    /**
