@@ -21,7 +21,12 @@ let
     ${pkgs.jq}/bin/jq \
       --arg go ${lib.escapeShellArg (sopsApiKey "OPENCODE_GO_KEY")} \
       --arg openrouter ${lib.escapeShellArg (sopsApiKey "OPENROUTER_API_KEY")} \
-      '.providers["opencode-go"].apiKey = $go | .providers.openrouter.apiKey = $openrouter' \
+      --arg relay ${lib.escapeShellArg (sopsApiKey "LOCAL_LLM_RELAY_API_KEY")} \
+      --arg andromeda ${lib.escapeShellArg (sopsApiKey "LOCAL_LLM_ANDROMEDA_API_KEY")} \
+      '.providers["opencode-go"].apiKey = $go
+       | .providers.openrouter.apiKey = $openrouter
+       | .providers.relay.apiKey = $relay
+       | .providers.andromeda.apiKey = $andromeda' \
       "$src" > "$out"
   '';
 in
@@ -50,6 +55,7 @@ in
   # OpenCode Zen is omitted on purpose: its Astra entry looks like ChatGPT
   # subscription Astra and 401s with this account.
   home.file.".pi/agent/models.json".source = piModelsJson;
+  home.file.".pi/agent/extensions/pi-qwen.ts".source = ../config/local-llm/pi-qwen.ts;
 
   home.file.".pi/agent/extensions/pi-voice.ts" = lib.mkIf voiceFeatures.stt {
     source = ../config/pi/extensions/pi-voice.ts;

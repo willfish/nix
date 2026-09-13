@@ -1,5 +1,49 @@
 {
   "providers": {
+    "relay": {
+      "baseUrl": "http://relay.taile09696.ts.net:8081/v1",
+      "api": "openai-completions",
+      "models": [
+        {
+          "id": "huihui-qwen3.6-35b-a3b",
+          "name": "Relay Huihui Qwen 3.6 35B-A3B",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 65536,
+          "maxTokens": 16384,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+          "compat": {
+            "supportsStore": false,
+            "supportsDeveloperRole": false,
+            "supportsReasoningEffort": false,
+            "maxTokensField": "max_tokens",
+            "thinkingFormat": "qwen-chat-template"
+          }
+        }
+      ]
+    },
+    "andromeda": {
+      "baseUrl": "http://andromeda.taile09696.ts.net:8081/v1",
+      "api": "openai-completions",
+      "models": [
+        {
+          "id": "qwen3.8-27b",
+          "name": "Andromeda Qwen 3.8 27B",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 131072,
+          "maxTokens": 16384,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+          "compat": {
+            "supportsStore": false,
+            "supportsDeveloperRole": false,
+            "supportsReasoningEffort": false,
+            "maxTokensField": "max_tokens",
+            "thinkingFormat": "qwen-chat-template"
+          }
+        }
+      ]
+    },
     "openai-codex": {
       "models": [
         {

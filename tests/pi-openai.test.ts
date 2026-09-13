@@ -21,6 +21,25 @@ test('Astra registry ships only the ChatGPT subscription route', () => {
   assert.equal(model.thinkingLevelMap.xhigh, 'xhigh');
   assert.ok(model.contextWindow >= 272000);
 });
+test('Tailscale Qwen providers are selectable without embedding keys', () => {
+  const { providers } = JSON.parse(readFileSync(modelsPath));
+  const relay = providers.relay;
+  const andromeda = providers.andromeda;
+  assert.equal(relay.apiKey, undefined);
+  assert.equal(andromeda.apiKey, undefined);
+  assert.equal(relay.baseUrl, 'http://relay.taile09696.ts.net:8081/v1');
+  assert.equal(andromeda.baseUrl, 'http://andromeda.taile09696.ts.net:8081/v1');
+  assert.equal(relay.api, 'openai-completions');
+  assert.equal(andromeda.api, 'openai-completions');
+  assert.equal(relay.models[0].id, 'huihui-qwen3.6-35b-a3b');
+  assert.equal(andromeda.models[0].id, 'qwen3.8-27b');
+  assert.equal(relay.models[0].compat.thinkingFormat, 'qwen-chat-template');
+  assert.equal(andromeda.models[0].compat.thinkingFormat, 'qwen-chat-template');
+  const pi = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
+  assert.match(pi, /sopsApiKey "LOCAL_LLM_RELAY_API_KEY"/);
+  assert.match(pi, /sopsApiKey "LOCAL_LLM_ANDROMEDA_API_KEY"/);
+  assert.match(pi, /extensions\/pi-qwen\.ts/);
+});
 test('Pi settings defaults enable quiet startup without clobbering user keys', () => {
   const defaults = JSON.parse(readFileSync(new URL('../home/config/pi/settings-defaults.json', import.meta.url)));
   assert.equal(defaults.defaultProvider, 'xai');

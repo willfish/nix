@@ -79,6 +79,18 @@ class DeclarationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 m.apply(root, declaration)
 
+    def test_telegram_is_routed_to_qwen_without_rewriting_when_present(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            declaration = self.declaration()
+            m.apply(root, declaration)
+            text = (root / "config.yaml").read_text()
+            self.assertIn("telegram-qwen", text)
+            self.assertIn("multiplex_profiles: true", text)
+            before = (root / "config.yaml").read_bytes()
+            m.apply(root, declaration)
+            self.assertEqual((root / "config.yaml").read_bytes(), before)
+
     def test_qwen_overlay_and_key_are_idempotent(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

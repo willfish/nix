@@ -79,6 +79,28 @@ def reconcile_jobs(declared, existing):
     return result
 
 
+def _with_telegram_qwen_route(root, path, data, mode):
+    if path != root / "config.yaml":
+        return path, data, mode
+    import yaml
+    from hermes_telegram_route import merge_routes
+
+    loaded = yaml.safe_load(data)
+    if loaded is not None and not isinstance(loaded, dict):
+        return path, data, mode
+    config, _changed = merge_routes({} if loaded is None else loaded)
+    return (
+        path,
+        yaml.safe_dump(
+            config,
+            sort_keys=False,
+            default_flow_style=False,
+            allow_unicode=True,
+        ).encode(),
+        mode,
+    )
+
+
 def apply(root, declaration, qwen_overlay=None, key_file=None):
     root = Path(root).resolve()
     if declaration.get("version") != 1:
@@ -164,6 +186,10 @@ def apply(root, declaration, qwen_overlay=None, key_file=None):
             )
             for path, data, mode in files
         ]
+    files = [
+        _with_telegram_qwen_route(root, path, data, mode)
+        for path, data, mode in files
+    ]
     jobs_path = safe_path(root, "cron/jobs.json")
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(root, 0o700)

@@ -4,8 +4,8 @@ Home Manager manages a Metal-accelerated llama.cpp server on the M4 Pro Mac mini
 `relay` and a CUDA server on Andromeda's RTX 5090. Both use the lean `qwen-pi`
 launcher with separate pinned models: Huihui Qwen3.6-35B-A3B abliterated
 Q5_K_M on Relay and Unsloth Qwen3.8-27B UD-Q5_K_M on Andromeda. Configuration is in
-`home/user/local-llm.nix`. The browser UI and Hermes setup below apply to Relay;
-Andromeda exposes its authenticated API only on localhost.
+`home/user/local-llm.nix`. The browser UI and Hermes Telegram routing below apply
+to Relay. Authenticated API access is available on each host's Tailscale name.
 
 ## Chat
 
@@ -86,12 +86,13 @@ are not enabled.
 
 The server releases the model and KV cache after ten idle minutes. Sending a new
 message reloads it, so the first response after sleeping takes longer. Browser
-history is local to the browser profile. The service listens on all IPv4
-interfaces, including localhost, LAN and Tailscale. API and tool-proxy requests
-require the login key (health and model-list metadata remain public).
-HTTP is unencrypted, so use only trusted networks and do
-not forward this port to the internet. The tool service itself listens only on
-`127.0.0.1:8082`; the authenticated chat server proxies browser tool calls to it.
+history is local to the browser profile. Both servers listen on all IPv4 interfaces. API requests require the login key
+(health and model-list metadata remain public). HTTP is unencrypted; Tailscale
+provides the transport encryption. Do not enable Funnel or otherwise forward
+this port to the internet. Andromeda's NixOS firewall trusts `tailscale0` and
+does not open 8081 on the LAN, so that GPU is tailnet-only. Relay also remains
+reachable on the LAN. The tool service itself listens only on `127.0.0.1:8082`;
+the authenticated chat server proxies browser tool calls to it.
 
 ## Automatic context compaction
 
@@ -246,7 +247,17 @@ direnv exec . node --test tests/local-pi.test.ts
 
 ### OpenAI / Astra in Pi
 
-Use plain `pi` for cloud models, not the isolated `qwen-pi` profile.
+Use plain `pi` for cloud models and for remote Qwen. `qwen-pi` remains the
+isolated local launcher on the GPU host. Every Home Manager home can select
+`relay/huihui-qwen3.6-35b-a3b` or `andromeda/qwen3.8-27b` over Tailscale; Grok
+stays the default. The API keys live in sops, not in Git. Full Pi skills and
+subagents make a heavier prompt than `qwen-pi`.
+
+```sh
+pi --provider relay --model huihui-qwen3.6-35b-a3b
+pi --provider andromeda --model qwen3.8-27b
+```
+
 Home Manager deploys a credential-free ChatGPT subscription definition for
 `openai-codex/gpt-6-astra` to `~/.pi/agent/models.json` on all machines. The
 billed OpenAI API overlay is not shipped. Account access still needs a ChatGPT
@@ -375,9 +386,11 @@ activation never download model weights. Other Ollama models are unaffected.
 
 ## API and operations
 
-API base URL: `http://127.0.0.1:8081/v1`. Relay's model ID is
+Local API base URL: `http://127.0.0.1:8081/v1`. Relay's model ID is
 `huihui-qwen3.6-35b-a3b`; Andromeda's remains `qwen3.8-27b`.
-For LAN clients, use `http://192.168.178.55:8081/v1`.
+Tailscale URLs are `http://relay.taile09696.ts.net:8081/v1` and
+`http://andromeda.taile09696.ts.net:8081/v1`. Relay also remains on the LAN at
+`http://192.168.178.55:8081/v1`.
 Use the key copied by `local-chat-key` as the client's Bearer API key.
 The browser runs the tool-calling loop. Plain API clients must implement their
 own tool loop; enabling this service does not make bare completions use tools.
@@ -412,6 +425,11 @@ additionally reads the key into an environment variable. No key is embedded in
 Git or the Nix store. Restart sessions opened before this authentication change.
 A fresh installation needs another `hmswitch` after the server first creates
 its key if using direct `hermes -p qwen` rather than the `qwen` wrapper.
+
+The Hermes gateway on Relay multiplexes Telegram onto this `qwen` profile, so
+ScoutFishBot uses local Qwen over localhost. Cron and the default `hermes` CLI
+stay on Grok. Restart the gateway after activation; do not send an unsolicited
+House message to test it.
 
 The managed defaults are:
 

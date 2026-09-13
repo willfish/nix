@@ -87,6 +87,8 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
     'qwen-pi launcher missing the explicit prompt-history extension',
   );
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
+  assert.match(source, /--host 0\.0\.0\.0 --port 8081/);
+  assert.ok(!source.includes('isAndromeda then "127.0.0.1"'), 'Andromeda llama.cpp still bound to localhost');
 });
 
 test('voice installation and explicit Qwen loading share the supported-host predicate', () => {

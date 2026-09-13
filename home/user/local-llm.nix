@@ -329,10 +329,13 @@ let
         openssl rand -hex 32 > ${lib.escapeShellArg apiKeyPath}
       fi
       chmod 600 ${lib.escapeShellArg apiKeyPath}
+      # Bind every address. NixOS trusts tailscale0 and does not open 8081 on the
+      # LAN, so Andromeda is tailnet-only. Relay already served LAN plus Tailscale.
+      # Authenticate with the API key. Do not enable Tailscale Funnel.
       exec ${llamaCpp}/bin/llama-server \
         --model ${lib.escapeShellArg modelPath} \
         --alias ${modelAlias} \
-        --host ${if isAndromeda then "127.0.0.1" else "0.0.0.0"} --port 8081 \
+        --host 0.0.0.0 --port 8081 \
         --api-key-file ${lib.escapeShellArg apiKeyPath} \
         ${lib.optionalString isAutomationDarwin "--ui-mcp-proxy --ui-config-file ${uiConfig} --path ${chatUi}"} \
         --ctx-size ${toString contextSize} --parallel 1 \
