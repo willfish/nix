@@ -71,7 +71,7 @@ test('exact name outranks description matches, without mutating registry', () =>
 test('real skill descriptions support paraphrases, ranked partial matches and manual-only metadata', async () => {
   const sources = [
     ['process-skills', 'systematic-debugging'], ['skills', 'rspec-testing'],
-    ['skills', 'outlook-login'], ['skills', 'jira-workflow'], ['skills', 'skill-router'],
+    ['skills', 'pull-request-workflow'], ['skills', 'diagramming'], ['skills', 'skill-router'],
   ];
   const registry = await Promise.all(sources.map(async ([group, name]) => {
     const file = new URL(`../home/config/llm/${group}/${name}/SKILL.md`, import.meta.url);
@@ -89,9 +89,8 @@ test('real skill descriptions support paraphrases, ranked partial matches and ma
     ['please help me fix the failing tests', 'systematic-debugging'],
     ['debug unexpected regressions', 'systematic-debugging'],
     ['writing Ruby specs', 'rspec-testing'],
-    ['Microsoft mailbox sign in', 'outlook-login'],
-    ['microsoft-login', 'outlook-login'],
-    ['update Jira stories', 'jira-workflow'],
+    ['GitHub pull request workflow', 'pull-request-workflow'],
+    ['Mermaid architecture diagrams', 'diagramming'],
   ]) {
     const page = searchCatalog(registry, registered, { query });
     assert.equal(page.results[0]?.name, expected, query);
