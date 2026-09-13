@@ -88,7 +88,13 @@ def _with_telegram_qwen_route(root, path, data, mode):
     loaded = yaml.safe_load(data)
     if loaded is not None and not isinstance(loaded, dict):
         return path, data, mode
-    config, _changed = merge_routes({} if loaded is None else loaded)
+    house = None
+    house_path = root / "house-telegram.json"
+    if house_path.is_file():
+        house = json.loads(house_path.read_text())
+    config, _changed = merge_routes(
+        {} if loaded is None else loaded, house=house
+    )
     return (
         path,
         yaml.safe_dump(

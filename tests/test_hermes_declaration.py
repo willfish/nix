@@ -82,10 +82,14 @@ class DeclarationTests(unittest.TestCase):
     def test_telegram_is_routed_to_qwen_without_rewriting_when_present(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
+            (root / "house-telegram.json").write_text(
+                '{"group_id": "-123", "topics": {"Qwen": 9}}'
+            )
             declaration = self.declaration()
             m.apply(root, declaration)
             text = (root / "config.yaml").read_text()
             self.assertIn("telegram-qwen", text)
+            self.assertIn("thread_id: '9'", text)
             self.assertIn("multiplex_profiles: true", text)
             before = (root / "config.yaml").read_bytes()
             m.apply(root, declaration)

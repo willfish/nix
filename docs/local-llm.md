@@ -427,10 +427,10 @@ Git or the Nix store. Restart sessions opened before this authentication change.
 A fresh installation needs another `hmswitch` after the server first creates
 its key if using direct `hermes -p qwen` rather than the `qwen` wrapper.
 
-The Hermes gateway on Relay multiplexes Telegram onto this `qwen` profile, so
-ScoutFishBot uses local Qwen over localhost. Cron and the default `hermes` CLI
-stay on Grok. Restart the gateway after activation; do not send an unsolicited
-House message to test it.
+The Hermes gateway on Relay multiplexes only the Kif House **Qwen** topic onto
+this profile, so that thread uses local Qwen over localhost. Other Telegram
+chats, cron and the default `hermes` CLI stay on Grok. Restart the gateway
+after activation; do not send an unsolicited House message to test it.
 
 The managed defaults are:
 
