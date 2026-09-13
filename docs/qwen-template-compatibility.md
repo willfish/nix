@@ -16,8 +16,8 @@ Messages schema uses the top-level `system` field instead; do not assume
 mid-conversation system roles are portable across Anthropic-compatible servers.
 The proxy leaves requests unchanged so wire-size measurements remain meaningful.
 
-The shared local server loads the override via `--chat-template-file`, on
-Andromeda and Relay. Only Andromeda was runtime-tested. When upgrading the
+Andromeda loads the override via `--chat-template-file` and was runtime-tested.
+Relay's Huihui Qwen3.6 model uses its own embedded template instead. When upgrading the
 model, compare against its embedded template before retaining this override.
 To revert, remove that argument from `home/user/local-llm.nix`, run `hmswitch`,
 and restart the local server. The GGUF itself is not modified.

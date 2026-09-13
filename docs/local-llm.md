@@ -2,8 +2,8 @@
 
 Home Manager manages a Metal-accelerated llama.cpp server on the M4 Pro Mac mini
 `relay` and a CUDA server on Andromeda's RTX 5090. Both use the lean `qwen-pi`
-launcher and pinned Unsloth Qwen3.8-27B weights: Q6 on Relay, Q5_K_M on
-Andromeda. Configuration is in
+launcher with separate pinned models: Huihui Qwen3.6-35B-A3B abliterated
+Q5_K_M on Relay and Unsloth Qwen3.8-27B UD-Q5_K_M on Andromeda. Configuration is in
 `home/user/local-llm.nix`. The browser UI and Hermes setup below apply to Relay;
 Andromeda exposes its authenticated API only on localhost.
 
@@ -40,7 +40,11 @@ is no shell execution tool. Web searches leave the machine for search providers;
 file contents otherwise remain in the local model and browser unless included
 in a search query. Treat instructions found in files and web pages as untrusted.
 
-The default model is Unsloth Qwen3.8-27B UD-Q6_K, a 22.0 GB dense GGUF.
+Relay's default is Huihui Qwen3.6-35B-A3B abliterated Q5_K_M, a 24.7 GB
+mixture-of-experts GGUF. Its isolated 64K-slot trial generated about 46 tokens/sec
+with thinking on or off and used about 24 GiB RSS without swap. These are short
+synthetic measurements, not full-context or quality evaluations. Qwen3.8 Q6
+and the Huihui Q4 trial weights are retained for rollback.
 Gemma 4 26B-A4B Q6 weights are retained locally, but are not loaded. The older
 Qwen3.6-35B-A3B Q4_K_S weights, their Ollama hard link, and their exclusive
 Ollama projector/config/manifest were removed with permission to make room.
@@ -66,7 +70,9 @@ model-quality evaluation. A filesystem tool round trip succeeded and reused
 The server is configured with one 65,536-token conversation slot, including
 input and
 output, with Flash Attention and q8_0 K/V caches. Parallel conversations queue.
-Qwen uses its embedded chat/tool template with `preserve_thinking` enabled.
+Relay uses the model's embedded chat/tool template. Andromeda retains its
+Qwen3.8 compatibility template. Thinking can be enabled per request on Relay;
+Qwen3.8-specific effort levels are not established for this model.
 Cached browser summaries are invalidated automatically when the model changes.
 
 Thinking is off by default for direct replies. API callers can enable it for
@@ -193,7 +199,7 @@ an 8,192-token recent-history budget:
 
 | Host | Weights | Total context | Compaction above |
 | --- | --- | --- | --- |
-| Relay | UD-Q6_K | 65,536 | 49,152 |
+| Relay | Huihui Qwen3.6 Q5_K_M | 65,536 | 49,152 |
 | Andromeda | UD-Q5_K_M | 131,072 | 114,688 |
 
 The context includes instructions, tool definitions, history and output.
@@ -288,9 +294,12 @@ On Relay:
 
 ```sh
 direnv exec . nix build .#homeConfigurations.william-darwin.activationPackage --no-link
+system=$(direnv exec . nix build .#darwinConfigurations.relay.system --no-link --print-out-paths)
+# With maintenance approval, deploy the matching system before Home Manager:
+sudo "$system/sw/bin/darwin-deploy" "$system"
 direnv exec . hmswitch
 local-llm-fetch
-launchctl kickstart "gui/$(id -u)/org.nix-community.home.local-llm"
+sudo launchctl kickstart "system/org.nixos.local-llm"
 local-chat
 local-chat-key
 ```
@@ -345,13 +354,16 @@ request. Inspect it with `systemctl --user status local-llm` or
 `http://127.0.0.1:8081/v1`; the key is in `~/.config/local-llm/api-key`.
 The Pi wrapper reads it automatically without exposing it in process arguments.
 
-`local-llm-fetch` selects the host's weights from the pinned Unsloth Hugging Face
-revision `4ca720788d1e01f1bff70c033e0d0028fd02e502` and verifies SHA256:
+`local-llm-fetch` selects pinned host-specific weights and verifies downloaded
+files with SHA256. Andromeda uses Unsloth revision
+`4ca720788d1e01f1bff70c033e0d0028fd02e502`. Relay uses
+`mradermacher/Huihui-Qwen3.6-35B-A3B-abliterated-GGUF` revision
+`7feb7bae6beaaf314ef087d552a09d8da05e0980`:
 
 - Andromeda Q5_K_M, 19,771,509,664 bytes:
   `2de73110cb254cbf09b54b717578dadff12ef1194e7271527e68202f39ba4bfd`
-- Relay Q6_K, 21,983,677,344 bytes:
-  `c9c206812fbe4ac7b76a729e25928b63f2ae89d37f69da7a71c20aec763cd436`
+- Relay Q5_K_M, 24,729,131,904 bytes:
+  `0b9660729ffe997d3ac5510689f27c724008c6f3acbb9d1f05dfebde7096f807`
 
 Verification finishes before the model becomes available. Interrupted downloads
 resume on the next invocation. If an identical Ollama blob already exists,
@@ -363,7 +375,8 @@ activation never download model weights. Other Ollama models are unaffected.
 
 ## API and operations
 
-API base URL: `http://127.0.0.1:8081/v1`; model: `qwen3.8-27b`.
+API base URL: `http://127.0.0.1:8081/v1`. Relay's model ID is
+`huihui-qwen3.6-35b-a3b`; Andromeda's remains `qwen3.8-27b`.
 For LAN clients, use `http://192.168.178.55:8081/v1`.
 Use the key copied by `local-chat-key` as the client's Bearer API key.
 The browser runs the tool-calling loop. Plain API clients must implement their
@@ -400,8 +413,8 @@ its key if using direct `hermes -p qwen` rather than the `qwen` wrapper.
 
 The managed defaults are:
 
-- Qwen3.8-27B Q6 with thinking enabled and medium effort in the chat-template
-  parameters. The browser still defaults to thinking off. Generic top-level
+- Huihui Qwen3.6-35B-A3B Q5_K_M with thinking enabled. The adapter still
+  sends medium effort, but this template's effort-level support is unverified. The browser still defaults to thinking off. Generic top-level
   reasoning flags alone do not control this llama.cpp version's template.
 - YOLO enabled: terminal/file tool calls do not ask for approval. This is host
   access as William, not the browser MCP's restricted workspace or root access.
