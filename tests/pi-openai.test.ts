@@ -39,6 +39,9 @@ test('Tailscale Qwen providers are selectable without embedding keys', () => {
   assert.match(pi, /sopsApiKey "LOCAL_LLM_RELAY_API_KEY"/);
   assert.match(pi, /sopsApiKey "LOCAL_LLM_ANDROMEDA_API_KEY"/);
   assert.match(pi, /extensions\/pi-qwen\.ts/);
+  assert.match(pi, /qwenBaseUrl/);
+  assert.match(pi, /hostName == host then/);
+  assert.match(pi, /127\.0\.0\.1:8081\/v1/);
 });
 test('Pi settings defaults enable quiet startup without clobbering user keys', () => {
   const defaults = JSON.parse(readFileSync(new URL('../home/config/pi/settings-defaults.json', import.meta.url)));

@@ -249,8 +249,9 @@ direnv exec . node --test tests/local-pi.test.ts
 
 Use plain `pi` for cloud models and for remote Qwen. `qwen-pi` remains the
 isolated local launcher on the GPU host. Every Home Manager home can select
-`relay/huihui-qwen3.6-35b-a3b` or `andromeda/qwen3.8-27b` over Tailscale; Grok
-stays the default. The API keys live in sops, not in Git. Full Pi skills and
+`relay/huihui-qwen3.6-35b-a3b` or `andromeda/qwen3.8-27b`. Other machines use
+Tailscale; the GPU host talks to its own model on localhost. Grok stays the
+default. The API keys live in sops, not in Git. Full Pi skills and
 subagents make a heavier prompt than `qwen-pi`.
 
 ```sh
