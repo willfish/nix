@@ -41,15 +41,15 @@ test('invalid direct-call bounds normalize safely', () => {
 });
 
 test('exact names, commands, aliases and full descriptions remain searchable', () => {
-  const registry = [{ name: 'outlook-login', description: 'Microsoft work authentication. alias microsoft-login', filePath: '/trusted/microsoft-login/SKILL.md', disableModelInvocation: true }];
-  const registered = [{ name: 'skill:outlook-login', source: 'skill', sourceInfo: { path: registry[0].filePath } },
-    { name: 'skill:microsoft-login', source: 'skill', sourceInfo: { path: registry[0].filePath } }];
-  for (const query of ['outlook-login', '/skill:outlook-login', 'microsoft-login', 'Microsoft authentication']) {
+  const registry = [{ name: 'mailbox-login', description: 'Mailbox authentication. alias mail-login', filePath: '/trusted/mail-login/SKILL.md', disableModelInvocation: true }];
+  const registered = [{ name: 'skill:mailbox-login', source: 'skill', sourceInfo: { path: registry[0].filePath } },
+    { name: 'skill:mail-login', source: 'skill', sourceInfo: { path: registry[0].filePath } }];
+  for (const query of ['mailbox-login', '/skill:mailbox-login', 'mail-login', 'Mailbox authentication']) {
     const [found] = searchCatalog(registry, registered, { query }).results;
-    assert.equal(found.name, 'outlook-login');
+    assert.equal(found.name, 'mailbox-login');
     assert.equal(found.manualOnly, true);
     assert.equal(found.path, registry[0].filePath);
-    assert.equal(found.command, '/skill:outlook-login');
+    assert.equal(found.command, '/skill:mailbox-login');
   }
   assert.equal(searchCatalog(registry, [], {}).results[0].command, null);
   assert.equal(searchCatalog(registry, [{ ...registered[0], source: 'extension' }]).results[0].command, null);
@@ -160,9 +160,9 @@ test('installed Pi exports formatter, loads extension and supplies trusted regis
   t.after(() => rm(dir, { recursive: true, force: true }));
   const agent = join(dir, 'agent');
   await mkdir(agent);
-  const visible = join(dir, 'microsoft-login.md');
+  const visible = join(dir, 'mail-login.md');
   const manual = join(dir, 'manual.md');
-  await writeFile(visible, '---\nname: outlook-login\ndescription: Microsoft work authentication, alias microsoft-login\n---\nSKILL BODY MUST NOT BE IN CATALOGUE');
+  await writeFile(visible, '---\nname: mailbox-login\ndescription: Mailbox authentication, alias mail-login\n---\nSKILL BODY MUST NOT BE IN CATALOGUE');
   await writeFile(manual, '---\nname: manual\ndescription: Explicit user request only\ndisable-model-invocation: true\n---\nMANUAL BODY');
   const output = join(dir, 'result.json');
   const fixture = join(dir, 'fixture.ts');
@@ -182,7 +182,7 @@ test('installed Pi exports formatter, loads extension and supplies trusted regis
         const original = ctx.getSystemPrompt() + '\\nteam preload and prior extension';
         const before = pi.getCommands();
         const patch = hooks.get('before_agent_start')({ systemPrompt: original, systemPromptOptions: options });
-        const result = await tool.execute('test', { query: 'microsoft-login' });
+        const result = await tool.execute('test', { query: 'mail-login' });
         const manual = await tool.execute('test', { query: 'manual' });
         const all = await tool.execute('test', {});
         const reading = replaceReadingPolicy(original, options);
@@ -204,7 +204,7 @@ test('installed Pi exports formatter, loads extension and supplies trusted regis
   assert.equal(run.status, 0, `${run.error ?? ''}\n${run.stderr}\n${run.stdout}`);
   const evidence = JSON.parse(await readFile(output, 'utf8'));
   assert.equal(evidence.patched, evidence.original.replace(evidence.advertisement, BOOTSTRAP));
-  assert.equal(JSON.parse(evidence.result.content[0].text).results[0].command, '/skill:outlook-login');
+  assert.equal(JSON.parse(evidence.result.content[0].text).results[0].command, '/skill:mailbox-login');
   assert.equal(JSON.parse(evidence.manual.content[0].text).results[0].manualOnly, true);
   assert.equal(JSON.parse(evidence.all.content[0].text).total, 2);
   assert.ok(!evidence.all.content[0].text.includes('SKILL BODY'));
