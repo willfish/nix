@@ -26,6 +26,10 @@
     mediaLocation = "/srv/media/immich";
   };
 
+  # Match Immich's upstream launcher: its optional Gunicorn admin socket is unused.
+  # The service account deliberately has no writable home for the default socket.
+  systemd.services.immich-machine-learning.environment.GUNICORN_CMD_ARGS = "--no-control-socket";
+
   # Self-hosted audiobook/podcast server (ShelfPlayer + LAN/Tailscale).
   # NixOS 26.05 provides 2.36.0, whose JWT refresh grace window keeps iOS
   # sessions alive through app suspend and network handoff.
