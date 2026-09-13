@@ -46,8 +46,20 @@ new per-host decryption identity.
 
 **Deploy system and home as a pair whenever the home generation changes.** The
 home guard rejects a mismatched installed system. Otherwise a standalone home
-update could leave boot jobs expecting an older generation. `hmswitch` does not
-install or restart system services; use it after the matching system deployment.
+update could leave boot jobs expecting an older generation. After the initial
+handover, type `hmswitch`: it builds the host's Darwin system as your user,
+deploys it through `darwin-deploy` if the active system, profile or pinned home
+is different, then activates that system's exact home generation. Sudo may prompt
+in your terminal. A failed system deployment stops the wrapper before home
+activation; preflight and the matching-generation guard remain mandatory.
+
+`hmswitch --dry` builds the pair and previews home changes without activation or
+sudo. `--ask` requests confirmation before a needed system deployment and again
+before home activation. The paired path also accepts `--verbose`, `--quiet`,
+`--no-nom` and `--diff` (and their short forms). Other arguments are rejected
+before building; update flake inputs separately so both stages share one target.
+Legacy Darwin and Linux argument forwarding is unchanged.
+
 A system-only change whose home generation is unchanged does not require a new
 home activation. Readiness gates startup, not live credential rotation: restart
 credential-caching consumers explicitly when necessary.

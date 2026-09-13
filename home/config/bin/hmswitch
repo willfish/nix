@@ -6,6 +6,9 @@ usage() {
 usage: hmswitch [NH_HOME_SWITCH_ARGS...]
 
 Switch this machine to the matching Home Manager configuration.
+System-managed Darwin hosts deploy the matching system first (sudo may prompt).
+On those hosts, supported options are --dry, --ask, --verbose, --quiet,
+--no-nom and --diff, including their short forms where available.
 
 Environment:
   HMSWITCH_FLAKE  Dotfiles flake path, default: ~/.dotfiles
@@ -14,6 +17,56 @@ USAGE
 
 flake="${HMSWITCH_FLAKE:-$HOME/.dotfiles}"
 darwin_system_services=false
+
+switch_darwin_pair() {
+  local arg dry ask answer system home
+  dry=false
+  ask=false
+  for arg in "$@"; do
+    case "$arg" in
+      -n|--dry) dry=true ;;
+      -a|--ask) ask=true ;;
+      -v|--verbose|-q|--quiet|--no-nom|-d|--diff) ;;
+      *)
+        echo "hmswitch: unsupported paired Darwin option: $arg" >&2
+        echo "Update flake inputs separately; system and home must use one built target." >&2
+        return 1
+        ;;
+    esac
+  done
+
+  # Keep both generations rooted while waiting for sudo and home activation.
+  darwin_build_dir=$(mktemp -d "${TMPDIR:-/tmp}/hmswitch.XXXXXXXX")
+  trap 'rm -rf -- "$darwin_build_dir"' EXIT
+  system=$(nix build --out-link "$darwin_build_dir/system" --print-out-paths \
+    --no-write-lock-file "$flake#darwinConfigurations.\"$host\".system")
+  home=$(< "$system/etc/dotfiles/home-generation")
+  if [ ! -x "$home/activate" ]; then
+    echo "hmswitch: built Darwin system lacks a usable pinned home generation" >&2
+    return 1
+  fi
+
+  if [ "$(cd /run/current-system 2>/dev/null && pwd -P)" != "$system" ] ||
+    [ "$(cd /nix/var/nix/profiles/system 2>/dev/null && pwd -P)" != "$system" ] ||
+    [ "$(cat /etc/dotfiles/home-generation 2>/dev/null)" != "$home" ]; then
+    echo "hmswitch: matching Darwin system: $system"
+    if [ "$dry" = true ]; then
+      echo "hmswitch: dry run; Darwin system will not be activated"
+    else
+      if [ "$ask" = true ]; then
+        read -r -p "Deploy the Darwin system before switching home? [y/N] " answer
+        case "$answer" in
+          y|Y|yes|YES) ;;
+          *) echo "hmswitch: cancelled" >&2; return 1 ;;
+        esac
+      fi
+      sudo "$system/sw/bin/darwin-deploy" "$system"
+    fi
+  fi
+
+  # A store installable prevents a second flake evaluation selecting another home.
+  nh home switch "$home" "$@"
+}
 
 sync_darwin_nix_config() {
   local source target
@@ -131,7 +184,10 @@ case "$(uname -s)" in
     fi
     darwin_system_services=$(nix eval --json "$flake#homeConfigurations.\"$configuration\".config.dotfiles.darwinSystemServices")
     case "$darwin_system_services" in
-      true) ;; # System changes require a separate, approved darwin-rebuild.
+      true)
+        switch_darwin_pair "$@"
+        exit 0
+        ;;
       false) sync_darwin_nix_config ;;
       *) echo "hmswitch: invalid Darwin service ownership" >&2; exit 1 ;;
     esac
