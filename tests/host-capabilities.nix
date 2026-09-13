@@ -83,6 +83,18 @@ let
     assert require (
       (c.home.activation ? createKnowledgeBaseDirs) == caps.knowledgeBase
     ) "knowledge activation boundary";
+    assert require (
+      (c.systemd.user.services ? knowledge-base)
+      == (homes.${name}.pkgs.stdenv.isLinux && caps.knowledgeBase)
+    ) "knowledge service boundary";
+    assert require (
+      !(c.systemd.user.services ? knowledge-base)
+      || (
+        (c.systemd.user.services.knowledge-base.Unit."X-RestartIfChanged" or true) == false
+        && c.systemd.user.services.knowledge-base.Service.Type == "oneshot"
+        && c.systemd.user.timers.knowledge-base.Timer.Unit == "knowledge-base.service"
+      )
+    ) "knowledge batch must remain timer-driven without restarting on switches";
     assert require (builtins.all (
       key: (builtins.hasAttr key c.home.activation) == caps.hermes
     ) hermesActivations) "Hermes activation boundary";

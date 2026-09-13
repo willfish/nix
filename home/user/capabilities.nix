@@ -131,6 +131,14 @@ in
     ++ lib.optional cfg.capabilities.memory "memory"
     ++ lib.optional (cfg.capabilities.nas || full) "nas"
     ++ lib.optional full "legacy";
+    # Leave in-flight KB batches alone; the timer picks up the new command next run.
+    # Restarting this oneshot makes sd-switch wait for sync and embedding to finish.
+    systemd.user.services.knowledge-base =
+      lib.mkIf (pkgs.stdenv.isLinux && cfg.capabilities.knowledgeBase)
+        {
+          Unit."X-RestartIfChanged" = false;
+        };
+
     privateConfig.hermesEnvironment = cfg.capabilities.hermes;
     privateConfig.darwinSystemService = cfg.darwinSystemServices;
 
