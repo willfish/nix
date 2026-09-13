@@ -137,16 +137,20 @@ def apply(root, declaration, qwen_overlay=None, key_file=None):
             "assets",
         }:
             raise ValueError("Declaration cannot own runtime state")
-    files = [
-        (
-            safe_path(root, item["path"]),
+    files = []
+    seen = {}
+    for item in items:
+        path = safe_path(root, item["path"])
+        payload = (
+            path,
             base64.b64decode(item["content"], validate=True),
             0o700 if item.get("executable", False) else 0o600,
         )
-        for item in items
-    ]
-    if len({p for p, _, _ in files}) != len(files):
-        raise ValueError("Duplicate declaration path")
+        if path in seen:
+            files[seen[path]] = payload
+            continue
+        seen[path] = len(files)
+        files.append(payload)
     reconcile_jobs(declaration["jobs"], [])
     new_key = None
     if qwen_overlay is not None:

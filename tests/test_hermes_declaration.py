@@ -76,8 +76,12 @@ class DeclarationTests(unittest.TestCase):
                     m.apply(root, declaration)
             declaration = self.declaration()
             declaration["files"] *= 2
-            with self.assertRaises(ValueError):
-                m.apply(root, declaration)
+            declaration["files"][1]["content"] = base64.b64encode(
+                b"model: later\n"
+            ).decode()
+            m.apply(root, declaration)
+            text = (root / "config.yaml").read_text()
+            self.assertEqual(text, "model: later\n")
 
     def test_telegram_is_routed_to_qwen_without_rewriting_when_present(self):
         with tempfile.TemporaryDirectory() as d:

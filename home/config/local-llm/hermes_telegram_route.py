@@ -39,10 +39,7 @@ def merge_routes(config, house=None):
     if not isinstance(config, dict):
         raise ValueError("config must be a mapping")
     gateway = config.get("gateway")
-    if gateway is None:
-        gateway = {}
-        config["gateway"] = gateway
-    if not isinstance(gateway, dict):
+    if gateway is not None and not isinstance(gateway, dict):
         raise ValueError("gateway must be a mapping")
     wanted = route_from_house(house)
     routes = list(config.get("profile_routes") or [])
@@ -55,14 +52,20 @@ def merge_routes(config, house=None):
         if kept == routes:
             return config, False
         config["profile_routes"] = kept
+        if gateway is None:
+            gateway = {}
+            config["gateway"] = gateway
         gateway["profile_routes"] = [dict(route) for route in kept]
         return config, True
+    if gateway is None:
+        gateway = {}
     if (
         config.get("multiplex_profiles") is True
         and gateway.get("multiplex_profiles") is True
         and any(_same_route(route, wanted) for route in routes)
     ):
         return config, False
+    config["gateway"] = gateway
     config["multiplex_profiles"] = True
     gateway["multiplex_profiles"] = True
     routes = [

@@ -21,19 +21,24 @@ MANAGED_SCRIPTS = {
 def capture(home):
     home = Path(home)
     files = []
+    seen = set()
 
     def add(path, relative=None):
         if path.is_symlink() or not path.is_file():
             return  # Existing Home Manager links retain their original owner.
+        rel = relative or str(path.relative_to(home))
+        if rel in seen:
+            return
         data = path.read_bytes()
         if path.suffix != ".md" and b"/nix/store/" in data:
             raise ValueError(
                 "An unmanaged file contains an ephemeral store reference; "
                 "declare its source instead"
             )
+        seen.add(rel)
         files.append(
             {
-                "path": relative or str(path.relative_to(home)),
+                "path": rel,
                 "content": base64.b64encode(data).decode(),
                 "executable": bool(path.stat().st_mode & 0o111),
             }
