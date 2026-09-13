@@ -68,6 +68,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
+    hermes-agent.url = "github:NousResearch/hermes-agent/08a2e7dbccfc9aafbf6715965963d8b31347f37d";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # Remote branch used only for packages under review (e.g. bootdev-cli PR).
     # Remove this input once the package is available in the pinned nixpkgs release.
@@ -116,6 +117,10 @@
         forte = forte.packages.${system}.default;
         inherit (walls.packages.${system}) walls;
         pi-coding-agent = llm-agents.packages.${system}.pi;
+        hermes-agent = import ./home/user/hermes-package.nix {
+          hermesInput = inputs.hermes-agent;
+          inherit system;
+        };
         # Static Go client; safe to pull from unstable while 26.05 lags.
         inherit (nixpkgs-unstable.legacyPackages.${system}) tailscale;
       };

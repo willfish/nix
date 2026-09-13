@@ -403,7 +403,9 @@ Home Manager reloads changed service definitions during `hmswitch`.
 
 Run `qwen` on relay, including over SSH. This is the installed Hermes harness
 using the existing `qwen` profile, not the separate Qwen Code application.
-Home Manager updates this profile and its launcher without reinstalling Hermes.
+Home Manager pins the Hermes runtime and restores the profile from its encrypted
+declaration, then applies the local-model settings before writing it. See
+[Hermes reproducibility](hermes-reproducibility.md) for configuration ownership.
 At activation it copies the existing API key into the mode-0600 runtime profile,
 so `hermes --yolo -p qwen` also works without the wrapper. The `qwen` launcher
 additionally reads the key into an environment variable. No key is embedded in
@@ -435,10 +437,10 @@ The managed defaults are:
   automatic curator/triage routing. Browser web search remains separately
   available; the normal local repair toolset does not require web search.
 
-Unrelated profile settings, memories and skills are retained. Changed YAML is
-backed up privately alongside the original as `config.yaml.before-local-llm-*`;
-the previous launcher is `~/.local/bin/qwen.before-local-llm`. Managed values
-come from `home/user/local-llm.nix` and are reapplied by `hmswitch`.
+Relay restores declared profile settings and skills; memories remain mutable.
+Replaced files are backed up privately under `~/.hermes/backups/home-manager`.
+The previous Qwen launcher is `~/.local/bin/qwen.before-local-llm`. Local-model
+values come from `home/user/local-llm.nix` and are reapplied by `hmswitch`.
 
 Measurements on 2026-09-06 used a harmless terminal task: inspect a JSON fixture,
 identify its invalid port and suggest a valid replacement. They do not measure

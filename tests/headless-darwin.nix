@@ -42,6 +42,17 @@ assert check (
 assert check (
   daemons.hermes.serviceConfig.EnvironmentVariables.HERMES_CRON_TIMEOUT == "7200"
 ) "Hermes cron timeout changed";
+assert check (
+  lib.hasPrefix "/nix/store/" (builtins.head home.dotfiles.darwinDaemons.hermes.ProgramArguments)
+  && daemons.hermes.serviceConfig.EnvironmentVariables.HERMES_MANAGED == "home-manager"
+  && !(lib.hasInfix "/.hermes/hermes-agent/venv" daemons.hermes.serviceConfig.EnvironmentVariables.PATH)
+) "Hermes must use the pinned package, not the imperative checkout";
+assert check (
+  c.sops.secrets.hermes-declaration.format == "json"
+  && c.sops.secrets.hermes-declaration.key == ""
+  && c.sops.secrets.hermes-declaration.sopsFile == home.sops.secrets.hermes-declaration.sopsFile
+  && home.home.activation ? configureHermesDeclaration
+) "Hermes encrypted declaration must reach native secrets and Home Manager";
 assert check (lib.hasInfix "chrome-headless-shell" home.home.sessionVariables.CHROME_PATH)
   "browser runtime must be pinned headless shell";
 assert check

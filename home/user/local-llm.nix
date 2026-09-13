@@ -161,7 +161,12 @@ let
       export LOCAL_QWEN_API_KEY
       LOCAL_QWEN_API_KEY="$(< ${lib.escapeShellArg apiKeyPath})"
       export TERMINAL_CWD="$PWD"
-      exec ${config.home.homeDirectory}/.local/bin/hermes -p qwen --yolo --in "$PWD" "$@"
+      exec ${
+        if isRelay then
+          "${pkgs.hermes-agent}/bin/hermes"
+        else
+          "${config.home.homeDirectory}/.local/bin/hermes"
+      } -p qwen --yolo --in "$PWD" "$@"
     '';
   };
   piAgentDir = "${config.xdg.configHome}/local-llm/pi";
@@ -366,6 +371,7 @@ let
   };
 in
 lib.mkIf (isAutomationDarwin || isAndromeda) {
+  dotfiles.hermes.qwenOverlay = lib.mkIf isRelay "${hermesOverlay}";
   home.packages = [
     qwenPi
     fetchModel
@@ -415,11 +421,20 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
   '';
 
   home.activation.configureLocalHermes = lib.mkIf isAutomationDarwin (
-    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      if [ -x ${lib.escapeShellArg "${config.home.homeDirectory}/.local/bin/hermes"} ]; then
-        ${profilePython}/bin/python3 ${../config/local-llm/hermes_profile.py} \
-          ${lib.escapeShellArg "${config.home.homeDirectory}/.hermes/profiles/qwen/config.yaml"} \
-          ${hermesOverlay} --key-file ${lib.escapeShellArg apiKeyPath}
+    lib.hm.dag.entryAfter [ "writeBoundary" "configureHermesDeclaration" ] ''
+      if [ -x ${
+        lib.escapeShellArg (
+          if isRelay then
+            "${pkgs.hermes-agent}/bin/hermes"
+          else
+            "${config.home.homeDirectory}/.local/bin/hermes"
+        )
+      } ]; then
+        ${lib.optionalString (!isRelay) ''
+          ${profilePython}/bin/python3 ${../config/local-llm/hermes_profile.py} \
+            ${lib.escapeShellArg "${config.home.homeDirectory}/.hermes/profiles/qwen/config.yaml"} \
+            ${hermesOverlay} --key-file ${lib.escapeShellArg apiKeyPath}
+        ''}
         qwenPath=${lib.escapeShellArg "${config.home.homeDirectory}/.local/bin/qwen"}
         if [ -f "$qwenPath" ] && [ ! -e "$qwenPath.before-local-llm" ]; then
           ${pkgs.coreutils}/bin/cp -p "$qwenPath" "$qwenPath.before-local-llm"

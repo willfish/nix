@@ -16,7 +16,7 @@ let
     };
     william-darwin = {
       role = "automation";
-      secrets = 26;
+      secrets = 27;
     };
     "william@foundation" = {
       role = "workstation";

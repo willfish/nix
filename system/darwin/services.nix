@@ -13,7 +13,8 @@ let
     LOGNAME = user;
     SOPS_AGE_KEY_FILE = homeConfiguration.home.sessionVariables.SOPS_AGE_KEY_FILE;
     PATH = lib.concatStringsSep ":" [
-      "${home}/.hermes/hermes-agent/venv/bin"
+      "${pkgs.hermes-agent}/bin"
+      "${pkgs.hermes-agent.hermesVenv}/bin"
       "${home}/.local/bin"
       "${home}/.bin"
       "${home}/.nix-profile/bin"

@@ -42,6 +42,7 @@
     ./hindsight.nix
     ./llm-harness.nix
     ./local-llm.nix
+    ./hermes.nix
     ./mcp.nix
     ./neovim.nix
     ./network.nix

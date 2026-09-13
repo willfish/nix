@@ -197,10 +197,12 @@ native Remote Login, compatible Nix and secure repository/key access separately.
 Decide FileVault policy explicitly: this configuration cannot bypass preboot
 unlocking after power loss.
 
-Hermes still uses its existing mutable `.hermes/hermes-agent/venv` runtime and
-approved job state. Provision those and required model files before deployment;
-do not copy another node's credentials/caches wholesale. This is not a bare-metal
-macOS or Hermes installer. Privacy grants and OS management remain separate.
+Relay's Hermes runtime and configuration are managed as described in
+[Hermes reproducibility](hermes-reproducibility.md). Its encrypted declaration
+is Relay-specific; do not copy it to another node or enable its scheduled jobs
+there. Provision required model files separately. Conversation and execution
+history need state backups, not a configuration rebuild. This is not a bare-metal
+macOS installer. Privacy grants and OS management remain separate.
 
 The patterns are informed by [SrvOS](https://github.com/nix-community/srvos/tree/ee2f679bdc7324f90dc73c0f22f2d5fab25b1b33/darwin),
 [Nix Community's Mac builders](https://github.com/nix-community/infra/tree/6d9ddcdfc42fc0d449fc620de9ed1115b2ba994d/modules/darwin),
