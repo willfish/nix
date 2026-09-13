@@ -117,10 +117,30 @@ let
   git-cm = pkgs.writeShellScriptBin "git-cm" ''
     set -euo pipefail
 
-    default=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@' || true)
-    default="''${default:-main}"
+    if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != --default-branch ]; }; then
+      echo "usage: git cm [--default-branch]" >&2
+      exit 2
+    fi
 
-    git checkout "$default"
+    default_ref="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || true)"
+    if [[ "$default_ref" != refs/remotes/origin/* ]] || ! git show-ref --verify --quiet "$default_ref"; then
+      # Recreated repositories may lack origin/HEAD. Ask origin rather than
+      # guessing main/master, and keep resolver stdout usable by Fish.
+      git fetch origin >&2
+      git remote set-head origin --auto >&2
+      default_ref="$(git symbolic-ref refs/remotes/origin/HEAD)"
+    fi
+    if [[ "$default_ref" != refs/remotes/origin/* ]] || ! git show-ref --verify --quiet "$default_ref"; then
+      echo "git-cm: origin default branch is unknown or missing; no checkout performed" >&2
+      exit 1
+    fi
+    default="''${default_ref#refs/remotes/origin/}"
+    if [ "''${1:-}" = --default-branch ]; then
+      printf '%s\n' "$default"
+      exit 0
+    fi
+
+    git switch "$default"
     git-cleanup
   '';
   awake = pkgs.writeShellScriptBin "awake" ''
@@ -302,6 +322,17 @@ in
         '
       '';
       git = ''
+        # Navigation must happen in Fish, not the git-cm child process, so the
+        # caller moves into an existing default-branch worktree before cleanup.
+        if test (count $argv) -eq 1; and test "$argv[1]" = cm
+          set -l target (command git-cm --default-branch)
+          or return $status
+          git switch "$target"
+          or return $status
+          command git-cleanup
+          return $status
+        end
+
         if test (count $argv) -eq 2
           set -l subcommand $argv[1]
           set -l target $argv[2]
