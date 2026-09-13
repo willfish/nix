@@ -32,33 +32,34 @@ let
     if isRelay then
       "Q5_K_M"
     else if isAndromeda then
-      "UD-Q5_K_M"
+      "UD-Q5_K_XL"
     else
       "UD-Q6_K";
   modelName =
     if isRelay then
       "Huihui-Qwen3.6-35B-A3B-abliterated.${modelQuant}.gguf"
     else
-      "Qwen3.8-27B-${modelQuant}.gguf";
-  modelLabel = if isRelay then "Huihui Qwen 3.6 35B-A3B abliterated" else "Qwen 3.8 27B";
+      "Huihui-Qwen3.8-27B-abliterated-${modelQuant}.gguf";
+  modelLabel =
+    if isRelay then "Huihui Qwen 3.6 35B-A3B abliterated" else "Huihui Qwen 3.8 27B abliterated";
   modelPath = "${modelDir}/${modelName}";
   modelHash =
     if isRelay then
       "0b9660729ffe997d3ac5510689f27c724008c6f3acbb9d1f05dfebde7096f807"
     else if isAndromeda then
-      "2de73110cb254cbf09b54b717578dadff12ef1194e7271527e68202f39ba4bfd"
+      "a6ff520853eba5cad302a2a16144b7fe683792cca7fb2830a08479e78ebe12b6"
     else
       "c9c206812fbe4ac7b76a729e25928b63f2ae89d37f69da7a71c20aec763cd436";
   modelRevision =
     if isRelay then
       "7feb7bae6beaaf314ef087d552a09d8da05e0980"
     else
-      "4ca720788d1e01f1bff70c033e0d0028fd02e502";
+      "8f1b52408a2f6e317535190c9386f776cacf0079";
   modelRepository =
     if isRelay then
       "mradermacher/Huihui-Qwen3.6-35B-A3B-abliterated-GGUF"
     else
-      "unsloth/Qwen3.8-27B-GGUF";
+      "huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF";
   modelUrl = "https://huggingface.co/${modelRepository}/resolve/${modelRevision}/${modelName}";
   ollamaBlob = "${config.home.homeDirectory}/.ollama/models/blobs/sha256-${modelHash}";
   logPath = "${config.home.homeDirectory}/Library/Logs/local-llm.log";
@@ -349,7 +350,15 @@ let
           ) "--chat-template-file ${../config/local-llm/qwen3.8-chat-template.jinja}"
         } \
         --chat-template-kwargs '${
-          builtins.toJSON (if isRelay then { enable_thinking = false; } else { preserve_thinking = true; })
+          builtins.toJSON (
+            if isRelay then
+              { enable_thinking = false; }
+            else
+              {
+                preserve_thinking = true;
+                reasoning_effort = "medium";
+              }
+          )
         }' \
         --temp 0.7 --top-p 0.8 --top-k 20 --min-p 0 \
         --presence-penalty 1.5 --repeat-penalty 1.0 \
@@ -477,9 +486,19 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     };
   };
 
+  home.activation.removeHuihuiTrialDropin = lib.mkIf isAndromeda (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      dropin="$XDG_RUNTIME_DIR/systemd/user/local-llm.service.d/90-huihui-trial.conf"
+      if [ -f "$dropin" ]; then
+        rm -f "$dropin"
+        rmdir "$XDG_RUNTIME_DIR/systemd/user/local-llm.service.d" 2>/dev/null || true
+      fi
+    ''
+  );
+
   systemd.user.services.local-llm = lib.mkIf isAndromeda {
     Unit = {
-      Description = "Local Qwen3.8 27B ${modelQuant} on the NVIDIA GPU";
+      Description = "Local Huihui Qwen3.8 27B ${modelQuant} on the NVIDIA GPU";
       After = [ "graphical-session.target" ];
       ConditionPathExists = modelPath;
     };

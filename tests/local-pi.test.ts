@@ -89,6 +89,9 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
   assert.match(source, /--host 0\.0\.0\.0 --port 8081/);
   assert.ok(!source.includes('isAndromeda then "127.0.0.1"'), 'Andromeda llama.cpp still bound to localhost');
+  assert.match(source, /Huihui-Qwen3\.8-27B-abliterated-\$\{modelQuant\}\.gguf/);
+  assert.match(source, /a6ff520853eba5cad302a2a16144b7fe683792cca7fb2830a08479e78ebe12b6/);
+  assert.match(source, /90-huihui-trial\.conf/);
 });
 
 test('voice installation and explicit Qwen loading share the supported-host predicate', () => {

@@ -3,7 +3,7 @@
 Home Manager manages a Metal-accelerated llama.cpp server on the M4 Pro Mac mini
 `relay` and a CUDA server on Andromeda's RTX 5090. Both use the lean `qwen-pi`
 launcher with separate pinned models: Huihui Qwen3.6-35B-A3B abliterated
-Q5_K_M on Relay and Unsloth Qwen3.8-27B UD-Q5_K_M on Andromeda. Configuration is in
+Q5_K_M on Relay and Huihui Qwen3.8-27B abliterated UD-Q5_K_XL on Andromeda. Configuration is in
 `home/user/local-llm.nix`. The browser UI and Hermes Telegram routing below apply
 to Relay. Authenticated API access is available on each host's Tailscale name.
 
@@ -201,7 +201,7 @@ an 8,192-token recent-history budget:
 | Host | Weights | Total context | Compaction above |
 | --- | --- | --- | --- |
 | Relay | Huihui Qwen3.6 Q5_K_M | 65,536 | 49,152 |
-| Andromeda | UD-Q5_K_M | 131,072 | 114,688 |
+| Andromeda | Huihui Qwen3.8 UD-Q5_K_XL | 131,072 | 114,688 |
 
 The context includes instructions, tool definitions, history and output.
 `/compact` also requests compaction manually. Summaries use
@@ -366,13 +366,13 @@ request. Inspect it with `systemctl --user status local-llm` or
 The Pi wrapper reads it automatically without exposing it in process arguments.
 
 `local-llm-fetch` selects pinned host-specific weights and verifies downloaded
-files with SHA256. Andromeda uses Unsloth revision
-`4ca720788d1e01f1bff70c033e0d0028fd02e502`. Relay uses
+files with SHA256. Andromeda uses `huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF`
+revision `8f1b52408a2f6e317535190c9386f776cacf0079`. Relay uses
 `mradermacher/Huihui-Qwen3.6-35B-A3B-abliterated-GGUF` revision
 `7feb7bae6beaaf314ef087d552a09d8da05e0980`:
 
-- Andromeda Q5_K_M, 19,771,509,664 bytes:
-  `2de73110cb254cbf09b54b717578dadff12ef1194e7271527e68202f39ba4bfd`
+- Andromeda UD-Q5_K_XL, 20,673,612,704 bytes:
+  `a6ff520853eba5cad302a2a16144b7fe683792cca7fb2830a08479e78ebe12b6`
 - Relay Q5_K_M, 24,729,131,904 bytes:
   `0b9660729ffe997d3ac5510689f27c724008c6f3acbb9d1f05dfebde7096f807`
 

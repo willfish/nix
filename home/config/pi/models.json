@@ -28,7 +28,7 @@
       "models": [
         {
           "id": "qwen3.8-27b",
-          "name": "Andromeda Qwen 3.8 27B",
+          "name": "Andromeda Huihui Qwen 3.8 27B",
           "reasoning": true,
           "input": ["text"],
           "contextWindow": 131072,
