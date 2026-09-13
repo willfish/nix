@@ -221,5 +221,12 @@
     "references": {
       "voice.md": "guides/voice.md"
     }
+  },
+  {
+    "name": "youtube-extract",
+    "kind": "shared",
+    "invocation": "model-invoked discipline",
+    "hermes": false,
+    "references": {}
   }
 ]

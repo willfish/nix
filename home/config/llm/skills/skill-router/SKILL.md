@@ -22,6 +22,7 @@ workflows may be supplied by the local overlay; do not assume they are present.
 - Nix, Home Manager, direnv or local machine context: `local-dev-environment`.
 - Diagrams: `diagramming`; terminal recordings: `terminal-demos`.
 - PDFs: `latex-pdfs`; author voice: `will-voice`.
+- YouTube URLs, timestamps, transcripts or captions: `youtube-extract`.
 - Dependencies or publishing: `javascript-supply-chain-security`.
 - Skill maintenance: `create-skill` and `skill-evaluation`.
 - Completion claims, commits or pushes: `verification-before-completion`.

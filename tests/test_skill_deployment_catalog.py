@@ -141,7 +141,7 @@ class SkillDeploymentCatalogTests(unittest.TestCase):
                 {e["name"] for e in entries if e["kind"] == kind},
                 {p.parent.name for p in (LLM / directory).glob("*/SKILL.md")},
             )
-        self.assertEqual(len(entries), 26)
+        self.assertEqual(len(entries), 27)
         self.assertEqual(sum(len(e["references"]) for e in entries), 29)
         self.assertEqual({e["name"] for e in entries if e["hermes"]}, set())
 
@@ -196,16 +196,16 @@ class SkillDeploymentCatalogTests(unittest.TestCase):
         normalized = re.sub(
             r"/nix/store/[a-z0-9]{32}-", "/nix/store/<hash>-", result.stdout)
         deployment = json.loads(normalized)
-        self.assertEqual(len(deployment), 51)
+        self.assertEqual(len(deployment), 52)
         self.assertEqual(sum(isinstance(v["source"], dict)
-                         for v in deployment.values()), 47)
+                         for v in deployment.values()), 48)
         digest = hashlib.sha256(json.dumps(
             deployment, sort_keys=True).encode()).hexdigest()
         # Reviewed merged-overlay deployment, independent of store hashes.
         # Intentional deployment changes require reviewing this fingerprint.
         self.assertEqual(
             digest,
-            "223a3884f9bbfe5f21f6de35c294260a9daae566e912312ee67d57d9fbe4de7d")
+            "1305bd9e013db8a2f0a652b1d3464b26060bea627a329175be67c35d8851c423")
 
 
 if __name__ == "__main__":
