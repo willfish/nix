@@ -93,9 +93,8 @@ Will writes thoughtful, structured feedback. Direct about strengths, specific ab
 
 - Conventional commit subject in imperative mood:
   `fix(scope): remove noisy healthcheck logging`
-- Put Jira references in the body/footer, not the subject:
+- When a ticket exists, put the Jira reference in the body/footer, not the subject:
   `Jira: PROJ-123`
-- For work with no ticket, use `Issue: No ticket/issue`.
 - When extra context is needed, keep the body short and explain the why
 - Never chatty, never vague
 

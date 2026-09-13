@@ -19,7 +19,7 @@ Read:
 
 Defaults:
 - PR titles use `{story}: Imperative description` for story work; when there is no Jira story, use a short descriptive title without a fake ticket key.
-- Commits use conventional commit subjects. Put the Jira story key in the body/footer as `Jira: PROJ-123`; for work with no ticket, use `Issue: No ticket/issue`.
+- Commits use conventional commit subjects. When a ticket exists, put the Jira story key in the body/footer as `Jira: PROJ-123`.
 - Branch names use `{story}-short-kebab-description`; never add agent/tool prefixes such as `codex/`.
 - Link the child story, not only the parent epic.
 - Use a checklist in the `What?` section.

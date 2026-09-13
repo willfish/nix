@@ -22,7 +22,7 @@ Inspect available configured MCP tools first; use them for supported external re
 
 ## Git and code
 
-Branches follow project/ticket conventions, otherwise short descriptive names; never agent/tool prefixes, even if a harness suggests them. Commit subject: `<type>(optional-scope): short imperative description`. No ticket IDs in subjects; put `Jira: <ticket-key>` in the body/footer, or `Issue: No ticket/issue` when none.
+Branches follow project/ticket conventions, otherwise short descriptive names; never agent/tool prefixes, even if a harness suggests them. Commit subject: `<type>(optional-scope): short imperative description`. No ticket IDs in subjects; when a ticket exists, put `Jira: <ticket-key>` in the body/footer.
 
 Rails/Zeitwerk: no explicit requires for autoloadable application constants in normal app code. Initializers may require them; check existing patterns before changing requires.
 

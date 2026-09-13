@@ -30,7 +30,7 @@ wrong without this?** If there is no concrete answer, delete it.
 |---|---|---|
 | Architecture, ADRs, reference docs | System boundaries, invariants, decision context and consequences; significant rejected alternatives and why | Implementation diary, current PR status, test runs, workstation details |
 | PR body | Problem, meaningful behaviour change, rationale, reviewer-relevant risk and rollout requirements | File-by-file diff narration, completed task diary, CI results, routine verification sections |
-| Commit | Change and why; non-obvious consequences; required issue footer | Test counts, build status, branch operations, agent process |
+| Commit | Change and why; non-obvious consequences; Jira footer when a ticket exists | Test counts, build status, branch operations, agent process |
 | Code comment | Non-obvious reason, invariant, constraint, or necessary algorithm explanation | Restating code, announcing an edit, author/session history |
 | Review or issue comment | Actionable finding, supporting evidence, impact, requested decision | Investigation transcript, generic praise, repeated status |
 | Runbook or how-to | Reproducible prerequisites, commands, expected signals, failure handling | One operator's completed run or machine-specific workaround presented as universal |

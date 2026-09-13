@@ -4,9 +4,9 @@ Before drafting prose, read `~/.agents/guides/documentation-relevance.md`.
 
 ## Commits and branches
 
-Use `<type>(optional-scope): short imperative description`. Put a child ticket
-key in the body as `Jira: PROJ-123`, never in the commit subject. When no ticket
-exists, use `Issue: No ticket/issue`. Explain what changes and why, not the diff.
+Use `<type>(optional-scope): short imperative description`. When a ticket
+exists, put the child ticket key in the body as `Jira: PROJ-123`, never in the
+commit subject. Explain what changes and why, not the diff.
 
 Follow repository branch conventions. Otherwise use a short descriptive name
 without an agent or tool prefix. Keep dependent branches based on their parent.

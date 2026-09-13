@@ -123,7 +123,7 @@ executor's environment. Skip the section otherwise.)
 (Filled from recon — match the repo's observed conventions.)
 
 - Branch: use the repo's branch-naming convention. If none is evident, use a neutral short description; do not use agent/tool prefixes.
-- Commit per step or per logical unit; use conventional commit subjects. Put the Jira key in the body/footer as `Jira: PROJ-123`, or use `Issue: No ticket/issue` when there is no ticket.
+- Commit per step or per logical unit; use conventional commit subjects. When a ticket exists, put the Jira key in the body/footer as `Jira: PROJ-123`.
 - Do NOT push or open a PR unless the operator instructed it.
 
 ## Steps
