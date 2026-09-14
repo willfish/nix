@@ -178,6 +178,18 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
         self.assertIn(
             "You are the starting Pi agent for this session", instructions)
         self.assertIn("## Final voice summary", instructions)
+        shared = (repo / "home/config/llm/AGENTS.md").read_text()
+        heading = "### Approval scope\n\n"
+        policy = heading + shared.split(heading)[1].split(
+            "\n\n## Verification")[0]
+        self.assertEqual(instructions.count(policy), 1,
+                         "Provider must receive canonical approval scope once")
+        for relative in (".agents/AGENTS.md", ".pi/agent/AGENTS.md"):
+            effective = (home_files / relative).read_text()
+            self.assertEqual(effective.count(policy), 1,
+                             "Rule paths must use canonical approval scope")
+            self.assertEqual(effective.count("For new behaviour"), 1,
+                             "Do not retain legacy approval policy")
         schemas = json.dumps(
     request["tools"],
     ensure_ascii=False,

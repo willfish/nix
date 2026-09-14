@@ -83,7 +83,36 @@ let
     }) (builtins.filter (skill: skill.kind == "shared") skillCatalog)
   );
 
-  mkAgentRuleFiles = lib.genAttrs agentRuleFiles (_: sourceFile (resolveLlm "AGENTS.md"));
+  # Private rules retain domain guidance, but shared approval scope has one owner.
+  # Refuse unknown boundaries instead of silently dropping private instructions.
+  sharedAgentRules = builtins.readFile "${publicLlmRoot}/AGENTS.md";
+  approvalHeading = "### Approval scope";
+  approvalParts = lib.splitString "\n\n${approvalHeading}\n\n" sharedAgentRules;
+  approvalTail = lib.splitString "\n\n## Verification" (builtins.elemAt approvalParts 1);
+  sharedApproval =
+    if builtins.length approvalParts != 2 || builtins.length approvalTail != 2 then
+      throw "Canonical AGENTS.md must contain one Approval scope block before Verification"
+    else
+      "${approvalHeading}\n\n${builtins.head approvalTail}";
+  selectedAgentRules = builtins.readFile (resolveLlm "AGENTS.md");
+  legacyApproval = builtins.filter (lib.hasPrefix "For new behaviour") (
+    lib.splitString "\n\n" selectedAgentRules
+  );
+  effectiveAgentRules =
+    if selectedAgentRules == sharedAgentRules then
+      sharedAgentRules
+    else if
+      builtins.length legacyApproval != 1
+      || lib.hasInfix approvalHeading selectedAgentRules
+      || lib.hasInfix "An approved objective authorizes" selectedAgentRules
+    then
+      throw "Private AGENTS.md approval boundary changed; reconcile it with canonical Approval scope"
+    else
+      lib.replaceStrings [ (builtins.head legacyApproval) ] [ sharedApproval ] selectedAgentRules;
+  mkAgentRuleFiles = lib.genAttrs agentRuleFiles (_: {
+    text = effectiveAgentRules;
+    force = true;
+  });
   mergedGuides = pkgs.runCommand "agent-guides" { } ''
     mkdir -p "$out"
     cp -a ${publicLlmRoot}/guides/. "$out/"

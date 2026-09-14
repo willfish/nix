@@ -197,15 +197,24 @@ class SkillDeploymentCatalogTests(unittest.TestCase):
             r"/nix/store/[a-z0-9]{32}-", "/nix/store/<hash>-", result.stdout)
         deployment = json.loads(normalized)
         self.assertEqual(len(deployment), 52)
-        self.assertEqual(sum(isinstance(v["source"], dict)
+        self.assertEqual(sum(isinstance(v.get("source"), dict)
                          for v in deployment.values()), 48)
+        heading = "### Approval scope\n\n"
+        shared = (LLM / "AGENTS.md").read_text()
+        policy = heading + shared.split(heading)[1].split(
+            "\n\n## Verification")[0]
+        for path in (".agents/AGENTS.md", ".pi/agent/AGENTS.md"):
+            self.assertEqual(deployment[path]["text"].count(policy), 1)
+            # Do not fingerprint private prose or couple unrelated skill
+            # deployment to approval wording. Composition has dedicated tests.
+            deployment[path]["text"] = "<composed-agent-rules>"
         digest = hashlib.sha256(json.dumps(
             deployment, sort_keys=True).encode()).hexdigest()
         # Reviewed merged-overlay deployment, independent of store hashes.
         # Intentional deployment changes require reviewing this fingerprint.
         self.assertEqual(
             digest,
-            "1305bd9e013db8a2f0a652b1d3464b26060bea627a329175be67c35d8851c423")
+            "5e31e94fc197fc93615f3bf01485a521ce45995252442a0db71e4ac01cbdc8e2")
 
 
 if __name__ == "__main__":

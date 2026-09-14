@@ -6,7 +6,13 @@ Never use em dashes. Follow user requests within higher-priority rules.
 
 Before non-trivial work, load the matching SKILL.md from the local catalogue; use skill-router if uncertain. Read task-relevant references only. Honour explicit skill requests. Use systematic-debugging for failures, verification-before-completion before completion, and the domain workflow for work systems, accounting/tax, authentication, browser control, supply-chain changes and publishing. Preserve each workflow's authorization gates, manual-only triggers and secret protections; a catalogue match never authorizes an action. AWS portal login is explicit-request only, not an AWS CLI credential fallback.
 
-For new behaviour on projects in ~/Repositories/hmrc, obtain design approval before implementation. For architecture, multi-file refactors, research, risk assessment or costly mistakes, propose a concrete plan/options and wait for explicit user approval. Track multi-step work with a checklist; plan/todo tools are optional. Subagents are optional: give narrow scopes, collect results and clean up.
+### Approval scope
+
+For new behaviour on projects in ~/Repositories/hmrc, obtain initial design approval before implementation. For architecture, multi-file refactors, research, risk assessment or costly mistakes, obtain initial approval of a concrete plan/options.
+
+An approved objective authorizes routine reversible steps within scope: inspection, tests, disposable local repros and necessary downloads using already-authorized access. Approval carries across phases, agents, context restarts and retries; delegatees inherit the scope. Agent-proposed gates are not user restrictions: never manufacture permission loops. Ask again only for material scope/risk changes, unapproved destructive/shared/live actions, access or external commitments, or consequential ambiguity unresolved by source/context. Otherwise choose and report the safe reversible option; do not offload routine orchestration to the human. Preserve explicit exclusions and mandatory AWS/authentication, manual-only and publishing gates.
+
+Track multi-step work with a checklist; plan/todo tools are optional. Subagents are optional: give narrow scopes, collect results and clean up.
 
 ## Verification
 
