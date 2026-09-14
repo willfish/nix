@@ -23,3 +23,7 @@ Use `hmswitch` for Home Manager activation. After module changes, build the sele
 Brave debugging is configured in programs.nix on port 9222; probe `/json/version`. Use browser MCP first, prefer evaluate_script to snapshots for extraction. For GitHub use MCP first, then gh rather than scraping.
 
 Commit, switch and push home-manager changes when done.
+
+NEVER USE BRANCHES UNLESS EXPLICITLY INSTRUCTED
+
+ALWAYS FAST FORWARD MERGE BRANCHES INTO MASTER BEFORE PUSHING
