@@ -13,7 +13,17 @@ else if not test -d "$notes_root"
   fail "notes path exists but is not a directory: $notes_root"
 end
 
-set -l notes_file (find "$notes_root" -type f -name "*.md" | sed "s#^$notes_root/##" | grep -v "templates" | grep -v "today.md" | grep -v "standup.md" | grep -v "README.md" | fzf --print-query | tail -1)
+set -l notes_file (
+  find "$notes_root" -type f -name "*.md" \
+  | sed "s#^$notes_root/##" \
+  | string match -r -v '^[0-9]{4}-[0-9]{2}-[0-9]{2}/' \
+  | string match -r -v '^templates/' \
+  | string match -r -v '(^|/)today\.md$' \
+  | string match -r -v '(^|/)standup\.md$' \
+  | string match -r -v '(^|/)README\.md$' \
+  | fzf --print-query --prompt 'notes> ' --header 'topic notes (not daily files)' --preview "head -n 40 '$notes_root'/{}" \
+  | tail -1
+)
 
 if test -z "$notes_file"
   fail "no notes file selected"
