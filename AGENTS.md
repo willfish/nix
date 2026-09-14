@@ -16,11 +16,9 @@ William's flake-based NixOS/Home Manager repo. Follow `home/config/llm/AGENTS.md
 
 ## Development
 
-Read task-relevant commands in `docs/nixos-host-operations.md` for builds, switches, rollback, Terminus health and CI.
+The dev shell installs commit checks and an affected-configuration pre-push gate; let the gate own push-time configuration checks rather than duplicating manual builds or broad flake checks. See `docs/nixos-host-operations.md` for selection rules, manual checks, runtime tests, switches and recovery.
 
-After `.nix` edits under `home/user/`, and before switching, build `nix build .#homeConfigurations.<attr>.activationPackage`. Select `william-darwin` on macOS, `william-linux` for generic Linux, or `william@<host>`; bare `william` is Linux, never use on macOS. Use `hmswitch` for activation. Direct nh syntax: `nh home switch . --configuration <attr>`, NOT `nh home switch '.#william-darwin'`. After Home Manager module changes activate and verify before committing, subject to task authorization.
-
-Run `nix flake check` for flake.nix or major module changes. System rebuild: `nh os switch` or `sudo nixos-rebuild switch --flake .`. Verify added packages exist in inputs/nixpkgs. Never commit secrets/private data
+Use `hmswitch` for Home Manager activation. After module changes, build the selected host, activate and verify before committing, subject to authorization; a push check does not replace deployment checks. Verify added packages exist in inputs/nixpkgs. Never commit secrets/private data.
 
 Brave debugging is configured in programs.nix on port 9222; probe `/json/version`. Use browser MCP first, prefer evaluate_script to snapshots for extraction. For GitHub use MCP first, then gh rather than scraping.
 
