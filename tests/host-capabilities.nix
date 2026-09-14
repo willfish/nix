@@ -8,31 +8,31 @@ let
     "william@relay" = william-darwin;
     william = {
       role = "legacy";
-      secrets = 51;
+      secrets = 52;
     };
     william-linux = {
       role = "legacy";
-      secrets = 51;
+      secrets = 52;
     };
     william-darwin = {
       role = "automation";
-      secrets = 29;
+      secrets = 30;
     };
     "william@foundation" = {
       role = "workstation";
-      secrets = 51;
+      secrets = 52;
     };
     "william@andromeda" = {
       role = "workstation";
-      secrets = 51;
+      secrets = 52;
     };
     "william@starfish" = {
       role = "legacy";
-      secrets = 51;
+      secrets = 52;
     };
     "william@terminus" = {
       role = "nas";
-      secrets = 9;
+      secrets = 10;
     };
   };
   inspect =
@@ -65,6 +65,7 @@ let
     ) "Pi and agent-browser must be everywhere";
     assert require (
       c.sops.secrets ? PI_OPENAI_CODEX_REFRESH
+      && c.sops.secrets ? PI_AGENT_BUS_TOKEN
       && c.sops.secrets ? OPENROUTER_API_KEY
       && c.sops.secrets ? GPG_SIGNING_PRIVATE_KEY
       && c.sops.secrets ? LOCAL_LLM_RELAY_API_KEY

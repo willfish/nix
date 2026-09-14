@@ -38,6 +38,8 @@ let
   '';
 in
 {
+  programs.pi-agent-bus.enable = lib.mkDefault true;
+
   # Follow terminal appearance with the host's theme pair. Explicit CLI theme
   # flags take precedence. With CAPTURE_PROMPTS set, run behind mitmproxy that
   # logs every request/response to $XDG_STATE_HOME/prompt-capture/pi.jsonl.
@@ -47,7 +49,56 @@ in
       #!${pkgs.bash}/bin/bash
       set -euo pipefail
 
+      export PI_AGENT_BUS_URL="''${PI_AGENT_BUS_URL-http://terminus:7420}"
+      bus_enabled=${if config.programs.pi-agent-bus.enable then "1" else "0"}
+      bus_offline="''${PI_OFFLINE:-}"
+      if [[ "''${bus_offline,,}" =~ ^[[:space:]]*(1|true|yes)[[:space:]]*$ ]]; then
+        bus_enabled=0
+      fi
+      for arg in "$@"; do
+        case "$arg" in --offline) bus_enabled=0 ;; esac
+      done
+      if [ "$bus_enabled" = "1" ] && [ "''${PI_AGENT_BUS_ENABLED:-}" != "0" ] \
+        && [ -z "''${PI_AGENT_BUS_TOKEN+x}" ]; then
+        # A missing/unavailable secret must not abort Pi under strict shell mode.
+        if PI_AGENT_BUS_TOKEN="$(${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.PI_AGENT_BUS_TOKEN.path} 2>/dev/null)"; then
+          export PI_AGENT_BUS_TOKEN
+        else
+          unset PI_AGENT_BUS_TOKEN
+        fi
+      fi
+      unset bus_enabled bus_offline
+
       if [ -n "''${CAPTURE_PROMPTS:-}" ] && [ "''${CAPTURE_PROMPTS:-}" != "0" ]; then
+        # Accept only authority spellings unchanged by WHATWG URL parsing.
+        # Other forms disable bus participation for capture, never rewrite the
+        # caller's URL. Empty URLs use the client's effective default.
+        if ! bus_host="$(${pkgs.python3}/bin/python3 -c '
+      import ipaddress, os, re
+      raw = os.environ.get("PI_AGENT_BUS_URL") or "http://terminus:7420"
+      match = re.fullmatch(r"https?://([A-Za-z0-9.-]+)(?::[0-9]+)?(?:/[^\s\\?#]*)?", raw)
+      host = match[1].lower() if match else ""
+      labels = host.split(".")
+      if not all(re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label) for label in labels):
+          host = ""
+      elif re.fullmatch(r"[0-9]+|0x[0-9a-f]*", labels[-1]):
+          try:
+              if str(ipaddress.IPv4Address(host)) != host:
+                  host = ""
+          except ValueError:
+              host = ""
+      print(host)
+      ' 2>/dev/null)"; then
+          bus_host=""
+        fi
+        if [ -n "$bus_host" ]; then
+          export NO_PROXY="''${NO_PROXY:+$NO_PROXY,}''${no_proxy:+$no_proxy,}$bus_host"
+          export no_proxy="$NO_PROXY"
+        else
+          # Parser errors or unsupported host forms must not expose bus traffic.
+          export PI_AGENT_BUS_ENABLED=0
+        fi
+        unset bus_host
         exec ${promptCapture}/bin/prompt-capture pi -- ${pkgs.pi-coding-agent}/bin/pi ${piThemeArgs} "$@"
       fi
 

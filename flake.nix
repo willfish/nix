@@ -11,6 +11,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nix-config.url = "git+ssh://git@github.com/willfish/nix-config.git";
+    agent-bus = {
+      url = "git+ssh://git@github.com/willfish/pi-switchboard.git";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-darwin = {
       url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -88,6 +92,7 @@
       home-manager,
       sops-nix,
       nix-config,
+      agent-bus,
       nix-darwin,
       sniffy,
       smailer,
@@ -223,6 +228,7 @@
         nix-index-database.homeModules.default
         sops-nix.homeManagerModules.sops
         nix-config.homeModules.default
+        agent-bus.homeManagerModules.default
         ./home
       ];
       nixosBaseModules = [
@@ -248,6 +254,7 @@
         homeModules.default = {
           imports = [
             nix-config.homeModules.default
+            agent-bus.homeManagerModules.default
             ./home
           ];
         };
@@ -287,7 +294,10 @@
           terminus = lib.nixosSystem {
             system = linuxSystem;
             specialArgs.immichPkgs = nixpkgs-unstable.legacyPackages.${linuxSystem};
-            modules = nixosBaseModules ++ [ ./system/terminus/configuration.nix ];
+            modules = nixosBaseModules ++ [
+              agent-bus.nixosModules.default
+              ./system/terminus/configuration.nix
+            ];
           };
         };
 
@@ -363,6 +373,26 @@
           };
 
           checks = {
+            pi-agent-bus-composition = import ./tests/pi-agent-bus-composition.nix {
+              inherit lib pkgs;
+              home =
+                inputs.self.homeConfigurations.${
+                  if system == darwinSystem then "william-darwin" else "william-linux"
+                }.config;
+            };
+            pi-agent-bus-runtime = agent-bus.lib.mkPiRuntimeCheck {
+              inherit pkgs;
+              piPackage = pkgs.pi-coding-agent;
+              hubPackage =
+                if system == linuxSystem then
+                  inputs.self.nixosConfigurations.terminus.config.services.pi-agent-bus.package
+                else
+                  agent-bus.packages.${system}.hub;
+              extensionPackage =
+                inputs.self.homeConfigurations.${
+                  if system == darwinSystem then "william-darwin" else "william-linux"
+                }.config.programs.pi-agent-bus.package;
+            };
             headless-darwin = import ./tests/headless-darwin.nix {
               inherit lib pkgs;
               darwin = inputs.self.darwinConfigurations.relay;

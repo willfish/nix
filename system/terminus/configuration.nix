@@ -1,4 +1,10 @@
-{ pkgs, immichPkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  immichPkgs,
+  ...
+}:
 
 {
   system.stateVersion = "26.05";
@@ -13,6 +19,20 @@
 
   boot.kernelPackages = pkgs.linuxPackages;
   boot.supportedFilesystems = [ "zfs" ];
+
+  services.pi-agent-bus = {
+    enable = true;
+    listenAddress = "0.0.0.0";
+    port = 7420;
+    tokenFile = config.sops.secrets.PI_AGENT_BUS_TOKEN.path;
+  };
+
+  # Activation-script installations finish before service activation; only the
+  # systemd installation mode provides this unit. Keep the global port closed.
+  systemd.services.pi-agent-bus = lib.mkIf config.sops.useSystemdActivation {
+    after = [ "sops-install-secrets.service" ];
+    requires = [ "sops-install-secrets.service" ];
+  };
 
   services.immich = {
     enable = true;

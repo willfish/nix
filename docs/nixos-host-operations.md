@@ -318,6 +318,143 @@ ssh terminus 'journalctl -u smartd --since "30 days ago" --no-pager'
 ssh terminus 'journalctl -u zfs-scrub.service --since "90 days ago" --no-pager'
 ```
 
+## Pi Switchboard on Terminus
+
+The external `agent-bus` flake supplies `services.pi-agent-bus` and
+`programs.pi-agent-bus`. Only Terminus runs the hub. Participating homes install
+one client at `~/.pi/agent/extensions/agent-bus`; do not also use `pi install`.
+The existing `~/.local/bin/pi` wrapper remains the sole runtime token loader.
+Qwen's separate offline profile and explicit extension list exclude Switchboard.
+Print, JSON, RPC, offline and `PI_AGENT_BUS_ENABLED=0` sessions do not participate.
+
+The wrapper reads `PI_AGENT_BUS_TOKEN` through `read-sops-secret` before normal
+or prompt-capture execution. An explicit token, including an empty value, takes
+precedence; a missing secret leaves Pi usable without bus participation. The
+URL defaults to `http://terminus:7420`; override `PI_AGENT_BUS_URL` only with a
+trusted tailnet destination, never a public HTTP endpoint or credential-bearing
+URL. No token belongs in shell startup files, Nix expressions or command arguments.
+Prompt capture adds the effective bus hostname to both proxy-bypass variables;
+an empty URL uses the client's default. Existing bypass entries are retained.
+Capture supports ordinary ASCII DNS names and canonical dotted-decimal IPv4.
+It disables bus participation for other URL forms, including Unicode hostnames,
+noncanonical IPv4 and IPv6, rather than risking WHATWG normalization sending
+presence or mail through the provider proxy. Use an ASCII/punycode tailnet name
+or canonical IPv4 address for capture. Normal Pi preserves URL overrides and is
+not restricted by this capture-only safeguard.
+
+### Candidate checks before activation
+
+Build the matching home and Terminus system generations using the commands
+above, then run the complete behavioral gate against that home. Its wiring
+checks read the generated credential wrapper but never execute it in fixtures.
+Run the additional composition probe with the immutable Pi, client and history
+outputs selected by that same generation, not a different upstream Pi pin:
+
+```bash
+python3 tests/pi-agent-bus-composition.py \
+  --pi-package "$pi_package" --extension-package "$extension_package" \
+  --prompt-history "$prompt_history" --mitmdump "$mitmdump" \
+  --ca-bundle "$ca_bundle" \
+  --tool-path "$tool_path"
+```
+
+Supply absolute Nix store paths. `tool_path` is a colon-separated list of Nix
+`bin` directories supplying Bash, flock, fd, ripgrep and coreutils. Bash and
+flock are resolved only from that supplied path, never the caller's host PATH.
+Use the pinned `cacert` package's certificate bundle for `ca_bundle`; the fixture
+must not depend on a host-specific `/etc/ssl` path. It replaces only the CA
+bundle path in a temporary copy of the capture script, alongside the pinned
+mitmdump substitution; production capture code is unchanged. This does not
+validate the deployed capture script's CA path on macOS: verify real Darwin
+capture separately before deployment. The probe uses a synthetic environment,
+temporary capture logs and loopback endpoints. It checks
+real Bun proxy bypass, client/history loading and exclusion modes, not service
+reachability or actual credentials. It never executes the generated credential
+wrapper. Run it natively on each target platform; alternate loopback-address
+availability is a fixture prerequisite, not proof of tailnet connectivity.
+
+Also run the external repository's complete `tests/pi-runtime.test.mjs` against
+those selected artifacts and the selected compiled hub. Its required variables
+are `PI_AGENT_BUS_TEST_PI_PACKAGE`, `PI_AGENT_BUS_TEST_EXTENSION_PACKAGE`,
+`PI_AGENT_BUS_TEST_EXECUTABLE`, `PI_AGENT_BUS_TEST_PYTHON` and
+`PI_AGENT_BUS_TEST_TOOL_PATH`. The executable variable names the hub launcher;
+the Python variable names the immutable Python executable. Do not substitute a
+credential-loading Pi wrapper. This remains separate from native home builds,
+actual credential loading and the deployment checks below.
+
+### Health, authentication and network isolation
+
+After authorized activation, run on Terminus:
+
+```bash
+systemctl is-active pi-agent-bus
+systemctl show pi-agent-bus -p ExecStart -p LoadCredential -p After -p Requires
+sudo ss -lntp
+```
+
+The service must use the compiled store launcher and systemd `LoadCredential`,
+not a source checkout or startup build. Secret ordering depends on SOPS mode:
+require `sops-install-secrets.service` only when systemd secret activation is
+enabled; activation-script mode installs secrets before service activation.
+Expect the HTTP listener on port 7420 and no new EPMD/distribution listener.
+Repeat the existing Terminus service/ZFS/SMART checks after activation.
+
+From a managed tailnet client, use a Bash subshell with tracing disabled:
+
+```bash
+(
+  set +x
+  set -euo pipefail
+  url="${PI_AGENT_BUS_URL:-http://terminus:7420}"
+  curl -q --noproxy '*' --fail --max-time 5 "$url/health"
+  curl -q --noproxy '*' --silent --output /dev/null --write-out '%{http_code}\n' \
+    --max-time 5 "$url/v1/agents"  # expect 401 without a token
+  token="$(read-sops-secret "${SOPS_NIX_SECRETS_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/sops-nix/secrets}/PI_AGENT_BUS_TOKEN")"
+  test -n "$token"
+  printf 'Authorization: Bearer %s\n' "$token" |
+    curl -q --noproxy '*' --fail --silent --show-error --max-time 5 \
+      --header @- "$url/v1/agents" | jq '{visibleAgents: (.agents | length)}'
+)
+```
+
+Health returns only `{"ok":true}`. A successful first agents page proves
+credential acceptance, not complete paginated discovery or active SSE receipt.
+Use `/agents` and `/bus` in two standard Pi TUIs to verify registration and
+receiving. Check labels, model updates without runtime-ID changes, notice inbox
+viewing without a model turn, and control off by default. Control requires local
+receiver consent; hub acceptance is not delivery or execution acknowledgement.
+
+Resolve `terminus` to its Tailscale address before diagnosing the HTTP service.
+Check `tailscale status`, MagicDNS and the selected route; use an explicit
+trusted tailnet IP/FQDN if local DNS resolves the short name to the physical LAN.
+Test with Mullvad both on and off. Do not open port 7420 globally to fix routing.
+The wildcard bind relies on the effective firewall trusting only loopback and
+`tailscale0` for this port. From a separate physical-LAN client, probe the
+Terminus **LAN address**, including `/health`, with a bounded connection timeout;
+the connection must fail. A tailnet success or firewall-source inspection does
+not replace this negative check. Stop rollout on any LAN exposure or consent
+failure. SSH re-authentication is a separate access gate; stop and obtain user
+assistance rather than retrying host authentication automatically.
+
+### Rotation, disablement and rollback
+
+Rotate the shared token in the private encrypted configuration, install it on
+the hub and participating homes, restart `pi-agent-bus`, then restart Pi through
+the standard wrapper. `/reload` alone does not refresh an inherited token.
+Expect existing clients with the old token to stop retrying after 401. Never
+print bearer headers or capture real bus traffic while diagnosing rotation.
+All token holders share one trust domain and can see presence or impersonate a
+peer; cwd, labels and model identifiers are not private between participants.
+
+For temporary client disablement launch `PI_AGENT_BUS_ENABLED=0 pi`. For
+persistent removal disable `programs.pi-agent-bus`; disable the Terminus service
+with `services.pi-agent-bus.enable = false`. Build and activate the corresponding
+generations. Roll back to the reviewed input revision and prior home/system
+generations when an upgrade fails, then restart clients and the hub as needed.
+A service restart discards queued mail and deduplication state; client reload or
+restart also clears inbox state and local control consent. Neither rollback nor
+restart makes an uncertain control request safe to resend automatically.
+
 ## CI
 
 The `CI` workflow runs formatting, flake checks (including Home Manager headless-profile assertions), the skill audit, and the complete offline Python/Node/Bats and packaged-runtime gate. It also evaluates every Home Manager configuration, builds every Linux and Darwin Home Manager home, and realises one build per NixOS host. Find current runs with:

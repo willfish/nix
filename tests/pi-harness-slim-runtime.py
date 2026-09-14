@@ -168,7 +168,9 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
         request = self.server.requests[0]
         names = {tool["function"]["name"] for tool in request["tools"]}
         self.assertEqual(names, {"read", "bash", "edit", "write", "mcp", "todo",
-                                "team", "subagent", "skill_catalog"})
+                                "team", "subagent", "skill_catalog",
+                                "list_agents", "set_agent_label",
+                                "send_agent_message"})
         instructions = "".join(
             message["content"] for message in request["messages"]
             if message["role"] in {"system", "developer"})
