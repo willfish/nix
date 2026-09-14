@@ -318,6 +318,7 @@ in
       immich-go # Import Google Photos takeouts into Immich
     ]
     ++ lib.optionals (stdenv.isLinux && capabilities.desktop) [
+      file-roller # Graphical archive manager for opening and extracting archives
       gimp # GNU Image Manipulation Program (the pinned package is Linux-only)
       cosmic-ext-tweaks
       ghostty # GPU-accelerated terminal emulator (system package on NixOS; set as default via TERMINAL + xdg-terminal-exec)

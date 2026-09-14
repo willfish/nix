@@ -24,6 +24,7 @@ let
     lib.recursiveUpdate herdrConfig { theme = herdrTheme; }
   );
   defaultImageViewer = "org.gnome.Loupe.desktop";
+  pdfDesktop = "com.system76.CosmicReader.desktop";
   browserDesktop = "brave-browser.desktop";
   telegramDesktop = "org.telegram.desktop.desktop";
   imageMimeTypes = [
@@ -51,12 +52,79 @@ let
     "image/x-qoi"
     "image/x-tga"
   ];
+  additionalMimeDefaults =
+    lib.genAttrs [
+      "text/html"
+      "application/xhtml+xml"
+      "x-scheme-handler/http"
+      "x-scheme-handler/https"
+    ] (_: browserDesktop)
+    // lib.genAttrs [
+      "application/msword"
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.template"
+      "application/vnd.ms-word.document.macroEnabled.12"
+      "application/vnd.oasis.opendocument.text"
+      "application/vnd.oasis.opendocument.text-template"
+      "application/rtf"
+      "text/rtf"
+    ] (_: "writer.desktop")
+    // lib.genAttrs [
+      "application/vnd.ms-excel"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.template"
+      "application/vnd.ms-excel.sheet.macroEnabled.12"
+      "application/vnd.oasis.opendocument.spreadsheet"
+      "application/vnd.oasis.opendocument.spreadsheet-template"
+      "text/csv"
+      "text/tab-separated-values"
+    ] (_: "calc.desktop")
+    // lib.genAttrs [
+      "application/vnd.ms-powerpoint"
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      "application/vnd.openxmlformats-officedocument.presentationml.template"
+      "application/vnd.openxmlformats-officedocument.presentationml.slideshow"
+      "application/vnd.ms-powerpoint.presentation.macroEnabled.12"
+      "application/vnd.oasis.opendocument.presentation"
+      "application/vnd.oasis.opendocument.presentation-template"
+    ] (_: "impress.desktop")
+    // lib.genAttrs [
+      "application/x-bittorrent"
+      "x-scheme-handler/magnet"
+    ] (_: "org.qbittorrent.qBittorrent.desktop")
+    // lib.genAttrs [
+      "application/json"
+      "application/yaml"
+      "application/x-yaml"
+      "text/yaml"
+      "text/x-yaml"
+    ] (_: "com.system76.CosmicEdit.desktop")
+    // lib.genAttrs [
+      "application/zip"
+      "application/x-tar"
+      "application/gzip"
+      "application/x-gzip"
+      "application/x-compressed-tar"
+      "application/x-bzip"
+      "application/x-bzip2"
+      "application/x-bzip-compressed-tar"
+      "application/x-xz"
+      "application/x-xz-compressed-tar"
+      "application/zstd"
+      "application/x-zstd-compressed-tar"
+      "application/x-7z-compressed"
+      "application/vnd.rar"
+      "application/x-rar"
+      "application/x-rar-compressed"
+    ] (_: "org.gnome.FileRoller.desktop");
   existingMimeDefaults = {
+    "application/pdf" = pdfDesktop;
     "x-scheme-handler/mailto" = browserDesktop;
     "x-scheme-handler/tg" = telegramDesktop;
     "x-scheme-handler/tonsite" = telegramDesktop;
   };
   existingMimeAssociations = {
+    "application/pdf" = pdfDesktop;
     "x-scheme-handler/tg" = telegramDesktop;
     "x-scheme-handler/tonsite" = telegramDesktop;
   };
@@ -223,7 +291,10 @@ in
 
   xdg.mimeApps = lib.mkIf isGraphicalLinux {
     enable = true;
-    defaultApplications = existingMimeDefaults // lib.genAttrs imageMimeTypes (_: defaultImageViewer);
-    associations.added = existingMimeAssociations;
+    defaultApplications =
+      existingMimeDefaults
+      // additionalMimeDefaults
+      // lib.genAttrs imageMimeTypes (_: defaultImageViewer);
+    associations.added = existingMimeAssociations // additionalMimeDefaults;
   };
 }
