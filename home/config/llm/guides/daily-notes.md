@@ -9,7 +9,7 @@ Before drafting or updating prose, read `~/.agents/guides/documentation-relevanc
 - Template: `~/Notes/templates/today.md`
 - Open today, yesterday, or tomorrow with the `today`, `yesterday`, and `tomorrow` shell functions.
 - Pick a dated daily note with `days` (last 14 days, newest first). `days all` lists every daily note; `days 30` changes the window. Type a `YYYY-MM-DD` query to open or create that day.
-- Pick topic notes with `notes`. That picker excludes dated daily directories, templates, `today.md`, and `standup.md`.
+- Pick topic notes with `notes`. That picker excludes dated daily directories, `knowledge-base/`, templates, `today.md`, and `standup.md`.
 
 ## Template format
 

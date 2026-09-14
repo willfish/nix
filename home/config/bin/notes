@@ -14,9 +14,10 @@ else if not test -d "$notes_root"
 end
 
 set -l notes_file (
-  find "$notes_root" -type f -name "*.md" \
+  find "$notes_root" \( -path "$notes_root/knowledge-base" -o -path "$notes_root/templates" \) -prune -o -type f -name "*.md" -print \
   | sed "s#^$notes_root/##" \
   | string match -r -v '^[0-9]{4}-[0-9]{2}-[0-9]{2}/' \
+  | string match -r -v '^knowledge-base/' \
   | string match -r -v '^templates/' \
   | string match -r -v '(^|/)today\.md$' \
   | string match -r -v '(^|/)standup\.md$' \
