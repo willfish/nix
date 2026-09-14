@@ -35,8 +35,15 @@ You **must** do all of the following in the current response:
 
 Keep full output in the execution record, not the published artifact. This gate
 requires running checks, not adding verification prose to PRs, commits, or
-architecture docs. Do not duplicate CI results or routine test counts in PRs;
-include only evidence CI does not provide that affects review, or material gaps.
+architecture docs. Keep all verification details out of PR bodies, including
+non-CI evidence. Report results, coverage gaps and blockers in the conversation;
+follow `~/.agents/guides/documentation-relevance.md` for placement.
+
+Before creating a PR, check the risk-label workflow's accepted body format and
+include its required risk marker at creation time; a label applied afterwards
+may arrive too late. If auto-merge still sees an earlier failed risk-label run
+after newer runs pass, rerun the failed run with user authorization and verify
+its result. A newer successful run may not clear the historical failure.
 
 Skipping any of these steps = invalid claim.
 
