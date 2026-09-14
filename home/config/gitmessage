@@ -6,7 +6,7 @@
 # Remember blank line between title and body.
 
 # Body: Explain *what* and *why* (not *how*).
-# Include Jira: PROJ-123, or Issue: No ticket/issue.
+# When a ticket exists, include Jira: PROJ-123.
 # Wrap at 72 chars. ################################## which is here:  #
 
 # At the end: Include Co-authored-by for all contributors.
