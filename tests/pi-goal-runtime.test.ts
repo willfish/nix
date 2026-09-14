@@ -12,7 +12,7 @@ import test from 'node:test';
 const binary = process.env.PI_GOAL_TEST_BIN ?? process.env.PI_SESSION_TEST_BIN;
 test('real Pi /goal audits with restricted tools, bounds loops, pauses and restores', { skip: !binary, timeout: 60000 }, async () => {
   const dir = await mkdtemp(join(tmpdir(), 'pi-goal-runtime-'));
-  const histories = [], wire = [], pending = new Map();
+  const histories = [], wire = [], pending = new Map(), heldMain = [];
   let child, buffer = '', stderr = '', sequence = 0, mode = 'complete';
   const server = createServer(async (req, res) => {
     try {
@@ -40,8 +40,12 @@ test('real Pi /goal audits with restricted tools, bounds loops, pauses and resto
         return; // Client cancellation must close this deliberately stalled stream.
       }
       const chunk = (delta, finish_reason = null) => res.write(`data: ${JSON.stringify({ id: 'fixture', object: 'chat.completion.chunk', created: 1, model: 'echo', choices: [{ index: 0, delta, finish_reason }] })}\n\n`);
-      chunk({ role: 'assistant' }); chunk(call ? { tool_calls: [call] } : { content: text });
-      chunk({}, call ? 'tool_calls' : 'stop'); res.end('data: [DONE]\n\n');
+      const finish = () => {
+        chunk({ role: 'assistant' }); chunk(call ? { tool_calls: [call] } : { content: text });
+        chunk({}, call ? 'tool_calls' : 'stop'); res.end('data: [DONE]\n\n');
+      };
+      if (!audit && mode === 'defer-main') { heldMain.push(finish); res.flushHeaders(); }
+      else finish();
     } catch (error) {
       stderr += `fixture: ${error.stack}\n`;
       res.writeHead(500).end('Fixture error');
@@ -127,6 +131,24 @@ test('real Pi /goal audits with restricted tools, bounds loops, pauses and resto
     assert.match(status(), /paused/, 'compaction retains the paused goal');
     mode = 'waiting'; await command('/goal requires a human decision');
     await until(() => status().includes('paused'), 'approval pause');
+    const beforeResume = histories.length;
+    mode = 'defer-main';
+    const approval = command('Approved, proceed with the work');
+    await until(() => heldMain.length === 1, 'approval-triggered work');
+    await command('/goal resume'); await command('/goal resume');
+    assert.match(status(), /paused/, 'resume must return promptly without activating during work');
+    await request('follow_up', { message: 'Also inspect the queued clarification' });
+    heldMain.shift()(); await approval;
+    await until(() => heldMain.length === 1, 'queued follow-up work');
+    assert.equal(histories.length, beforeResume + 2);
+    assert.match(status(), /paused/, 'low-level agent end must not consume resume before follow-ups');
+    mode = 'waiting'; heldMain.shift()();
+    await until(() => histories.length === beforeResume + 3 && status().includes('paused'), 'one deferred continuation after full settlement');
+    const resumedJournal = (await readFile(sessionFile, 'utf8')).split('\n').filter(Boolean).map(line => JSON.parse(line));
+    const resume = resumedJournal.filter(entry => entry.customType === 'goal' && entry.data.action === 'resume').at(-1);
+    assert.equal(resume.data.goal.continuations, 0); assert.equal(resume.data.goal.audits, 0);
+    const sinceResume = resumedJournal.slice(resumedJournal.indexOf(resume) + 1);
+    assert.equal(sinceResume.filter(entry => entry.customType === 'goal' && entry.data.action === 'continue').length, 1);
     const count = histories.length;
     await request('get_state'); assert.equal(histories.length, count);
     mode = 'loop'; await command('/goal resume');

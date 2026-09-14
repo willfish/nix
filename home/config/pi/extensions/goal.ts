@@ -314,7 +314,7 @@ function normalizeGoal(value, version) {
 export function createGoalExtension({ runAudit = createAuditRunner(), renderCard } = {}) {
   return function goalExtension(pi) {
     let goal = null, audit = null, turnOwner = null, endedTurn = null, continuationQueued = false;
-    let epoch = 0;
+    let epoch = 0, pendingResume = null;
     const cards = new Map();
     if (renderCard) pi.registerEntryRenderer(AUDIT_CARD_TYPE, (entry, { expanded }, theme) =>
       renderCard(() => cards.get(entry.data.auditId) ?? entry.data, expanded, theme));
@@ -367,6 +367,7 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
     }
     function invalidate(persistCard = true) {
       epoch++;
+      pendingResume = null;
       if (audit) {
         finishCard(audit, 'cancelled', 'Audit cancelled; no completion verdict accepted.', persistCard);
         audit.controller.abort();
@@ -421,12 +422,31 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
       }
     }
 
+    function resume(ctx) {
+      invalidate();
+      goal.status = 'active'; goal.continuations = 0; goal.audits = 0; goal.reason = '';
+      persist('resume'); updateStatus(ctx); queueContinuation(ctx, goal.auditReport, true);
+    }
+    function resumePending(ctx) {
+      if (!pendingResume) return false;
+      if (!goal || pendingResume.epoch !== epoch || pendingResume.id !== goal.id
+        || pendingResume.revision !== goal.revision || goal.status === 'complete' || audit) {
+        pendingResume = null;
+        return false;
+      }
+      if (!ctx.isIdle() || ctx.hasPendingMessages()) return false;
+      resume(ctx);
+      return true;
+    }
+
     async function auditCompletion(ctx) {
       if (!goal || audit || !ctx.isIdle() || ctx.hasPendingMessages()) return;
       if (goal.audits >= MAX_AUDITS) {
         stop(ctx, 'limited', 'Audit attempt limit reached. Inspect the reports before /goal resume.');
         return;
       }
+      // A new audit owns the completion decision, not an earlier resume request.
+      pendingResume = null;
       const contract = { id: goal.id, revision: goal.revision, objective: goal.objective,
         requirements: requirementsFor(goal.objective), auditId: randomUUID() };
       const job = { contract, controller: new AbortController(), epoch };
@@ -482,18 +502,18 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
     pi.on('agent_start', async (_event, ctx) => {
       if (audit) stop(ctx, 'unverified', 'New agent work cancelled the audit. Verify again after it settles.');
       continuationQueued = false;
-      turnOwner = goal?.status === 'active' ? { id: goal.id, revision: goal.revision, epoch } : null;
+      turnOwner = goal ? { id: goal.id, revision: goal.revision, epoch } : null;
       endedTurn = null;
     });
     pi.on('tool_result', async (event, ctx) => {
-      if (goal?.status !== 'active' || !['team', 'subagent'].includes(event.toolName)) return;
+      if ((goal?.status !== 'active' && !pendingResume) || !['team', 'subagent'].includes(event.toolName)) return;
       const questions = event.details?.job?.tasks?.map(task => task.result?.question) ?? [];
       if (questions.some(question => question?.requiresUser) || event.details?.question?.requiresUser) {
         stop(ctx, 'paused', 'A team member requires a human decision. Answer the question, then /goal resume explicitly.');
       }
     });
     pi.on('agent_end', async (event, ctx) => {
-      if (!goal || goal.status !== 'active' || !turnOwner || turnOwner.epoch !== epoch) return;
+      if (!goal || (goal.status !== 'active' && !pendingResume) || !turnOwner || turnOwner.epoch !== epoch) return;
       const messages = event.messages ?? [];
       const last = [...messages].reverse().find(message => message?.role === 'assistant');
       if (last?.stopReason === 'aborted') { stop(ctx, 'paused', 'Turn aborted. Goal automation stopped.'); return; }
@@ -503,7 +523,8 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
     pi.on('agent_settled', async (_event, ctx) => {
       const ended = endedTurn;
       endedTurn = null;
-      if (!goal || goal.status !== 'active' || !ended || ended.owner.epoch !== epoch) return;
+      if (!goal || (goal.status !== 'active' && !pendingResume)) return;
+      if (!ended || ended.owner.epoch !== epoch) { resumePending(ctx); return; }
       if (ended.last?.stopReason === 'error' || !ended.last) {
         stop(ctx, 'blocked', 'Turn failed after host recovery. Inspect the error before /goal resume.');
         return;
@@ -512,7 +533,7 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
       if (claim === 'waiting') { stop(ctx, 'paused', 'Waiting for your decision or approval. Answer, then /goal resume explicitly.'); return; }
       if (claim === 'blocked') { stop(ctx, 'blocked', 'Agent reported an impasse. Inspect the evidence before /goal resume.'); return; }
       if (claim === 'complete') { launchAudit(ctx); return; }
-      queueContinuation(ctx);
+      if (!resumePending(ctx)) queueContinuation(ctx);
     });
     pi.on('context', async event => {
       // Only the latest continuation for this exact local revision is runnable.
@@ -551,10 +572,13 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
         }
         if (parsed.action === 'resume') {
           if (goal.status === 'complete') { notify(ctx, 'Completed goals stay closed. Use /goal edit or set to change the contract.'); return; }
-          if (!ctx.isIdle() || ctx.hasPendingMessages()) { notify(ctx, 'Wait for the agent to settle before /goal resume.', 'warning'); return; }
-          invalidate();
-          goal.status = 'active'; goal.continuations = 0; goal.audits = 0; goal.reason = '';
-          persist('resume'); updateStatus(ctx); queueContinuation(ctx, goal.auditReport, true);
+          if (!ctx.isIdle() || ctx.hasPendingMessages()) {
+            // Return promptly so pause/edit/clear remain available while Pi settles.
+            pendingResume = { id: goal.id, revision: goal.revision, epoch };
+            notify(ctx, 'Goal resume requested. It will resume after the agent and queued messages settle, unless the goal changes or a new stop or audit intervenes.');
+            return;
+          }
+          resume(ctx);
           return;
         }
         let objective = parsed.action === 'set' ? parsed.objective : parsed.rest;

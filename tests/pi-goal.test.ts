@@ -231,6 +231,99 @@ test('pending input and busy work suppress audits and continuation', async () =>
   await h.command('new objective'); assert.equal(h.goal().status, 'paused');
 });
 
+for (const busy of ['running', 'queued']) {
+  test(`explicit resume is deferred while ${busy}, without resetting allowances early`, async () => {
+    const h = harness({ runAudit: async ({ contract }) => ({ text: report(contract, 'unverified') }) });
+    await h.command('work'); await h.turn(); await h.command('verify'); await h.command('pause');
+    h.idle = busy !== 'running'; h.pending = busy === 'queued';
+    const before = structuredClone(h.goal()), count = h.messages.length;
+    await h.command('resume'); await h.command('resume');
+    assert.match(h.notices.at(-1)[0], /resume.*settle/i);
+    assert.deepEqual(h.goal(), before);
+    await h.emit('agent_settled');
+    assert.equal(h.messages.length, count, 'still busy or queued is not settled');
+    h.idle = true; h.pending = false;
+    await h.emit('agent_settled');
+    assert.equal(h.goal().status, 'active');
+    assert.equal(h.goal().continuations, 0);
+    assert.equal(h.goal().audits, 0);
+    assert.equal(h.messages.length, count + 1);
+    assert.match(h.messages.at(-1).message.content, /untrusted_audit_feedback/);
+    await h.emit('agent_settled');
+    assert.equal(h.messages.length, count + 1, 'one-shot request cannot duplicate continuation');
+  });
+}
+
+for (const action of ['pause', 'clear', 'edit changed', 'replacement', 'session_tree', 'session_start', 'session_shutdown']) {
+  test(`pending resume cannot cross ${action}`, async () => {
+    const h = harness(); await h.command('work'); await h.command('pause');
+    h.idle = false; await h.command('resume');
+    if (action.startsWith('session_')) await h.emit(action);
+    else await h.command(action);
+    const before = structuredClone(h.goal()), count = h.messages.length;
+    h.idle = true; await h.emit('agent_settled');
+    assert.deepEqual(h.goal(), before); assert.equal(h.messages.length, count);
+  });
+}
+
+test('deferred resume replaces ordinary continuation and resets the allowance only once', async () => {
+  const h = harness(); await h.command('work'); await h.turn();
+  h.idle = false; await h.emit('agent_start'); await h.command('resume');
+  await h.emit('agent_end', { messages: [{ role: 'assistant', content: 'working', stopReason: 'stop' }] });
+  const count = h.messages.length;
+  h.idle = true; await h.emit('agent_settled'); await h.emit('agent_settled');
+  assert.equal(h.goal().continuations, 0); assert.equal(h.messages.length, count + 1);
+  await h.turn(); assert.equal(h.goal().continuations, 1);
+});
+
+for (const initial of ['active', 'paused']) {
+  for (const [text, stopReason, status] of [
+    ['aborted', 'aborted', 'paused'], ['error', 'error', 'blocked'],
+    [WAITING_MARKER, 'stop', 'paused'], [BLOCKED_MARKER, 'stop', 'blocked'],
+    [COMPLETE_MARKER, 'stop', 'complete'],
+  ]) {
+    test(`pending resume of ${initial} goal cannot override ${status} from ${text}`, async () => {
+      const h = harness(); await h.command('work');
+      if (initial === 'paused') await h.command('pause');
+      h.idle = false; await h.emit('agent_start'); await h.command('resume');
+      const count = h.messages.length;
+      await h.emit('agent_end', { messages: [{ role: 'assistant', content: text, stopReason }] });
+      h.idle = true; await h.emit('agent_settled'); await h.emit('agent_settled');
+      assert.equal(h.goal().status, status); assert.equal(h.messages.length, count);
+    });
+  }
+  test(`a new human-required question invalidates pending resume of ${initial} goal`, async () => {
+    const h = harness(); await h.command('work');
+    if (initial === 'paused') await h.command('pause');
+    h.idle = false; await h.emit('agent_start'); await h.command('resume');
+    await h.emit('tool_result', { toolName: 'team', details: { question: { requiresUser: true } } });
+    const count = h.messages.length;
+    h.idle = true; await h.emit('agent_settled');
+    assert.equal(h.goal().status, 'paused'); assert.equal(h.messages.length, count);
+  });
+}
+
+test('failed deferred resume send consumes the request without a retry loop', async () => {
+  const h = harness(); await h.command('work'); await h.command('pause');
+  h.idle = false; await h.command('resume'); h.sendError = true;
+  const count = h.messages.length;
+  h.idle = true; await h.emit('agent_settled');
+  assert.equal(h.goal().status, 'paused');
+  h.sendError = false; await h.emit('agent_settled');
+  assert.equal(h.messages.length, count);
+});
+
+test('an audit consumes pending resume authority even when completion is unverified', async () => {
+  const d = deferredAudit(), h = harness({ runAudit: d.runAudit });
+  await h.command('work'); h.idle = false; await h.emit('agent_start'); await h.command('resume');
+  await h.emit('agent_end', { messages: [{ role: 'assistant', content: COMPLETE_MARKER, stopReason: 'stop' }] });
+  h.idle = true; await h.emit('agent_settled');
+  assert.equal(h.goal().status, 'auditing');
+  const count = h.messages.length;
+  d.finish('unverified'); await Promise.resolve(); await h.emit('agent_settled');
+  assert.equal(h.goal().status, 'unverified'); assert.equal(h.messages.length, count);
+});
+
 test('old implementation turn cannot complete newly set goal', async () => {
   let count = 0;
   const h = harness({ runAudit: async options => { count++; return accepted(options); } });
