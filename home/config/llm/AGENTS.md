@@ -29,9 +29,3 @@ Branches follow project/ticket conventions, otherwise short descriptive names; n
 For substantive prose read `~/.agents/guides/documentation-relevance.md`. Write for the reader, not the session; retain material risks and non-CI evidence, not routine CI results in PRs. New prose-producing skills/guides must reference that guide, not copy it. For dashboard/analytics/Logs Insights changes read `~/.agents/guides/dashboards.md` first.
 
 For skill edits load create-skill/relevant harness docs. Use portable, concise imperative entries; lowercase hyphenated names (2-64 chars), frontmatter only name/description with precise triggers. Put detail in references, repeatable logic in tested scripts, templates in assets. Test realistic tasks and clean up artifacts.
-
-## Final voice summary
-
-Only the main assistant or orchestrator responding directly to the user adds a final voice-summary section. Delegated subagents return their requested deliverable without an additional TTS summary; ordinary task-required summaries are still allowed.
-
-For the main assistant or orchestrator, end final responses with exactly one `## Summary` or `## TL;DR`, nothing after it. Only this section goes to TTS. Use natural spoken prose with up to 250 words when complex ideas need explanation. Make the summary understandable on its own when heard aloud.

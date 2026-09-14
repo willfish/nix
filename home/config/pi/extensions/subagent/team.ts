@@ -17,6 +17,9 @@ export function launchCommand(invocation) {
     '-u', 'PI_MODEL', '-u', 'PI_REASONING_LEVEL', 'PI_TEAM_CHILD=1',
     invocation.command, ...invocation.args].map(shellQuote).join(' ');
 }
+export function teamChildEnv(env = process.env) {
+  return { ...env, PI_TEAM_CHILD: '1' };
+}
 export function teamAvailable(ctx, env = process.env) {
   return ctx.mode === 'tui' && env.HERDR_ENV === '1' && !!env.HERDR_SOCKET_PATH &&
     !!env.HERDR_PANE_ID && env.PI_TEAM_CHILD !== '1';

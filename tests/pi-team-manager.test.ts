@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
-import { TeamManager, CHILD_EXTENSION, launchCommand, shellQuote, teamAvailable } from '../home/config/pi/extensions/subagent/team.ts';
+import { TeamManager, CHILD_EXTENSION, launchCommand, shellQuote, teamAvailable, teamChildEnv } from '../home/config/pi/extensions/subagent/team.ts';
 import { atomicJson, envelope, readJson } from '../home/config/pi/extensions/subagent/protocol.ts';
 import { Jobs } from '../home/config/pi/extensions/subagent/jobs.ts';
 
@@ -160,6 +160,13 @@ test('allocated persona role reaches the launched child environment unchanged', 
     encoding: 'utf8', env: { PATH: process.env.PATH, ...paneEnv },
   }));
   assert.deepEqual(childEnv, { child: '1', role: 'security-reviewer' });
+});
+
+test('teamChildEnv marks headless children without dropping the parent environment', () => {
+  const env = teamChildEnv({ PATH: '/bin', PI_TEAM_CHILD: '0', KEEP: 'yes' });
+  assert.equal(env.PI_TEAM_CHILD, '1');
+  assert.equal(env.PATH, '/bin');
+  assert.equal(env.KEEP, 'yes');
 });
 
 test('availability requires interactive Herdr parent and refuses recursive children', () => {

@@ -79,6 +79,9 @@ in
   home.file.".pi/agent/extensions/skill-catalog".source = ../config/pi/extensions/skill-catalog;
   home.file.".pi/agent/extensions/reading-policy.ts".source =
     ../config/pi/extensions/reading-policy.ts;
+  home.file.".pi/agent/extensions/orchestrator-addendum.ts".source =
+    ../config/pi/extensions/orchestrator-addendum.ts;
+  home.file.".pi/agent/ORCHESTRATOR.md".source = ../config/llm/ORCHESTRATOR.md;
   home.file.".pi/agent/extensions/goal.ts".source = ../config/pi/extensions/goal.ts;
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =

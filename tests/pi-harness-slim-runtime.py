@@ -122,6 +122,13 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
         (self.profile / "extensions").symlink_to(deployed / \
          "extensions", target_is_directory=True)
         shutil.copyfile(deployed / "AGENTS.md", self.profile / "AGENTS.md")
+        shutil.copyfile(
+            deployed / "ORCHESTRATOR.md", self.profile / "ORCHESTRATOR.md")
+        self.assertTrue(
+            (deployed / "extensions/orchestrator-addendum.ts").is_file())
+        self.assertNotIn(
+            "## Final voice summary",
+            (deployed / "AGENTS.md").read_text())
         repo = Path(__file__).resolve().parents[1]
         shutil.copyfile(repo / "AGENTS.md", self.root / "AGENTS.md")
         # Never copy deployed models.json, auth.json, settings.json or MCP
@@ -166,6 +173,9 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
             message["content"] for message in request["messages"]
             if message["role"] in {"system", "developer"})
         self.assertNotIn("<available_skills>", instructions)
+        self.assertIn(
+            "You are the starting Pi agent for this session", instructions)
+        self.assertIn("## Final voice summary", instructions)
         schemas = json.dumps(
     request["tools"],
     ensure_ascii=False,
@@ -251,6 +261,26 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
         self.assertIn("Do not invent human approval.", instructions)
         self.assertIn("never restart its chain", instructions)
         client.finish()
+
+    def test_orchestrator_addendum_appends_for_parent_not_team_child(self):
+        addendum = Path(__file__).resolve().parents[1] / (
+            "home/config/pi/extensions/orchestrator-addendum.ts")
+        (self.profile / "ORCHESTRATOR.md").write_text(
+            "You are the starting Pi agent for this session.\n"
+            "ORCHESTRATOR_SENTINEL\n")
+        client = self.client(["--extension", str(addendum)])
+        self.catalog(client, query="fixture-00")
+        instructions = self.server.requests[0]["messages"][0]["content"]
+        self.assertIn("ORCHESTRATOR_SENTINEL", instructions)
+        client.finish()
+
+        self.server.requests.clear()
+        self.env["PI_TEAM_CHILD"] = "1"
+        child = self.client(["--extension", str(addendum)])
+        self.catalog(child, query="fixture-00")
+        child_instructions = self.server.requests[0]["messages"][0]["content"]
+        self.assertNotIn("ORCHESTRATOR_SENTINEL", child_instructions)
+        child.finish()
 
     def test_team_preload_uses_unchanged_registry_after_catalogue_replacement(
         self):

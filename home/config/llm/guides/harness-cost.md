@@ -53,9 +53,11 @@ test -x "$PI_MCP_TEST_BIN"
 test -f "$PI_MCP_TEST_EXTENSION"
 test -f "$PI_SKILL_TEST_EXTENSION"
 test -f "$generation/home-files/.pi/agent/extensions/reading-policy.ts"
+test -f "$generation/home-files/.pi/agent/extensions/orchestrator-addendum.ts"
 test -d "$PI_HARNESS_TEST_HOME_FILES/.agents/skills"
 test -f "$PI_HARNESS_TEST_HOME_FILES/.pi/agent/AGENTS.md"
-node --experimental-vm-modules --test tests/pi-skill-catalog.test.ts tests/pi-reading-policy.test.ts tests/pi-mcp-namespace-tools.test.ts
+test -f "$PI_HARNESS_TEST_HOME_FILES/.pi/agent/ORCHESTRATOR.md"
+node --experimental-vm-modules --test tests/pi-skill-catalog.test.ts tests/pi-reading-policy.test.ts tests/pi-orchestrator-addendum.test.ts tests/pi-mcp-namespace-tools.test.ts
 python3 tests/pi-mcp-runtime.py -v
 python3 tests/pi-harness-slim-runtime.py -v
 SH

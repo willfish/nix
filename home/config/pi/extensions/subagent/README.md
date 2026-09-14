@@ -23,7 +23,7 @@ Personas are ordinary agent Markdown files:
 
 Work solo unless delegation answers a distinct question or the user requests a team. These are available roles, not a checklist: use at most one general reviewer, adding specialists only for separate evidence or artifacts. Four panes are a capacity limit, not a staffing target. Assign non-overlapping ownership to the builder and test engineer.
 
-The domain specialist is for conflicting or unclear business rules. Use scout plus a domain skill for ordinary domain-code reconnaissance. Choose framework, domain and security skills for the task rather than loading them into every specialist. Role bodies load only when dispatched; normal Pi instructions and skill discovery still apply. Concise handoffs keep parent context focused.
+The domain specialist is for conflicting or unclear business rules. Use scout plus a domain skill for ordinary domain-code reconnaissance. Choose framework, domain and security skills for the task rather than loading them into every specialist. Role bodies load only when dispatched; normal Pi instructions and skill discovery still apply. Children still load shared `AGENTS.md` context files. Orchestrator-only rules live in `~/.pi/agent/ORCHESTRATOR.md` and are appended only when `PI_TEAM_CHILD` is unset. Concise handoffs keep parent context focused.
 
 Existing scout, planner, worker and reviewer definitions still work. The latter three are compatibility roles, not additional team stages. Model and thinking level inherit from the coordinator unless the agent pins a model.
 
@@ -93,7 +93,7 @@ Herdr layout edits use positional paths and are not transactional across clients
 - `herdr.ts`: bounded socket calls, explicit pane ownership and subtree ratios.
 - `protocol.ts`: private atomic command/result files.
 - `child.ts`: readiness, typed questions, validated answer delivery, settlement, retirement and coordinator lease.
-- `team.ts`: parent lifecycle, answer transport and retained sessions.
+- `team.ts`: parent lifecycle, answer transport, retained sessions and `PI_TEAM_CHILD` for headless and interactive children.
 - `jobs.ts`: session-owned scheduling, question tracking, continuation and cancellation capacity.
 - `job-results.ts`: honest waiting/result rendering, segment usage and parent batch guards.
 - `controls.ts`: coordinator tool, slash command and collaboration guidance.
