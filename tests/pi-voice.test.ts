@@ -36,13 +36,17 @@ if (existsSync(extensionPath)) {
     let idle = true;
     let pending = false;
     let session = 'session-a';
+    const shortcuts = {};
+    const statuses = [];
     const pi = { on: (name, callback) => { hooks[name] = callback; },
       sendUserMessage: (text) => { sent.push(text); idle = false; },
-      getSessionName: () => 'Voice test' };
+      getSessionName: () => 'Voice test',
+      registerShortcut: (key, options) => { shortcuts[key] = options; } };
     const ctx = { hasUI: true, cwd: directory, isIdle: () => idle,
       hasPendingMessages: () => pending,
       sessionManager: { getSessionId: () => session, getLeafId: () => 'turn-a' },
-      ui: { getEditorText: () => editor, setEditorText: (value) => { editor = value; }, notify: () => {} } };
+      ui: { getEditorText: () => editor, setEditorText: (value) => { editor = value; }, notify: () => {},
+        setStatus: (id, message) => { statuses.push([id, message]); } } };
     registerVoice(pi, { AGENT_VOICE_TOKEN: 'token', AGENT_VOICE_KIND: 'pi',
       AGENT_VOICE_ADAPTER_SOCKET: path, AGENT_VOICE_SOCKET: controlPath,
       AGENT_VOICE_LAUNCH_PID: String(process.ppid) });
@@ -60,12 +64,38 @@ if (existsSync(extensionPath)) {
       socket.on('data', (chunk) => { data += chunk; });
       socket.on('end', () => resolve(JSON.parse(data)));
     });
-    return { request, events, hooks, ctx, sent, path, pi,
+    return { request, events, hooks, ctx, sent, path, pi, shortcuts, statuses,
       editor: () => editor, setEditor: (value) => { editor = value; },
       setIdle: (value) => { idle = value; },
       setPending: (value) => { pending = value; },
       setSession: (value) => { session = value; } };
   }
+
+  test('Alt+M toggles controller dictation and paints the listening meter', async (t) => {
+    const f = await fixture(t, (event) => {
+      if (event.action === 'dictate' || event.action === 'status')
+        return { ok: true, phase: 'recording', input_level: 0.4 };
+      return { ok: true, accepted: true, attached: { state: 'ready', token: 'token' } };
+    });
+    assert.ok(f.shortcuts['alt+m']);
+    assert.ok(f.shortcuts['alt+n']);
+    await f.shortcuts['alt+m'].handler(f.ctx);
+    assert.ok(f.events.some((event) => event.action === 'dictate' && event.token === 'token'));
+    const painted = await Promise.race([
+      new Promise((resolve) => {
+        const timer = setInterval(() => {
+          if (f.statuses.some((entry) => entry[0] === 'voice' && String(entry[1] || '').includes('listening'))) {
+            clearInterval(timer);
+            resolve(true);
+          }
+        }, 10);
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('meter was not painted')), 1000)),
+    ]);
+    assert.equal(painted, true);
+    await f.shortcuts['alt+n'].handler(f.ctx);
+    assert.ok(f.events.some((event) => event.action === 'dictate-cancel'));
+  });
 
   test('session startup retries until its launcher registration is accepted', async (t) => {
     const f = await fixture(t, (_event, count) => ({ ok: true, accepted: count >= 4 }));

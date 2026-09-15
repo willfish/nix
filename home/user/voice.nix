@@ -15,10 +15,7 @@ let
     cudaSupport = cudaTts;
   };
   whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
-  vadModel = pkgs.fetchurl {
-    url = "https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v6.2.0.bin";
-    sha256 = "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987";
-  };
+  sttModel = if hostName == "andromeda" then "ggml-large-v3-turbo-q5_0.bin" else "ggml-small.en.bin";
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
   voicePython = pkgs.python3.withPackages (ps: [ ps.dbus-next ]);
   voiceScripts = pkgs.runCommand "pi-voice-scripts" { } ''
@@ -95,8 +92,8 @@ let
     runtimeInputs = [ pkgs.python3 ];
     text = ''
       exec python3 ${../config/voice/voice-model-setup} ${
-        lib.optionalString (!voiceTts) "--stt-only"
-      } "$@"
+        lib.optionalString (!voiceTts) "--stt-only "
+      }--host ${lib.escapeShellArg hostName} "$@"
     '';
   };
   newerSamanthaSource = pkgs.fetchurl {
@@ -210,7 +207,7 @@ in
     systemd.user.services.pi-voice-stt = {
       Unit.Description = "Local Whisper speech recognition on the GPU";
       Service = common // {
-        ExecStart = "${whisper}/bin/whisper-server --host 127.0.0.1 --port 8178 -m ${dataDir}/models/ggml-small.en.bin -t 4 -l en --vad --vad-model ${vadModel} --suppress-nst";
+        ExecStart = "${whisper}/bin/whisper-server --host 127.0.0.1 --port 8178 -m ${dataDir}/models/${sttModel} -t 4 -l en --suppress-nst";
         Environment = [ "VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/${vulkanDriver}" ];
       };
     };

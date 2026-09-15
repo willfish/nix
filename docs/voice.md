@@ -2,10 +2,12 @@
 
 One local recorder, tray and pair of speech engines serve Pi and Qwen Pi.
 The control command is `pi-voice`; units are `pi-voice`, `pi-voice-stt` and
-`pi-voice-tts`. Whisper small.en recognizes speech with Silero VAD; audio.cpp runs Qwen3-TTS
-0.6B with two pinned Samantha references. Andromeda uses CUDA for TTS and
-NVIDIA Vulkan for Whisper. Foundation gets Whisper dictation on the Radeon
-iGPU only; TTS stays off. macOS needs separate platform adapters.
+`pi-voice-tts`. Andromeda uses Whisper large-v3-turbo Q5 on NVIDIA Vulkan; Foundation keeps
+Whisper small.en on the Radeon iGPU. Pause detection stays in the local
+recorder. The recogniser does not run a second VAD pass, because short slices
+were being dropped. audio.cpp
+runs Qwen3-TTS 0.6B with two pinned Samantha references. Andromeda uses CUDA
+for TTS. Foundation has no TTS. macOS needs separate platform adapters.
 
 ## Launch and select a session
 
@@ -52,20 +54,24 @@ using. After the last session leaves, engines stop once active work has drained.
 | Super+Shift+Space | Explicitly send the dictated draft |
 | Super+R | Read the latest completed summary; press again to stop speaking |
 | Super+Shift+V | Open the keyboard voice/session/action picker |
+| Alt+M | In Pi, start or stop dictation for this session (does not send) |
+| Alt+N | In Pi, cancel in-flight dictation |
 
-Super is the Windows key. Transcription is staged for review; recording never
+Super is the Windows key. While Pi is recording, the footer shows a live
+microphone meter. Transcription is staged for review; recording never
 automatically presses Enter. Capture starts only after microphone samples
 arrive and stops after three minutes. A pause, or thirty seconds of
 uninterrupted speech, flushes a slice into the Pi prompt while recording
 continues, so earlier words are kept if the take hits the limit. Silence,
-punctuation-only output and non-speech markers are skipped. Silero VAD adds
-speech detection beyond the initial quiet-audio gate, while a small vocabulary
-prompt helps with names such as Herdr, Qwen, NixOS and the configured hosts.
+punctuation-only output and non-speech markers are skipped. The recorder already
+splits on pauses; a small vocabulary prompt helps with names such as Herdr,
+Qwen, NixOS and the configured hosts.
 
-The usual flow uses Super+Space to start, stop, then send. Text may already be
-in the prompt before you stop. Wait for the green ready state before sending. Retained dictation
-is delivered and sent when the selected agent is ready; a busy agent leaves
-those words retained. The hotkey applies across all four launchers and never
+The usual flow uses Super+Space to start, stop, then send, or Alt+M in Pi to
+start and stop without sending. Text may already be
+in the prompt before you stop. Wait for the green ready state before sending.
+If the selected agent is busy, the take is kept and sent when that agent goes
+idle. Super+Space while it is busy queues that send instead of dropping the draft. The hotkey applies across all four launchers and never
 broadcasts to other registered sessions, including multiple sessions of the
 same harness.
 
@@ -302,7 +308,7 @@ journalctl --user -u pi-voice -u pi-voice-stt -u pi-voice-tts -n 100
 
 On Andromeda, pull the configuration, run `hmswitch`, then
 `pi-voice-models` and verify the microphone, NVIDIA Vulkan and playback.
-On Foundation, `hmswitch` then `pi-voice-models` installs Whisper only
+On Foundation, `hmswitch` then `pi-voice-models` installs Whisper small.en only
 (about 500 MB). Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
 
 ## Voice choice and measured performance

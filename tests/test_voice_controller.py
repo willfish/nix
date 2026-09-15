@@ -385,6 +385,37 @@ class VoiceTests(unittest.TestCase):
             "token-1", self.event(thread="new-conversation", turn="new-turn")
         ))
 
+    def test_dictate_selects_this_session_and_does_not_send(self):
+        self.app.register("token-2", dict(self.target, pane="w1:p3"))
+        self.assertEqual(self.app.token, "token-2")
+        self.voice.dispatch(self.app, {"action": "dictate", "token": "token-1"})
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            if self.app.status()["recording"]:
+                break
+            time.sleep(0.005)
+        else:
+            self.fail(f"Capture did not become ready: {self.app.status()}")
+        self.assertEqual(self.app.token, "token-1")
+        self.voice.dispatch(self.app, {"action": "dictate", "token": "token-1"})
+        self.app.worker.join(2)
+        self.assertEqual(self.terminal.keys, [])
+        self.assertTrue(self.app.status()["draft"])
+
+    def test_dictate_cancel_discards_recording(self):
+        self.start_recording()
+        self.voice.dispatch(
+            self.app, {"action": "dictate-cancel", "token": "token-1"}
+        )
+        self.app.worker.join(2)
+        self.assertFalse(self.app.status()["recording"])
+        self.assertEqual(self.terminal.text, [])
+        self.assertEqual(self.terminal.keys, [])
+
+    def test_dictate_requires_a_bound_session_token(self):
+        with self.assertRaisesRegex(RuntimeError, "not bound"):
+            self.voice.dispatch(self.app, {"action": "dictate"})
+
     def test_record_toggle_stages_transcript_without_submitting(self):
         self.start_recording()
         self.assertTrue(self.app.status()["recording"])
@@ -496,16 +527,30 @@ class VoiceTests(unittest.TestCase):
         self.start_recording()
         self.app.interact()
         self.app.worker.join(2)
-        with self.assertRaisesRegex(RuntimeError, "working"):
-            self.app.interact()
+        self.app.interact()
         self.assertTrue(self.app.status()["pending"])
         self.assertFalse(self.app.status()["recording"])
+        self.assertTrue(self.app.send_when_idle)
         self.terminal.state = "idle"
-        self.app.interact()
+        self.app._flush_queued_send()
         self.assertEqual(self.terminal.text, [
             "Please explain the failing tests."
         ])
         self.assertEqual(self.terminal.keys, ["Enter"])
+
+    def test_busy_event_keeps_draft_until_send(self):
+        self.start_recording()
+        self.app.record()
+        self.app.worker.join(2)
+        self.assertTrue(self.app.status()["draft"])
+        self.app.harness_event("token-1", {
+            "harness": "pi", "type": "session", "session": "thread-1",
+        })
+        self.assertTrue(self.app.harness_event("token-1", {
+            "harness": "pi", "type": "busy", "session": "thread-1",
+        }))
+        self.assertTrue(self.app.status()["draft"])
+        self.assertEqual(self.terminal.keys, [])
 
     def test_primary_hotkey_does_not_send_while_transcription_is_pending(self):
         self.audio.transcribe_release.clear()

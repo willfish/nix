@@ -313,6 +313,7 @@ class Controller:
         self.worker = None
         self.retry_audio = None
         self.active_retry = None
+        self.send_when_idle = False
         self.activity_inflight = set()
         self.attachments = AttachmentRegistry()
         self.selection_initialized = False
@@ -1475,15 +1476,14 @@ class Controller:
                 self._set_activity(entry,
                     "blocked" if event.get("state") == "blocked" else "working"
                 )
-                entry["draft"] = False
                 entry["active_turn"] = event.get("turn")
-                if token == self.token:
-                    self.draft = False
-                    if self.phase == "draft" and not self.pending:
-                        self.phase = "idle"
                 return True
             if kind in ("settled", "shutdown"):
                 self._settle_activity(entry, event.get("turn"))
+                if kind == "settled" and token == self.token:
+                    threading.Thread(
+                        target=self._flush_queued_send, daemon=True
+                    ).start()
                 return True
             if kind != "reply" or not event.get("turn"):
                 return False
@@ -1904,9 +1904,16 @@ class Controller:
                 with self.lock:
                     if token == self.token and not cancelled.is_set():
                         self.phase = "draft"
-                self.notice(
-                    "Dictation ready", "Press Super+Space again to send"
-                )
+            if staged_any or self.pending:
+                if self._queue_if_busy():
+                    self.notice(
+                        "Dictation queued",
+                        "Will send when Pi is idle",
+                    )
+                elif staged_any:
+                    self.notice(
+                        "Dictation ready", "Press Super+Space again to send"
+                    )
             elif not spoken:
                 self.notice("No speech detected", "Nothing was inserted")
         except Exception as exc:
@@ -2107,56 +2114,101 @@ class Controller:
             self.error = None
             return True
 
-    def send(self, expected=None, allow_edited=False):
-        with self.lock:
-            self._require_ready(self.token)
-            if expected is not None and expected != (
-                self.token, self.input_cancelled
-            ):
-                raise RuntimeError("Voice session changed; press Send again")
-            if expected is not None and expected[1].is_set():
-                raise RuntimeError("Voice delivery was cancelled")
-            if self.recording_active():
-                raise RuntimeError(
-                    "Finish recording and transcription before sending"
-                )
-            pending, token = self.pending, self.token
-        if pending:
-            self.stage(pending, token)
-        with self.lock:
-            if expected is not None and (
-                expected != (self.token, self.input_cancelled)
-                or expected[1].is_set()
-            ):
-                raise RuntimeError("Voice delivery was cancelled")
-            if not self.target or not self.draft:
-                raise RuntimeError("No new dictation to send")
-            if self.input_cancelled.is_set():
-                self.input_cancelled = threading.Event()
-            target, operation = self.target, self.input_cancelled
-        if not self.delivery_lock.acquire(blocking=False):
-            raise RuntimeError("Input delivery is already in progress")
+    def _queue_if_busy(self):
+        if not (self.draft or self.pending) or not self.target:
+            return False
         try:
-            self._probe_managed(target)
-            self.terminal.validate(target)
+            self.terminal.validate(self.target)
+        except RuntimeError:
+            self.send_when_idle = True
+            self.phase = "draft"
+            return True
+        return False
+
+    def _flush_queued_send(self):
+        with self.lock:
+            if not self.send_when_idle or self.recording_active():
+                return
+            if not (self.draft or self.pending):
+                self.send_when_idle = False
+                return
+        try:
+            self.send(allow_edited=True)
+        except Exception as exc:
+            self.report_error(exc)
+
+    def _queue_send_error(self, exc):
+        message = str(exc).lower()
+        if not (self.draft or self.pending):
+            return False
+        if not any(
+            word in message
+            for word in ("busy", "working", "waiting for an interaction")
+        ):
+            return False
+        self.send_when_idle = True
+        self.phase = "draft"
+        self.notice("Dictation queued", "Will send when Pi is idle")
+        return True
+
+    def send(self, expected=None, allow_edited=False):
+        try:
             with self.lock:
-                if token != self.token or operation.is_set():
+                self._require_ready(self.token)
+                if expected is not None and expected != (
+                    self.token, self.input_cancelled
+                ):
+                    raise RuntimeError(
+                        "Voice session changed; press Send again"
+                    )
+                if expected is not None and expected[1].is_set():
                     raise RuntimeError("Voice delivery was cancelled")
-                if not self.draft:
+                if self.recording_active():
+                    raise RuntimeError(
+                        "Finish recording and transcription before sending"
+                    )
+                pending, token = self.pending, self.token
+            if pending:
+                self.stage(pending, token)
+            with self.lock:
+                if expected is not None and (
+                    expected != (self.token, self.input_cancelled)
+                    or expected[1].is_set()
+                ):
+                    raise RuntimeError("Voice delivery was cancelled")
+                if not self.target or not self.draft:
                     raise RuntimeError("No new dictation to send")
-                # Never retry an ambiguous Enter automatically.
-                self.draft = False
-                self.phase = "idle"
-            guarded = getattr(self.terminal, "submit_guarded", None)
-            if guarded:
-                if allow_edited:
-                    guarded(target, operation, allow_edited=True)
+                if self.input_cancelled.is_set():
+                    self.input_cancelled = threading.Event()
+                target, operation = self.target, self.input_cancelled
+            if not self.delivery_lock.acquire(blocking=False):
+                raise RuntimeError("Input delivery is already in progress")
+            try:
+                self._probe_managed(target)
+                self.terminal.validate(target)
+                with self.lock:
+                    if token != self.token or operation.is_set():
+                        raise RuntimeError("Voice delivery was cancelled")
+                    if not self.draft:
+                        raise RuntimeError("No new dictation to send")
+                    # Never retry an ambiguous Enter automatically.
+                    self.draft = False
+                    self.phase = "idle"
+                    self.send_when_idle = False
+                guarded = getattr(self.terminal, "submit_guarded", None)
+                if guarded:
+                    if allow_edited:
+                        guarded(target, operation, allow_edited=True)
+                    else:
+                        guarded(target, operation)
                 else:
-                    guarded(target, operation)
-            else:
-                self.terminal.submit(target)
-        finally:
-            self.delivery_lock.release()
+                    self.terminal.submit(target)
+            finally:
+                self.delivery_lock.release()
+        except RuntimeError as exc:
+            if self._queue_send_error(exc):
+                return
+            raise
 
     def stop(self, discard=True, *, target_lost=False):
         if not target_lost:
@@ -2176,6 +2228,7 @@ class Controller:
             self.record_started = None
             if discard:
                 self.pending = None
+                self.send_when_idle = False
             self._expire_retry(force=True)
             self.phase = "draft" if self.draft or self.pending else "idle"
             self.error = None
@@ -2255,6 +2308,20 @@ def dispatch(app, request):
     elif action in ("append", "replace"):
         app.record(mode=action)
     elif action == "discard":
+        app.stop()
+    elif action == "dictate":
+        token = request.get("token")
+        if not isinstance(token, str) or not token:
+            raise RuntimeError(
+                "Voice dictation is not bound to this Pi session"
+            )
+        if app.token != token:
+            app.select(token)
+        app.record()
+    elif action == "dictate-cancel":
+        token = request.get("token")
+        if token and app.token and app.token != token:
+            raise RuntimeError("This Pi session is not recording")
         app.stop()
     elif action in (
         "interact", "record", "send", "read", "stop", "retry", "rebind"
