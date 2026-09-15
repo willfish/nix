@@ -219,6 +219,7 @@ let
         --extension ${../config/local-llm/pi-qwen.ts} \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/mcp/index.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/todo.ts \
+        --extension ${config.home.homeDirectory}/.pi/agent/extensions/question.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-agent-state.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-ui.ts \
         --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-model.ts \
@@ -227,7 +228,7 @@ let
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/plan-work.md \
         --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/review.md \
         --system-prompt "$(< ${piSystemPrompt})" \
-        --tools read,bash,edit,write,mcp,todo "$@"
+        --tools read,bash,edit,write,mcp,todo,question "$@"
     '';
   };
   toolsPython = pkgs.python3.withPackages (ps: [

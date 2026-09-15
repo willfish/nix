@@ -357,6 +357,7 @@ class WiringTests(unittest.TestCase):
                     for name in (
                         "mcp/index.ts",
                         "todo.ts",
+                        "question.ts",
                         "herdr-agent-state.ts",
                         "herdr-ui.ts",
                         "herdr-model.ts",
