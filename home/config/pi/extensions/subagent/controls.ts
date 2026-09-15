@@ -1,11 +1,12 @@
 import { formatJob } from './job-results.ts';
+import { promptWithChoices } from '../question.ts';
 
 const HELP = '/team list | questions | read <member|job> | send <member> <task> | steer <member> <guidance> | answer <question> <text> | ask <question> | wait <job> | cancel <job> | close <member|all>';
 export const DELEGATION_POLICY = 'Default to working solo unless a team is requested. Each delegation needs a distinct question or deliverable, scope, relevant skills and a stop condition. Use at most one general reviewer; add specialists only for separate evidence. Never launch every role or a fixed pipeline.';
 const GUIDANCE = `Roles: scout (code map), architect (design), builder (implementation), sceptic (correctness review). Optional: test-engineer (regressions), security-reviewer (trust boundaries), domain-specialist (authoritative rules). planner/worker/reviewer are compatibility roles.
 Use item-level skills for mixed teams; top-level skills load into every member. Give editing agents disjoint ownership, including named tests. Shared filesystem access is not a sandbox.
 Call subagent or team send/wait/ask alone, using subagent tasks for parallelism. A waiting_question result is a paused job, not a completed task: never restart its chain or substitute the question as previous output.
-Answer pending questions with team answer from existing evidence or an architect recommendation. Use team ask only for credentials, access, unapproved live/destructive work, or mandatory gates; this asks the human in the main pane. Design, approach, and plan choices are not human questions. Do not invent human approval. If a dialog is dismissed, leave the question pending and do not reopen it automatically.
+Answer pending questions with team answer from existing evidence or an architect recommendation. Use team ask only for credentials, access, unapproved live/destructive work, or mandatory gates; this asks the human in the main pane as a selectable list. Always include concrete choices. Design, approach, and plan choices are not human questions. Do not invent human approval. If a dialog is dismissed, leave the question pending and do not reopen it automatically.
 Answers acknowledge queued input, not completion. Use team wait for the job's next question or final result; team questions lists pending questions. Explicit team cancel stops a job after it yielded. The main pane receives later question/completion notifications; no pane hopping is required.
 Reuse team send for retained context; team read includes direct user conversations. team steer is guidance, not an answer to a pending question. Request concise evidence, resolve disagreements and verify integration. Four panes are capacity, not a staffing target; waiting questions retain their slots.`;
 const terminal = new Set(['completed', 'error', 'aborted']);
@@ -69,11 +70,7 @@ export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = ()
         if (!q) throw new Error('Unknown or stale question');
         if (ctx?.mode !== 'tui') throw new Error('Human answers require the main interactive Pi pane');
         const title = `${jobs.snapshot(q.jobId).tasks[q.index].agent}: ${q.text}`;
-        if (q.choices?.length) {
-          const other = 'Other answer (type text)';
-          text = await ctx.ui.select(title, [...q.choices, other], { signal });
-          if (text === other && !signal?.aborted) text = await ctx.ui.input(title, undefined, { signal });
-        } else text = await ctx.ui.input(title, undefined, { signal });
+        text = await promptWithChoices(ctx.ui, title, q.choices, signal);
         if (signal?.aborted) throw new Error('Human question cancelled; the question is still pending');
         if (text === undefined || text === null || !text.trim()) return {
           status: 'waiting_question', questionId: id, text: 'Dismissed; still waiting. Do not reopen automatically.',

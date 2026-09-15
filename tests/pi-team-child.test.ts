@@ -67,7 +67,7 @@ const toolMessage = (names = ['ask_coordinator']) => ({
   role: 'assistant', stopReason: 'toolUse',
   content: names.map((name, index) => ({ type: 'toolCall', name, id: `tool-${index}`, arguments: { text: 'Which option?' } })),
 });
-async function ask(f, params = { text: 'Which option?' }) {
+async function ask(f, params = { text: 'Which option?', choices: ['A', 'B'] }) {
   await f.emit('message_end', { message: toolMessage() });
   assert.equal(await f.emit('tool_call', { toolName: 'ask_coordinator', toolCallId: 'tool-0', input: params }), undefined);
   return f.registered.get('ask_coordinator').execute('tool-0', params, undefined, undefined, f.ctx);
@@ -457,7 +457,7 @@ test('invalid answers and ordinary controls cannot destroy a pending human quest
   await f.start();
   const initial = await f.send('prompt', 'task');
   await until(() => f.sent.length === 1);
-  const { details: { question } } = await ask(f, { text: 'Approve?', requiresUser: true });
+  const { details: { question } } = await ask(f, { text: 'Approve?', choices: ['Yes', 'No'], requiresUser: true });
   const early = await f.send('answer', 'yes', answerExtra(question, 'human'));
   assert.match((await f.result(early)).errorMessage, /not settled/);
   await f.emit('agent_settled');
@@ -584,7 +584,7 @@ test('question tool rejects manual turns, invalid parameters, and an aborted sig
   await f.send('prompt', 'task');
   await until(() => f.sent.length === 1);
   await f.emit('message_end', { message: toolMessage() });
-  for (const params of [{ text: '' }, { text: 'Q', choices: [] }, { text: 'Q', choices: [''] }, { text: 'Q', requiresUser: 'yes' }]) {
+  for (const params of [{ text: '' }, { text: 'Q' }, { text: 'Q', choices: [] }, { text: 'Q', choices: ['only'] }, { text: 'Q', choices: [''] }, { text: 'Q', requiresUser: 'yes' }]) {
     await assert.rejects(execute(params), /Invalid coordinator question/);
   }
   await assert.rejects(execute({ text: 'Q' }, AbortSignal.abort()), /cancelled/);

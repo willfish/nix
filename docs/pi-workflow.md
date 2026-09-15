@@ -11,6 +11,7 @@ and `qwen-pi-voice`.
 | Planning prompt | Investigate a change and agree on the approach before implementation | `/plan-work add a recording timeout` |
 | Review prompt | Check a diff for concrete bugs and gaps in verification | `/review`, `/review HEAD~1`, or specify files |
 | Prompt history search | Find and adapt a prompt from earlier sessions or projects | Ctrl+R, fuzzy search, Enter to restore for editing |
+| Human questions | Hard-gate decisions with a selectable list, not a typed chat prompt | The `question` tool in the main pane; team `ask_coordinator` with choices |
 
 The [official todo extension](https://github.com/earendil-works/pi/blob/v0.85.1/packages/coding-agent/examples/extensions/todo.ts)
 provides one model tool, `todo`, with list, add, toggle and clear actions. Each

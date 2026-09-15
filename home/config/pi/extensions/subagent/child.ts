@@ -27,12 +27,12 @@ export default function childExtension(pi, options = {}) {
   };
   const registerQuestionTool = () => pi.registerTool({
     name: questionTool, label: 'Ask coordinator',
-    description: 'Pause this team task for a coordinator answer. Call alone, with no sibling tools. Set requiresUser for a human decision.',
+    description: 'Pause this team task for a coordinator answer. Call alone, with no sibling tools. Always pass at least two concrete choices. Set requiresUser only for a human hard gate.',
     parameters: {
-      type: 'object', additionalProperties: false, required: ['text'],
+      type: 'object', additionalProperties: false, required: ['text', 'choices'],
       properties: {
         text: { type: 'string', minLength: 1 },
-        choices: { type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+        choices: { type: 'array', items: { type: 'string', minLength: 1 }, minItems: 2 },
         requiresUser: { type: 'boolean' },
       },
     },
@@ -42,14 +42,13 @@ export default function childExtension(pi, options = {}) {
       if (signal?.aborted) throw new Error('Team command was cancelled');
       if (typeof params.text !== 'string' || !params.text.trim() ||
           (params.requiresUser !== undefined && typeof params.requiresUser !== 'boolean') ||
-          (params.choices !== undefined && (!Array.isArray(params.choices) || !params.choices.length ||
-            params.choices.some((choice) => typeof choice !== 'string' || !choice.trim())))) {
+          !Array.isArray(params.choices) || params.choices.length < 2 ||
+          params.choices.some((choice) => typeof choice !== 'string' || !choice.trim())) {
         throw new Error('Invalid coordinator question');
       }
       // Set the pause synchronously before any I/O, so poll/input cannot queue
       // steering between the pending-message check and the terminating result.
-      question = { id: randomUUID(), text: params.text,
-        ...(params.choices === undefined ? {} : { choices: [...params.choices] }),
+      question = { id: randomUUID(), text: params.text, choices: [...params.choices],
         requiresUser: params.requiresUser ?? false, commandId: active };
       syncTools();
       return { content: [{ type: 'text', text: 'Waiting for coordinator answer.' }], details: { question }, terminate: true };
@@ -228,7 +227,7 @@ export default function childExtension(pi, options = {}) {
   });
   pi.on('before_agent_start', (event) => {
     if (!dir || stopped || !active) return;
-    return { systemPrompt: `${event.systemPrompt}\n\nWhen clarification is needed, call ask_coordinator alone instead of ending with an unanswered prose question. The coordinator answers from evidence or asks the human in the main pane. Set requiresUser only for credentials, access, unapproved live/destructive work, or mandatory gates. Do not set it for design, approach, preference, or plan approval. Do not guess approval.` };
+    return { systemPrompt: `${event.systemPrompt}\n\nWhen clarification is needed, call ask_coordinator alone instead of ending with an unanswered prose question. Always pass at least two concrete choices. The coordinator answers from evidence or asks the human in the main pane as a selectable list. Set requiresUser only for credentials, access, unapproved live/destructive work, or mandatory gates. Do not set it for design, approach, preference, or plan approval. Do not guess approval.` };
   });
   pi.on('input', () => {
     if (!dir || stopped || !question) return;

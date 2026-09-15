@@ -134,6 +134,7 @@ in
     ../config/pi/extensions/orchestrator-addendum.ts;
   home.file.".pi/agent/ORCHESTRATOR.md".source = ../config/llm/ORCHESTRATOR.md;
   home.file.".pi/agent/extensions/goal.ts".source = ../config/pi/extensions/goal.ts;
+  home.file.".pi/agent/extensions/question.ts".source = ../config/pi/extensions/question.ts;
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
