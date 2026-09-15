@@ -114,6 +114,8 @@ class ApprovalPolicyTest(unittest.TestCase):
             "mandatory gate": "Preserve explicit exclusions and mandatory "
                 "AWS/authentication, manual-only and publishing gates",
             "active goal": "An active `/goal` is an approved objective",
+            "human question list":
+                "call the question tool with 2-6 concrete options",
         }
         for scenario, clause in scenarios.items():
             with self.subTest(scenario=scenario):

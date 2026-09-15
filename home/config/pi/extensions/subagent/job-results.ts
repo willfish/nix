@@ -35,7 +35,12 @@ export function formatJob(snapshot) {
       lines.push(text.length > 50000 ? `${text.slice(0, 50000)}\n[Truncated; inspect the child session.]` : text);
     }
   }
-  if (snapshot.status === 'waiting_question') lines.push('\nAnswer with team answer, or use team ask to ask the human in the main pane. Then team wait for this job. Do not restart the task or chain.');
+  if (snapshot.status === 'waiting_question') {
+    const human = snapshot.tasks.some(task => task.state === 'waiting_question' && task.result?.question?.requiresUser && task.result.question.choices?.length);
+    lines.push(human
+      ? '\nA selectable list is shown in the main pane for the human hard-gate question. Then team wait for this job. Do not restart the task or chain.'
+      : '\nAnswer with team answer from evidence. Then team wait for this job. Do not restart the task or chain.');
+  }
   else if (snapshot.status === 'running') {
     if (snapshot.blockedByQuestions?.length) lines.push(`\nCapacity is held by questions: ${snapshot.blockedByQuestions.join(', ')}. Use team questions and answer them before waiting again.`);
     lines.push('\nUse team wait for this job. Running and queued work remains owned by the job.');
