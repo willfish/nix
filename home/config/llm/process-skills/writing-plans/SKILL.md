@@ -33,9 +33,9 @@ Before drafting or updating prose, read `~/.agents/guides/documentation-relevanc
 4. Save the plan to the project's preferred local gitignored planning
    location. In this dotfiles harness, default to
    `plans/YYYY-MM-DD-<short-name>.md`. Do not add or commit plan/spec files.
-5. Offer the user two execution modes:
-   - **Subagent-driven** (recommended for complex work): One fresh subagent per task with review between tasks.
-   - **Inline**: Execute the plan yourself in this session using checkpoints.
+5. If a human must choose how to execute, call the question tool with concrete
+   options such as Subagent-driven, Inline, and Do not implement. Do not ask
+   that choice in the chat editor.
 
 ## Plan Structure (Required)
 

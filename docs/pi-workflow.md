@@ -23,12 +23,12 @@ Planning and review use Pi's built-in
 [prompt templates](https://pi.dev/docs/latest/prompt-templates). They expand
 only when invoked, so they do not enlarge the instructions on ordinary turns.
 They are workflow instructions, not an enforced read-only mode. Planning asks
-Pi to investigate and wait for an instruction to implement. Review reports
-findings without editing source or publishing a review. You can also give
-equivalent instructions by voice.
+Pi to investigate, then request a go-ahead with the `question` tool and a
+selectable list. Review reports findings without editing source or publishing
+a review. You can also give equivalent instructions by voice.
 
-For a typical larger change: use `/plan-work <task>`, discuss the proposal,
-then ask Pi to implement and keep its todos updated. Use `/review` when the
+For a typical larger change: use `/plan-work <task>`, pick from the option
+list, then keep todos updated while implementing. Use `/review` when the
 change is ready to inspect. Small tasks can use Pi normally.
 
 ## High-level goals
