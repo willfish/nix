@@ -24,6 +24,7 @@
     enable = true;
     listenAddress = "0.0.0.0";
     port = 7420;
+    operatorAccess = "tailnet";
     tokenFile = config.sops.secrets.PI_AGENT_BUS_TOKEN.path;
   };
 
