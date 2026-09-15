@@ -83,8 +83,10 @@ instead of sending a prepared prompt.
 
 On Andromeda and Foundation, **Super+Shift+V** opens `voice-menu`, a short-lived
 Fuzzel popup. Type to fuzzy-filter, use Up/Down, press Enter to choose, or Escape
-to close without changing anything. Mouse input is disabled. Choose **session**
-or **voice**, or select one of the same contextual actions exposed by the tray.
+to close without changing anything. Mouse input is disabled. Choose **session**, **voice** (Qwen characters, Samantha by default) or
+**dictation** (Whisper locally, or Deepgram in the cloud). The default
+dictation backend is Whisper. Deepgram is recognition only; playback stays on
+Qwen. Or select one of the same contextual actions exposed by the tray.
 The existing recording and send hotkeys are unchanged; the picker does not
 introduce another Send action.
 

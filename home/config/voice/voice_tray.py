@@ -165,6 +165,13 @@ def presentation(status):
         context.append('Team members are silent')
     for character, label in status.get("voices", {}).items():
         actions["voice:" + character] = (public_label(label), True)
+    for name, label in status.get("stt_backends", {}).items():
+        actions["stt:" + name] = (public_label(label), True)
+    selected_stt = public_label(status.get("selected_stt") or "whisper", 20)
+    context.append(
+        "Dictation: Deepgram" if selected_stt == "deepgram"
+        else "Dictation: Whisper"
+    )
     if connected and not blocked and not busy and not pending and not speaking \
             and not responding and can_speak and status.get("reply"):
         actions["read"] = ("Replay last reply", True)

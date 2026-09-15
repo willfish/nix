@@ -3,6 +3,7 @@
   lib,
   pkgs,
   hostName,
+  readSopsSecret,
   ...
 }:
 let
@@ -40,6 +41,11 @@ let
         export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
         export PI_VOICE_COMMAND="$0"
         export AGENT_VOICE_LAUNCH_KIND=${lib.escapeShellArg harness}
+        secret=${lib.escapeShellArg config.sops.secrets.DEEPGRAM_API_KEY.path}
+        if [ -r "$secret" ]; then
+          DEEPGRAM_API_KEY="$(${readSopsSecret}/bin/read-sops-secret "$secret")"
+          export DEEPGRAM_API_KEY
+        fi
         exec python3 ${voiceScripts}/voice_controller.py "$@"
       '';
     };

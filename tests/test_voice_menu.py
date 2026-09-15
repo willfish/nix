@@ -242,6 +242,33 @@ class MenuTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "no longer available"):
             menu.run_menu(request=request, picker=Mock(return_value="read"))
 
+    def test_dictation_submenu_marks_the_selected_backend(self):
+        state = status()
+        state["selected_stt"] = "whisper"
+        state["stt_backends"] = {
+            "whisper": "Whisper (local GPU)",
+            "deepgram": "Deepgram (cloud)",
+        }
+        self.assertIn(
+            ("menu:dictation", "Choose dictation"),
+            menu.rows_for(state, "menu"),
+        )
+        self.assertEqual(
+            menu.rows_for(state, "dictation"),
+            [
+                ("stt:whisper", "* Whisper (local GPU)"),
+                ("stt:deepgram", "Deepgram (cloud)"),
+            ],
+        )
+        request = Mock(return_value=state)
+        menu.run_menu(
+            "dictation", request=request,
+            picker=Mock(return_value="stt:deepgram"),
+        )
+        self.assertEqual(
+            request.call_args.args[0], {"action": "stt:deepgram"},
+        )
+
     def test_private_text_not_in_labels(self):
         state = status()
         state.update(draft="secret dictation", reply="secret response")

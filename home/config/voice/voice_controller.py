@@ -885,6 +885,11 @@ class Controller:
             # An explicit discard also prevents a cancelled late transcript
             # resurfacing.
             self.record_cancelled.voice_target_lost = False
+            if not self.recording_active():
+                self.error = None
+                self.phase = (
+                    "draft" if self.draft or self.pending else "idle"
+                )
 
     def recover_stage(self):
         with self.lock:
@@ -1301,6 +1306,10 @@ class Controller:
                     "selected_voice", "samantha"
                 ),
                 "voices": audio_status.get("voices", {}),
+                "selected_stt": audio_status.get(
+                    "selected_stt", "whisper"
+                ),
+                "stt_backends": audio_status.get("stt_backends", {}),
                 "recording": self.phase == "recording",
                 "transcribing": self.transcribing,
                 "speaking": bool(self.playback and self.playback.is_alive()),
@@ -1741,7 +1750,10 @@ class Controller:
                 self.lock.release()
 
         try:
-            if lease is None and self.engines:
+            if (
+                lease is None and self.engines
+                and getattr(self.audio, "stt_backend", "whisper") == "whisper"
+            ):
                 lease = self.engines.acquire('stt')
             # Readiness can be transiently unknown while Pi redraws. Check
             # identity now and enforce idle/done only when delivering text.
@@ -2270,6 +2282,9 @@ def dispatch(app, request):
         return app.status()
     if isinstance(action, str) and action.startswith("voice:"):
         app.audio.set_voice(action.split(":", 1)[1])
+        return app.status()
+    if isinstance(action, str) and action.startswith("stt:"):
+        app.audio.set_stt_backend(action.split(":", 1)[1])
         return app.status()
     if action == 'team-toggle':
         with app.lock:

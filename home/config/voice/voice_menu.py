@@ -35,12 +35,25 @@ def rows_for(status, section):
             if action.startswith("select:")
             and (enabled or action in selected_child)
         ]
+    if section == "dictation":
+        current_stt = status.get("selected_stt", "whisper")
+        return [
+            (
+                action,
+                ("* " if action == "stt:" + current_stt else "") + label,
+            )
+            for action, (label, enabled) in actions.items()
+            if action.startswith("stt:") and enabled
+        ]
     rows = [
         ("menu:sessions", "Choose session"),
         ("menu:voices", "Choose voice"),
+        ("menu:dictation", "Choose dictation"),
     ]
     for action, (label, enabled) in actions.items():
-        if enabled and not action.startswith(("voice:", "select:")):
+        if enabled and not action.startswith(
+            ("voice:", "select:", "stt:")
+        ):
             toggle = {"auto-toggle": "auto",
                 "team-toggle": "show_team"}.get(action)
             if toggle:
@@ -94,12 +107,16 @@ def run_menu(section="menu", *, request=call, picker):
             raise RuntimeError(
                 "No other selectable sessions"
                 if section == "sessions"
+                else "No dictation backends are available"
+                if section == "dictation"
                 else "No voices are available"
             )
         current = status.get("selected_voice", "samantha")
+        current_stt = status.get("selected_stt", "whisper")
         prompt = {
             "menu": "Voice controls",
             "voices": f"Voice ({current})",
+            "dictation": f"Dictation ({current_stt})",
             "sessions": "Voice sessions",
         }[section]
         view = presentation(status)
@@ -187,7 +204,7 @@ def main(args=None):
     parser.add_argument(
         "section",
         nargs="?",
-        choices=["menu", "voices", "sessions"],
+        choices=["menu", "voices", "dictation", "sessions"],
         default="menu",
     )
     parser.add_argument(

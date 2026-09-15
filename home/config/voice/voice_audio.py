@@ -12,7 +12,9 @@ import subprocess
 import tempfile
 import threading
 import time
+import os
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 import wave
@@ -67,6 +69,15 @@ class LocalAudio:
             # Previous Samantha modes and removed characters return to Samantha.
             if saved in self.voices:
                 self.selected_voice = saved
+        self.stt_backend = "whisper"
+        stt_path = config.get("stt_preferences_path")
+        if not stt_path and self.voice_preferences:
+            stt_path = self.voice_preferences.with_name("stt-backend")
+        self.stt_preferences = Path(stt_path) if stt_path else None
+        if self.stt_preferences and self.stt_preferences.exists():
+            saved_stt = self.stt_preferences.read_text().strip()
+            if saved_stt in ("whisper", "deepgram"):
+                self.stt_backend = saved_stt
         self.synthesis_lock = threading.Lock()
         self.recognition_lock = threading.Lock()
         self.stopped = threading.Event()
@@ -173,6 +184,20 @@ class LocalAudio:
                 temporary.replace(self.voice_preferences)
             self.selected_voice = character
 
+    def set_stt_backend(self, backend):
+        if backend not in ("whisper", "deepgram"):
+            raise RuntimeError("Unknown dictation backend")
+        if backend == "deepgram" and not os.environ.get("DEEPGRAM_API_KEY"):
+            raise RuntimeError(
+                "Deepgram API key is not installed; stay on Whisper"
+            )
+        with self.lock:
+            if self.stt_preferences:
+                temporary = self.stt_preferences.with_suffix(".tmp")
+                temporary.write_text(backend + "\n")
+                temporary.replace(self.stt_preferences)
+            self.stt_backend = backend
+
     def status(self):
         """Return cached health immediately, refreshing in bounded workers."""
         def refresh(engine):
@@ -190,6 +215,11 @@ class LocalAudio:
                 "selected_voice": self.selected_voice,
                 "voices": {
                     key: voice["label"] for key, voice in self.voices.items()
+                },
+                "selected_stt": self.stt_backend,
+                "stt_backends": {
+                    "whisper": "Whisper (local GPU)",
+                    "deepgram": "Deepgram (cloud)",
                 },
                 "backends": dict(self.backends),
                 "backend_errors": dict(self.backend_errors),
@@ -345,8 +375,80 @@ class LocalAudio:
         """
         return self.transcribe(path, cancelled, on_drained=on_drained)
 
+    def _deepgram_url(self):
+        params = [
+            ("model", "nova-3"),
+            ("smart_format", "true"),
+            ("punctuate", "true"),
+            ("mip_opt_out", "true"),
+        ]
+        for term in (self.config.get("stt_prompt") or "").split(","):
+            term = term.strip()
+            if term:
+                params.append(("keyterm", term))
+        return "https://api.deepgram.com/v1/listen?" + urllib.parse.urlencode(
+            params
+        )
+
+    @staticmethod
+    def _deepgram_text(result):
+        if isinstance(result.get("text"), str) and result["text"].strip():
+            return result["text"]
+        channels = (result.get("results") or {}).get("channels") or []
+        if not channels or not isinstance(channels[0], dict):
+            raise RuntimeError("Deepgram returned no transcription text")
+        alternatives = channels[0].get("alternatives") or []
+        if not alternatives or not isinstance(alternatives[0], dict):
+            raise RuntimeError("Deepgram returned no transcription text")
+        text = alternatives[0].get("transcript")
+        if not isinstance(text, str):
+            raise RuntimeError("Deepgram returned no transcription text")
+        return text
+
+    def _transcribe_deepgram(self, path, cancelled, on_drained):
+        key = os.environ.get("DEEPGRAM_API_KEY")
+        if not key:
+            raise RuntimeError(
+                "Deepgram API key is not installed; stay on Whisper"
+            )
+        payload = path.read_bytes()
+
+        def recognize():
+            request = urllib.request.Request(
+                self._deepgram_url(), data=payload,
+                headers={
+                    "Authorization": "Token " + key,
+                    "Content-Type": "audio/wav",
+                },
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=90) as response:
+                    data = response.read(1024 * 1024 + 1)
+            except urllib.error.HTTPError as exc:
+                exc.close()
+                raise RuntimeError(
+                    f"Deepgram request failed (HTTP {exc.code})"
+                ) from None
+            except urllib.error.URLError as exc:
+                raise RuntimeError("Deepgram connection failed") from exc
+            if len(data) > 1024 * 1024:
+                raise RuntimeError("Deepgram response exceeds the size limit")
+            try:
+                result = json.loads(data)
+            except (ValueError, UnicodeDecodeError):
+                raise RuntimeError("Deepgram returned invalid JSON") from None
+            if not isinstance(result, dict):
+                raise RuntimeError("Deepgram returned invalid JSON")
+            return self._deepgram_text(result)
+
+        return self._request(
+            recognize, self.recognition_lock, cancelled, on_drained=on_drained
+        ) or ""
+
     def transcribe(self, path, cancelled=None, *, on_drained=None):
         cancelled = cancelled or threading.Event()
+        if self.stt_backend == "deepgram":
+            return self._transcribe_deepgram(path, cancelled, on_drained)
         if not self.wait_ready("stt", cancelled):
             return ""
         boundary = uuid.uuid4().hex

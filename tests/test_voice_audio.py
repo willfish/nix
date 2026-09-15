@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -421,6 +422,52 @@ class RequestTests(unittest.TestCase):
             self.assertEqual(errors, [])
             self.assertTrue(second_request.is_set())
             self.assertEqual(requests, ["First.", "Second."])
+
+    def test_deepgram_uses_opt_out_and_keyterms(self):
+        captured = {}
+
+        class Response:
+            def read(self, n):
+                return (
+                    b'{"results":{"channels":[{"alternatives":'
+                    b'[{"transcript":"hello NixOS"}]}]}}'
+                )
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        def fake_open(request, timeout=90):
+            captured["url"] = request.full_url
+            captured["auth"] = request.get_header("Authorization")
+            return Response()
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "dictation.wav"
+            path.write_bytes(wav_bytes())
+            prefs = Path(directory) / "voice-mode"
+            local = audio.LocalAudio(
+                Path(directory),
+                {
+                    "stt_prompt": "NixOS, Pi",
+                    "voice_preferences_path": str(prefs),
+                },
+            )
+            with patch.dict(os.environ, {"DEEPGRAM_API_KEY": "test-key"}):
+                local.set_stt_backend("deepgram")
+                with patch.object(
+                    audio.urllib.request, "urlopen", fake_open
+                ):
+                    text = local.transcribe(path)
+            saved = Path(directory, "stt-backend").read_text().strip()
+        self.assertEqual(text, "hello NixOS")
+        self.assertIn("mip_opt_out=true", captured["url"])
+        self.assertIn("keyterm=NixOS", captured["url"])
+        self.assertIn("keyterm=Pi", captured["url"])
+        self.assertEqual(captured["auth"], "Token test-key")
+        self.assertEqual(saved, "deepgram")
 
 
 if __name__ == "__main__":

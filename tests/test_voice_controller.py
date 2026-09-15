@@ -93,6 +93,7 @@ class Audio:
         self.spoken = []
         self.stops = 0
         self.silent = False
+        self.stt_backend = "whisper"
         self.transcriptions = 0
         self.transcribe_started = threading.Event()
         self.transcribe_release = threading.Event()
@@ -129,6 +130,18 @@ class Audio:
     def speak(self, text, cancelled):
         if not cancelled.is_set():
             self.spoken.append(text)
+
+    def set_stt_backend(self, backend):
+        self.stt_backend = backend
+
+    def status(self):
+        return {
+            "selected_stt": self.stt_backend,
+            "stt_backends": {
+                "whisper": "Whisper (local GPU)",
+                "deepgram": "Deepgram (cloud)",
+            },
+        }
 
 
 class VoiceTests(unittest.TestCase):
@@ -411,6 +424,11 @@ class VoiceTests(unittest.TestCase):
         self.assertFalse(self.app.status()["recording"])
         self.assertEqual(self.terminal.text, [])
         self.assertEqual(self.terminal.keys, [])
+
+    def test_stt_backend_toggle_does_not_start_whisper(self):
+        self.voice.dispatch(self.app, {"action": "stt:deepgram"})
+        self.assertEqual(self.app.audio.stt_backend, "deepgram")
+        self.assertEqual(self.app.status()["selected_stt"], "deepgram")
 
     def test_dictate_requires_a_bound_session_token(self):
         with self.assertRaisesRegex(RuntimeError, "not bound"):
