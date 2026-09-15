@@ -104,6 +104,20 @@ test('main-pane questions tool uses real registry and schema cannot override hum
   assert.equal(f.jobs.snapshot(id).tasks[0].result.messages.length, 1, 'public redaction does not mutate registry');
 });
 
+test('wait auto-presents a human question as a selectable list', async t => {
+  const f = fixture(t);
+  const { id, question } = await f.start({ requiresUser: true, choices: ['staging', 'production'] });
+  const ack = await f.tool({ action: 'wait', id });
+  assert.deepEqual(ack, { status: 'queued', jobId: id, questionId: question.id });
+  await until(() => f.resumes.length);
+  assert.equal(f.resumes[0].source, 'human');
+  assert.equal(f.resumes[0].text, 'staging');
+  assert.deepEqual(f.uiCalls.map(call => call.method), ['select']);
+  assert.deepEqual(f.uiCalls[0].choices, ['staging', 'production', 'Other answer (type text)']);
+  f.resumes[0].gate.resolve({ status: 'completed', text: 'deployed', memberId: f.member.id });
+  assert.equal((await f.tool({ action: 'wait', id })).status, 'completed');
+});
+
 for (const method of ['input', 'select', 'other']) test(`ask obtains ${method} in main UI and resumes with human provenance`, async t => {
   const f = fixture(t);
   const { id, question } = await f.start({ requiresUser: true, ...(method === 'input' ? {} : { choices: ['staging', 'production'] }) });

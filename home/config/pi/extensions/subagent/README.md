@@ -58,7 +58,7 @@ Each result includes a member ID. Both the `team` tool and `/team` command suppo
 
 A child calls `ask_coordinator` when it needs clarification, with at least two concrete choices. Its execution segment ends with a typed question, not a completed task. The coordinator receives the first settled question without waiting for slow siblings, while the job retains running and queued work.
 
-The coordinator uses `team answer` from evidence or an architect recommendation. Use `team ask` only for credentials, access, unapproved live/destructive work, or mandatory gates; it displays the question in this main pane. Design and plan choices are not human questions. Questions marked `requiresUser` accept answers only through actual main-pane UI input or a user slash-answer, never a model-supplied provenance flag. Dismissing or cancelling the dialog leaves the question pending.
+The coordinator uses `team answer` from evidence or an architect recommendation. Human hard-gate questions with choices open a selectable list in this main pane on wait, not a typed chat prompt. Use `team ask` for the same list. Design and plan choices are not human questions. Questions marked `requiresUser` accept answers only through actual main-pane UI input or a user slash-answer, never a model-supplied provenance flag. Dismissing or cancelling the dialog leaves the question pending.
 
 ```text
 /team questions

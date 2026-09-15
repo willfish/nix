@@ -17,7 +17,9 @@ export function publicJob(snapshot) {
 }
 
 export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = () => undefined) {
-  const seen = new Map(), timers = new Map();
+  const seen = new Map(), timers = new Map(), offeredHuman = new Set();
+  let uiCtx;
+  const noteUi = ctx => { if (ctx?.mode === 'tui' && ctx.ui) uiCtx = ctx; };
   const remember = snapshot => seen.set(snapshot.jobId, {
     revision: snapshot.revision, terminal: terminal.has(snapshot.status),
     questions: new Set(snapshot.tasks.flatMap(task => task.state === 'waiting_question' ? [task.result.question.id] : [])),
@@ -34,6 +36,12 @@ export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = ()
       const cleanupFailed = current.tasks.some(task => task.cleanupError && !prior.cleanup.has(`${task.index}:${task.cleanupError}`));
       if (current.revision <= prior.revision || (!fresh && !cleanupFailed && (!terminal.has(current.status) || prior.terminal))) return;
       remember(current);
+      const human = current.tasks.find(task => task.state === 'waiting_question' && task.result.question.requiresUser
+        && task.result.question.choices?.length && !prior.questions.has(task.result.question.id));
+      if (human && uiCtx?.mode === 'tui') {
+        void presentHuman(human.result.question, `${human.agent}: ${human.result.question.text}`, uiCtx, undefined, jobs);
+        return;
+      }
       pi.sendMessage({ customType: 'team-job', content: formatJob(current), display: true }, { triggerTurn: true, deliverAs: 'followUp' });
     }, 50);
     timer.unref?.();
@@ -49,7 +57,24 @@ export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = ()
     visible(snapshot);
     return snapshot;
   };
+  async function presentHuman(question, title, ctx, signal, jobs) {
+    if (!question?.requiresUser || !question.choices?.length || offeredHuman.has(question.id)) return;
+    if (ctx?.mode !== 'tui' || !ctx.ui) return;
+    offeredHuman.add(question.id);
+    const text = await promptWithChoices(ctx.ui, title, question.choices, signal);
+    if (signal?.aborted) throw new Error('Human question cancelled; the question is still pending');
+    if (text === undefined || text === null || !String(text).trim()) {
+      return { status: 'waiting_question', questionId: question.id, text: 'Dismissed; still waiting. Do not reopen automatically.' };
+    }
+    return jobs.answer(question.id, String(text).trim(), { source: 'human' });
+  }
+  async function presentFromSnapshot(snapshot, signal, ctx, jobs) {
+    const task = snapshot.tasks.find(item => item.state === 'waiting_question' && item.result?.question?.requiresUser && item.result.question.choices?.length);
+    if (!task) return;
+    return presentHuman(task.result.question, `${task.agent}: ${task.result.question.text}`, ctx, signal, jobs);
+  }
   const execute = async ({ action, id, text, after }, signal, ctx, source) => {
+    noteUi(ctx);
     const team = getTeam(), jobs = getJobs();
     if (signal?.aborted) throw new Error('Team action was cancelled');
     if (!team) throw new Error('Interactive teams require a root Pi session inside herdr');
@@ -57,7 +82,10 @@ export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = ()
     if (action === 'questions') return jobs?.questions() ?? [];
     if (!id) throw new Error('A member, job, or question ID is required');
     if (action === 'read') return jobs?.jobs.has(id) ? publicJob(jobs.snapshot(id)) : team.read(id);
-    if (action === 'wait') return publicJob(await wait(id, signal, after));
+    if (action === 'wait') {
+      const snapshot = await wait(id, signal, after);
+      return await presentFromSnapshot(snapshot, signal, ctx, jobs) ?? publicJob(snapshot);
+    }
     if (action === 'cancel') {
       const snapshot = jobs.cancel(id);
       visible(snapshot);
@@ -69,6 +97,7 @@ export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = ()
         const q = jobs.question(id);
         if (!q) throw new Error('Unknown or stale question');
         if (ctx?.mode !== 'tui') throw new Error('Human answers require the main interactive Pi pane');
+        offeredHuman.add(q.id);
         const title = `${jobs.snapshot(q.jobId).tasks[q.index].agent}: ${q.text}`;
         text = await promptWithChoices(ctx.ui, title, q.choices, signal);
         if (signal?.aborted) throw new Error('Human question cancelled; the question is still pending');
@@ -110,6 +139,8 @@ export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = ()
         cancelMember: memberId => team.close(memberId), health: memberId => team.health(memberId),
       });
       const snapshot = await wait(jobId, signal);
+      const presented = await presentFromSnapshot(snapshot, signal, ctx, jobs);
+      if (presented) return presented;
       const result = snapshot.tasks[0].result;
       return terminal.has(snapshot.status) && result ? { ...result, jobId, revision: snapshot.revision } : publicJob(snapshot);
     }
@@ -147,8 +178,11 @@ export function registerTeamControls(pi, getTeam, Type, StringEnum, getJobs = ()
       } catch (error) { ctx.ui.notify(error.message, 'error'); }
     },
   });
-  pi.on('before_agent_start', event => {
+  pi.on('before_agent_start', (event, ctx) => {
+    noteUi(ctx);
     if (getTeam()) return { systemPrompt: `${event.systemPrompt}\n\n${GUIDANCE}` };
   });
-  return { changed, visible, reset() { for (const timer of timers.values()) clearTimeout(timer); timers.clear(); seen.clear(); } };
+  return { changed, visible, reset() {
+    for (const timer of timers.values()) clearTimeout(timer); timers.clear(); seen.clear(); offeredHuman.clear(); uiCtx = undefined;
+  } };
 }
