@@ -2,10 +2,10 @@
 name: writing-plans
 description: >
   Implementation planning. Use for specs, feature requests, multi-step changes,
-  complex tasks, TDD plans, handoff plans, file-level tasks, and expected
+  complex tasks, handoff plans, file-level tasks, and expected
   verification commands before coding.
 metadata:
-  short-description: "Write excellent, actionable implementation plans (TDD, small steps, clear handoff)"
+  short-description: "Write excellent, actionable implementation plans (small steps, clear handoff)"
 ---
 
 # Writing Plans
@@ -21,7 +21,7 @@ Before drafting or updating prose, read `~/.agents/guides/documentation-relevanc
 - Assume the implementer is competent but has **zero** context on this specific problem or codebase.
 - Every task must be small enough to complete in 2–15 minutes.
 - Every code-changing step must include the actual code (no "implement X" placeholders).
-- Prefer TDD: failing test → minimal implementation → passing test → commit.
+- Do not use TDD. Implement first, then add tests and verify.
 - Frequent small commits are better than large ones.
 - The plan itself should be reviewable and executable.
 
@@ -61,13 +61,20 @@ Every plan should start with this header:
 Then break the work into tasks using this format:
 
 ```markdown
-### Task 3: Add failing test for new behavior
+### Task 3: Implement thing behavior
 
 **Files:**
-- Create: `tests/feature/thing.test.ts`
-- (No other files in this task)
+- Modify: `src/feature/thing.ts`
+- Modify: `tests/feature/thing.test.ts`
 
-- [ ] Write the minimal failing test that describes the desired behavior
+- [ ] Implement the behavior
+  ```ts
+  export function doThing(input: Input): Result {
+    return compute(input);
+  }
+  ```
+
+- [ ] Add or update tests for the evolved implementation
   ```ts
   it('should do X when Y', () => {
     const result = doThing(input);
@@ -75,16 +82,16 @@ Then break the work into tasks using this format:
   });
   ```
 
-- [ ] Run the test and confirm it fails for the right reason
+- [ ] Run the tests and confirm they pass
   ```bash
   pnpm test tests/feature/thing.test.ts
   ```
-  Expected: FAIL with message about missing implementation
+  Expected: PASS
 
 - [ ] Commit
   ```bash
-  git add tests/feature/thing.test.ts
-  git commit -m "test: add failing test for thing behavior"
+  git add src/feature/thing.ts tests/feature/thing.test.ts
+  git commit -m "feat: implement thing behavior"
   ```
 ```
 
@@ -123,5 +130,6 @@ For subagent execution, the `superpowers` skill + `spawn_subagent` works very we
 
 The full original material (with additional examples) lives in:
 `~/.agents/references/superpowers/skills/writing-plans/`
+Ignore TDD in that upstream copy.
 
 This skill pairs extremely well with `enter_plan_mode`, `superpowers`, and `systematic-debugging`.

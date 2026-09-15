@@ -85,7 +85,7 @@ If you reach "I don't know" — say it out loud. Do not guess.
 
 ### Phase 4: Implementation & Verification
 
-1. **Create a failing test first** (or minimal reproduction script). Use the `test-driven-development` skill if appropriate.
+1. **Add a regression test or minimal reproduction** that captures the bug, then apply the fix. Do not use TDD for feature work.
 2. Make **one single change** that addresses the root cause you identified.
 3. Verify:
    - The original failure is gone.
@@ -124,7 +124,6 @@ These thoughts are the enemy. They are how you waste hours and introduce new bug
 This skill works extremely well together with:
 - `superpowers` (the overall discipline)
 - `verification-before-completion` (after you think you've fixed it)
-- `test-driven-development` (for Phase 4)
 - `writing-plans` (if the debugging session is large or architectural)
 
 ## Why This Matters

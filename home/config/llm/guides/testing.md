@@ -11,7 +11,7 @@
 **Always write tests when:**
 - Adding a new model, service, or controller action
 - Changing business logic (anything that affects what users see or data integrity)
-- Fixing a bug (write the failing test first, then fix)
+- Fixing a bug (add a regression test that covers the failure)
 - Adding a new API endpoint
 
 **Skip tests when:**
@@ -59,15 +59,9 @@ See `rspec.md` for syntax. Key points:
 - Stub external HTTP with WebMock or VCR
 - Create only the records the example needs
 
-## Test-first for non-trivial logic
+## Tests after implementation
 
-For anything algorithmic or with complex branching:
-1. Write the test that defines success
-2. Run it — confirm it fails
-3. Implement until it passes
-4. Refactor with confidence
-
-Tests are your loop condition. Use them.
+Do not use TDD. Implement the behaviour, then add tests that cover the evolved code and run them before claiming done. For bugs, a regression test or reproduction is fine.
 
 ## Flaky tests
 

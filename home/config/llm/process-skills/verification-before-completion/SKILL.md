@@ -60,7 +60,7 @@ Skipping any of these steps = invalid claim.
 
 ## How to Use This With Other Skills
 
-This skill is designed to be used **after** `systematic-debugging`, `writing-plans`, `test-driven-development`, or any implementation work.
+This skill is designed to be used **after** `systematic-debugging`, `writing-plans`, or any implementation work.
 
 Recommended pairing:
 - Do the work using the appropriate skill(s)

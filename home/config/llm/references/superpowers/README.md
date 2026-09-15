@@ -1,5 +1,7 @@
 # Superpowers
 
+This harness does not use TDD. Ignore TDD, red/green, and `test-driven-development` in this upstream library.
+
 Superpowers is a complete software development methodology for your coding agents, built on top of a set of composable skills and some initial instructions that make sure your agent uses them.
 
 ## Quickstart

@@ -84,11 +84,11 @@ Example:
 Deeper supporting documents (original detailed references, additional examples, root-cause tracing techniques, etc.) live in:
 `~/.agents/references/superpowers/`
 
-The native process skills (`using-superpowers`, `superpowers`, `systematic-debugging`, `verification-before-completion`, `writing-plans`) are the primary, maintained versions. The references directory holds expanded upstream material (e.g. full `brainstorming`, `test-driven-development`).
+The native process skills (`using-superpowers`, `superpowers`, `systematic-debugging`, `verification-before-completion`, `writing-plans`) are the primary, maintained versions. The references directory holds expanded upstream material (e.g. full `brainstorming`). Do not use TDD or the upstream `test-driven-development` skill.
 
 ## Skill Types
 
-- **Rigid skills** (e.g. systematic-debugging, verification-before-completion, test-driven-development): Follow the process exactly. Do not skip steps for "speed".
+- **Rigid skills** (e.g. systematic-debugging, verification-before-completion): Follow the process exactly. Do not skip steps for "speed".
 - **Flexible skills**: Adapt the principles to context while keeping the spirit.
 
 The individual skill will tell you which type it is.

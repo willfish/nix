@@ -18,6 +18,8 @@ Track multi-step work with a checklist; plan/todo tools are optional. Subagents 
 
 ## Verification
 
+Do not use TDD. Implement first, then verify with tests; regression tests while debugging are fine.
+
 Before completion claims, commits, pushes, PR creation/update or branch extraction, identify and run fresh full relevant checks in the actual worktree/environment. Read full output, exit codes and failure counts; report evidence/blockers, never inferred success. Verify again after extraction. Cover full behaviour groups, especially value-object refactors and construction semantics, not selected tests or another branch's results. Review the diff before committing.
 
 ## Tools and secrets

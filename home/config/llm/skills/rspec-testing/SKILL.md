@@ -18,7 +18,7 @@ Read:
 Defaults:
 - RSpec everywhere; no minitest or cucumber.
 - Test business logic, bug fixes, API endpoints, models, services, and controllers.
-- Prefer test-first for non-trivial logic and bug fixes.
+- Do not use TDD. Implement first, then add tests. For bugs, add a regression test.
 - Use `.method` for class methods and `#method` for instance methods.
 - Contexts start with `when`, `with`, or `without`.
 - Cover valid, edge, and invalid cases.
