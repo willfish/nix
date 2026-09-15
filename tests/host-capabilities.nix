@@ -8,31 +8,31 @@ let
     "william@relay" = william-darwin;
     william = {
       role = "legacy";
-      secrets = 52;
+      secrets = 53;
     };
     william-linux = {
       role = "legacy";
-      secrets = 52;
+      secrets = 53;
     };
     william-darwin = {
       role = "automation";
-      secrets = 30;
+      secrets = 31;
     };
     "william@foundation" = {
       role = "workstation";
-      secrets = 52;
+      secrets = 53;
     };
     "william@andromeda" = {
       role = "workstation";
-      secrets = 52;
+      secrets = 53;
     };
     "william@starfish" = {
       role = "legacy";
-      secrets = 52;
+      secrets = 53;
     };
     "william@terminus" = {
       role = "nas";
-      secrets = 10;
+      secrets = 11;
     };
   };
   inspect =
