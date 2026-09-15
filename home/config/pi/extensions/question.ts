@@ -22,8 +22,11 @@ export default function questionExtension(pi) {
     parameters: {
       type: 'object', additionalProperties: false, required: ['question', 'options'],
       properties: {
-        question: { type: 'string', minLength: 1 },
-        options: { type: 'array', items: { type: 'string', minLength: 1 }, minItems: 2 },
+        question: { type: 'string', minLength: 1, description: 'Short question to show in the selectable list' },
+        options: {
+          type: 'array', items: { type: 'string', minLength: 1 }, minItems: 2,
+          description: 'Concrete options; the user picks one instead of typing',
+        },
       },
     },
     async execute(_id, params, signal, _onUpdate, ctx) {

@@ -14,5 +14,7 @@ State the problem and desired behavior, recommend the smallest useful change,
 and identify the affected files, meaningful verification and material risks.
 Ask only for information that would change the approach. Use the todo tool for
 the implementation steps when the task needs a checklist, and leave those
-steps incomplete. Present the plan concisely and wait for my instruction to
-implement it. Do not treat creating a plan as completing the underlying task.
+steps incomplete. Present the plan concisely. If you need a go-ahead, call the
+question tool with concrete options such as Implement this plan, Change the
+approach, and Do not implement. Do not wait for a typed chat reply.
+Do not treat creating a plan as completing the underlying task.

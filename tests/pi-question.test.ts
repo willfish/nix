@@ -30,6 +30,8 @@ test('parent process loads the question tool; team children do not', () => {
   assert.equal(isQuestionParent({ PI_TEAM_CHILD: '1' }), false);
   const parent = harness();
   assert.equal(parent.tools.has('question'), true);
+  const schema = parent.tools.get('question').parameters;
+  assert.deepEqual(schema.required, ['question', 'options']);
   assert.match((parent.events.before_agent_start({ systemPrompt: 'base' })).systemPrompt, /question tool/);
   assert.equal(harness({ child: true }).tools.has('question'), false);
 });
