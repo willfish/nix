@@ -1,4 +1,4 @@
-// Real Pi advertises the parent question tool to the model.
+// Real Pi loads the question and subagent extensions together, including from Nix store paths.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -10,7 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 
 const binary = process.env.PI_QUESTION_TEST_BIN ?? process.env.PI_SESSION_TEST_BIN;
-test('real Pi advertises the question tool with required options', { skip: !binary, timeout: 30000 }, async () => {
+test('real Pi loads sibling question and subagent extensions with required options', { skip: !binary, timeout: 30000 }, async () => {
   const dir = await mkdtemp(join(tmpdir(), 'pi-question-runtime-'));
   const histories = [], pending = new Map();
   let child, buffer = '', stderr = '', sequence = 0;
@@ -38,7 +38,7 @@ test('real Pi advertises the question tool with required options', { skip: !bina
     const extension = process.env.PI_QUESTION_TEST_EXTENSION ?? (process.env.PI_HARNESS_TEST_HOME_FILES
       ? join(process.env.PI_HARNESS_TEST_HOME_FILES, '.pi/agent/extensions/question.ts')
       : fileURLToPath(new URL('../home/config/pi/extensions/question.ts', import.meta.url)));
-    child = spawn(binary, ['--mode', 'rpc', '--offline', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-context-files', '-e', extension],
+    child = spawn(binary, ['--mode', 'rpc', '--offline', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-context-files', '-e', extension, '-e', join(dirname(extension), 'subagent/index.ts')],
       { cwd: dir, env: { ...process.env, PATH: `${dirname(binary)}:${process.env.PATH}`, PI_CODING_AGENT_DIR: agentDir, PI_OFFLINE: '1', CAPTURE_PROMPTS: '0' }, stdio: ['pipe', 'pipe', 'pipe'] });
     child.on('error', error => { stderr += `Pi startup failed: ${error.code}\n`; });
     child.stderr.setEncoding('utf8').on('data', text => { stderr += text; });
@@ -64,7 +64,10 @@ test('real Pi advertises the question tool with required options', { skip: !bina
     for (let i = 0; i < 80 && histories.length === 0; i++) await delay(25);
     assert.equal(histories.length > 0, true, `no model request: ${stderr}`);
     const names = histories[0].tools.map(tool => tool.function.name);
-    assert.ok(names.includes('question'), `question missing from ${names.join(',')}`);
+    for (const name of ['question', 'subagent', 'team']) {
+      assert.equal(names.filter(value => value === name).length, 1, `${name} must register once: ${names.join(',')}`);
+    }
+    assert.doesNotMatch(stderr, /Failed to load extension|Extension errors/i);
     const question = histories[0].tools.find(tool => tool.function.name === 'question');
     const required = question.function.parameters?.required ?? [];
     assert.ok(required.includes('options'), JSON.stringify(question.function.parameters));

@@ -12,6 +12,8 @@ let
   llmMcps = import ./llm-mcps.nix { inherit config; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
   promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
+  # Preserve sibling imports in the store, not just in Home Manager's symlink tree.
+  piExtensions = ../config/pi/extensions;
   promptCapture = import ./prompt-capture.nix { inherit pkgs; };
   sopsApiKey =
     name:
@@ -134,7 +136,7 @@ in
     ../config/pi/extensions/orchestrator-addendum.ts;
   home.file.".pi/agent/ORCHESTRATOR.md".source = ../config/llm/ORCHESTRATOR.md;
   home.file.".pi/agent/extensions/goal.ts".source = ../config/pi/extensions/goal.ts;
-  home.file.".pi/agent/extensions/question.ts".source = ../config/pi/extensions/question.ts;
+  home.file.".pi/agent/extensions/question.ts".source = "${piExtensions}/question.ts";
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
@@ -144,7 +146,7 @@ in
   # processes. Agent definitions pin no model, so subagents run on whatever
   # Grok/OpenAI model the session is using.
   # Adapted pinned upstream example: interactive herdr teams and persona skills.
-  home.file.".pi/agent/extensions/subagent".source = ../config/pi/extensions/subagent;
+  home.file.".pi/agent/extensions/subagent".source = "${piExtensions}/subagent";
   # Pinned upstream fuzzy history overlay. Enter restores without submitting.
   # Both launchers share code, but history/index/settings follow getAgentDir().
   home.file.".pi/agent/extensions/prompt-history".source = promptHistory;
