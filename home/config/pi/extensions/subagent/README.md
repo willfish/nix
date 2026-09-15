@@ -56,9 +56,9 @@ Each result includes a member ID. Both the `team` tool and `/team` command suppo
 
 ## Questions in the main pane
 
-A child calls `ask_coordinator` when it needs clarification, with at least two concrete choices. Its execution segment ends with a typed question, not a completed task. The coordinator receives the first settled question without waiting for slow siblings, while the job retains running and queued work.
+A child calls `ask_coordinator` when it needs clarification, with at least two concrete choices. Its execution segment ends with a structured multiple-choice question, not a completed task. The coordinator receives the first settled question without waiting for slow siblings, while the job retains running and queued work.
 
-The coordinator uses `team answer` from evidence or an architect recommendation. Human hard-gate questions with choices open a selectable list in this main pane on wait, not a typed chat prompt. Use `team ask` for the same list. Design and plan choices are not human questions. Questions marked `requiresUser` accept answers only through actual main-pane UI input or a user slash-answer, never a model-supplied provenance flag. Dismissing or cancelling the dialog leaves the question pending.
+The coordinator uses `team answer` from evidence or an architect recommendation. Human hard-gate questions with choices open a selectable list in this main pane on wait, not a typed chat prompt. Use `team ask` for the same list. Design and plan choices are not human questions. Questions marked `requiresUser` accept answers only through that selectable list or a user slash-answer, never a model-supplied provenance flag. Dismissing or cancelling the dialog leaves the question pending.
 
 ```text
 /team questions
@@ -92,7 +92,7 @@ Herdr layout edits use positional paths and are not transactional across clients
 - `skills.ts`: strict declarations and prompt composition.
 - `herdr.ts`: bounded socket calls, explicit pane ownership and subtree ratios.
 - `protocol.ts`: private atomic command/result files.
-- `child.ts`: readiness, typed questions, validated answer delivery, settlement, retirement and coordinator lease.
+- `child.ts`: readiness, multiple-choice questions, validated answer delivery, settlement, retirement and coordinator lease.
 - `team.ts`: parent lifecycle, answer transport, retained sessions and `PI_TEAM_CHILD` for headless and interactive children.
 - `jobs.ts`: session-owned scheduling, question tracking, continuation and cancellation capacity.
 - `job-results.ts`: honest waiting/result rendering, segment usage and parent batch guards.
