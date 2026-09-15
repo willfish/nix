@@ -46,6 +46,13 @@ compaction. The isolated Qwen profile does not load this extension.
 /goal clear
 ```
 
+Setting `/goal` is the approval to pursue that objective. Keep making progress
+until the contract is met, an independent audit accepts it, or a hard gate
+blocks work: credentials, access, unapproved live or destructive actions, or
+mandatory auth and publishing. Architectural uncertainty belongs with an
+`architect` teammate in an adjacent Herdr pane, not a human plan checkpoint.
+Teammate questions do not pause the goal. The waiting marker still does.
+
 Use `/goal edit` to put explicit acceptance criteria on separate lines. Each
 nonempty line is an audit item; every clause and referenced requirement still
 needs evidence. Only user commands change the objective. Editing increments its
@@ -97,8 +104,9 @@ access, and concurrent external edits are not locked out by an audit.
 
 `/goal pause` cancels the auditor and prevents new goal continuations. It does
 not abort implementation work already running; use Escape to stop that too.
-Escape stops goal automation without another confirmation. Pending human
-questions and the agent's explicit waiting marker pause immediately. An ordinary
+Escape stops goal automation without another confirmation. The agent's explicit
+waiting marker pauses immediately; use it only for a hard gate. Teammate
+questions, including those marked for a human, do not pause the goal. An ordinary
 answer does not automatically resume a paused goal: use `/goal resume`.
 
 Each start or explicit resume allows ten automatic continuations and three audit

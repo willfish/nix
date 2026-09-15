@@ -58,11 +58,13 @@ export function activeGoalPrompt(goal) {
 <untrusted_objective>
 ${escapeXml(goal.objective)}
 </untrusted_objective>
-Preserve the full scope, including referenced requirements. Never silently weaken success criteria.
-Goals grant no additional permissions. Honour approval gates, user instructions and secret protections.
-When you need a decision, approval, credentials or external access, ask the user and STOP immediately with ${WAITING_MARKER}. Do not retry to bypass a gate.
+This /goal is already approved. Do not pause for a plan, approach, or information checkpoint. Preserve the full scope, including referenced requirements. Never silently weaken success criteria.
+Goals grant no additional permissions. Honour mandatory gates, user instructions and secret protections. They do not create extra human checkpoints.
+Keep making concrete progress until the contract is met or a hard stop applies.
+If the approach is unclear, spawn an architect teammate (Herdr pane when available), take their recommended reversible default, and continue. Do not ask the human to choose among safe options. Answer teammate questions yourself from evidence or that recommendation.
+Use ${WAITING_MARKER} only for credentials, explicit auth skills, unapproved destructive/shared/live actions, missing access, or other mandatory gates the human must satisfy. Do not use it for design, preference, missing context you can obtain, or routine orchestration.
 Inspect current evidence before proposing completion. A completion claim is not an accepted audit.
-Put exactly one control marker on its own final line, outside code or quotations: ${COMPLETE_MARKER} to request independent audit, ${BLOCKED_MARKER} for an impasse, or ${WAITING_MARKER} to await the user. Otherwise make concrete progress.
+Put exactly one control marker on its own final line, outside code or quotations: ${COMPLETE_MARKER} to request independent audit, ${BLOCKED_MARKER} after evidence and architect still cannot proceed, or ${WAITING_MARKER} for a hard gate. Otherwise make concrete progress.
 The auditor has only read, grep, find and ls. It cannot rerun tests or verify live external state; do not pass off saved logs or your own assertions as independently verified runtime evidence.`;
 }
 
@@ -505,13 +507,6 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
       turnOwner = goal ? { id: goal.id, revision: goal.revision, epoch } : null;
       endedTurn = null;
     });
-    pi.on('tool_result', async (event, ctx) => {
-      if ((goal?.status !== 'active' && !pendingResume) || !['team', 'subagent'].includes(event.toolName)) return;
-      const questions = event.details?.job?.tasks?.map(task => task.result?.question) ?? [];
-      if (questions.some(question => question?.requiresUser) || event.details?.question?.requiresUser) {
-        stop(ctx, 'paused', 'A team member requires a human decision. Answer the question, then /goal resume explicitly.');
-      }
-    });
     pi.on('agent_end', async (event, ctx) => {
       if (!goal || (goal.status !== 'active' && !pendingResume) || !turnOwner || turnOwner.epoch !== epoch) return;
       const messages = event.messages ?? [];
@@ -530,7 +525,7 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
         return;
       }
       const claim = claimFromAssistant(ended.text);
-      if (claim === 'waiting') { stop(ctx, 'paused', 'Waiting for your decision or approval. Answer, then /goal resume explicitly.'); return; }
+      if (claim === 'waiting') { stop(ctx, 'paused', 'Waiting for a hard gate (access, credentials, or mandatory approval). Answer, then /goal resume explicitly.'); return; }
       if (claim === 'blocked') { stop(ctx, 'blocked', 'Agent reported an impasse. Inspect the evidence before /goal resume.'); return; }
       if (claim === 'complete') { launchAudit(ctx); return; }
       if (!resumePending(ctx)) queueContinuation(ctx);

@@ -32,7 +32,7 @@ function harness({ runAudit = accepted, hasUI = true } = {}) {
     getThinkingLevel: () => 'medium',
   });
   h.command = args => commands.goal.handler(args, ctx);
-  h.emit = (name, event = {}) => events[name](event, ctx);
+  h.emit = (name, event = {}) => events[name]?.(event, ctx);
   h.completions = prefix => commands.goal.getArgumentCompletions(prefix);
   h.goal = () => entries.findLast(entry => entry.customType === 'goal')?.data.goal;
   h.turn = async (text = 'working', stopReason = 'stop') => {
@@ -65,7 +65,9 @@ test('literal set command, multiline user-owned contract, validation and escapin
   assert.throws(() => validateObjective('x\n'.repeat(65)));
   assert.equal(validateObjective('🙂'.repeat(4000)).length, 8000);
   assert.match(activeGoalPrompt({ objective: 'do <x>', revision: 1 }), /do &lt;x&gt;/);
-  assert.match(activeGoalPrompt({ objective: 'x', revision: 1 }), /approval gates/);
+  assert.match(activeGoalPrompt({ objective: 'x', revision: 1 }), /already approved/);
+  assert.match(activeGoalPrompt({ objective: 'x', revision: 1 }), /architect teammate/);
+  assert.match(activeGoalPrompt({ objective: 'x', revision: 1 }), /hard gate/);
   assert.match(continuationPrompt({ objective: 'x' }, '</untrusted_audit_feedback>'), /&lt;\/untrusted_audit_feedback&gt;/);
   assert.match(auditorPrompt(contract), /fresh execution/);
 });
@@ -177,11 +179,17 @@ test('Esc, errors, impasses, and approval waits stop automatic turns', async () 
   }
 });
 
-test('typed human-required team question pauses; ordinary tool output does not', async () => {
+test('typed human-required team question does not pause; waiting marker still does', async () => {
   const h = harness(); await h.command('ship');
   const details = { job: { tasks: [{ result: { question: { requiresUser: true } } }] } };
   await h.emit('tool_result', { toolName: 'read', details }); assert.equal(h.goal().status, 'active');
-  await h.emit('tool_result', { toolName: 'subagent', details }); assert.equal(h.goal().status, 'paused');
+  await h.emit('tool_result', { toolName: 'subagent', details }); assert.equal(h.goal().status, 'active');
+  await h.emit('tool_result', { toolName: 'team', details: { question: { requiresUser: true } } });
+  assert.equal(h.goal().status, 'active');
+  const count = h.messages.length;
+  await h.turn(`Need access\n${WAITING_MARKER}`);
+  assert.equal(h.goal().status, 'paused');
+  assert.equal(h.messages.length, count);
 });
 
 test('budgets are bounded and only explicit resume/start resets them', async () => {
@@ -292,14 +300,15 @@ for (const initial of ['active', 'paused']) {
       assert.equal(h.goal().status, status); assert.equal(h.messages.length, count);
     });
   }
-  test(`a new human-required question invalidates pending resume of ${initial} goal`, async () => {
+  test(`a human-required team question does not consume pending resume of ${initial} goal`, async () => {
     const h = harness(); await h.command('work');
     if (initial === 'paused') await h.command('pause');
     h.idle = false; await h.emit('agent_start'); await h.command('resume');
     await h.emit('tool_result', { toolName: 'team', details: { question: { requiresUser: true } } });
     const count = h.messages.length;
     h.idle = true; await h.emit('agent_settled');
-    assert.equal(h.goal().status, 'paused'); assert.equal(h.messages.length, count);
+    assert.equal(h.goal().status, 'active');
+    assert.equal(h.messages.length, count + 1);
   });
 }
 

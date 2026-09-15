@@ -103,6 +103,8 @@ test('real Pi /goal audits with restricted tools, bounds loops, pauses and resto
     await command('/goal proof.txt contains fixture proof');
     await until(() => status().includes('complete'), 'independent audit completion');
     assert.equal(histories.length, 3, 'one implementation turn and two detached auditor turns');
+    const implSystem = histories[0].messages.filter(message => ['system', 'developer'].includes(message.role)).map(message => message.content).join('\n');
+    assert.match(implSystem, /already approved/);
     const sessionFile = (await request('get_state')).sessionFile;
     const journal = (await readFile(sessionFile, 'utf8')).split('\n').filter(Boolean).map(line => JSON.parse(line));
     const anchors = journal.filter(entry => entry.customType === 'goal-audit-card');

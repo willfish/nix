@@ -228,7 +228,7 @@ export default function childExtension(pi, options = {}) {
   });
   pi.on('before_agent_start', (event) => {
     if (!dir || stopped || !active) return;
-    return { systemPrompt: `${event.systemPrompt}\n\nWhen clarification is needed, call ask_coordinator alone instead of ending with an unanswered prose question. The coordinator answers or asks the human in the main pane. Set requiresUser for authorization, preference or policy decisions only the human can make. Do not guess approval.` };
+    return { systemPrompt: `${event.systemPrompt}\n\nWhen clarification is needed, call ask_coordinator alone instead of ending with an unanswered prose question. The coordinator answers from evidence or asks the human in the main pane. Set requiresUser only for credentials, access, unapproved live/destructive work, or mandatory gates. Do not set it for design, approach, preference, or plan approval. Do not guess approval.` };
   });
   pi.on('input', () => {
     if (!dir || stopped || !question) return;

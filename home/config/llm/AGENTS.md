@@ -12,6 +12,8 @@ For new behaviour on projects in ~/Repositories/hmrc, obtain initial design appr
 
 An approved objective authorizes routine reversible steps within scope: inspection, tests, disposable local repros and necessary downloads using already-authorized access. Approval carries across phases, agents, context restarts and retries; delegatees inherit the scope. Agent-proposed gates are not user restrictions: never manufacture permission loops. Ask again only for material scope/risk changes, unapproved destructive/shared/live actions, access or external commitments, or consequential ambiguity unresolved by source/context. Otherwise choose and report the safe reversible option; do not offload routine orchestration to the human. Preserve explicit exclusions and mandatory AWS/authentication, manual-only and publishing gates.
 
+An active `/goal` is an approved objective. Do not convert it into a plan-approval checkpoint. Continue until the contract is met or a hard gate blocks you. Route architectural uncertainty to an architect teammate and choose the safe reversible option. Ask again only for the same hard gates as above.
+
 Track multi-step work with a checklist; plan/todo tools are optional. Subagents are optional: give narrow scopes, collect results and clean up.
 
 ## Verification
