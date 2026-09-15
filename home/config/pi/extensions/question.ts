@@ -7,12 +7,11 @@ export function isQuestionParent(env = process.env) {
 }
 
 export async function promptWithChoices(ui, title, choices, signal) {
-  if (choices?.length) {
-    let text = await ui.select(title, [...choices, OTHER_ANSWER], { signal });
-    if (text === OTHER_ANSWER && !signal?.aborted) text = await ui.input(title, undefined, { signal });
-    return text;
-  }
-  return ui.input(title, undefined, { signal });
+  const options = Array.isArray(choices) ? choices.map(value => String(value).trim()).filter(Boolean) : [];
+  if (options.length < 2) throw new Error('Human questions require at least two concrete options');
+  let text = await ui.select(title, [...options, OTHER_ANSWER], { signal });
+  if (text === OTHER_ANSWER && !signal?.aborted) text = await ui.input(title, undefined, { signal });
+  return text;
 }
 
 export default function questionExtension(pi) {

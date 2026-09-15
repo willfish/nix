@@ -57,7 +57,8 @@ test('other answer falls through to typed input; cancel leaves no answer', async
   await assert.rejects(harness({ mode: 'rpc' }).execute({ question: 'Deploy?', options: ['a', 'b'] }), /interactive/);
 });
 
-test('promptWithChoices keeps free-text fallback for questions without choices', async () => {
+test('promptWithChoices refuses questions without a selectable list', async () => {
   const ui = { select: async () => 'nope', input: async (title) => `typed:${title}` };
-  assert.equal(await promptWithChoices(ui, 'Choose', undefined, undefined), 'typed:Choose');
+  await assert.rejects(promptWithChoices(ui, 'Choose', undefined, undefined), /at least two concrete options/);
+  await assert.rejects(promptWithChoices(ui, 'Choose', ['only'], undefined), /at least two concrete options/);
 });

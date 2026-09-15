@@ -104,6 +104,13 @@ test('main-pane questions tool uses real registry and schema cannot override hum
   assert.equal(f.jobs.snapshot(id).tasks[0].result.messages.length, 1, 'public redaction does not mutate registry');
 });
 
+test('ask without choices refuses a typed-only prompt', async t => {
+  const f = fixture(t);
+  const { question } = await f.start({ requiresUser: true });
+  await assert.rejects(f.tool({ action: 'ask', id: question.id }), /at least two concrete options/);
+  assert.deepEqual(f.uiCalls, []);
+});
+
 test('wait auto-presents a human question as a selectable list', async t => {
   const f = fixture(t);
   const { id, question } = await f.start({ requiresUser: true, choices: ['staging', 'production'] });
@@ -118,9 +125,9 @@ test('wait auto-presents a human question as a selectable list', async t => {
   assert.equal((await f.tool({ action: 'wait', id })).status, 'completed');
 });
 
-for (const method of ['input', 'select', 'other']) test(`ask obtains ${method} in main UI and resumes with human provenance`, async t => {
+for (const method of ['select', 'other']) test(`ask obtains ${method} in main UI and resumes with human provenance`, async t => {
   const f = fixture(t);
-  const { id, question } = await f.start({ requiresUser: true, ...(method === 'input' ? {} : { choices: ['staging', 'production'] }) });
+  const { id, question } = await f.start({ requiresUser: true, choices: ['staging', 'production'] });
   if (method === 'other') f.ctx.ui.select = async (title, choices) => {
     f.uiCalls.push({ method: 'select', title, choices }); return choices.at(-1);
   };
@@ -131,35 +138,34 @@ for (const method of ['input', 'select', 'other']) test(`ask obtains ${method} i
   assert.equal(f.resumes[0].text, method === 'select' ? 'staging' : 'typed answer');
   assert.equal(f.resumes[0].questionId, question.id);
   assert.equal(f.jobs.snapshot(id).status, 'running', 'ack is not completion');
-  assert.deepEqual(f.uiCalls.map(c => c.method), method === 'other' ? ['select', 'input'] : [method]);
+  assert.deepEqual(f.uiCalls.map(c => c.method), method === 'other' ? ['select', 'input'] : ['select']);
   assert.ok(f.uiCalls.every(c => c.title === 'builder: Choose deployment'));
-  if (method !== 'input') assert.deepEqual(f.uiCalls[0].choices, ['staging', 'production', 'Other answer (type text)']);
+  assert.deepEqual(f.uiCalls[0].choices, ['staging', 'production', 'Other answer (type text)']);
   f.resumes[0].gate.resolve({ status: 'completed', text: 'deployed', memberId: f.member.id });
   assert.equal((await f.tool({ action: 'wait', id })).status, 'completed');
 });
 
 for (const response of [undefined, null, '', '   ']) test(`dismissed ask (${JSON.stringify(response)}) stays waiting without automatic reopen`, async t => {
   const f = fixture(t);
-  const { id, question } = await f.start({ requiresUser: true });
-  let inputs = 0;
-  f.ctx.ui.input = async () => { inputs++; return response; };
+  const { id, question } = await f.start({ requiresUser: true, choices: ['staging', 'production'] });
+  let selects = 0;
+  f.ctx.ui.select = async () => { selects++; return response; };
   const result = await f.tool({ action: 'ask', id: question.id });
   assert.equal(result.status, 'waiting_question');
   assert.equal(result.questionId, question.id);
   assert.match(result.text, /Do not reopen automatically/);
   await f.tool({ action: 'wait', id });
   await delay(80);
-  assert.equal(inputs, 1);
+  assert.equal(selects, 1);
   assert.equal(f.jobs.snapshot(id).status, 'waiting_question');
   assert.ok(f.jobs.question(question.id));
   assert.deepEqual(f.resumes, []);
   assert.deepEqual(f.pi.messages, []);
 });
 
-for (const method of ['input', 'select', 'other', 'select-other-late']) test(`cancelled ${method} dialog forwards signal and ignores late human response`, async t => {
+for (const method of ['select', 'other', 'select-other-late']) test(`cancelled ${method} dialog forwards signal and ignores late human response`, async t => {
   const f = fixture(t);
-  const { id, question } = await f.start({ requiresUser: true,
-    ...(method === 'input' ? {} : { choices: ['staging', 'production'] }) });
+  const { id, question } = await f.start({ requiresUser: true, choices: ['staging', 'production'] });
   const controller = new AbortController(), gate = deferred(), calls = [];
   const answer = t.mock.method(f.jobs, 'answer');
   f.ctx.ui.select = async (title, choices, options) => {
@@ -178,7 +184,7 @@ for (const method of ['input', 'select', 'other', 'select-other-late']) test(`ca
   gate.resolve(method === 'select-other-late' ? 'Other answer (type text)' : 'staging');
   await rejected;
   await delay(0);
-  assert.deepEqual(calls.map(call => call.method), method === 'other' ? ['select', 'input'] : [method === 'input' ? 'input' : 'select']);
+  assert.deepEqual(calls.map(call => call.method), method === 'other' ? ['select', 'input'] : ['select']);
   assert.equal(answer.mock.callCount(), 0);
   assert.deepEqual(f.resumes, []);
   assert.equal(f.jobs.snapshot(id).status, 'waiting_question');
