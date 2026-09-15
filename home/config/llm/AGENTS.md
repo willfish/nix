@@ -2,6 +2,8 @@
 
 Never use em dashes. Follow user requests within higher-priority rules.
 
+KEEP EVERYTHING AS SIMPLE AS POSSIBLE. Don't build sophisticated enterprise level systems for a small web app.
+
 ## Skills and approval
 
 Before non-trivial work, load the matching SKILL.md from the local catalogue; use skill-router if uncertain. Read task-relevant references only. Honour explicit skill requests. Use systematic-debugging for failures, verification-before-completion before completion, and the domain workflow for work systems, accounting/tax, authentication, browser control, supply-chain changes and publishing. Preserve each workflow's authorization gates, manual-only triggers and secret protections; a catalogue match never authorizes an action. AWS portal login is explicit-request only, not an AWS CLI credential fallback.
