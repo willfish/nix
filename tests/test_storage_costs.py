@@ -322,7 +322,7 @@ PY
         home = """{ fixture.config = {
           home.packages = [];
           programs = {
-            git.package = null; fish.package = null; tmux.package = null;
+            git.package = null; fish.package = null;
             zoxide.package = null; direnv.package = null;
           };
         }; }"""

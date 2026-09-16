@@ -8,15 +8,15 @@ When working on CLI tools, proactively generate animated GIF demos for READMEs a
 
 - Choose your approach
 - Approach 1: asciinema (simple CLI demos)
-- Approach 2: gpu-screen-recorder (tmux, vim, htop, etc.)
+- Approach 2: gpu-screen-recorder (herdr, vim, htop, etc.)
 - Tips
 
 ## Choose your approach
 
 | Approach | Use when | Limitations |
 |----------|----------|-------------|
-| **asciinema + agg** | Simple CLI output | Cannot capture tmux, vim, htop, or other TUI apps |
-| **gpu-screen-recorder + ffmpeg** | tmux, vim, htop, or any visual terminal content | Requires portal interaction, larger files |
+| **asciinema + agg** | Simple CLI output | Cannot capture herdr, vim, htop, or other TUI apps |
+| **gpu-screen-recorder + ffmpeg** | herdr, vim, htop, or any visual terminal content | Requires portal interaction, larger files |
 
 ## Approach 1: asciinema (simple CLI demos)
 
@@ -61,9 +61,9 @@ asciinema rec demo.cast --command 'bash demo-script.sh' --cols 80 --rows 24 --ov
 agg demo.cast demo.gif --font-size 14 --speed 1
 ```
 
-## Approach 2: gpu-screen-recorder (tmux, vim, htop, etc.)
+## Approach 2: gpu-screen-recorder (herdr, vim, htop, etc.)
 
-Use this when the demo needs to show tmux panes, vim, htop, or other TUI applications that asciinema cannot capture.
+Use this when the demo needs to show herdr panes, vim, htop, or other TUI applications that asciinema cannot capture.
 
 **Why not wf-recorder?** It requires wlroots protocols (Sway, Hyprland). For COSMIC, GNOME, KDE, use gpu-screen-recorder which works via xdg-desktop-portal.
 
@@ -77,7 +77,6 @@ VIDEO_FILE="/tmp/demo.mp4"
 GIF_FILE="demo.gif"
 
 # Cleanup
-tmux kill-session -t demo 2>/dev/null || true
 rm -f "$VIDEO_FILE"
 
 echo "Starting recording..."
@@ -113,9 +112,6 @@ sleep 1.5
 
 clear
 
-# For tmux demos: auto-detach after delay
-(sleep 4; tmux detach-client -s demo 2>/dev/null) &
-
 type_cmd "mux start -p demo/demo.yml"
 ./build/mux start -p demo/demo.yml
 
@@ -126,9 +122,6 @@ sleep 0.5
 kill -INT $RECORDER_PID 2>/dev/null
 sleep 2
 wait $RECORDER_PID 2>/dev/null || true
-
-# Cleanup
-tmux kill-session -t demo 2>/dev/null || true
 
 # Convert to GIF
 ffmpeg -y -i "$VIDEO_FILE" \

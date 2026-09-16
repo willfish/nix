@@ -38,7 +38,6 @@ let
       dconfSettings = builtins.attrNames c.dconf.settings;
       stylixAutoEnable = c.stylix.autoEnable;
       fishFixed = c.stylix.targets.fish.enable;
-      tmuxFixed = c.stylix.targets.tmux.enable;
       cosmicSource = if runtime then selected.cosmic else null;
       rememberMode = c.home.activation.rememberCosmicMode.data or "";
       writableModeScript = c.home.activation.writableCosmicMode.data or "";

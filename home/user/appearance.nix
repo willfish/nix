@@ -42,7 +42,6 @@ in
   stylix.targets.ghostty.enable = false;
   stylix.targets.neovim.enable = false;
   stylix.targets.fish.enable = false;
-  stylix.targets.tmux.enable = false;
   stylix.targets.gtk.enable = false;
   stylix.targets.qt.enable = false;
   stylix.targets.kde.enable = false;

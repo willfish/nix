@@ -53,7 +53,7 @@ flowchart TD
 | `pre-commit-hooks` | Git hook management |
 | `sniffy` | AWS secrets scanner |
 | `smailer` | S3 email viewer |
-| `mux` | Tmux session manager |
+| `mux` | Herdr session manager |
 | `forte` | Desktop music player |
 | `llm-agents` | Pi package |
 
@@ -83,7 +83,7 @@ flowchart TD
             NVIM[nvim]
             GHOSTTY[ghostty]
             COSMIC[cosmic]
-            OTHER[bin, tmuxinator...]
+            OTHER[bin...]
         end
     end
 
@@ -182,10 +182,6 @@ Fish is the default shell with extensive configuration:
 ### Git
 
 Signed commits with GPG key `BC6DED9479D436F5`. Delta as the diff viewer with the GitHub theme. Histogram diff algorithm, zdiff3 merge conflicts, auto-stash on rebase, and a commit template with JIRA format guidance. LFS enabled.
-
-### Tmux
-
-Rose Pine Moon theme. Vi key bindings, vim-tmux-navigator for seamless pane switching with `Alt+hjkl`, sessionx for fuzzy session management, thumbs for URL capturing, and yank for clipboard integration. Status bar at top. Tmuxinator session definitions for work, fun, and dotfiles projects.
 
 ### Desktop (Linux only)
 

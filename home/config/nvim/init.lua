@@ -261,15 +261,7 @@ vim.keymap.set("n", "<leader>nf", function()
 end, { desc = "Toggle file explorer on current file" })
 
 packadd_many({ "herdr-navigator.nvim" })
-local herdr_navigator = require("herdr-navigator")
-herdr_navigator.setup()
-
-if not herdr_navigator.is_herdr() then
-	vim.keymap.set("n", "<M-h>", "<cmd>TmuxNavigateLeft<CR>")
-	vim.keymap.set("n", "<M-j>", "<cmd>TmuxNavigateDown<CR>")
-	vim.keymap.set("n", "<M-k>", "<cmd>TmuxNavigateUp<CR>")
-	vim.keymap.set("n", "<M-l>", "<cmd>TmuxNavigateRight<CR>")
-end
+require("herdr-navigator").setup()
 
 vim.keymap.set("n", "<Leader>i", ":Git ", { desc = "Enter a GIT command" })
 vim.keymap.set("n", "<Leader>b", ":Git blame<CR>", { desc = "Enter a GIT blame for the current buffer" })

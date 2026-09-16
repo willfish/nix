@@ -187,9 +187,9 @@ in
       duf # Disk usage utility with a user-friendly interface
       dust # Disk usage analyzer (alternative to du)
       fd # Fast, simple alternative to find
-      findutils # GNU find, locate, xargs, etc. (tmux-sessionx and similar plugins sanitize $PATH and only inject a few tools)
+      findutils # GNU find, locate, xargs, etc.
       fzf # Fuzzy finder for command-line searches
-      gawk # GNU awk (required by tmux-sessionx for session list processing; only a few tools are guaranteed after plugin PATH mangling)
+      gawk # GNU awk
       gh # GitHub CLI for repository management
       git-ignore # Fetch .gitignore templates using the packaged gitignore.io client
       git-lfs # Large file support (filter configured in git.nix on all platforms)

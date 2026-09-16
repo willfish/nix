@@ -280,7 +280,6 @@ in
     (items "home-manager" "home.packages/evaluated" home.home.packages)
     ++ (optionalItem "home-manager" "programs.git.package" home.programs.git.package)
     ++ (optionalItem "home-manager" "programs.fish.package" home.programs.fish.package)
-    ++ (optionalItem "home-manager" "programs.tmux.package" home.programs.tmux.package)
     ++ (optionalItem "home-manager" "programs.zoxide.package" home.programs.zoxide.package)
     ++ (optionalItem "home-manager" "programs.direnv.package" home.programs.direnv.package)
     ++ lib.optionals (home.programs ? brave) (optionalItem "home-manager" "programs.brave.package" home.programs.brave.package)

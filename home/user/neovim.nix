@@ -140,7 +140,6 @@ let
     "Wansmer/treesj" = vimPlugins.treesj;
     "nvim-tree/nvim-tree.lua" = vimPlugins.nvim-tree-lua;
     "nvim-tree/nvim-web-devicons" = vimPlugins.nvim-web-devicons;
-    "christoomey/vim-tmux-navigator" = vimPlugins.vim-tmux-navigator;
     "willfish/herdr-navigator.nvim" = customPlugins.herdr-navigator-nvim;
     "tpope/vim-fugitive" = vimPlugins.vim-fugitive;
     "folke/flash.nvim" = vimPlugins.flash-nvim;

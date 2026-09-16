@@ -75,7 +75,7 @@ appearance reports; older multiplexers may require a restart or an explicit Pi
   Nix sandbox. There is no custom reimplementation of COSMIC's component styling.
 - COSMIC owns GTK/Qt exports on graphical Linux. Fixed Stylix GTK, Qt and KDE
   overrides are disabled there to avoid conflicting colour sources.
-- Fish and tmux use terminal ANSI roles, with no shell-emitted palette overrides.
+- Fish uses terminal ANSI roles, with no shell-emitted palette overrides.
 - Neovim uses the same palettes, following its detected `background` option.
   `:set background=light` or `:set background=dark` is an explicit fallback when a
   terminal does not update background detection.

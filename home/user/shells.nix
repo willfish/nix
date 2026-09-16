@@ -11,7 +11,6 @@ let
     ag = "rg";
     la = "lsd -la";
     ll = "lsd -l";
-    tm = "tmux";
     v = "nvim";
     vi = "nvim";
     vim = "nvim";
@@ -25,7 +24,6 @@ let
 
     cdn = "cd ~/Notes";
     cdr = "cd ~/Repositories";
-    tm = "tmux";
   }
   // lib.optionalAttrs config.dotfiles.capabilities.development {
     bundle = "bundle install";

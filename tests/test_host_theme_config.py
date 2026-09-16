@@ -45,7 +45,6 @@ class HostThemeConfigTest(unittest.TestCase):
                 )
                 self.assertTrue(profile["theme"]["auto_switch"])
                 self.assertFalse(profile["fishFixed"])
-                self.assertFalse(profile["tmuxFixed"])
                 self.assertIn(
                     "--use-theme host-light/host-dark", profile["pi"]
                 )

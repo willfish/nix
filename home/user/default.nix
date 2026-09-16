@@ -52,6 +52,5 @@
     ./prompt-capture-file.nix
     ./shells.nix
     ./stylix.nix
-    ./tmux.nix
   ];
 }
