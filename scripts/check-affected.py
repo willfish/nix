@@ -7,6 +7,7 @@ import argparse
 from dataclasses import dataclass, field
 import os
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import tarfile
@@ -222,10 +223,19 @@ def check_revision(revision: str, selection: Selection, native: str) -> None:
         run_checks(root, selection, native)
 
 
+def automatic_gate_enabled() -> bool:
+    return socket.gethostname().split(".", 1)[0].lower() == "andromeda"
+
+
 def install(executable: Path) -> None:
     hooks = Path(git("rev-parse", "--git-path", "hooks"))
-    hooks.mkdir(parents=True, exist_ok=True)
     hook = hooks / "pre-push"
+    if not automatic_gate_enabled():
+        if hook.is_symlink() and Path(os.readlink(hook)).name == MARKER:
+            hook.unlink()
+            print(f"Removed {hook}: automatic build gate is Andromeda-only")
+        return
+    hooks.mkdir(parents=True, exist_ok=True)
     if hook.exists() or hook.is_symlink():
         if not hook.is_symlink() or Path(os.readlink(hook)).name != MARKER:
             raise ValueError(f"Refusing to replace unmanaged hook: {hook}")
@@ -251,6 +261,11 @@ def main() -> int:
     try:
         if args.install:
             install(args.install)
+            return 0
+        if not args.base and not automatic_gate_enabled():
+            print(
+                "pre-push: automatic build gate is Andromeda-only", flush=True
+            )
             return 0
         os.chdir(git("rev-parse", "--show-toplevel"))
         if args.base:

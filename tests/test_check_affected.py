@@ -107,6 +107,11 @@ class SelectionTests(unittest.TestCase):
 
 class GitTests(unittest.TestCase):
     def setUp(self):
+        hostname = patch.object(
+            gate.socket, "gethostname", return_value="andromeda"
+        )
+        hostname.start()
+        self.addCleanup(hostname.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -246,9 +251,42 @@ class GitTests(unittest.TestCase):
             gate.install(first)
         self.assertFalse(hook.is_symlink())
 
+    def test_other_hosts_remove_only_managed_hooks(self):
+        executable = self.root / gate.MARKER
+        hook = Path(self.git("rev-parse", "--git-path", "hooks/pre-push"))
+        for host in ("terminus", "foundation", "starfish", "relay"):
+            gate.install(executable)
+            with patch.object(gate.socket, "gethostname", return_value=host):
+                gate.install(executable)
+                self.assertFalse(hook.is_symlink())
+                hook.write_text("#!/bin/sh\nexit 1\n")
+                gate.install(executable)
+                self.assertEqual(hook.read_text(), "#!/bin/sh\nexit 1\n")
+            hook.unlink()
+
+    def test_other_hosts_skip_before_git_stdin_or_nix(self):
+        for host in ("terminus", "foundation", "starfish", "relay"):
+            with (
+                patch.object(gate.socket, "gethostname", return_value=host),
+                patch.object(sys, "argv", ["check-affected"]),
+                patch.object(gate, "git", side_effect=AssertionError),
+                patch.object(gate, "revisions", side_effect=AssertionError),
+                patch.object(gate, "run_checks", side_effect=AssertionError),
+            ):
+                self.assertEqual(gate.main(), 0)
+
+    def test_andromeda_hostname_accepts_fqdn(self):
+        with patch.object(
+            gate.socket, "gethostname", return_value="Andromeda.fritz.box"
+        ):
+            self.assertTrue(gate.automatic_gate_enabled())
+
     def test_manual_build_rejects_untracked_sources(self):
         (self.repo / "flake.nix").write_text("untracked\n")
-        with patch.object(sys, "argv", ["check-affected", "--base", "HEAD"]):
+        with (
+            patch.object(gate.socket, "gethostname", return_value="terminus"),
+            patch.object(sys, "argv", ["check-affected", "--base", "HEAD"]),
+        ):
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(gate.main(), 1)
 
@@ -279,7 +317,8 @@ if args[0] == "build" and os.environ.get("NIX_TEST_FAIL"):
         nix.chmod(0o755)
         executable = bin_dir / gate.MARKER
         executable.write_text(
-            f"#!{sys.executable}\nimport runpy\n"
+            f"#!{sys.executable}\nimport runpy, socket\n"
+            "socket.gethostname = lambda: 'andromeda'\n"
             f"runpy.run_path({str(ROOT / 'scripts/check-affected.py')!r}, "
             "run_name='__main__')\n"
         )

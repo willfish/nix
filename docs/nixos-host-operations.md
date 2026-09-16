@@ -34,7 +34,13 @@ done
 ### Automatic push gate
 
 Entering the dev shell (`direnv allow` or `nix develop`) installs the existing
-commit hooks and a separate `pre-push` hook. The push gate checks clean snapshots
+commit hooks. Only Andromeda installs the automatic `pre-push` build gate.
+Other hosts remove that managed hook on dev-shell entry; unmanaged hooks are
+left alone. The gate also checks the hostname at runtime, so an updated hook
+cannot trigger automatic builds elsewhere. Manual `--base` checks remain
+available on every host.
+
+The push gate checks clean snapshots
 of the pushed tips, not dirty files or whichever branch is checked out. Failures
 block the push; checks never activate a generation or contact hosts to deploy it.
 An existing unmanaged push hook is not overwritten.
