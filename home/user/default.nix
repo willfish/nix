@@ -39,7 +39,6 @@
     ./email.nix
     ./environment.nix
     ./git.nix
-    ./hindsight.nix
     ./llm-harness.nix
     ./local-llm.nix
     ./hermes.nix

@@ -53,7 +53,6 @@ in
       hermes = capability "Hermes automation scripts and Telegram environment";
       telegram = capability "Telegram agent integration";
       personal = capability "personal desktop apps and interactive account workflows";
-      memory = capability "Hindsight memory tooling";
       desktop = capability "desktop applications and desktop settings";
       playwright = capability "visible-browser MCP integration";
       headlessBrowser = capability "pinned headless browser automation";
@@ -109,7 +108,6 @@ in
       hermes = interactive;
       telegram = interactive;
       personal = full;
-      memory = full;
       desktop = full;
       playwright = full;
       headlessBrowser = interactive;
@@ -128,7 +126,6 @@ in
     ++ lib.optional cfg.capabilities.email "email"
     ++ lib.optional cfg.capabilities.telegram "telegram"
     ++ lib.optional cfg.capabilities.personal "personal"
-    ++ lib.optional cfg.capabilities.memory "memory"
     ++ lib.optional (cfg.capabilities.nas || full) "nas"
     ++ lib.optional full "legacy";
     # Leave in-flight KB batches alone; the timer picks up the new command next run.
