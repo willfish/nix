@@ -52,6 +52,9 @@ in
       set -euo pipefail
 
       export PI_AGENT_BUS_URL="''${PI_AGENT_BUS_URL-http://terminus:7420}"
+      export PI_AGENT_BUS_OPERATOR_NOTICES="''${PI_AGENT_BUS_OPERATOR_NOTICES-1}"
+      export PI_AGENT_BUS_OPERATOR_READ="''${PI_AGENT_BUS_OPERATOR_READ-1}"
+      export PI_AGENT_BUS_OPERATOR_HISTORY="''${PI_AGENT_BUS_OPERATOR_HISTORY-1}"
       bus_enabled=${if config.programs.pi-agent-bus.enable then "1" else "0"}
       bus_offline="''${PI_OFFLINE:-}"
       if [[ "''${bus_offline,,}" =~ ^[[:space:]]*(1|true|yes)[[:space:]]*$ ]]; then

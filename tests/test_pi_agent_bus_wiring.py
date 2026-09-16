@@ -77,7 +77,9 @@ exit "${SECRET_STATUS:-0}"
             f"""#!{sys.executable}
 import json, os, sys
 keys = ('PI_AGENT_BUS_URL', 'PI_AGENT_BUS_TOKEN', \
-'PI_AGENT_BUS_ENABLED', 'NO_PROXY', 'no_proxy', 'CAPTURE_BRANCH')
+'PI_AGENT_BUS_ENABLED', 'NO_PROXY', 'no_proxy', 'CAPTURE_BRANCH', \
+'PI_AGENT_BUS_OPERATOR_NOTICES', 'PI_AGENT_BUS_OPERATOR_READ', \
+'PI_AGENT_BUS_OPERATOR_HISTORY')
 print(json.dumps({{'args': sys.argv[1:], \
 'env': {{key: os.environ.get(key) for key in keys}}}}))
 """,
@@ -128,6 +130,24 @@ exec "$@"
         count = len(reads.read_text().splitlines()) if reads.exists() else 0
         reads.unlink(missing_ok=True)
         return json.loads(result.stdout), count
+
+    def test_operator_defaults_and_explicit_overrides(self):
+        keys = (
+            'PI_AGENT_BUS_OPERATOR_NOTICES',
+            'PI_AGENT_BUS_OPERATOR_READ',
+            'PI_AGENT_BUS_OPERATOR_HISTORY',
+        )
+        for capture in ('0', '1'):
+            result, _ = self.launch(env={'CAPTURE_PROMPTS': capture})
+            self.assertTrue(all(result['env'][key] == '1' for key in keys))
+            for value in ('0', ''):
+                overrides = {key: value for key in keys}
+                result, _ = self.launch(env={
+                    'CAPTURE_PROMPTS': capture, **overrides,
+                })
+                self.assertEqual(
+                    {key: result['env'][key] for key in keys}, overrides
+                )
 
     def test_normal_and_capture_load_once_before_exec_and_forward_arguments(
         self,
