@@ -64,19 +64,20 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
                     )
                     self.assertEqual(herdr["theme"], palette["herdrTheme"])
                     for variant in menu.COSMIC_NAMES:
-                        source = (
+                        source_root = (
                             Path(palette["cosmic"])
-                            / f"cosmic/com.system76.CosmicTheme.{variant}/v1"
+                            / f"cosmic/com.system76.CosmicTheme.{variant}"
                         )
-                        for field in source.iterdir():
-                            self.assertEqual(
-                                (
-                                    root
-                                    / "config"
-                                    / field.relative_to(palette["cosmic"])
-                                ).read_bytes(),
-                                field.read_bytes(),
-                            )
+                        for field in source_root.glob("v*/*"):
+                            if field.is_file():
+                                self.assertEqual(
+                                    (
+                                        root
+                                        / "config"
+                                        / field.relative_to(palette["cosmic"])
+                                    ).read_bytes(),
+                                    field.read_bytes(),
+                                )
                     for mode_name in ("light", "dark"):
                         result = subprocess.run(
                             [

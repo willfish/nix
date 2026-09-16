@@ -57,18 +57,31 @@ class Themes:
         }
         cosmic = Path(palette["cosmic"]) / "cosmic"
         for variant in COSMIC_NAMES:
-            relative = (
-                Path("cosmic") / f"com.system76.CosmicTheme.{variant}" / "v1"
+            variant_dir = cosmic / f"com.system76.CosmicTheme.{variant}"
+            versions = sorted(
+                path
+                for path in variant_dir.iterdir()
+                if path.is_dir() and path.name.startswith("v")
             )
-            source_dir = cosmic / relative.relative_to("cosmic")
-            sources = list(source_dir.iterdir())
-            if not sources:
-                raise ValueError(f"Incomplete COSMIC palette: {variant}")
-            for source in sources:
-                if source.is_file():
+            copied = False
+            for source_dir in versions:
+                sources = [
+                    path for path in source_dir.iterdir() if path.is_file()
+                ]
+                if not sources:
+                    continue
+                copied = True
+                relative = (
+                    Path("cosmic")
+                    / f"com.system76.CosmicTheme.{variant}"
+                    / source_dir.name
+                )
+                for source in sources:
                     writes[self.config / relative / source.name] = (
                         source.read_bytes()
                     )
+            if not copied:
+                raise ValueError(f"Incomplete COSMIC palette: {variant}")
         selection_path = self.state / "selection"
         previous_selection = (
             selection_path.read_bytes() if selection_path.exists() else None

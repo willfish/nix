@@ -226,9 +226,54 @@ class ThemeMenuTest(unittest.TestCase):
         )
         (directory / "background").unlink()
         directory.rmdir()
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(ValueError):
             self.controller.apply("rose-pine")
         self.assertFalse((self.state / "active/host-palettes.json").exists())
+
+    def test_skips_empty_schema_directories(self):
+        bundle = Path(self.palettes["rose-pine"]["cosmic"])
+        for variant in menu.COSMIC_NAMES:
+            v1 = bundle / f"cosmic/com.system76.CosmicTheme.{variant}/v1"
+            (v1 / "background").unlink()
+            v2 = bundle / f"cosmic/com.system76.CosmicTheme.{variant}/v2"
+            v2.mkdir()
+            (v2 / "background").write_text("v2-only")
+        self.controller.apply("rose-pine")
+        self.assertEqual(
+            (
+                self.config
+                / "cosmic/com.system76.CosmicTheme.Dark/v2/background"
+            ).read_text(),
+            "v2-only",
+        )
+        self.assertFalse(
+            (
+                self.config
+                / "cosmic/com.system76.CosmicTheme.Dark/v1/background"
+            ).exists()
+        )
+
+    def test_copies_v2_schema_when_present(self):
+        bundle = Path(self.palettes["rose-pine"]["cosmic"])
+        for variant in menu.COSMIC_NAMES:
+            v2 = bundle / f"cosmic/com.system76.CosmicTheme.{variant}/v2"
+            v2.mkdir(parents=True)
+            (v2 / "background").write_text("v2-rose-pine")
+        self.controller.apply("rose-pine")
+        self.assertEqual(
+            (
+                self.config
+                / "cosmic/com.system76.CosmicTheme.Dark/v2/background"
+            ).read_text(),
+            "v2-rose-pine",
+        )
+        self.assertEqual(
+            (
+                self.config
+                / "cosmic/com.system76.CosmicTheme.Dark/v1/background"
+            ).read_text(),
+            "rose-pine",
+        )
 
     def test_reload_does_not_start_ghostty_and_reports_failures(self):
         with patch.object(menu.subprocess, "run") as run:
