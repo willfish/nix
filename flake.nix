@@ -143,7 +143,6 @@
             inherit (unstablePkgs)
               cosmic-app-library
               cosmic-applets
-              cosmic-applibrary
               cosmic-bg
               cosmic-comp
               cosmic-edit
@@ -178,7 +177,6 @@
               cosmic-settings-daemon
               cosmic-sound-theme
               cosmic-store
-              cosmic-tasks
               cosmic-term
               cosmic-viewer
               cosmic-wallpapers
@@ -188,6 +186,8 @@
               pop-launcher
               xdg-desktop-portal-cosmic
               ;
+            # 26.05 module still names this cosmic-applibrary.
+            cosmic-applibrary = unstablePkgs.cosmic-app-library;
           }
         );
       mkPkgs =

@@ -59,6 +59,9 @@
   environment.systemPackages = with pkgs; [
     ghostty
     xclip
+    # 26.05 COSMIC module does not install these 1.6 extras.
+    cosmic-monitor
+    cosmic-sound-theme
   ];
 
   virtualisation.docker = {
