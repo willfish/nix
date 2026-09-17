@@ -29,7 +29,7 @@ import {
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
-import { agentLaunchFlags, resolveLaunchConfig, THINKING_LEVELS } from "./launch.ts";
+import { agentLaunchFlags, resolveLaunchConfig } from "./launch.ts";
 import { withSkills } from "./skills.ts";
 import { TeamManager, teamAvailable, teamChildEnv } from "./team.ts";
 import { registerTeamControls, DELEGATION_POLICY } from "./controls.ts";
@@ -473,26 +473,11 @@ async function runSingleAgent(
 	}
 }
 
-const ModelOverride = Type.Optional(
-	Type.String({
-		description:
-			"Override the role default model as provider/id. Prefer xai/grok-4.6 or openai-codex/gpt-6-astra. Role frontmatter then the coordinator session apply if omitted.",
-	}),
-);
-const ThinkingOverride = Type.Optional(
-	StringEnum(THINKING_LEVELS, {
-		description:
-			"Override the role default thinking level. Role frontmatter then the coordinator session apply if omitted.",
-	}),
-);
-
 const TaskItem = Type.Object({
 	skills: Type.Optional(Type.Array(Type.String(), { description: "Additional harness skills for this agent" })),
 	agent: Type.String({ description: "Name of the agent to invoke" }),
 	task: Type.String({ description: "Task to delegate to the agent" }),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
-	model: ModelOverride,
-	thinking: ThinkingOverride,
 });
 
 const ChainItem = Type.Object({
@@ -500,8 +485,6 @@ const ChainItem = Type.Object({
 	agent: Type.String({ description: "Name of the agent to invoke" }),
 	task: Type.String({ description: "Task with optional {previous} placeholder for prior output" }),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
-	model: ModelOverride,
-	thinking: ThinkingOverride,
 });
 
 const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
@@ -520,8 +503,6 @@ const SubagentParams = Type.Object({
 	),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process (single mode)" })),
 	skills: Type.Optional(Type.Array(Type.String(), { description: "Additional harness skills for every dispatched agent" })),
-	model: ModelOverride,
-	thinking: ThinkingOverride,
 });
 
 export default function (pi: ExtensionAPI) {
@@ -562,8 +543,6 @@ export default function (pi: ExtensionAPI) {
 			"Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
 			`Default agent scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
 			`To enable project-local agents in ${CONFIG_DIR_NAME}/agents, set agentScope: "both" (or "project").`,
-			"Each role pins model and thinking in agent frontmatter. Override with model and thinking on this call or a task/chain item; omitted values use the role then the coordinator session.",
-			"Prefer xai/grok-4.6 and openai-codex/gpt-6-astra. Follow-up team send keeps the child's existing model.",
 		].join(" "),
 		parameters: SubagentParams,
 

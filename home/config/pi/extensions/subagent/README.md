@@ -29,14 +29,12 @@ Existing scout, planner, worker and reviewer definitions still work. The latter 
 
 ## Model and thinking
 
-Each role pins defaults in agent frontmatter. The coordinator overrides a dispatch with `model` and `thinking` on the `subagent` call, or on a parallel task or chain step. Resolution is override, then role, then the coordinator session. Follow-up `team send` keeps the child's existing model.
+Each role pins defaults in agent frontmatter. Those are not listed in the coordinator prompt or `subagent` tool schema. Dispatch uses the role, then the coordinator session. Thinking values are `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and `max`. YAML 1.1 treats unquoted `off` as false; the loader accepts that spelling.
 
 ```yaml
 model: xai/grok-4.6
 thinking: medium
 ```
-
-Prefer `xai/grok-4.6` for fast recon and implementation, and `openai-codex/gpt-6-astra` with `high` thinking for architecture, review, security and domain rules. Thinking values are `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and `max`. YAML 1.1 treats unquoted `off` as false; the loader accepts that spelling.
 
 ## Skills
 

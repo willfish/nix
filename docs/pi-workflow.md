@@ -210,10 +210,9 @@ runs. Four user-level agents are deployed from `home/config/pi/agents/`:
 | `reviewer` | Read-only code and security review of a diff |
 | `worker` | General-purpose delegation with full tools |
 
-Each role pins a default `model` and `thinking` in agent frontmatter. The
-coordinator can override those on a `subagent` call or a task/chain item;
-otherwise the role default, then the dispatching session, apply. Prefer
-`xai/grok-4.6` and `openai-codex/gpt-6-astra`. The capability is meant for
+Each role pins a default `model` and `thinking` in agent frontmatter. Those
+are not advertised to the coordinator; dispatch uses the role, then the
+session. The capability is meant for
 cloud models (Grok, OpenAI): a subagent is a second live model conversation,
 and in the local Qwen profile a concurrent request would double the KV cache
 memory the GPU does not have. `qwen-pi` passes `--no-extensions` plus an
