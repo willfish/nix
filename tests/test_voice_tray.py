@@ -271,6 +271,31 @@ class PresentationTests(unittest.TestCase):
                 {"voice:" + key for key in voices},
             )
 
+    def test_dictation_choices_are_exclusive_and_lock_while_busy(self):
+        backends = {
+            "whisper": "Whisper (local GPU)",
+            "deepgram": "Deepgram (cloud)",
+        }
+        idle = self.tray.presentation({
+            "selected_stt": "whisper", "stt_backends": backends,
+        })
+        self.assertEqual(idle["selected_stt"], "whisper")
+        self.assertEqual(
+            idle["actions"]["stt:whisper"], ("Whisper (local GPU)", True)
+        )
+        self.assertEqual(
+            idle["actions"]["stt:deepgram"], ("Deepgram (cloud)", True)
+        )
+        self.assertIn("Dictation: Whisper", idle["context"])
+        busy = self.tray.presentation({
+            "phase": "recording", "selected_stt": "deepgram",
+            "stt_backends": backends,
+        })
+        self.assertEqual(busy["selected_stt"], "deepgram")
+        self.assertFalse(busy["actions"]["stt:whisper"][1])
+        self.assertFalse(busy["actions"]["stt:deepgram"][1])
+        self.assertIn("Dictation: Deepgram", busy["context"])
+
     def test_child_silence_hides_replay_without_disabling_dictation(self):
         for child in (False, True):
             with self.subTest(child=child):
@@ -509,6 +534,8 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 state["auto"] = not state["auto"]
             if name.startswith("voice:"):
                 state["selected_voice"] = name.split(":", 1)[1]
+            if name.startswith("stt:"):
+                state["selected_stt"] = name.split(":", 1)[1]
             if name.startswith("select:"):
                 for session in state.get("sessions", []):
                     session["selected"] = name == "select:" + session["token"]
@@ -742,6 +769,51 @@ class BusTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(
                     [r.value[1]["toggle-state"].value for r in subtree[2]],
                     [0, 0, 1],
+                )
+                state.update(
+                    stt_backends={
+                        "whisper": "Whisper (local GPU)",
+                        "deepgram": "Deepgram (cloud)",
+                    },
+                    selected_stt="whisper",
+                )
+                await wait_until(
+                    lambda: "stt:deepgram" in tray.view["actions"]
+                )
+                _, layout = await menu.call_get_layout(0, -1, [])
+                selector = next(
+                    child.value
+                    for child in layout[2]
+                    if child.value[1]["label"].value == "Dictation"
+                )
+                backends = [child.value for child in selector[2]]
+                self.assertEqual(
+                    [row[1]["label"].value for row in backends],
+                    ["Whisper (local GPU)", "Deepgram (cloud)"],
+                )
+                self.assertEqual(
+                    [row[1]["toggle-state"].value for row in backends], [1, 0]
+                )
+                self.assertTrue(all(
+                    row[1]["toggle-type"].value == "radio"
+                    for row in backends
+                ))
+                before = list(actions)
+                await menu.call_event(
+                    selector[0], "clicked", Variant("i", 0), 0
+                )
+                await asyncio.sleep(0.1)
+                self.assertEqual(actions, before)
+                await menu.call_event(
+                    backends[1][0], "clicked", Variant("i", 0), 0
+                )
+                await wait_until(
+                    lambda: tray.view["selected_stt"] == "deepgram"
+                )
+                _, subtree = await menu.call_get_layout(selector[0], -1, [])
+                self.assertEqual(
+                    [row.value[1]["toggle-state"].value for row in subtree[2]],
+                    [0, 1],
                 )
                 await watcher_bus.release_name("org.kde.StatusNotifierWatcher")
                 replacement = Watcher()

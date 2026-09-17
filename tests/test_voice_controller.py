@@ -430,6 +430,14 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(self.app.audio.stt_backend, "deepgram")
         self.assertEqual(self.app.status()["selected_stt"], "deepgram")
 
+    def test_stt_backend_toggle_is_blocked_while_recording(self):
+        self.start_recording()
+        with self.assertRaisesRegex(RuntimeError, "before changing dictation"):
+            self.voice.dispatch(self.app, {"action": "stt:deepgram"})
+        self.assertEqual(self.app.audio.stt_backend, "whisper")
+        self.voice.dispatch(self.app, {"action": "stop"})
+        self.app.worker.join(2)
+
     def test_dictate_requires_a_bound_session_token(self):
         with self.assertRaisesRegex(RuntimeError, "not bound"):
             self.voice.dispatch(self.app, {"action": "dictate"})

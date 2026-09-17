@@ -226,6 +226,18 @@ class MenuTests(unittest.TestCase):
         busy["phase"] = "recording"
         self.assertEqual(menu.rows_for(busy, "sessions"), [])
 
+    def test_busy_dictation_is_not_offered(self):
+        busy = status()
+        busy.update(
+            phase="recording",
+            selected_stt="whisper",
+            stt_backends={
+                "whisper": "Whisper (local GPU)",
+                "deepgram": "Deepgram (cloud)",
+            },
+        )
+        self.assertEqual(menu.rows_for(busy, "dictation"), [])
+
     def test_changed_target_cannot_receive_old_action(self):
         old, fresh = status(), status()
         old["reply"] = fresh["reply"] = "private reply"

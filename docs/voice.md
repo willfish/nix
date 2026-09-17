@@ -93,13 +93,14 @@ introduce another Send action.
 ```bash
 voice-menu            # controls and submenu choices
 voice-menu voices     # character list; * marks the selected voice
+voice-menu dictation  # Whisper or Deepgram; * marks the selected backend
 voice-menu sessions   # other currently selectable registered sessions
 ```
 
 Sessions are selected by their registration token, not their displayed label.
 The current session is normally omitted, except when it needs explicit
-confirmation for retained-text recovery. Session switching is unavailable
-while capture/transcription is busy. Status is refreshed
+confirmation for retained-text recovery. Session and dictation switching are
+unavailable while capture/transcription is busy. Status is refreshed
 before dispatch; stale actions or changed target bindings require reopening the
 menu. It never displays dictated drafts or assistant replies.
 
@@ -115,8 +116,10 @@ two voice-enabled agents, select the other session and confirm the tray's target
 
 ## Tray and recovery
 
-The idle menu contains **Voice session**, **Show team members** and
-**Read replies aloud**. The latter
+The idle menu contains **Voice session**, **Character voice**, **Dictation**,
+**Show team members** and **Read replies aloud**. Dictation is a radio choice
+between local Whisper and cloud Deepgram. It is locked while recording or
+transcribing so the current take keeps one backend. **Read replies aloud**
 toggles automatic playback of completed replies. Other actions appear only
 when useful: Replay last reply, Record more, Retry transcription, Discard
 retained dictation/recording, and Bind to current conversation. Cancel recording,

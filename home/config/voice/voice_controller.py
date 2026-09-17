@@ -2284,6 +2284,10 @@ def dispatch(app, request):
         app.audio.set_voice(action.split(":", 1)[1])
         return app.status()
     if isinstance(action, str) and action.startswith("stt:"):
+        if app.recording_active():
+            raise RuntimeError(
+                "Finish recording and transcription before changing dictation"
+            )
         app.audio.set_stt_backend(action.split(":", 1)[1])
         return app.status()
     if action == 'team-toggle':

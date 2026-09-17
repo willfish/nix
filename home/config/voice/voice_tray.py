@@ -149,6 +149,7 @@ def presentation(status):
         "context": context,
         "auto": bool(status.get("auto")),
         "selected_voice": status.get("selected_voice", "samantha"),
+        "selected_stt": status.get("selected_stt") or "whisper",
         "selected_session": None,
         "selection_identity": selected_session(status),
         "session_identities": {},
@@ -165,9 +166,9 @@ def presentation(status):
         context.append('Team members are silent')
     for character, label in status.get("voices", {}).items():
         actions["voice:" + character] = (public_label(label), True)
+    selected_stt = status.get("selected_stt") or "whisper"
     for name, label in status.get("stt_backends", {}).items():
-        actions["stt:" + name] = (public_label(label), True)
-    selected_stt = public_label(status.get("selected_stt") or "whisper", 20)
+        actions["stt:" + name] = (public_label(label), not busy)
     context.append(
         "Dictation: Deepgram" if selected_stt == "deepgram"
         else "Dictation: Whisper"
@@ -386,7 +387,7 @@ def _interfaces(tray):
             rows = [
                 (tray.action_id(action), label, enabled)
                 for action, (label, enabled) in tray.view["actions"].items()
-                if not action.startswith(("select:", "voice:"))
+                if not action.startswith(("select:", "voice:", "stt:"))
             ]
             rows = [
                 [
@@ -467,7 +468,40 @@ def _interfaces(tray):
                 "enabled": Variant("b", True),
                 "children-display": Variant("s", "submenu"),
             }, voices]
-            return [selector, *([voice_selector] if voices else []), *rows]
+            backends = [
+                Variant(
+                    "(ia{sv}av)",
+                    [
+                        tray.action_id(action),
+                        {
+                            "label": Variant("s", label),
+                            "enabled": Variant("b", enabled),
+                            "toggle-type": Variant("s", "radio"),
+                            "toggle-state": Variant(
+                                "i",
+                                int(
+                                    action
+                                    == "stt:" + tray.view["selected_stt"]
+                                ),
+                            ),
+                        },
+                        [],
+                    ],
+                )
+                for action, (label, enabled) in tray.view["actions"].items()
+                if action.startswith("stt:")
+            ]
+            stt_selector = [14, {
+                "label": Variant("s", "Dictation"),
+                "enabled": Variant("b", bool(backends)),
+                "children-display": Variant("s", "submenu"),
+            }, backends]
+            return [
+                selector,
+                *([voice_selector] if voices else []),
+                *([stt_selector] if backends else []),
+                *rows,
+            ]
 
         @method()
         def GetLayout(
@@ -607,6 +641,9 @@ class VoiceTray:
                     if displayed["session_identities"].get(name) != view[
                         "session_identities"
                     ].get(name):
+                        return
+                elif name.startswith("stt:"):
+                    if displayed["selected_stt"] != view["selected_stt"]:
                         return
                 elif name in (
                     "read",
