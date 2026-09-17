@@ -29,6 +29,7 @@ import {
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
+import { agentLaunchFlags, resolveLaunchConfig, THINKING_LEVELS } from "./launch.ts";
 import { withSkills } from "./skills.ts";
 import { TeamManager, teamAvailable, teamChildEnv } from "./team.ts";
 import { registerTeamControls, DELEGATION_POLICY } from "./controls.ts";
@@ -277,9 +278,24 @@ type OnUpdateCallback = (partial: AgentToolResult<SubagentDetails>) => void;
 interface DispatchDefaults {
 	model?: string;
 	thinkingLevel?: ThinkingLevel;
+	overrideModel?: string;
+	overrideThinking?: string;
 	skills?: string[];
 	availableSkills?: { name: string; filePath: string }[];
 	team?: TeamManager;
+}
+
+function withLaunchOverride(
+	defaults: DispatchDefaults,
+	params: { model?: string; thinking?: string; skills?: string[] },
+	task: { model?: string; thinking?: string; skills?: string[] } = {},
+): DispatchDefaults {
+	return {
+		...defaults,
+		skills: [...(params.skills ?? []), ...(task.skills ?? [])],
+		overrideModel: task.model ?? params.model,
+		overrideThinking: task.thinking ?? params.thinking,
+	};
 }
 
 async function runSingleAgent(
@@ -311,12 +327,12 @@ async function runSingleAgent(
 	}
 
 	const args: string[] = ["--mode", "json", "-p", "--no-session"];
-	const inheritsDispatchConfig = !agent.model;
-	const model = agent.model ?? dispatchDefaults.model;
-	if (model) args.push("--model", model);
-	if (inheritsDispatchConfig && dispatchDefaults.thinkingLevel) {
-		args.push("--thinking", dispatchDefaults.thinkingLevel);
-	}
+	const launch = resolveLaunchConfig(
+		agent,
+		{ model: dispatchDefaults.overrideModel, thinking: dispatchDefaults.overrideThinking },
+		dispatchDefaults,
+	);
+	args.push(...agentLaunchFlags(launch));
 	if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
 
 	let tmpPromptDir: string | null = null;
@@ -330,7 +346,7 @@ async function runSingleAgent(
 		messages: [],
 		stderr: "",
 		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
-		model,
+		model: launch.model,
 		step,
 	};
 
@@ -457,11 +473,26 @@ async function runSingleAgent(
 	}
 }
 
+const ModelOverride = Type.Optional(
+	Type.String({
+		description:
+			"Override the role default model as provider/id. Prefer xai/grok-4.6 or openai-codex/gpt-6-astra. Role frontmatter then the coordinator session apply if omitted.",
+	}),
+);
+const ThinkingOverride = Type.Optional(
+	StringEnum(THINKING_LEVELS, {
+		description:
+			"Override the role default thinking level. Role frontmatter then the coordinator session apply if omitted.",
+	}),
+);
+
 const TaskItem = Type.Object({
 	skills: Type.Optional(Type.Array(Type.String(), { description: "Additional harness skills for this agent" })),
 	agent: Type.String({ description: "Name of the agent to invoke" }),
 	task: Type.String({ description: "Task to delegate to the agent" }),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
+	model: ModelOverride,
+	thinking: ThinkingOverride,
 });
 
 const ChainItem = Type.Object({
@@ -469,6 +500,8 @@ const ChainItem = Type.Object({
 	agent: Type.String({ description: "Name of the agent to invoke" }),
 	task: Type.String({ description: "Task with optional {previous} placeholder for prior output" }),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
+	model: ModelOverride,
+	thinking: ThinkingOverride,
 });
 
 const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
@@ -487,7 +520,8 @@ const SubagentParams = Type.Object({
 	),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process (single mode)" })),
 	skills: Type.Optional(Type.Array(Type.String(), { description: "Additional harness skills for every dispatched agent" })),
-
+	model: ModelOverride,
+	thinking: ThinkingOverride,
 });
 
 export default function (pi: ExtensionAPI) {
@@ -528,6 +562,8 @@ export default function (pi: ExtensionAPI) {
 			"Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
 			`Default agent scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
 			`To enable project-local agents in ${CONFIG_DIR_NAME}/agents, set agentScope: "both" (or "project").`,
+			"Each role pins model and thinking in agent frontmatter. Override with model and thinking on this call or a task/chain item; omitted values use the role then the coordinator session.",
+			"Prefer xai/grok-4.6 and openai-codex/gpt-6-astra. Follow-up team send keeps the child's existing model.",
 		].join(" "),
 		parameters: SubagentParams,
 
@@ -616,7 +652,7 @@ export default function (pi: ExtensionAPI) {
 					run: async (task: any, index: number, previous: string, jobSignal: AbortSignal) => {
 						const text = mode === "chain" ? task.task.replace(/\{previous\}/g, previous) : task.task;
 						const result = await runSingleAgent(ctx.cwd,
-							{ ...dispatchDefaults, skills: [...(params.skills ?? []), ...(task.skills ?? [])] },
+							withLaunchOverride(dispatchDefaults, params, task),
 							agents, task.agent, text, task.cwd, mode === "chain" ? index + 1 : undefined,
 							jobSignal, undefined, makeDetails(mode));
 						return { ...result, status: result.status ?? (result.exitCode === 0 ? "completed" : "error"),
@@ -657,7 +693,7 @@ export default function (pi: ExtensionAPI) {
 
 					const result = await runSingleAgent(
 						ctx.cwd,
-						{ ...dispatchDefaults, skills: [...(params.skills ?? []), ...(step.skills ?? [])] },
+						withLaunchOverride(dispatchDefaults, params, step),
 						agents,
 						step.agent,
 						taskWithContext,
@@ -730,7 +766,7 @@ export default function (pi: ExtensionAPI) {
 				const results = await mapWithConcurrencyLimit(params.tasks, MAX_CONCURRENCY, async (t, index) => {
 					const result = await runSingleAgent(
 						ctx.cwd,
-						{ ...dispatchDefaults, skills: [...(params.skills ?? []), ...(t.skills ?? [])] },
+						withLaunchOverride(dispatchDefaults, params, t),
 						agents,
 						t.agent,
 						t.task,
@@ -774,7 +810,7 @@ export default function (pi: ExtensionAPI) {
 			if (params.agent && params.task) {
 				const result = await runSingleAgent(
 					ctx.cwd,
-					dispatchDefaults,
+					withLaunchOverride(dispatchDefaults, params),
 					agents,
 					params.agent,
 					params.task,

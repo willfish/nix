@@ -146,8 +146,8 @@ in
   # Subagent delegation for the standard profile. Auto-discovered by pi; the
   # qwen-pi launcher passes --no-extensions plus an explicit list that omits
   # it, so the memory-constrained local Qwen profile never spawns subagent
-  # processes. Agent definitions pin no model, so subagents run on whatever
-  # Grok/OpenAI model the session is using.
+  # processes. Agent frontmatter pins model and thinking; the coordinator can
+  # override per dispatch.
   # Adapted pinned upstream example: interactive herdr teams and persona skills.
   home.file.".pi/agent/extensions/subagent".source = "${piExtensions}/subagent";
   # Pinned upstream fuzzy history overlay. Enter restores without submitting.

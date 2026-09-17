@@ -6,6 +6,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { CONFIG_DIR_NAME, getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { parseSkillList } from "./skills.ts";
+import {
+	type AgentThinkingLevel,
+	nonemptyString,
+	parseThinkingLevel,
+} from "./launch.ts";
 
 export type AgentScope = "user" | "project" | "both";
 
@@ -15,6 +20,7 @@ export interface AgentConfig {
 	tools?: string[];
 	skills?: string[];
 	model?: string;
+	thinking?: AgentThinkingLevel;
 	systemPrompt: string;
 	source: "user" | "project";
 	filePath: string;
@@ -39,6 +45,7 @@ type AgentFrontmatter = {
 	tools?: unknown;
 	skills?: unknown;
 	model?: unknown;
+	thinking?: unknown;
 };
 
 /**
@@ -90,6 +97,7 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 
 		const { frontmatter, body } = parseFrontmatter<AgentFrontmatter>(content);
 		const skills = parseSkillList(frontmatter.skills, `Agent skills in ${filePath}`);
+		const thinking = parseThinkingLevel(frontmatter.thinking, `Agent thinking in ${filePath}`);
 
 		if (typeof frontmatter.name !== "string" || typeof frontmatter.description !== "string") {
 			continue;
@@ -100,7 +108,8 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			description: frontmatter.description,
 			tools: parseToolList(frontmatter.tools),
 			skills,
-			model: typeof frontmatter.model === "string" ? frontmatter.model : undefined,
+			model: nonemptyString(frontmatter.model),
+			thinking,
 			systemPrompt: body,
 			source,
 			filePath,

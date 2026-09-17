@@ -25,7 +25,18 @@ Work solo unless delegation answers a distinct question or the user requests a t
 
 The domain specialist is for conflicting or unclear business rules. Use scout plus a domain skill for ordinary domain-code reconnaissance. Choose framework, domain and security skills for the task rather than loading them into every specialist. Role bodies load only when dispatched; normal Pi instructions and skill discovery still apply. Children still load shared `AGENTS.md` context files. Orchestrator-only rules live in `~/.pi/agent/ORCHESTRATOR.md` and are appended only when `PI_TEAM_CHILD` is unset. Concise handoffs keep parent context focused.
 
-Existing scout, planner, worker and reviewer definitions still work. The latter three are compatibility roles, not additional team stages. Model and thinking level inherit from the coordinator unless the agent pins a model.
+Existing scout, planner, worker and reviewer definitions still work. The latter three are compatibility roles, not additional team stages.
+
+## Model and thinking
+
+Each role pins defaults in agent frontmatter. The coordinator overrides a dispatch with `model` and `thinking` on the `subagent` call, or on a parallel task or chain step. Resolution is override, then role, then the coordinator session. Follow-up `team send` keeps the child's existing model.
+
+```yaml
+model: xai/grok-4.6
+thinking: medium
+```
+
+Prefer `xai/grok-4.6` for fast recon and implementation, and `openai-codex/gpt-6-astra` with `high` thinking for architecture, review, security and domain rules. Thinking values are `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and `max`. YAML 1.1 treats unquoted `off` as false; the loader accepts that spelling.
 
 ## Skills
 
@@ -90,6 +101,7 @@ Herdr layout edits use positional paths and are not transactional across clients
 ## Implementation boundaries
 
 - `skills.ts`: strict declarations and prompt composition.
+- `launch.ts`: role model/thinking defaults and coordinator overrides.
 - `herdr.ts`: bounded socket calls, explicit pane ownership and subtree ratios.
 - `protocol.ts`: private atomic command/result files.
 - `child.ts`: readiness, multiple-choice questions, validated answer delivery, settlement, retirement and coordinator lease.

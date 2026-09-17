@@ -128,8 +128,20 @@ test('real Pi frontmatter discovery retains strict skills and existing permissiv
     sceptic: ['code-review-workflow'],
     'test-engineer': [], 'security-reviewer': [], 'domain-specialist': [],
   };
+  const expectedLaunch = {
+    architect: { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
+    builder: { model: 'xai/grok-4.6', thinking: 'medium' },
+    sceptic: { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
+    'test-engineer': { model: 'xai/grok-4.6', thinking: 'medium' },
+    'security-reviewer': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
+    'domain-specialist': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
+  };
   assert.equal(personas.length, 6);
-  for (const persona of personas) assert.deepEqual(persona.skills, expected[persona.name]);
+  for (const persona of personas) {
+    assert.deepEqual(persona.skills, expected[persona.name]);
+    assert.equal(persona.model, expectedLaunch[persona.name].model);
+    assert.equal(persona.thinking, expectedLaunch[persona.name].thinking);
+  }
   const optional = personas.filter(persona => persona.skills.length === 0);
   for (const persona of optional) {
     // Empty defaults do not preload a framework/domain workflow or any other role's body.
