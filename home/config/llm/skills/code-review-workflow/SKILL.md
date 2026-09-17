@@ -12,8 +12,11 @@ Use this for code review.
 Read `references/reviews.md` before writing review comments. Read `references/voice.md` when the comment should sound like Will.
 
 Defaults:
+- Be kind. Write like a helpful teammate.
+- Use the simplest words that stay accurate. Use short sentences.
 - Lead with findings, not preamble.
+- Say what is wrong, why it matters, and what to do.
 - Prioritise correctness, edge cases, performance, security, tests, and scope.
 - Keep comments short and concrete.
 - Use `--comment`, not request-changes, unless the user explicitly asks otherwise.
-- Avoid stiff phrasing and over-explanation.
+- Do not be stiff. Do not talk down. Do not over-explain.
