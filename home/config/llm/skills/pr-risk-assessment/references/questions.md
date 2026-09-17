@@ -67,6 +67,13 @@ migration; an unused additive table can often remain in place.
 - Shared resources with unbounded or unverified load.
 - Unknown.
 
+If isolation is described only as separate queues, ask whether the same worker
+processes consume them or whether execution capacity is actually reserved.
+Queue priority is not pre-emption. An outbound-query limit does not necessarily
+limit the threads or connections held by waiting jobs. Check deployment commands,
+queue lists and capsules before claiming isolation; distinguish checked-in defaults
+from verified runtime configuration.
+
 Inspect concurrency, database connection use, fan-out, scans, retries and memory
 where relevant. Name the failure mechanism, not the generic fact that code uses
 CPU or a database. Assess planned frequency and release activation, not only a

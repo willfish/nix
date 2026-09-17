@@ -2,9 +2,10 @@
 name: pr-risk-assessment
 description: >
   Assess PR or deployment risk against repository risk templates. Use when the
-  user asks for a risk rating, questions an existing classification, or requests
-  a risk interview. Establish actual use, planned activation, data effects and
-  shared-resource impact before recommending a classification.
+  user asks for a risk rating, questions an existing classification, requests
+  a risk interview or authorizes approval-register updates. Establish actual
+  use, planned activation, data effects and shared-resource impact before
+  recommending a classification.
 ---
 
 # PR risk assessment
@@ -53,6 +54,10 @@ This is a standalone assessment, not permission to publish, deploy or merge.
 - Distinguish an actively depended-on API from an endpoint with unused client
   code. User-confirmed unused functionality reduces exposure, but check shared
   jobs, startup work, external exposure and the planned activation separately.
+- Do not equate queue priority with worker isolation. Verify the processes or
+  reserved capacity consuming each queue. A cap on outbound queries need not
+  cap occupied threads or held connections. Material contention with live work
+  can justify medium risk even when the reporting UI is unused.
 - Treat creation of a new empty table/index separately from altering populated
   tables, rewriting data, introducing blocking locks or changing live constraints.
   A later feature's possible risk does not automatically belong to the migration.
@@ -81,6 +86,16 @@ separate. A low-risk label does not satisfy code-owner approval or authorize a
 bypass. Do not change labels, PR bodies, credentials or protections without the
 relevant authorization. If correcting an earlier rating, acknowledge the mistaken
 assumption rather than rationalizing it.
+
+## 5. Record an authorized decision
+
+For confirmed medium/high ratings, follow
+[references/approval-register.md](references/approval-register.md) to prepare or
+publish the required register entry and synchronize the PR when authorized.
+Check PR state first. Mark reviews of **already-merged PRs** as retrospective,
+with the actual assessment date, previous category and reason. Reclassification
+of an open PR is a current review, not retrospective. Merge is not proof of
+production deployment or retroactive approval. Preserve decision history.
 
 ## Validation
 
