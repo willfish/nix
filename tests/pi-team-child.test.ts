@@ -22,7 +22,7 @@ async function fixture(t, options = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'pi-child-test-'));
   await chmod(dir, 0o700);
   const runId = randomUUID();
-  await prepareRun(dir, { runId, agent: 'builder' });
+  await prepareRun(dir, { runId, agent: 'builder', ...(options.task ? { task: options.task } : {}) });
   const hooks = new Map(), registered = new Map(), sent = [], notices = [], flags = [];
   let pendingMessages = false;
   let tools = ['read', 'bash', 'subagent', 'team', 'custom'], idle = true, aborts = 0, shutdowns = 0;
@@ -99,6 +99,12 @@ test('child registers its flag, publishes private ready/session status, and disa
   await f.start(); // Repeated session_start must not replace the bridge.
   assert.equal(f.cancelled, 0);
   assert.deepEqual(f.names, ['builder']);
+});
+
+test('child session_start reapplies the launch task label after spin-up', async (t) => {
+  const f = await fixture(t, { task: 'Task: Implement the importer' });
+  await f.start();
+  assert.deepEqual(f.names, ['builder: Implement the importer']);
 });
 
 for (const [name, options, setup, error] of [

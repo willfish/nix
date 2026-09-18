@@ -219,7 +219,7 @@ export default function childExtension(pi, options = {}) {
     dir = flag;
     ctx = context;
     stopped = false;
-    applyWorkLabel(pi, request.agent);
+    applyWorkLabel(pi, request.agent, request.task);
     registerQuestionTool();
     // Never let a child create an uncontrolled recursive team, even via headless delegation.
     pi.setActiveTools(pi.getActiveTools().filter((name) => !['subagent', 'team', questionTool].includes(name)));

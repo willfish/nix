@@ -175,11 +175,11 @@ export class TeamManager {
       const runId = randomUUID();
       const entry = { id: runId.slice(0, 8), runId, dir, agent, cwd, pending: true, closed: false };
       try {
-        await prepareRun(dir, { runId, agent });
+        await prepareRun(dir, { runId, agent, task });
         entry.paneId = await this.panes.open(cwd, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: agent }, `pi: ${agent} [${entry.id}]`);
         this.records.set(entry.id, entry);
         await atomicJson(join(dir, 'request.json'), envelope(runId, {
-          parentPid: process.pid, paneId: entry.paneId, runId, agent,
+          parentPid: process.pid, paneId: entry.paneId, runId, agent, task,
         }));
         const launch = invocation(['--name', teamWorkLabel(agent, task), '--extension', CHILD_EXTENSION, '--team-run', dir]);
         await this.panes.call('pane.send_input', { pane_id: entry.paneId,
