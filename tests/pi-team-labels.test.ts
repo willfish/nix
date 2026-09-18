@@ -27,3 +27,15 @@ test("applyWorkLabel is cosmetic and never throws", () => {
 		"builder",
 	);
 });
+
+test("startup does not clobber a launch session name, but prompts still refresh it", () => {
+	const names: string[] = ["builder: Implement the importer"];
+	const pi = {
+		getSessionName: () => names.at(-1),
+		setSessionName: (name: string) => names.push(name),
+	};
+	assert.equal(applyWorkLabel(pi, "builder"), "builder: Implement the importer");
+	assert.deepEqual(names, ["builder: Implement the importer"]);
+	assert.equal(applyWorkLabel(pi, "builder", "Task: follow up"), "builder: follow up");
+	assert.deepEqual(names, ["builder: Implement the importer", "builder: follow up"]);
+});

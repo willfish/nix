@@ -41,6 +41,7 @@ async function fixture(t, options = {}) {
     on: (name, hook) => hooks.set(name, hook),
     getActiveTools: () => tools, setActiveTools: (value) => { tools = value; },
     sendUserMessage: (...args) => sent.push(args),
+    getSessionName: () => names.at(-1),
     setSessionName: (name) => names.push(name),
   };
   childExtension(pi, {

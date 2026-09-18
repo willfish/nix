@@ -15,10 +15,19 @@ function cleanLabelPart(value: unknown): string {
 }
 
 export function applyWorkLabel(
-	pi: { setSessionName?: (name: string) => void },
+	pi: { setSessionName?: (name: string) => void; getSessionName?: () => unknown },
 	agent: unknown,
 	task?: unknown,
 ): string | undefined {
+	// Launch already passes `pi --name`. Do not replace that with the role-only fallback.
+	if (task === undefined) {
+		try {
+			const current = cleanLabelPart(pi.getSessionName?.());
+			if (current) return current;
+		} catch {
+			/* Missing getters are treated as unnamed. */
+		}
+	}
 	const label = teamWorkLabel(agent, task);
 	if (!label) return;
 	try {
