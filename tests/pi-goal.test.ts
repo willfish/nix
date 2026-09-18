@@ -5,6 +5,7 @@ import {
   COMPLETE_MARKER, BLOCKED_MARKER, WAITING_MARKER, MAX_CONTINUATIONS, MAX_AUDITS,
   activeGoalPrompt, auditorPrompt, auditTextFromEvents, claimFromAssistant,
   continuationPrompt, createAuditRunner, createGoalExtension, escapeXml,
+  GOAL_MARKER_LABELS, presentGoalMarkers,
   parseAuditReport, parseGoalCommand, requirementsFor, validateObjective,
 } from '../home/config/pi/extensions/goal.ts';
 
@@ -27,6 +28,7 @@ function harness({ runAudit = accepted, hasUI = true } = {}) {
   };
   createGoalExtension({ runAudit })({ on: (name, handler) => { events[name] = handler; },
     registerCommand: (name, command) => { commands[name] = command; },
+    registerMarkdownTransformer: fn => { h.transformer = fn; },
     appendEntry: (customType, data) => entries.push({ type: 'custom', customType, data: structuredClone(data) }),
     sendMessage: (message, options) => { if (h.sendError) throw Error('send failed'); messages.push({ message, options }); },
     getThinkingLevel: () => 'medium',
@@ -81,6 +83,23 @@ test('only one final standalone unfenced marker controls completion', () => {
   }
   assert.equal(claimFromAssistant(`${COMPLETE_MARKER}\n${BLOCKED_MARKER}`), null);
   assert.equal(claimFromAssistant('still working'), null);
+});
+
+test('transcript replaces a controlling marker with a quiet status line', () => {
+  assert.equal(presentGoalMarkers(`Done\n${COMPLETE_MARKER}\n`, { messageType: 'assistant' }),
+    `Done\n${GOAL_MARKER_LABELS.complete}`);
+  assert.equal(presentGoalMarkers(`Hold\n${WAITING_MARKER}`, { messageType: 'assistant' }),
+    `Hold\n${GOAL_MARKER_LABELS.waiting}`);
+  assert.equal(presentGoalMarkers(`Stuck\n${BLOCKED_MARKER}`, { messageType: 'assistant' }),
+    `Stuck\n${GOAL_MARKER_LABELS.blocked}`);
+  assert.equal(presentGoalMarkers(`Done\n${COMPLETE_MARKER}`, { messageType: 'assistant', isStreaming: true }),
+    `Done\n${COMPLETE_MARKER}`);
+  assert.equal(presentGoalMarkers(`Done\n${COMPLETE_MARKER}`, { messageType: 'user' }), `Done\n${COMPLETE_MARKER}`);
+  assert.equal(presentGoalMarkers(`Example: ${COMPLETE_MARKER}`, { messageType: 'assistant' }),
+    `Example: ${COMPLETE_MARKER}`);
+  const h = harness();
+  assert.equal(h.transformer(`Done\n${COMPLETE_MARKER}`, { messageType: 'assistant' }),
+    `Done\n${GOAL_MARKER_LABELS.complete}`);
 });
 
 test('strict report coverage, identities and internally consistent verdicts', () => {

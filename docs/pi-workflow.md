@@ -63,6 +63,8 @@ allows literal objectives beginning with command words such as `pause`.
 ### Completion and evidence
 
 A final completion marker requests an audit; it does not mark the goal complete.
+The transcript shows a one-line status (`Goal · audit requested`, `Goal · hard gate`,
+or `Goal · impasse`) in place of the raw HTML comment. The stored message is unchanged.
 A fresh Pi process receives the contract, not the implementing conversation.
 It loads no extensions, skills, context files or prompt templates and exposes
 only `read`, `grep`, `find` and `ls`, never `bash`, `write` or `edit`.

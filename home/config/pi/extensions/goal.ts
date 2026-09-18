@@ -139,6 +139,22 @@ export function claimFromAssistant(text) {
   return found[0] === COMPLETE_MARKER ? 'complete' : found[0] === BLOCKED_MARKER ? 'blocked' : 'waiting';
 }
 
+export const GOAL_MARKER_LABELS = {
+  complete: '**Goal · audit requested**',
+  blocked: '**Goal · impasse**',
+  waiting: '**Goal · hard gate**',
+};
+
+/** Display-only. Session text and claim detection stay on the HTML comments. */
+export function presentGoalMarkers(markdown, { messageType, isStreaming } = {}) {
+  if (isStreaming || (messageType && messageType !== 'assistant')) return markdown;
+  const claim = claimFromAssistant(markdown);
+  if (!claim) return markdown;
+  const lines = markdown.trimEnd().split(/\r?\n/);
+  lines[lines.length - 1] = GOAL_MARKER_LABELS[claim];
+  return lines.join('\n');
+}
+
 // Read JSON events, not stdout substrings: tool output and intermediate prose
 // must never become a completion verdict, even on a zero-exit provider failure.
 export function auditTextFromEvents(stdout) {
@@ -320,6 +336,7 @@ export function createGoalExtension({ runAudit = createAuditRunner(), renderCard
     const cards = new Map();
     if (renderCard) pi.registerEntryRenderer(AUDIT_CARD_TYPE, (entry, { expanded }, theme) =>
       renderCard(() => cards.get(entry.data.auditId) ?? entry.data, expanded, theme));
+    pi.registerMarkdownTransformer?.(presentGoalMarkers);
 
     function finishCard(job, phase, report, persistCard = true) {
       clearInterval(job.tick);
