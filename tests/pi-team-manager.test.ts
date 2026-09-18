@@ -116,7 +116,7 @@ async function fixture(t, options = {}) {
   const invocations = [];
   const invocation = (flags) => {
     invocations.push(flags);
-    return { command: '/path with spaces/pi', args: ['--model', "model's name", ...flags] };
+    return { command: '/path with spaces/pi', args: [...flags, '--model', "model's name"] };
   };
   t.after(async () => {
     panes.closeError = undefined;
@@ -188,7 +188,7 @@ test('startup creates private IPC, launches interactive child, retains result an
   assert.deepEqual(f.invocations, [['--name', 'builder: initial task', '--extension', CHILD_EXTENSION, '--team-run', record.dir]]);
   assert.deepEqual(f.panes.opened[0], { paneId: first.paneId, cwd: "/work/it's a project", env: { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder' }, label: `pi: builder [${first.memberId}]` });
   assert.deepEqual(f.panes.calls[0].params.keys, ['Enter']);
-  assert.equal(f.panes.calls[0].params.text, launchCommand({ command: '/path with spaces/pi', args: ['--model', "model's name", ...f.invocations[0]] }));
+  assert.equal(f.panes.calls[0].params.text, launchCommand({ command: '/path with spaces/pi', args: [...f.invocations[0], '--model', "model's name"] }));
   assert.equal(first.status, 'completed');
   assert.equal(first.text, 'answer: initial task');
   assert.equal(record.pending, false);

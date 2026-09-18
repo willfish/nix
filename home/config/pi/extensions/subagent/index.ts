@@ -372,7 +372,7 @@ async function runSingleAgent(
 			const interactiveArgs = args.slice(4); // Drop --mode json -p --no-session, retaining model/tools/prompt.
 			const result = await dispatchDefaults.team.run({
 				agent: agentName, task: `Task: ${task}`, cwd: cwd ?? defaultCwd, signal,
-				invocation: (bridgeArgs: string[]) => getPiInvocation([...interactiveArgs, ...bridgeArgs]),
+				invocation: (bridgeArgs: string[]) => getPiInvocation([...bridgeArgs, ...interactiveArgs]),
 				onProgress: (messages: Message[]) => { currentResult.messages = messages; emitUpdate(); },
 			});
 			return segmentResult({ ...currentResult, messages: [] }, result);

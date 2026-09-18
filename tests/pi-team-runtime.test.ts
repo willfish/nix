@@ -279,8 +279,8 @@ test('live herdr: retained interactive children preserve context, focus and pare
     let teamRatio;
     for (let i = 0; i < 3; i++) {
       const result = await manager.run({ agent: `runtime-${i}`, task: `SMOKE_LIVE_${i}`, cwd: f.cwd,
-        invocation: bridge => ({ command: launcher, args: [...isolatedArgs, '--session-dir', join(f.dir, 'sessions'),
-          '--append-system-prompt', promptFile, '-e', index, ...bridge] }) });
+        invocation: bridge => ({ command: launcher, args: [...bridge, ...isolatedArgs, '--session-dir', join(f.dir, 'sessions'),
+          '--append-system-prompt', promptFile, '-e', index] }) });
       assert.equal(result.status, 'completed');
       assert.equal(result.text, `echo:SMOKE_LIVE_${i}; user-turns:1`);
       assert.ok(result.commandId && result.sessionId && result.sessionFile && result.memberId && result.paneId);
