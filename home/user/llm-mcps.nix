@@ -40,6 +40,11 @@ rec {
         wrapper = "mcp-nixos";
       }
       {
+        name = "dap";
+        enabled = config.dotfiles.capabilities.development;
+        wrapper = "mcp-dap";
+      }
+      {
         name = "slack";
         enabled = config.dotfiles.capabilities.work;
         wrapper = "mcp-slack";

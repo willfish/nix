@@ -59,6 +59,7 @@ let
   };
   slackMcpServer = pkgs.callPackage ./mcp-packages/slack-mcp-server.nix { };
   telegramMcpServer = pkgs.callPackage ./mcp-packages/telegram-mcp.nix { };
+  mcpDapServer = pkgs.callPackage ./mcp-packages/mcp-dap-server.nix { };
   # One-time Telethon login for the file-based session used by mcp-telegram.
   telegramLoginScript = pkgs.writeTextFile {
     name = "telegram-mcp-login.py";
@@ -101,6 +102,7 @@ in
           browser-playwright = pkgs.playwright-mcp;
           terraform = pkgs.terraform-mcp-server;
           nixos = pkgs.mcp-nixos;
+          dap = mcpDapServer;
           slack = slackMcpServer;
           telegram = telegramMcpServer;
         }
@@ -192,6 +194,17 @@ in
       set -euo pipefail
 
       exec ${pkgs.mcp-nixos}/bin/mcp-nixos
+    '';
+  };
+
+  home.file.".local/bin/mcp-dap" = lib.mkIf (enabled "dap") {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      export PATH=${lib.escapeShellArg "${pkgs.delve}/bin"}:"$PATH"
+      exec ${mcpDapServer}/bin/mcp-dap-server
     '';
   };
 

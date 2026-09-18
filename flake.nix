@@ -415,6 +415,8 @@
         {
           _module.args.pkgs = mkPkgs system;
 
+          packages.mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix { };
+
           treefmt = {
             projectRootFile = "flake.nix";
             programs = {

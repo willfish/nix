@@ -129,6 +129,7 @@ let
     assert require (
       caps.playwright || (!(has ".local/bin/mcp-brave") && !(has ".local/bin/mcp-agent-browser"))
     ) "visible browser wrappers on headless host";
+    assert require (has ".local/bin/mcp-dap" == caps.development) "debugger wrapper boundary";
     assert require (
       !(builtins.elem name [
         "william-darwin"
@@ -169,6 +170,7 @@ let
       spec.role != "nas"
       || builtins.all (p: !(builtins.elem p packageNames)) [
         "playwright-mcp"
+        "mcp-dap-server"
         "telegram-mcp"
         "himalaya"
         "pandoc"

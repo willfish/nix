@@ -429,6 +429,24 @@ class NativeMcpTests(unittest.TestCase):
             self.assertEqual(entry["session"], "native-fixture-session")
         self.assertIn("DELETE", [entry["method"] for entry in server.observed])
 
+    def test_dap_wrapper_and_server_advertise_debug_tools(self):
+        wrapper = self.home / "home-files/.local/bin/mcp-dap"
+        binary = self.home / "home-path/bin/mcp-dap-server"
+        self.assertEqual(wrapper.is_file(), binary.is_file())
+        if not wrapper.is_file():
+            return
+        client = StdioClient(
+            [str(binary)],
+            isolated_env(self.directory),
+            self.directory,
+        )
+        self.addCleanup(client.close)
+        initialized = client.initialize()
+        self.assertIn("tools", initialized["capabilities"])
+        names = {tool["name"] for tool in client.request("tools/list")["tools"]}
+        self.assertEqual(names, {"debug"})
+        self.assertEqual(client.finish()[0], 0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

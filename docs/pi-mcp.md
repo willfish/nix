@@ -11,6 +11,7 @@ the shared MCP server configuration:
 | Browser Playwright | `mcp-brave` |
 | Terraform | `mcp-terraform` |
 | NixOS | `mcp-nixos` |
+| DAP debugger | `mcp-dap` |
 | Slack | `mcp-slack` |
 
 Run `hmswitch` after pulling the dotfiles on another machine. Restart Pi, or
@@ -18,6 +19,13 @@ use `/reload` in an existing plain Pi session. The browser servers require
 the configured Brave browser to be running with CDP on port 9222. Authenticated
 servers use local sops secrets or session credentials through their wrappers.
 No credentials are copied into Pi's configuration.
+
+`mcp-dap` is a compiled Go server from the Delve project. It is registered only
+on development homes. It can spawn debuggees and evaluate expressions in them,
+so treat it like a shell. It is not a Ruby or Python IDE debugger; those still
+need a language DAP adapter on `PATH`. The wrapper puts Delve on `PATH` for Go.
+Build or substitute the binary with `nix build .#mcp-dap-server`. Do not add npm
+MCP debugger packages to this repository.
 
 ## Using the servers
 
