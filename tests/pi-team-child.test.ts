@@ -34,12 +34,14 @@ async function fixture(t, options = {}) {
     abort: async () => { aborts++; },
     shutdown: () => { shutdowns++; },
   };
+  const names = [];
   const pi = {
     registerTool: (tool) => registered.set(tool.name, tool),
     registerFlag: (...args) => flags.push(args), getFlag: () => Object.hasOwn(options, 'flag') ? options.flag : dir,
     on: (name, hook) => hooks.set(name, hook),
     getActiveTools: () => tools, setActiveTools: (value) => { tools = value; },
     sendUserMessage: (...args) => sent.push(args),
+    setSessionName: (name) => names.push(name),
   };
   childExtension(pi, {
     ...options.bridge,
@@ -53,7 +55,7 @@ async function fixture(t, options = {}) {
     await rm(dir, { recursive: true, force: true });
   });
   return {
-    dir, runId, ctx, emit, sent, notices, flags, registered,
+    dir, runId, ctx, emit, sent, notices, flags, registered, names,
     pending: (value) => { pendingMessages = value; },
     get tools() { return tools; }, get aborts() { return aborts; }, get cancelled() { return cancelled; }, get shutdowns() { return shutdowns; },
     idle: (value) => { idle = value; },
@@ -92,8 +94,10 @@ test('child registers its flag, publishes private ready/session status, and disa
   assert.equal(state.stopped, false);
   assert.equal(state.sessionId, 'private-session');
   assert.equal(state.sessionFile, '/sessions/child.jsonl');
+  assert.deepEqual(f.names, ['builder']);
   await f.start(); // Repeated session_start must not replace the bridge.
   assert.equal(f.cancelled, 0);
+  assert.deepEqual(f.names, ['builder']);
 });
 
 for (const [name, options, setup, error] of [
@@ -126,9 +130,11 @@ test('without the flag the extension does nothing, including lifecycle events', 
 test('prompt and busy steer use explicit delivery modes; results appear only when fully settled', async (t) => {
   const f = await fixture(t);
   await f.start();
+  assert.deepEqual(f.names, ['builder']);
   const id = await f.send('prompt', 'Implement {{literal}}');
   await until(() => f.sent.length === 1);
   assert.deepEqual(f.sent[0], ['Implement {{literal}}', { deliverAs: 'followUp', expandPromptTemplates: false }]);
+  assert.deepEqual(f.names, ['builder', 'builder: Implement {{literal}}']);
   f.idle(false);
   await f.emit('agent_start');
   await f.emit('message_end', { message: { role: 'toolResult', content: 'not assistant output' } });
@@ -141,6 +147,7 @@ test('prompt and busy steer use explicit delivery modes; results appear only whe
   const guidance = await f.send('steer', 'Use the existing API');
   assert.equal((await f.result(guidance)).status, 'accepted');
   assert.deepEqual(f.sent[1], ['Use the existing API', { deliverAs: 'steer', expandPromptTemplates: false }]);
+  assert.deepEqual(f.names, ['builder', 'builder: Implement {{literal}}']);
   const busy = await f.send('prompt', 'Do not start another task');
   assert.match((await f.result(busy)).errorMessage, /busy; use steer/);
   await f.emit('message_end', { message: assistant('final answer') });

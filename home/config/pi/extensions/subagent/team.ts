@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { HerdrPanes } from './herdr.ts';
+import { teamWorkLabel } from './labels.ts';
 import { prepareRun, command, readJson, sleep, atomicJson, envelope } from './protocol.ts';
 
 export const CHILD_EXTENSION = fileURLToPath(new URL('./child.ts', import.meta.url));
@@ -180,7 +181,7 @@ export class TeamManager {
         await atomicJson(join(dir, 'request.json'), envelope(runId, {
           parentPid: process.pid, paneId: entry.paneId, runId, agent,
         }));
-        const launch = invocation(['--extension', CHILD_EXTENSION, '--team-run', dir]);
+        const launch = invocation(['--name', teamWorkLabel(agent, task), '--extension', CHILD_EXTENSION, '--team-run', dir]);
         await this.panes.call('pane.send_input', { pane_id: entry.paneId,
           text: launchCommand(launch), keys: ['Enter'] });
         return entry;

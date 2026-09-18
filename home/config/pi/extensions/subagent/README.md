@@ -87,6 +87,7 @@ Call blocking parent delegation/wait/ask tools alone, using the `tasks` array fo
 ## Pane lifecycle
 
 - Children open to the right without changing focus. Only their downward-split column is rebalanced; the coordinator's width is preserved.
+- Session/Switchboard labels are set at launch from the role and current task (`pi --name`), then refreshed when a follow-up prompt arrives. This does not wait for the child model to call `set_agent_label`.
 - Four panes are retained. At capacity, an idle child must acknowledge retirement before being replaced. Busy conversations, pending questions and incomplete cancellation cleanup are not eligible.
 - Completed panes stay open for follow-up. Closing, evicting, or shutting down the parent closes only owned child panes. Normal Pi session files remain available for resumption.
 - Startup is limited to 60 seconds and each execution segment to 30 minutes. Human answer time does not consume that limit; leases and health checks continue. Dispatch/job waits yield within 30 seconds without cancelling background work. Explicit cancellation or a failed execution wait requests abort, then closes the owned pane.
@@ -99,6 +100,7 @@ Herdr layout edits use positional paths and are not transactional across clients
 ## Implementation boundaries
 
 - `skills.ts`: strict declarations and prompt composition.
+- `labels.ts`: role/task session names used as Switchboard presence labels.
 - `launch.ts`: role model/thinking defaults and coordinator overrides.
 - `herdr.ts`: bounded socket calls, explicit pane ownership and subtree ratios.
 - `protocol.ts`: private atomic command/result files.

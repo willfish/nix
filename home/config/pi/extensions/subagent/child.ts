@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile, readdir, rename, rm, stat } from 'node:fs/promises';
 import { join, isAbsolute } from 'node:path';
 import { atomicJson, readJson, envelope, assistantResult, VERSION } from './protocol.ts';
+import { applyWorkLabel } from './labels.ts';
 import { socketCall } from './herdr.ts';
 
 /** Explicitly loaded only for interactive team children. No terminal scraping. */
@@ -167,6 +168,7 @@ export default function childExtension(pi, options = {}) {
             messages = [];
             batch = [];
             segmentAborted = false;
+            applyWorkLabel(pi, request.agent, data.text);
             syncTools();
             pi.sendUserMessage(data.text, { deliverAs: 'followUp', expandPromptTemplates: false });
           } else if (data.kind === 'steer') {
@@ -217,6 +219,7 @@ export default function childExtension(pi, options = {}) {
     dir = flag;
     ctx = context;
     stopped = false;
+    applyWorkLabel(pi, request.agent);
     registerQuestionTool();
     // Never let a child create an uncontrolled recursive team, even via headless delegation.
     pi.setActiveTools(pi.getActiveTools().filter((name) => !['subagent', 'team', questionTool].includes(name)));

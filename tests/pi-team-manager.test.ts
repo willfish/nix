@@ -183,7 +183,7 @@ test('startup creates private IPC, launches interactive child, retains result an
   const record = f.manager.get(first.memberId);
   assert.equal((await stat(record.dir)).mode & 0o777, 0o700);
   assert.equal((await readJson(join(record.dir, 'request.json'), record.runId)).agent, 'builder');
-  assert.deepEqual(f.invocations, [['--extension', CHILD_EXTENSION, '--team-run', record.dir]]);
+  assert.deepEqual(f.invocations, [['--name', 'builder: initial task', '--extension', CHILD_EXTENSION, '--team-run', record.dir]]);
   assert.deepEqual(f.panes.opened[0], { paneId: first.paneId, cwd: "/work/it's a project", env: { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder' }, label: `pi: builder [${first.memberId}]` });
   assert.deepEqual(f.panes.calls[0].params.keys, ['Enter']);
   assert.equal(f.panes.calls[0].params.text, launchCommand({ command: '/path with spaces/pi', args: ['--model', "model's name", ...f.invocations[0]] }));
