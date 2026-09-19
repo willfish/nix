@@ -153,7 +153,7 @@ test('allocated persona role reaches the launched child environment unchanged', 
   const f = await fixture(t);
   await f.run({ agent: 'security-reviewer' });
   const paneEnv = f.panes.opened[0].env;
-  assert.deepEqual(paneEnv, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'security-reviewer' });
+  assert.deepEqual(paneEnv, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'security-reviewer', PI_OM_DEFAULT: '0' });
   const launch = launchCommand({ command: process.execPath,
     args: ['-e', 'console.log(JSON.stringify({child:process.env.PI_TEAM_CHILD,role:process.env.PI_TEAM_ROLE}))'] });
   const childEnv = JSON.parse(execFileSync('/bin/sh', ['-c', launch], {
@@ -162,28 +162,16 @@ test('allocated persona role reaches the launched child environment unchanged', 
   assert.deepEqual(childEnv, { child: '1', role: 'security-reviewer' });
 });
 
-test('interactive launch passes parent observational memory into pane env', async t => {
-  const f = await fixture(t);
-  await f.run({ agent: 'builder', parentMemoryRoot: '/work/.memory/parent-session' });
-  assert.deepEqual(f.panes.opened[0].env, {
-    PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder', PI_OM_PARENT_MEMORY: '/work/.memory/parent-session',
-  });
-});
-
 test('teamChildEnv marks headless children without dropping the parent environment', () => {
-  const env = teamChildEnv({ PATH: '/bin', PI_TEAM_CHILD: '0', KEEP: 'yes', PI_OM_DEFAULT: '1' }, { PI_OM_PARENT_MEMORY: '/work/.memory/parent' });
+  const env = teamChildEnv({ PATH: '/bin', PI_TEAM_CHILD: '0', KEEP: 'yes', PI_OM_DEFAULT: '1' });
   assert.equal(env.PI_TEAM_CHILD, '1');
   assert.equal(env.PI_OM_DEFAULT, '0');
-  assert.equal(env.PI_OM_PARENT_MEMORY, '/work/.memory/parent');
   assert.equal(env.PATH, '/bin');
   assert.equal(env.KEEP, 'yes');
 });
 
-test('teamPaneEnv seeds interactive children without forcing om off', () => {
-  assert.deepEqual(teamPaneEnv('builder'), { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder' });
-  assert.deepEqual(teamPaneEnv('builder', '/work/.memory/parent'), {
-    PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder', PI_OM_PARENT_MEMORY: '/work/.memory/parent',
-  });
+test('teamPaneEnv forces observational memory off for interactive children', () => {
+  assert.deepEqual(teamPaneEnv('builder'), { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder', PI_OM_DEFAULT: '0' });
 });
 
 test('availability requires interactive Herdr parent and refuses recursive children', () => {
@@ -203,7 +191,7 @@ test('startup creates private IPC, launches interactive child, retains result an
   assert.equal(request.agent, 'builder');
   assert.equal(request.task, 'initial task');
   assert.deepEqual(f.invocations, [['--name', 'builder: initial task', '--extension', CHILD_EXTENSION, '--team-run', record.dir]]);
-  assert.deepEqual(f.panes.opened[0], { paneId: first.paneId, cwd: "/work/it's a project", env: { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder' }, label: `pi: builder [${first.memberId}]` });
+  assert.deepEqual(f.panes.opened[0], { paneId: first.paneId, cwd: "/work/it's a project", env: { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder', PI_OM_DEFAULT: '0' }, label: `pi: builder [${first.memberId}]` });
   assert.deepEqual(f.panes.calls[0].params.keys, ['Enter']);
   assert.equal(f.panes.calls[0].params.text, launchCommand({ command: '/path with spaces/pi', args: [...f.invocations[0], '--model', "model's name"] }));
   assert.equal(first.status, 'completed');

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { sessionMemoryRoot } from "./paths.js";
-import { envParentMemoryRoot, existingMemoryRoot, seedFromParentMemory } from "./parent-env.js";
+import { existingMemoryRoot, seedFromParentMemory } from "./parent-env.js";
 
 type SessionCtx = {
 	cwd: string;
@@ -28,12 +28,12 @@ function parentMemoryRoot(ctx: SessionCtx): string | undefined {
 	return existingMemoryRoot(sessionMemoryRoot(ctx.cwd, parentId));
 }
 
-export function ensureSessionMemory(ctx: SessionCtx, env: NodeJS.ProcessEnv = process.env): string {
+export function ensureSessionMemory(ctx: SessionCtx): string {
 	const sessionId = ctx.sessionManager.getSessionId();
 	const root = sessionMemoryRoot(ctx.cwd, sessionId);
 	if (existsSync(root)) return root;
 
-	const parent = parentMemoryRoot(ctx) ?? envParentMemoryRoot(env);
+	const parent = parentMemoryRoot(ctx);
 	if (parent) seedFromParentMemory(parent, root);
 	return root;
 }

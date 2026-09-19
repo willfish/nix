@@ -31,7 +31,6 @@ import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
 import { agentLaunchFlags, resolveLaunchConfig } from "./launch.ts";
 import { withSkills } from "./skills.ts";
-import { composeChildSystemPrompt, observationalMemoryBriefing, parentObservationalMemoryRoot } from "./memory.ts";
 import { TeamManager, teamAvailable, teamChildEnv } from "./team.ts";
 import { registerTeamControls, DELEGATION_POLICY } from "./controls.ts";
 import { Jobs, waitForProcess } from "./jobs.ts";
@@ -284,7 +283,6 @@ interface DispatchDefaults {
 	skills?: string[];
 	availableSkills?: { name: string; filePath: string }[];
 	team?: TeamManager;
-	parentMemoryRoot?: string;
 }
 
 function withLaunchOverride(
@@ -362,10 +360,7 @@ async function runSingleAgent(
 	};
 
 	try {
-		const systemPrompt = composeChildSystemPrompt(
-			await withSkills(agent, dispatchDefaults.skills, dispatchDefaults.availableSkills),
-			observationalMemoryBriefing(dispatchDefaults.parentMemoryRoot),
-		);
+		const systemPrompt = await withSkills(agent, dispatchDefaults.skills, dispatchDefaults.availableSkills);
 		if (systemPrompt.trim()) {
 			const tmp = await writePromptToTempFile(agent.name, systemPrompt);
 			tmpPromptDir = tmp.dir;
@@ -377,7 +372,6 @@ async function runSingleAgent(
 			const interactiveArgs = args.slice(4); // Drop --mode json -p --no-session, retaining model/tools/prompt.
 			const result = await dispatchDefaults.team.run({
 				agent: agentName, task: `Task: ${task}`, cwd: cwd ?? defaultCwd, signal,
-				parentMemoryRoot: dispatchDefaults.parentMemoryRoot,
 				invocation: (bridgeArgs: string[]) => getPiInvocation([...bridgeArgs, ...interactiveArgs]),
 				onProgress: (messages: Message[]) => { currentResult.messages = messages; emitUpdate(); },
 			});
@@ -395,8 +389,7 @@ async function runSingleAgent(
 				cwd: cwd ?? defaultCwd,
 				shell: false,
 				stdio: ["ignore", "pipe", "pipe"],
-				env: teamChildEnv(process.env, dispatchDefaults.parentMemoryRoot
-					? { PI_OM_PARENT_MEMORY: dispatchDefaults.parentMemoryRoot } : {}),
+				env: teamChildEnv(),
 			});
 			let buffer = "";
 
@@ -565,7 +558,6 @@ export default function (pi: ExtensionAPI) {
 				availableSkills: pi.getCommands().filter((command) => command.source === "skill")
 					.map((command) => ({ name: command.name.slice("skill:".length), filePath: command.sourceInfo.path })),
 				team,
-				parentMemoryRoot: parentObservationalMemoryRoot(ctx.cwd, ctx.sessionManager?.getSessionId?.()),
 			};
 			const discovery = discoverAgents(ctx.cwd, agentScope);
 			const agents = discovery.agents;

@@ -230,8 +230,8 @@ Pi to use one agent, run several in parallel, or chain steps with the
 As in the example, only user-level agents are loaded by default. Project-local
 agents under `.pi/agents/` are opt-in through the tool's `agentScope`
 parameter, with a confirmation prompt in untrusted projects. Team children
-inherit a snapshot of the coordinator's observational memory when that session
-has `.memory/<session>/`; the JSON fallback does not turn om on.
+leave observational memory off so specialists compact normally and do not
+inherit the coordinator's notes.
 
 ## History search
 
