@@ -94,12 +94,14 @@ Call blocking parent delegation/wait/ask tools alone, using the `tasks` array fo
 - A coordinator lease expires after 30 seconds without renewal. Children abort and request shutdown, with a bounded owned-pane close fallback. Private IPC ownership records remain if the coordinator dies unexpectedly.
 - Child reload/session replacement ends an outstanding request; use a new dispatch rather than transferring its bridge to another conversation.
 - Outside interactive herdr, delegation retains the upstream headless JSON runner with the same skill preloading. The memory-constrained local Qwen launcher still excludes this extension.
+- When the coordinator has `.memory/<session>/`, children get a short INDEX and journey briefing. Interactive panes also seed their own session copy and keep observational memory on; compact does not inject a resume turn. Headless JSON fallback leaves om off (`PI_OM_DEFAULT=0`).
 
 Herdr layout edits use positional paths and are not transactional across clients. Avoid moving/splitting panes while a team is being created or balanced. Mixed ownership detected in a layout disables rebalancing, but the public API cannot rule out a simultaneous manual topology change between validation and a ratio write.
 
 ## Implementation boundaries
 
 - `skills.ts`: strict declarations and prompt composition.
+- `memory.ts`: parent observational-memory root, INDEX/journey briefing and child prompt composition.
 - `labels.ts`: role/task session names used as Switchboard presence labels.
 - `launch.ts`: role model/thinking defaults and coordinator overrides.
 - `herdr.ts`: bounded socket calls, explicit pane ownership and subtree ratios.

@@ -18,8 +18,13 @@ export function launchCommand(invocation) {
     '-u', 'PI_MODEL', '-u', 'PI_REASONING_LEVEL', 'PI_TEAM_CHILD=1',
     invocation.command, ...invocation.args].map(shellQuote).join(' ');
 }
-export function teamChildEnv(env = process.env) {
-  return { ...env, PI_TEAM_CHILD: '1' };
+export function teamPaneEnv(agent, parentMemoryRoot) {
+  const env = { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: agent };
+  if (typeof parentMemoryRoot === 'string' && parentMemoryRoot) env.PI_OM_PARENT_MEMORY = parentMemoryRoot;
+  return env;
+}
+export function teamChildEnv(env = process.env, extra = {}) {
+  return { ...env, ...extra, PI_TEAM_CHILD: '1', PI_OM_DEFAULT: '0' };
 }
 export function teamAvailable(ctx, env = process.env) {
   return ctx.mode === 'tui' && env.HERDR_ENV === '1' && !!env.HERDR_SOCKET_PATH &&
@@ -147,7 +152,7 @@ export class TeamManager {
       });
     }
   }
-  async run({ agent, task, cwd, invocation, signal, onProgress }) {
+  async run({ agent, task, cwd, invocation, signal, onProgress, parentMemoryRoot }) {
     if (signal?.aborted) throw new Error('Subagent was aborted');
     const record = await this.#serialize(async () => {
       if (this.stopped) throw new Error('Team manager has stopped');
@@ -176,7 +181,7 @@ export class TeamManager {
       const entry = { id: runId.slice(0, 8), runId, dir, agent, cwd, pending: true, closed: false };
       try {
         await prepareRun(dir, { runId, agent, task });
-        entry.paneId = await this.panes.open(cwd, { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: agent }, `pi: ${agent} [${entry.id}]`);
+        entry.paneId = await this.panes.open(cwd, teamPaneEnv(agent, parentMemoryRoot), `pi: ${agent} [${entry.id}]`);
         this.records.set(entry.id, entry);
         await atomicJson(join(dir, 'request.json'), envelope(runId, {
           parentPid: process.pid, paneId: entry.paneId, runId, agent, task,

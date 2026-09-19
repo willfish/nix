@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
-import { TeamManager, CHILD_EXTENSION, launchCommand, shellQuote, teamAvailable, teamChildEnv } from '../home/config/pi/extensions/subagent/team.ts';
+import { TeamManager, CHILD_EXTENSION, launchCommand, shellQuote, teamAvailable, teamChildEnv, teamPaneEnv } from '../home/config/pi/extensions/subagent/team.ts';
 import { atomicJson, envelope, readJson } from '../home/config/pi/extensions/subagent/protocol.ts';
 import { Jobs } from '../home/config/pi/extensions/subagent/jobs.ts';
 
@@ -162,11 +162,28 @@ test('allocated persona role reaches the launched child environment unchanged', 
   assert.deepEqual(childEnv, { child: '1', role: 'security-reviewer' });
 });
 
+test('interactive launch passes parent observational memory into pane env', async t => {
+  const f = await fixture(t);
+  await f.run({ agent: 'builder', parentMemoryRoot: '/work/.memory/parent-session' });
+  assert.deepEqual(f.panes.opened[0].env, {
+    PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder', PI_OM_PARENT_MEMORY: '/work/.memory/parent-session',
+  });
+});
+
 test('teamChildEnv marks headless children without dropping the parent environment', () => {
-  const env = teamChildEnv({ PATH: '/bin', PI_TEAM_CHILD: '0', KEEP: 'yes' });
+  const env = teamChildEnv({ PATH: '/bin', PI_TEAM_CHILD: '0', KEEP: 'yes', PI_OM_DEFAULT: '1' }, { PI_OM_PARENT_MEMORY: '/work/.memory/parent' });
   assert.equal(env.PI_TEAM_CHILD, '1');
+  assert.equal(env.PI_OM_DEFAULT, '0');
+  assert.equal(env.PI_OM_PARENT_MEMORY, '/work/.memory/parent');
   assert.equal(env.PATH, '/bin');
   assert.equal(env.KEEP, 'yes');
+});
+
+test('teamPaneEnv seeds interactive children without forcing om off', () => {
+  assert.deepEqual(teamPaneEnv('builder'), { PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder' });
+  assert.deepEqual(teamPaneEnv('builder', '/work/.memory/parent'), {
+    PI_TEAM_CHILD: '1', PI_TEAM_ROLE: 'builder', PI_OM_PARENT_MEMORY: '/work/.memory/parent',
+  });
 });
 
 test('availability requires interactive Herdr parent and refuses recursive children', () => {

@@ -154,7 +154,10 @@ kind-keyed files under `.memory/<session>/`:
 
 Tombstones are written only after those files land, so a failed Jev call does
 not drain the buffer. A forked session seeds its directory from the parent
-once.
+once. Team children seed the same way from `PI_OM_PARENT_MEMORY`. Compact still
+renders the ledger in a team pane, but does not inject a hidden resume turn
+while `PI_TEAM_CHILD=1`. Headless JSON subagents set `PI_OM_DEFAULT=0` so they
+do not run observers on an ephemeral `--no-session` process.
 
 ## Requirements
 

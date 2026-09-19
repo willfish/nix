@@ -1,6 +1,6 @@
-import { cpSync, existsSync, readFileSync, renameSync, rmSync } from "node:fs";
-import { basename, sep } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { sessionMemoryRoot } from "./paths.js";
+import { envParentMemoryRoot, existingMemoryRoot, seedFromParentMemory } from "./parent-env.js";
 
 type SessionCtx = {
 	cwd: string;
@@ -25,32 +25,15 @@ function parentMemoryRoot(ctx: SessionCtx): string | undefined {
 	if (!parentFile) return undefined;
 	const parentId = readSessionHeaderId(parentFile);
 	if (!parentId) return undefined;
-	const root = sessionMemoryRoot(ctx.cwd, parentId);
-	return existsSync(root) ? root : undefined;
+	return existingMemoryRoot(sessionMemoryRoot(ctx.cwd, parentId));
 }
 
-function isRunsPath(p: string): boolean {
-	return basename(p) === ".runs" || p.includes(`${sep}.runs${sep}`);
-}
-
-export function ensureSessionMemory(ctx: SessionCtx): string {
+export function ensureSessionMemory(ctx: SessionCtx, env: NodeJS.ProcessEnv = process.env): string {
 	const sessionId = ctx.sessionManager.getSessionId();
 	const root = sessionMemoryRoot(ctx.cwd, sessionId);
 	if (existsSync(root)) return root;
 
-	const parent = parentMemoryRoot(ctx);
-	if (parent) {
-		const tmp = `${root}.seed-tmp-${process.pid}-${Date.now()}`;
-		try {
-			cpSync(parent, tmp, { recursive: true, filter: (src) => !isRunsPath(src) });
-			renameSync(tmp, root);
-		} catch {
-			try {
-				rmSync(tmp, { recursive: true, force: true });
-			} catch {
-				/* best-effort cleanup */
-			}
-		}
-	}
+	const parent = parentMemoryRoot(ctx) ?? envParentMemoryRoot(env);
+	if (parent) seedFromParentMemory(parent, root);
 	return root;
 }

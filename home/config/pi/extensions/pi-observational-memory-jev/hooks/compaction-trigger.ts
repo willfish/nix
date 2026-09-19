@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { OM_RESUME, rawTokensSinceLastCompaction, type Entry } from "../ledger/index.js";
 import type { Runtime } from "../runtime.js";
+import { shouldResumeAfterOmCompact } from "./resume.js";
 
 const RESUME_PROMPT =
 	"[automatic] Your context was just compacted to free space; no user message was sent. " +
@@ -43,7 +44,7 @@ export function registerCompactionTrigger(pi: ExtensionAPI, runtime: Runtime): v
 
 		if (!contextPressureTokens(ctx, runtime.config.compactAtContextTokens).due) return;
 
-		const shouldResume = runtime.config.resumeAfterMidRunCompaction && turnWillContinue(event);
+		const shouldResume = shouldResumeAfterOmCompact(runtime, turnWillContinue(event));
 		const hasUI = ctx.hasUI;
 		const ui = ctx.ui;
 		runtime.compactInFlight = true;
