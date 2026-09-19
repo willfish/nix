@@ -32,6 +32,7 @@ function entryTimestamp(entry: RenderableEntry): string {
  */
 export function extractCandidates(entries: RenderableEntry[], maxCandidates: number): Candidate[] {
 	const candidates: Candidate[] = [];
+	const seen = new Set<string>();
 	for (const entry of entries) {
 		if (!entry.id) continue;
 		const plain = extractEntryPlainText(entry).trim();
@@ -40,6 +41,9 @@ export function extractCandidates(entries: RenderableEntry[], maxCandidates: num
 		const blocks = splitBlocks(plain);
 		const parts = blocks.length > 0 ? blocks : [plain.replace(/\s+/g, " ").trim()].filter((p) => p.length >= MIN_CHARS);
 		for (const text of parts) {
+			const key = text.toLowerCase();
+			if (seen.has(key)) continue;
+			seen.add(key);
 			candidates.push({
 				id: `c${candidates.length + 1}`,
 				sourceEntryId: entry.id,

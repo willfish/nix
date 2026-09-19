@@ -75,7 +75,11 @@ export function evaluateConsolidatorTrigger(pi: ExtensionAPI, runtime: Runtime, 
 					coversUpToId,
 				});
 			}
-			recordWorkerCost(pi, runtime, ctx, "consolidator", runId, 0, result.requests);
+			recordWorkerCost(pi, runtime, ctx, "consolidator", runId, {
+				requests: result.requests,
+				inputTokens: result.inputTokens,
+				outputTokens: result.outputTokens,
+			});
 			runtime.status.workerDone(runId, result.writes.length);
 			runtime.refreshFooterGauges(ctx.sessionManager.getBranch(), ctx.getContextUsage?.()?.tokens ?? null);
 			if (ctx.hasUI) {

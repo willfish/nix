@@ -17,6 +17,7 @@ import {
 	type Entry,
 	type SourceSlice,
 } from "../ledger/index.js";
+import { formatObserverResultToast } from "../spend.js";
 import type { Runtime } from "../runtime.js";
 
 type TriggerCtx = {
@@ -35,10 +36,16 @@ export function recordWorkerCost(
 	ctx: { sessionManager: { getEntries: () => Entry[] } },
 	role: "observer" | "consolidator",
 	runId: string,
-	costUsd = 0,
-	requests = 0,
+	spend: { costUsd?: number; requests?: number; inputTokens?: number; outputTokens?: number } = {},
 ): void {
-	pi.appendEntry(OM_COST, { costUsd, role, runId, requests });
+	pi.appendEntry(OM_COST, {
+		costUsd: spend.costUsd ?? 0,
+		role,
+		runId,
+		requests: spend.requests ?? 0,
+		inputTokens: spend.inputTokens ?? 0,
+		outputTokens: spend.outputTokens ?? 0,
+	});
 	runtime.refreshCost(ctx.sessionManager.getEntries());
 }
 
@@ -131,12 +138,20 @@ async function dispatchObserver(
 		});
 
 		pi.appendEntry(OM_OBSERVATIONS_RECORDED, { observations, coversUpToId });
-		recordWorkerCost(pi, runtime, ctx, "observer", runId, 0, result.requests);
+		recordWorkerCost(pi, runtime, ctx, "observer", runId, {
+			requests: result.requests,
+			inputTokens: result.inputTokens,
+			outputTokens: result.outputTokens,
+		});
 		runtime.status.workerDone(runId, observations.length);
 		runtime.refreshFooterGauges(ctx.sessionManager.getBranch(), ctx.getContextUsage?.()?.tokens ?? null);
 		if (ctx.hasUI && ctx.ui) {
 			runtime.queueToast(
-				`om: observer +${observations.length} (~${slice.tokens.toLocaleString()} tok)`,
+				formatObserverResultToast({
+					kept: observations.length,
+					rejected: result.rejected,
+					tokens: slice.tokens,
+				}),
 				"info",
 				ctx.ui.notify.bind(ctx.ui),
 			);

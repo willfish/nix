@@ -57,6 +57,29 @@ export function snapCutoff(
 	return bestId ? { firstKeptId: bestId, tail: bestTail } : { firstKeptId: proposedFirstKeptId, tail: undefined };
 }
 
+export function lastBranchEntryId(branch: Entry[]): string {
+	for (let i = branch.length - 1; i >= 0; i--) {
+		const id = branch[i]?.id;
+		if (typeof id === "string" && id.length > 0) return id;
+	}
+	return "";
+}
+
+export function planOmCompaction(
+	runtime: Runtime,
+	branch: Entry[],
+	proposedFirstKeptId: string,
+): { firstKeptId: string; summary: string; details: ReturnType<typeof buildCompactionProjection>["details"] } | undefined {
+	if (!proposedFirstKeptId) return undefined;
+	const snap = snapCutoff(branch, proposedFirstKeptId, runtime.config.tailTokens);
+	const projection = buildCompactionProjection(branch, snap.firstKeptId);
+	const journey = readJourney(runtime.memoryRoot);
+	const map = renderMemoryMap(listTopics(runtime.memoryRoot));
+	const summary = renderSummary(journey, map, projection.observations);
+	if (!summary) return undefined;
+	return { firstKeptId: snap.firstKeptId, summary, details: projection.details };
+}
+
 export function canSkipObserverWait(
 	branch: Entry[],
 	snappedFirstKeptId: string,
@@ -109,19 +132,15 @@ export function registerCompactionHook(pi: ExtensionAPI, runtime: Runtime): void
 				snap = snapCutoff(branch, firstKeptEntryId, tailTokens);
 			}
 
-			const snapped = snap.firstKeptId;
-			const projection = buildCompactionProjection(branch, snapped);
-			const journey = readJourney(runtime.memoryRoot);
-			const map = renderMemoryMap(listTopics(runtime.memoryRoot));
-			const summary = renderSummary(journey, map, projection.observations);
-			if (!summary) return undefined;
+			const planned = planOmCompaction(runtime, branch, snap.firstKeptId);
+			if (!planned) return undefined;
 
 			return {
 				compaction: {
-					summary,
-					firstKeptEntryId: snapped,
+					summary: planned.summary,
+					firstKeptEntryId: planned.firstKeptId,
 					tokensBefore,
-					details: projection.details,
+					details: planned.details,
 				},
 			};
 		} finally {

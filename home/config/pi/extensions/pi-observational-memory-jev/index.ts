@@ -17,6 +17,7 @@ import { registerObserverTrigger } from "./hooks/observer-trigger.js";
 import { OM_ENABLED, type Entry } from "./ledger/index.js";
 import { ensureSessionMemory } from "./memory/session.js";
 import { Runtime } from "./runtime.js";
+import { shouldAttachOmStatus } from "./spend.js";
 
 function readGateFromLedger(branch: Entry[]): boolean {
 	for (let i = branch.length - 1; i >= 0; i--) {
@@ -32,7 +33,7 @@ export default function observationalMemoryJev(pi: ExtensionAPI): void {
 	const runtime = new Runtime();
 
 	function attachIfEnabled(ctx: any): void {
-		if (runtime.enabled && ctx.mode === "tui" && ctx.hasUI && ctx.ui) {
+		if (runtime.enabled && shouldAttachOmStatus(ctx)) {
 			runtime.status.attach(ctx.ui);
 		} else {
 			runtime.status.detach();

@@ -77,8 +77,7 @@ export class Runtime {
 
 	refreshCost(allEntries: Entry[]): void {
 		if (!this.enabled) return;
-		const { costUsd, runs } = sumSessionCost(allEntries);
-		this.status.setCost(costUsd, runs);
+		this.status.setSpend(sumSessionCost(allEntries));
 	}
 
 	abortAllWorkers(): void {

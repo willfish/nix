@@ -70,6 +70,8 @@ export type CostEntryData = {
 	role: "observer" | "consolidator";
 	runId: string;
 	requests?: number;
+	inputTokens?: number;
+	outputTokens?: number;
 };
 
 export type MemoryDetails = {
@@ -156,18 +158,28 @@ export function isCostEntry(entry: Entry): entry is Entry & {
 	return !!data && typeof data.costUsd === "number" && Number.isFinite(data.costUsd) && data.costUsd >= 0;
 }
 
-export function sumSessionCost(allEntries: Entry[]): { costUsd: number; runs: number; requests: number } {
+export function sumSessionCost(allEntries: Entry[]): {
+	costUsd: number;
+	runs: number;
+	requests: number;
+	inputTokens: number;
+	outputTokens: number;
+} {
 	let costUsd = 0;
 	let runs = 0;
 	let requests = 0;
+	let inputTokens = 0;
+	let outputTokens = 0;
 	for (const entry of allEntries) {
 		if (isCostEntry(entry)) {
 			costUsd += entry.data.costUsd;
 			runs += 1;
 			requests += entry.data.requests ?? 0;
+			inputTokens += entry.data.inputTokens ?? 0;
+			outputTokens += entry.data.outputTokens ?? 0;
 		}
 	}
-	return { costUsd, runs, requests };
+	return { costUsd, runs, requests, inputTokens, outputTokens };
 }
 
 export function isObservationsDroppedEntry(entry: Entry): entry is Entry & {

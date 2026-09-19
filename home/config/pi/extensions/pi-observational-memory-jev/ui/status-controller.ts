@@ -1,3 +1,5 @@
+import { formatFooterSpend, type Spend } from "../spend.js";
+
 export type WorkerType = "observer" | "consolidator";
 
 export interface FooterGauges {
@@ -43,7 +45,7 @@ export class StatusController {
 	private readonly workers = new Map<string, WorkerEntry>();
 	private spinnerTimer: ReturnType<typeof setInterval> | undefined;
 	private gauges: FooterGauges | undefined;
-	private cost: { costUsd: number; runs: number } | undefined;
+	private spend: Spend | undefined;
 	private readonly spinnerIntervalMs: number;
 	private readonly settleMs: number;
 
@@ -64,7 +66,7 @@ export class StatusController {
 		}
 		this.workers.clear();
 		this.gauges = undefined;
-		this.cost = undefined;
+		this.spend = undefined;
 		this.ui?.setWidget(WORKERS_WIDGET_KEY, undefined);
 		if (this.ui) this.ui.setStatus(FOOTER_KEY, undefined);
 		this.ui = undefined;
@@ -75,8 +77,8 @@ export class StatusController {
 		if (this.ui) this.ui.setStatus(FOOTER_KEY, this.renderFooter());
 	}
 
-	setCost(costUsd: number, runs: number): void {
-		this.cost = { costUsd, runs };
+	setSpend(spend: Spend): void {
+		this.spend = spend;
 		if (this.ui) this.ui.setStatus(FOOTER_KEY, this.renderFooter());
 	}
 
@@ -156,7 +158,8 @@ export class StatusController {
 		const next = `${theme.fg("muted", "O")}${this.gaugeBar(g.nextValue, g.nextMax)}`;
 		const pool = `${theme.fg("muted", "C")}${this.gaugeBar(g.poolValue, g.poolMax)}`;
 		const ctx = `${theme.fg("muted", "X")}${this.gaugeBar(g.ctxValue, g.ctxMax)}`;
-		const cost = this.cost ? ` ${theme.fg("dim", `$${this.cost.costUsd.toFixed(3)}`)}` : "";
+		const spendText = this.spend ? formatFooterSpend(this.spend) : "";
+		const cost = spendText ? ` ${theme.fg("dim", spendText)}` : "";
 		return `${next}  ${pool}  ${ctx}${cost}`;
 	}
 

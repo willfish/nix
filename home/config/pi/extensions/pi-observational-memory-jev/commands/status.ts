@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { foldLedger, poolTokens, rawTokensSinceObservationCoverage, sumSessionCost, type Entry } from "../ledger/index.js";
 import { listTopics, readJourney } from "../memory/paths.js";
+import { formatStatusSpend } from "../spend.js";
 import { estimateStringTokens } from "../tokens.js";
 import type { Runtime } from "../runtime.js";
 
@@ -21,7 +22,7 @@ export function registerStatusCommand(pi: ExtensionAPI, runtime: Runtime): void 
 			const pool = poolTokens(folded.activeObservations);
 			const topicCount = listTopics(runtime.memoryRoot).length;
 			const journey = readJourney(runtime.memoryRoot);
-			const { costUsd, runs, requests } = sumSessionCost(ctx.sessionManager.getEntries() as Entry[]);
+			const spend = sumSessionCost(ctx.sessionManager.getEntries() as Entry[]);
 
 			const lines = [
 				`om status (jev)`,
@@ -35,7 +36,7 @@ export function registerStatusCommand(pi: ExtensionAPI, runtime: Runtime): void 
 				`  journey: ${journey ? `~${estimateStringTokens(journey).toLocaleString()} / ${runtime.config.journeyTargetTokens.toLocaleString()} tok` : "none yet"}`,
 				`  context: ${contextTokens != null ? contextTokens.toLocaleString() : "?"} / ${runtime.config.compactAtContextTokens.toLocaleString()} tok`,
 				`  jev: ${runtime.config.jev.model} @ ${runtime.config.jev.baseUrl}`,
-				`  session cost: $${costUsd.toFixed(4)} (${runs} run${runs === 1 ? "" : "s"}, ${requests} jev request${requests === 1 ? "" : "s"})`,
+				`  jev spend: ${formatStatusSpend(spend)}`,
 				runtime.lastWorkerError ? `  last error: ${runtime.lastWorkerError}` : `  last error: none`,
 			];
 			ctx.ui.notify(lines.join("\n"), "info");

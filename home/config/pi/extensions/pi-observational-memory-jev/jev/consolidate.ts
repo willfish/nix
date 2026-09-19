@@ -17,6 +17,8 @@ export type ConsolidateResult = {
 	journey: string;
 	droppedTimestamps: string[];
 	requests: number;
+	inputTokens: number;
+	outputTokens: number;
 };
 
 const KIND_FILES: Record<ObservationKind, { filename: string; title: string }> = {
@@ -103,7 +105,7 @@ export async function consolidateOverflow(
 	signal?: AbortSignal,
 ): Promise<ConsolidateResult> {
 	if (promote.length === 0) {
-		return { writes: [], journey: existingJourney?.trim() ?? "", droppedTimestamps: [], requests: 0 };
+		return { writes: [], journey: existingJourney?.trim() ?? "", droppedTimestamps: [], requests: 0, inputTokens: 0, outputTokens: 0 };
 	}
 
 	const state = {
@@ -143,10 +145,14 @@ export async function consolidateOverflow(
 
 	const journey = trimJourney(appendJourney(existingJourney, durable, options.updated), options.journeyTargetTokens);
 
+	const input = response.usage?.input_tokens;
+	const output = response.usage?.output_tokens;
 	return {
 		writes,
 		journey,
 		droppedTimestamps: promote.map((observation) => observation.timestamp),
 		requests: 1,
+		inputTokens: typeof input === "number" && Number.isFinite(input) && input > 0 ? Math.round(input) : 0,
+		outputTokens: typeof output === "number" && Number.isFinite(output) && output > 0 ? Math.round(output) : 0,
 	};
 }

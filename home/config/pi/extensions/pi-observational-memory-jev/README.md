@@ -60,10 +60,10 @@ flowchart LR
 |---|---|
 | `/om`, `/om on`, `/om off` | Per-session on/off gate |
 | `/om:status` | Workers, pool, clocks, Jev endpoint, last error |
-| `/om:compact` | Force compaction now |
+| `/om:compact` | Force compaction now. Renders the observational ledger even if Pi will not cut a small session. |
 | `/om:consolidate` | Force consolidation now |
 
-Footer gauges (when on): observer progress `O`, consolidator pool `C`, context `X`, plus session cost.
+Footer gauges (when on, TUI and RPC): observer progress `O`, consolidator pool `C`, context `X`, plus Jev spend (request count and tokens). Duplicate candidate text in a chunk is scored once.
 
 ## Setup
 

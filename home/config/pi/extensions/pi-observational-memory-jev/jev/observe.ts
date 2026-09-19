@@ -15,6 +15,8 @@ export type ObserveResult = {
 	accepted: ModelObservation[];
 	rejected: number;
 	requests: number;
+	inputTokens: number;
+	outputTokens: number;
 };
 
 const KIND_CRITERIA: Record<ObservationKind, string> = {
@@ -91,7 +93,7 @@ export async function observeChunk(
 	options: ObserveOptions,
 	signal?: AbortSignal,
 ): Promise<ObserveResult> {
-	if (candidates.length === 0) return { accepted: [], rejected: 0, requests: 0 };
+	if (candidates.length === 0) return { accepted: [], rejected: 0, requests: 0, inputTokens: 0, outputTokens: 0 };
 
 	const state = fitState(chunkText, candidates, options.maxStateTokens);
 	const stateTokens = estimateStringTokens(JSON.stringify(state));
@@ -100,6 +102,8 @@ export async function observeChunk(
 	const accepted: ModelObservation[] = [];
 	let rejected = 0;
 	let requests = 0;
+	let inputTokens = 0;
+	let outputTokens = 0;
 
 	const responses = await Promise.all(
 		batches.map(async (batch) => {
@@ -108,6 +112,12 @@ export async function observeChunk(
 		}),
 	);
 	requests = responses.length;
+	for (const { response } of responses) {
+		const input = response.usage?.input_tokens;
+		const output = response.usage?.output_tokens;
+		if (typeof input === "number" && Number.isFinite(input) && input > 0) inputTokens += Math.round(input);
+		if (typeof output === "number" && Number.isFinite(output) && output > 0) outputTokens += Math.round(output);
+	}
 
 	for (const { batch, response } of responses) {
 		for (const candidate of batch) {
@@ -134,5 +144,5 @@ export async function observeChunk(
 		}
 	}
 
-	return { accepted, rejected, requests };
+	return { accepted, rejected, requests, inputTokens, outputTokens };
 }
