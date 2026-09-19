@@ -6,6 +6,7 @@ import {
 	isSourceEntry,
 	isValidCutPoint,
 	rawTokensAfterIndex,
+	EMPTY_OM_COMPACTION_SUMMARY,
 	renderSummary,
 	type Entry,
 } from "../ledger/index.js";
@@ -133,14 +134,12 @@ export function registerCompactionHook(pi: ExtensionAPI, runtime: Runtime): void
 			}
 
 			const planned = planOmCompaction(runtime, branch, snap.firstKeptId);
-			if (!planned) return undefined;
-
 			return {
 				compaction: {
-					summary: planned.summary,
-					firstKeptEntryId: planned.firstKeptId,
+					summary: planned?.summary ?? EMPTY_OM_COMPACTION_SUMMARY,
+					firstKeptEntryId: planned?.firstKeptId ?? snap.firstKeptId,
 					tokensBefore,
-					details: planned.details,
+					...(planned?.details ? { details: planned.details } : {}),
 				},
 			};
 		} finally {

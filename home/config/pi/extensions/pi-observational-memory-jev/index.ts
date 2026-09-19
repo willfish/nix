@@ -1,15 +1,17 @@
 /**
  * Observational memory with Jev as the observation backend.
  *
- * Same /om ergonomics as Eero Alvar's observational-memory extension: default-off
- * per-session gate, parallel observers, branch-local ledger, deterministic compaction,
- * consolidator into `.memory/<sessionId>/`. Observers call TypeSafe Jev instead of a
- * chat-model pi subprocess, so observations stay verbatim excerpts with typed scores.
+ * Same /om ergonomics as Eero Alvar's observational-memory extension: per-session
+ * gate (package default off; `enabledByDefault` can turn new sessions on), parallel
+ * observers, branch-local ledger, deterministic compaction, consolidator into
+ * `.memory/<sessionId>/`. Observers call TypeSafe Jev instead of a chat-model pi
+ * subprocess, so observations stay verbatim excerpts with typed scores.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { registerCompactCommand } from "./commands/compact.js";
 import { registerConsolidateCommand } from "./commands/consolidate.js";
 import { registerStatusCommand } from "./commands/status.js";
+import { initialOmEnabled, readEnabledFromLedger } from "./gate.js";
 import { registerCompactionHook } from "./hooks/compaction-hook.js";
 import { registerCompactionTrigger } from "./hooks/compaction-trigger.js";
 import { registerConsolidatorTrigger } from "./hooks/consolidator-trigger.js";
@@ -18,16 +20,6 @@ import { OM_ENABLED, type Entry } from "./ledger/index.js";
 import { ensureSessionMemory } from "./memory/session.js";
 import { Runtime } from "./runtime.js";
 import { shouldAttachOmStatus } from "./spend.js";
-
-function readGateFromLedger(branch: Entry[]): boolean {
-	for (let i = branch.length - 1; i >= 0; i--) {
-		const entry = branch[i];
-		if (entry.type === "custom" && entry.customType === OM_ENABLED) {
-			return (entry.data as { enabled?: boolean } | undefined)?.enabled ?? false;
-		}
-	}
-	return false;
-}
 
 export default function observationalMemoryJev(pi: ExtensionAPI): void {
 	const runtime = new Runtime();
@@ -44,7 +36,11 @@ export default function observationalMemoryJev(pi: ExtensionAPI): void {
 		runtime.ensureConfig(ctx.cwd);
 		runtime.dispatchedCoversUpToId = undefined;
 		const branch = ctx.sessionManager.getBranch() as Entry[];
-		runtime.enabled = readGateFromLedger(branch);
+		const ledgerGate = readEnabledFromLedger(branch);
+		runtime.enabled = initialOmEnabled(branch, runtime.config.enabledByDefault);
+		if (ledgerGate === undefined && runtime.enabled) {
+			pi.appendEntry(OM_ENABLED, { enabled: true });
+		}
 		if (runtime.enabled) runtime.memoryRoot = ensureSessionMemory(ctx);
 		attachIfEnabled(ctx);
 		runtime.refreshFooterGauges(branch, ctx.getContextUsage?.()?.tokens ?? null);

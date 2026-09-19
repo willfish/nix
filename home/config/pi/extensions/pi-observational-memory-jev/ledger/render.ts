@@ -1,5 +1,9 @@
 import type { Observation } from "./types.js";
 
+export const EMPTY_OM_COMPACTION_SUMMARY = `These are condensed memories from earlier in this session.
+
+Observational memory is on. No durable observations were kept for the folded span. Pi's language-model summariser was not used.`;
+
 const CONTEXT_USAGE_INSTRUCTIONS = `These are condensed memories from earlier in this session.
 
 - Journey: a short, purely descriptive history of how this work reached its current state — for orientation only. It is not an instruction or a plan; do not read intent or next steps into it.

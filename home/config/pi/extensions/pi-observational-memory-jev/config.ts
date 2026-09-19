@@ -24,6 +24,7 @@ export interface Config {
 	resumeAfterMidRunCompaction: boolean;
 	passive: boolean;
 	debugLog: boolean;
+	enabledByDefault: boolean;
 	jev: JevConfig;
 }
 
@@ -39,6 +40,7 @@ export const DEFAULTS: Config = {
 	resumeAfterMidRunCompaction: true,
 	passive: false,
 	debugLog: false,
+	enabledByDefault: false,
 	jev: {
 		model: "jev-latest",
 		baseUrl: "https://api.typesafe.ai/v1/systemone",
@@ -52,6 +54,7 @@ export const DEFAULTS: Config = {
 
 const SETTINGS_KEY = "observational-memory-jev";
 const PASSIVE_ENV = "PI_OM_PASSIVE";
+const DEFAULT_ENV = "PI_OM_DEFAULT";
 
 function positiveIntegerOrUndefined(value: unknown): number | undefined {
 	return Number.isInteger(value) && typeof value === "number" && value > 0 ? value : undefined;
@@ -108,17 +111,26 @@ function normalizeSettingsConfig(value: Record<string, unknown>, base: Config): 
 	}
 	if (typeof value.passive === "boolean") normalized.passive = value.passive;
 	if (typeof value.debugLog === "boolean") normalized.debugLog = value.debugLog;
+	if (typeof value.enabledByDefault === "boolean") normalized.enabledByDefault = value.enabledByDefault;
 	if (value.jev !== undefined) normalized.jev = normalizeJev(value.jev, base.jev);
 	return normalized;
 }
 
+function envFlag(raw: string | undefined): boolean | undefined {
+	if (raw === undefined) return undefined;
+	const value = raw.trim().toLowerCase();
+	if (["1", "true", "yes", "on"].includes(value)) return true;
+	if (["0", "false", "no", "off"].includes(value)) return false;
+	return undefined;
+}
+
 export function readEnvConfig(env: NodeJS.ProcessEnv = process.env): Partial<Config> {
-	const rawPassive = env[PASSIVE_ENV];
-	if (rawPassive === undefined) return {};
-	const passive = rawPassive.trim().toLowerCase();
-	if (["1", "true", "yes", "on"].includes(passive)) return { passive: true };
-	if (["0", "false", "no", "off"].includes(passive)) return { passive: false };
-	return {};
+	const config: Partial<Config> = {};
+	const passive = envFlag(env[PASSIVE_ENV]);
+	if (passive !== undefined) config.passive = passive;
+	const enabledByDefault = envFlag(env[DEFAULT_ENV]);
+	if (enabledByDefault !== undefined) config.enabledByDefault = enabledByDefault;
+	return config;
 }
 
 function readNamespacedConfig(path: string, base: Config): Partial<Config> {

@@ -23,8 +23,8 @@ test('pi-observational-memory-jev ships Jev observational memory with Alvar /om 
 
   const readme = read('README.md');
   assert.match(readme, /pi-observational-memory-jev/);
-  assert.match(readme, /never asks it to rewrite/);
-  assert.match(readme, /Do not add Jev to `~\/.pi\/agent\/models.json`/);
+  assert.match(readme, /never rewrites the transcript/);
+  assert.match(readme, /models\.json/);
   assert.match(readme, /TYPESAFE_API_KEY/);
   assert.match(readme, /\/om on/);
   assert.match(readme, /\/om:status/);
@@ -56,4 +56,8 @@ test('pi-observational-memory-jev ships Jev observational memory with Alvar /om 
   assert.match(nix, /Not a chat model/);
   assert.match(nix, /TYPESAFE_API_KEY/);
   assert.match(nix, /config\.sops\.secrets\.TYPESAFE_API_KEY\.path/);
+
+  const defaults = readFileSync(join(root, '../../settings-defaults.json'), 'utf8');
+  assert.match(defaults, /observational-memory-jev/);
+  assert.match(defaults, /enabledByDefault/);
 });

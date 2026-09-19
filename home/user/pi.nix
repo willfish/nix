@@ -141,7 +141,8 @@ in
     ../config/pi/extensions/context-window.ts;
   home.file.".pi/agent/extensions/usage.ts".source = ../config/pi/extensions/usage.ts;
   home.file.".pi/agent/extensions/skill-catalog".source = ../config/pi/extensions/skill-catalog;
-  # Observational memory with Jev. Default-off (/om); omitted from qwen-pi's
+  # Observational memory with Jev. Package default off; this home turns it on
+  # via settings enabledByDefault. Omitted from qwen-pi's
   # explicit extension list. Not a chat model: System One is called directly.
   home.file.".pi/agent/extensions/pi-observational-memory-jev".source =
     ../config/pi/extensions/pi-observational-memory-jev;
