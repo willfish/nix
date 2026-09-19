@@ -74,6 +74,14 @@ in
       fi
       unset bus_enabled bus_offline
 
+      if [ -z "''${TYPESAFE_API_KEY+x}" ]; then
+        if TYPESAFE_API_KEY="$(${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.TYPESAFE_API_KEY.path} 2>/dev/null)"; then
+          export TYPESAFE_API_KEY
+        else
+          unset TYPESAFE_API_KEY
+        fi
+      fi
+
       if [ -n "''${CAPTURE_PROMPTS:-}" ] && [ "''${CAPTURE_PROMPTS:-}" != "0" ]; then
         # Accept only authority spellings unchanged by WHATWG URL parsing.
         # Other forms disable bus participation for capture, never rewrite the

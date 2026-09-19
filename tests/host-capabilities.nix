@@ -8,31 +8,31 @@ let
     "william@relay" = william-darwin;
     william = {
       role = "legacy";
-      secrets = 53;
+      secrets = 54;
     };
     william-linux = {
       role = "legacy";
-      secrets = 53;
+      secrets = 54;
     };
     william-darwin = {
       role = "automation";
-      secrets = 32;
+      secrets = 33;
     };
     "william@foundation" = {
       role = "workstation";
-      secrets = 53;
+      secrets = 54;
     };
     "william@andromeda" = {
       role = "workstation";
-      secrets = 53;
+      secrets = 54;
     };
     "william@starfish" = {
       role = "legacy";
-      secrets = 53;
+      secrets = 54;
     };
     "william@terminus" = {
       role = "nas";
-      secrets = 12;
+      secrets = 13;
     };
   };
   inspect =
@@ -70,6 +70,7 @@ let
       && c.sops.secrets ? GPG_SIGNING_PRIVATE_KEY
       && c.sops.secrets ? LOCAL_LLM_RELAY_API_KEY
       && c.sops.secrets ? LOCAL_LLM_ANDROMEDA_API_KEY
+      && c.sops.secrets ? TYPESAFE_API_KEY
     ) "Pi/Git credentials missing";
     assert require (
       has ".agents/skills/systematic-debugging" && has ".agents/skills/local-dev-environment"

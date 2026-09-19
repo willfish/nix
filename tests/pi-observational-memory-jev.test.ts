@@ -54,4 +54,6 @@ test('pi-observational-memory-jev ships Jev observational memory with Alvar /om 
   const nix = readFileSync(join(root, '../../../../user/pi.nix'), 'utf8');
   assert.match(nix, /pi-observational-memory-jev/);
   assert.match(nix, /Not a chat model/);
+  assert.match(nix, /TYPESAFE_API_KEY/);
+  assert.match(nix, /config\.sops\.secrets\.TYPESAFE_API_KEY\.path/);
 });

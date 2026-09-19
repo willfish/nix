@@ -35,6 +35,9 @@ def wrapper_text(
         "${lib.escapeShellArg config.sops.secrets.PI_AGENT_BUS_TOKEN.path}": (
             "'/synthetic/secret'"
         ),
+        "${lib.escapeShellArg config.sops.secrets.TYPESAFE_API_KEY.path}": (
+            "'/synthetic/typesafe'"
+        ),
         "${pkgs.python3}/bin/python3": shlex.quote(
             str(python or sys.executable)
         ),
@@ -66,7 +69,7 @@ class WrapperTests(unittest.TestCase):
         self.secret = self.script(
             "secret",
             """#!/usr/bin/env bash
-printf 'read\\n' >> "$HOME/reads"
+printf '%s\\n' "$1" >> "$HOME/reads"
 printf 'synthetic-helper-token'
 printf 'synthetic-helper-error' >&2
 exit "${SECRET_STATUS:-0}"
@@ -127,8 +130,9 @@ exec "$@"
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stderr, "")
         reads = self.root / "reads"
-        count = len(reads.read_text().splitlines()) if reads.exists() else 0
+        paths = reads.read_text().splitlines() if reads.exists() else []
         reads.unlink(missing_ok=True)
+        count = sum(1 for path in paths if path == "/synthetic/secret")
         return json.loads(result.stdout), count
 
     def test_operator_defaults_and_explicit_overrides(self):
@@ -424,6 +428,7 @@ if os.environ.get("MCP_TEST_HOME"):
             self.assertEqual(wrapper.count(str(raw_package / "bin/pi")), 2)
             self.assertIn("read-sops-secret", wrapper)
             self.assertIn("PI_AGENT_BUS_TOKEN", wrapper)
+            self.assertIn("TYPESAFE_API_KEY", wrapper)
             self.assertNotIn("pi install", wrapper)
 
 
