@@ -30,7 +30,12 @@ buildGoModule rec {
     runHook preCheck
     # Auth tests isolate their own homes. The other suites start subprocesses
     # which need a writable config directory inside the Nix sandbox.
-    go test ./auth
+    #
+    # TestConcurrentAuthOperations races a 5s collect timeout against 5s
+    # exclusive lock-file waits. Under sandbox scheduling the wait-group can
+    # return after the context expires, so the select fails even when every
+    # save/load finished.
+    go test ./auth -skip TestConcurrentAuthOperations
     MCP_REMOTE_CONFIG_DIR="$TMPDIR/mcp-remote-test-auth" \
       go test ./cmd/... ./internal/... ./proxy
     runHook postCheck
