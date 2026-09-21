@@ -130,9 +130,9 @@ test('real Pi frontmatter discovery retains strict skills and existing permissiv
   };
   const expectedLaunch = {
     architect: { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
-    builder: { model: 'xai/grok-4.6', thinking: 'medium' },
+    builder: { model: 'xai/grok-4.7', thinking: 'medium' },
     sceptic: { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
-    'test-engineer': { model: 'xai/grok-4.6', thinking: 'medium' },
+    'test-engineer': { model: 'xai/grok-4.7', thinking: 'medium' },
     'security-reviewer': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
     'domain-specialist': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
   };

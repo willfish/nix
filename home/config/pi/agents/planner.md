@@ -2,7 +2,7 @@
 name: planner
 description: Creates implementation plans from context and requirements
 tools: read, grep, find, ls, skill_catalog
-model: xai/grok-4.6
+model: xai/grok-4.7
 thinking: medium
 ---
 

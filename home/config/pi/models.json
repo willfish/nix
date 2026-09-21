@@ -44,6 +44,46 @@
         }
       ]
     },
+    "xai": {
+      "models": [
+        {
+          "id": "grok-4.7",
+          "name": "Grok 4.7",
+          "api": "openai-responses",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": null,
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": null
+          },
+          "input": ["text", "image"],
+          "contextWindow": 500000,
+          "maxTokens": 500000,
+          "cost": {
+            "input": 2,
+            "output": 6,
+            "cacheRead": 0.5,
+            "cacheWrite": 0,
+            "tiers": [
+              {
+                "inputTokensAbove": 200000,
+                "input": 4,
+                "output": 12,
+                "cacheRead": 1,
+                "cacheWrite": 0
+              }
+            ]
+          },
+          "compat": {
+            "supportsLongCacheRetention": false
+          }
+        }
+      ]
+    },
     "openai-codex": {
       "models": [
         {

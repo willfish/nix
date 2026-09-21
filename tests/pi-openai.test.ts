@@ -21,6 +21,19 @@ test('Astra registry ships only the ChatGPT subscription route', () => {
   assert.equal(model.thinkingLevelMap.xhigh, 'xhigh');
   assert.ok(model.contextWindow >= 272000);
 });
+test('xAI registry adds Grok 4.7 on the built-in subscription provider', () => {
+  const { providers } = JSON.parse(readFileSync(modelsPath));
+  assert.equal(providers.xai.apiKey, undefined);
+  const model = providers.xai.models.find(m => m.id === 'grok-4.7');
+  assert.ok(model);
+  assert.equal(model.api, 'openai-responses');
+  assert.equal(model.reasoning, true);
+  assert.equal(model.thinkingLevelMap.off, null);
+  assert.equal(model.thinkingLevelMap.minimal, null);
+  assert.equal(model.thinkingLevelMap.xhigh, 'xhigh');
+  assert.equal(model.compat.supportsLongCacheRetention, false);
+  assert.equal(model.contextWindow, 500000);
+});
 test('Tailscale Qwen providers are selectable without embedding keys', () => {
   const { providers } = JSON.parse(readFileSync(modelsPath));
   const relay = providers.relay;
@@ -46,7 +59,7 @@ test('Tailscale Qwen providers are selectable without embedding keys', () => {
 test('Pi settings defaults enable quiet startup without clobbering user keys', () => {
   const defaults = JSON.parse(readFileSync(new URL('../home/config/pi/settings-defaults.json', import.meta.url)));
   assert.equal(defaults.defaultProvider, 'xai');
-  assert.equal(defaults.defaultModel, 'grok-4.6');
+  assert.equal(defaults.defaultModel, 'grok-4.7');
   assert.equal(defaults.quietStartup, true);
   assert.equal(defaults.editorPaddingX, 1);
   const keybindings = JSON.parse(readFileSync(new URL('../home/config/pi/keybindings-defaults.json', import.meta.url)));

@@ -33,7 +33,7 @@ class PiSettingsDefaultsTest(unittest.TestCase):
     def test_declared_defaults_include_quiet_startup(self):
         defaults = json.loads(DEFAULTS.read_text())
         self.assertEqual(defaults["defaultProvider"], "xai")
-        self.assertEqual(defaults["defaultModel"], "grok-4.6")
+        self.assertEqual(defaults["defaultModel"], "grok-4.7")
         self.assertEqual(defaults["quietStartup"], True)
         self.assertEqual(defaults["editorPaddingX"], 1)
         keybindings = json.loads(KEYBINDINGS.read_text())
@@ -42,11 +42,23 @@ class PiSettingsDefaultsTest(unittest.TestCase):
     def test_creates_settings_when_missing(self):
         merged = self.run_merge()
         self.assertEqual(merged["defaultProvider"], "xai")
-        self.assertEqual(merged["defaultModel"], "grok-4.6")
+        self.assertEqual(merged["defaultModel"], "grok-4.7")
         self.assertEqual(merged["quietStartup"], True)
         self.assertEqual(merged["editorPaddingX"], 1)
         mode = stat.S_IMODE(self.settings.stat().st_mode)
         self.assertEqual(mode, 0o600)
+
+    def test_migrates_grok_4_6_default_to_grok_4_7(self):
+        self.settings.parent.mkdir(parents=True)
+        self.settings.write_text(
+            json.dumps({
+                "defaultProvider": "xai",
+                "defaultModel": "grok-4.6",
+            }) + "\n"
+        )
+        merged = self.run_merge()
+        self.assertEqual(merged["defaultModel"], "grok-4.7")
+        self.assertEqual(merged["defaultProvider"], "xai")
 
     def test_fills_only_missing_keys(self):
         self.settings.parent.mkdir(parents=True)

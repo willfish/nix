@@ -1,7 +1,7 @@
 ---
 name: worker
 description: General-purpose subagent with full capabilities, isolated context
-model: xai/grok-4.6
+model: xai/grok-4.7
 thinking: medium
 ---
 

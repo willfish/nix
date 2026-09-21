@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Fill missing keys in a writable Pi settings.json from declared defaults."""
+"""Fill missing keys in a writable Pi settings.json from declared defaults.
+
+Also retarget a leftover grok-4.6 defaultModel to grok-4.7 so existing
+profiles pick up the current Grok default without clobbering other keys.
+"""
 from __future__ import annotations
 
 import json
@@ -15,6 +19,12 @@ def merge_missing(defaults: dict, settings: dict) -> tuple[dict, bool]:
         if key not in merged:
             merged[key] = value
             changed = True
+    if (
+        merged.get("defaultModel") == "grok-4.6"
+        and defaults.get("defaultModel") == "grok-4.7"
+    ):
+        merged["defaultModel"] = "grok-4.7"
+        changed = True
     return merged, changed
 
 

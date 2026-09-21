@@ -12,11 +12,11 @@ import {
 const personaDir = fileURLToPath(new URL('../home/config/pi/agents/', import.meta.url));
 
 const ROLE_LAUNCH = {
-  scout: { model: 'xai/grok-4.6', thinking: 'low' },
-  planner: { model: 'xai/grok-4.6', thinking: 'medium' },
-  worker: { model: 'xai/grok-4.6', thinking: 'medium' },
-  builder: { model: 'xai/grok-4.6', thinking: 'medium' },
-  'test-engineer': { model: 'xai/grok-4.6', thinking: 'medium' },
+  scout: { model: 'xai/grok-4.7', thinking: 'low' },
+  planner: { model: 'xai/grok-4.7', thinking: 'medium' },
+  worker: { model: 'xai/grok-4.7', thinking: 'medium' },
+  builder: { model: 'xai/grok-4.7', thinking: 'medium' },
+  'test-engineer': { model: 'xai/grok-4.7', thinking: 'medium' },
   architect: { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
   sceptic: { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
   reviewer: { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
@@ -34,32 +34,32 @@ test('thinking levels accept YAML off and reject malformed values', () => {
 });
 
 test('launch config prefers orchestrator override, then role, then session', () => {
-  const agent = { model: 'xai/grok-4.6', thinking: 'medium' };
+  const agent = { model: 'xai/grok-4.7', thinking: 'medium' };
   const session = { model: 'session/default', thinkingLevel: 'low' };
   assert.deepEqual(
     resolveLaunchConfig(agent, { model: 'openai-codex/gpt-6-astra', thinking: 'high' }, session),
     { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
   );
   assert.deepEqual(resolveLaunchConfig(agent, { thinking: 'xhigh' }, session), {
-    model: 'xai/grok-4.6', thinking: 'xhigh',
+    model: 'xai/grok-4.7', thinking: 'xhigh',
   });
   assert.deepEqual(resolveLaunchConfig(agent, { model: 'openai-codex/gpt-6-astra' }, session), {
     model: 'openai-codex/gpt-6-astra', thinking: 'medium',
   });
   assert.deepEqual(resolveLaunchConfig(agent, {}, session), {
-    model: 'xai/grok-4.6', thinking: 'medium',
+    model: 'xai/grok-4.7', thinking: 'medium',
   });
   assert.deepEqual(resolveLaunchConfig({}, {}, session), {
     model: 'session/default', thinking: 'low',
   });
-  assert.deepEqual(resolveLaunchConfig({ model: 'xai/grok-4.6' }, {}, session), {
-    model: 'xai/grok-4.6', thinking: 'low',
+  assert.deepEqual(resolveLaunchConfig({ model: 'xai/grok-4.7' }, {}, session), {
+    model: 'xai/grok-4.7', thinking: 'low',
   });
 });
 
 test('launch flags pass model and thinking independently', () => {
-  assert.deepEqual(agentLaunchFlags({ model: 'xai/grok-4.6', thinking: 'high' }), [
-    '--model', 'xai/grok-4.6', '--thinking', 'high',
+  assert.deepEqual(agentLaunchFlags({ model: 'xai/grok-4.7', thinking: 'high' }), [
+    '--model', 'xai/grok-4.7', '--thinking', 'high',
   ]);
   assert.deepEqual(agentLaunchFlags({ model: 'openai-codex/gpt-6-astra' }), [
     '--model', 'openai-codex/gpt-6-astra',
@@ -68,7 +68,7 @@ test('launch flags pass model and thinking independently', () => {
   assert.deepEqual(agentLaunchFlags({}), []);
 });
 
-test('every team role pins grok 4.6 or Astra with a thinking level', () => {
+test('every team role pins grok 4.7 or Astra with a thinking level', () => {
   const files = readdirSync(personaDir).filter(name => name.endsWith('.md'));
   assert.deepEqual(files.map(name => name.replace(/\.md$/, '')).sort(), Object.keys(ROLE_LAUNCH).sort());
   for (const file of files) {
