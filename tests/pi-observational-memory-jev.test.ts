@@ -3,6 +3,11 @@ import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import {
+  formatObservationLine,
+  formatObservationMarkdown,
+  htmlToMarkdown,
+} from '../home/config/pi/extensions/pi-observational-memory-jev/ledger/html-markdown.ts';
 
 const root = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -60,4 +65,35 @@ test('pi-observational-memory-jev ships Jev observational memory with Alvar /om 
   const defaults = readFileSync(join(root, '../../settings-defaults.json'), 'utf8');
   assert.match(defaults, /observational-memory-jev/);
   assert.match(defaults, /enabledByDefault/);
+});
+
+test('html excerpts become markdown the compaction card can render', () => {
+  assert.equal(
+    htmlToMarkdown('## <span colorid="z0pxrn9bl1">“other” question responses</span>'),
+    '## **“other” question responses**',
+  );
+  assert.equal(htmlToMarkdown('<span><strong>Metric</strong></span>'), '**Metric**');
+
+  const table = htmlToMarkdown(
+    '<table class="confluenceTable"><tbody><tr><th><p><strong>Metric</strong></p></th><th>Value</th></tr><tr><td>clicks</td><td>12</td></tr></tbody></table>',
+  );
+  assert.match(table, /\| \*\*Metric\*\* \| Value \|/);
+  assert.match(table, /\| --- \| --- \|/);
+  assert.match(table, /\| clicks \| 12 \|/);
+
+  const content =
+    '## <span colorid="z0pxrn9bl1">“other” question responses are leading to bad user experiences</span>';
+  assert.equal(
+    formatObservationMarkdown('2026-09-21T16:10:00.01', 'hypothesis', content),
+    '### [hypothesis] · 2026-09-21T16:10:00.01\n\n## **“other” question responses are leading to bad user experiences**',
+  );
+  assert.equal(
+    formatObservationLine('2026-09-21T16:10:00.01', 'hypothesis', content),
+    '2026-09-21T16:10:00.01  [hypothesis] ## **“other” question responses are leading to bad user experiences**',
+  );
+
+  const render = read('ledger/render.ts');
+  assert.match(render, /observationToMarkdown/);
+  assert.match(render, /formatObservationMarkdown/);
+  assert.match(render, /## Observations/);
 });

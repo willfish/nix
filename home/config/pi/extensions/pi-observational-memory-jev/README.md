@@ -127,12 +127,19 @@ Footer gauges when on: observer progress `O`, consolidator pool `C`, context
 
 ![Pipeline from session history through Jev to a verbatim ledger, model-free compaction, and durable topic files](docs/diagrams/pipeline.svg)
 
-Compaction prints lines like this, not a rewritten paragraph:
+Compaction prints scored observations, not a rewritten paragraph. Expand the
+card with Ctrl+O to read them. HTML excerpts (Confluence spans, tables,
+headings) render as Markdown so headings, tables, and emphasis show as formatted
+text instead of raw tags:
 
-```text
-2026-03-18T16:02:11Z  [constraint] Rails app code must not explicitly require autoloadable constants
-2026-03-18T16:41:08Z  [decision] Use direnv exec for this checkout rather than a global Node
-2026-03-18T17:05:44Z  [correction] The failing spec was a factory default, not the calculator
+```markdown
+### [constraint] · 2026-03-18T16:02:11Z
+
+Rails app code must not explicitly require autoloadable constants
+
+### [decision] · 2026-03-18T16:41:08Z
+
+Use direnv exec for this checkout rather than a global Node
 ```
 
 | Rolled back by `/tree` | Not rolled back |
