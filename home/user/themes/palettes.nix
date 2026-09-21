@@ -49,16 +49,16 @@ in
         "524f67"
         "a7a3bf"
         "e0def4"
-        "e0def4"
+        "f2e9f8"
         "e0def4"
         "eb6f92"
         "ebbcba"
         "f6c177"
         "9ccfd8"
-        "9ccfd8"
+        "7eb8c9"
         "c4a7e7"
-        "c4a7e7"
-        "ebbcba"
+        "b794d4"
+        "e08a9a"
       ]
       [
         "f3ebdf"
@@ -75,7 +75,7 @@ in
         "34685d"
         "286477"
         "714d87"
-        "714d87"
+        "5c3d72"
         "94435c"
       ];
   foundation =

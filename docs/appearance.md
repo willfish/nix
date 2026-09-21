@@ -76,6 +76,7 @@ appearance reports; older multiplexers may require a restart or an explicit Pi
 - COSMIC owns GTK/Qt exports on graphical Linux. Fixed Stylix GTK, Qt and KDE
   overrides are disabled there to avoid conflicting colour sources.
 - Fish uses terminal ANSI roles, with no shell-emitted palette overrides.
+- Git delta uses terminal ANSI green and red for hunks and does not pin a delta theme or light/dark mode. Detection follows the terminal.
 - Neovim uses the same palettes, following its detected `background` option.
   `:set background=light` or `:set background=dark` is an explicit fallback when a
   terminal does not update background detection.

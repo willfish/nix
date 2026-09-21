@@ -1,6 +1,41 @@
 { lib }:
 let
   hex = p: lib.mapAttrs (_: c: "#${c}") p;
+  hexDigits = lib.stringToCharacters "0123456789abcdef";
+  hexValue = lib.listToAttrs (
+    lib.imap0 (index: digit: {
+      name = digit;
+      value = index;
+    }) hexDigits
+  );
+  fromHex =
+    text:
+    lib.foldl' (acc: digit: acc * 16 + hexValue.${lib.toLower digit}) 0 (lib.stringToCharacters text);
+  toHex2 = value: "${lib.elemAt hexDigits (value / 16)}${lib.elemAt hexDigits (lib.mod value 16)}";
+  # 35% toward the target. Integer division is the contract checked by tests.
+  mix =
+    source: target:
+    lib.concatMapStrings
+      (
+        offset:
+        let
+          current = fromHex (lib.substring offset 2 source);
+          destination = fromHex (lib.substring offset 2 target);
+        in
+        toHex2 (current + (35 * (destination - current)) / 100)
+      )
+      [
+        0
+        2
+        4
+      ];
+  channelSum =
+    colour:
+    lib.foldl' (acc: offset: acc + fromHex (lib.substring offset 2 colour)) 0 [
+      0
+      2
+      4
+    ];
 in
 {
   herdr =
@@ -34,6 +69,10 @@ in
     p:
     let
       c = hex p;
+      # The renderer sees one palette, not a mode flag. Light paper is lighter
+      # than its text; dark paper is darker than its text.
+      brightTarget = if channelSum p.base00 > channelSum p.base05 then p.base07 else p.base05;
+      bright = colour: "#${mix colour brightTarget}";
     in
     ''
       background = ${c.base00}
@@ -53,12 +92,12 @@ in
           c.base0C
           c.base05
           c.base04
-          c.base08
-          c.base0B
-          c.base0A
-          c.base0D
-          c.base0E
-          c.base0C
+          (bright p.base08)
+          (bright p.base0B)
+          (bright p.base0A)
+          (bright p.base0D)
+          (bright p.base0E)
+          (bright p.base0C)
           c.base06
         ]
       )}
@@ -126,8 +165,8 @@ in
         thinkingLow = c.base0C;
         thinkingMedium = c.base0D;
         thinkingHigh = c.base0E;
-        thinkingXhigh = c.base0E;
-        thinkingMax = c.base0E;
+        thinkingXhigh = c.base08;
+        thinkingMax = c.base09;
         bashMode = c.base0A;
       };
       export = {

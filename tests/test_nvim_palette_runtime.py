@@ -25,8 +25,8 @@ class NvimPaletteRuntimeTest(unittest.TestCase):
             palettes.write_text(
                 json.dumps(
                     {
-                        "dark": {"base00": "#112233"},
-                        "light": {"base00": "#ddeeff"},
+                        "dark": {"base00": "#112233", "base0D": "#445566"},
+                        "light": {"base00": "#ddeeff", "base0D": "#778899"},
                     }
                 )
             )
@@ -45,23 +45,36 @@ local path = vim.fn.stdpath("config") .. "/host-palettes.json"
 local function background()
   return vim.api.nvim_get_hl(0, {{name="Normal"}}).bg
 end
+local function arrow()
+  return vim.api.nvim_get_hl(0, {{name="NvimTreeFolderArrowClosed"}}).fg
+end
 module.setup()
 assert(background() == 0x112233)
+assert(arrow() == 0x445566)
 vim.wait(200, function() return false end)
 for _, colour in ipairs({{0x223344, 0x334455}}) do
   local palette = {{
-    dark={{base00=string.format("#%06x", colour)}},
-    light={{base00="#ddeeff"}}
+    dark={{base00=string.format("#%06x", colour), base0D="#445566"}},
+    light={{base00="#ddeeff", base0D="#778899"}}
   }}
   vim.fn.writefile({{vim.json.encode(palette)}}, path .. ".new")
   assert(vim.uv.fs_rename(path .. ".new", path))
   assert(vim.wait(3500, function() return background() == colour end),
     "palette did not reload")
 end
+local arrow_palette = {{
+  dark={{base00="#334455", base0D="#123456"}},
+  light={{base00="#ddeeff", base0D="#778899"}}
+}}
+vim.fn.writefile({{vim.json.encode(arrow_palette)}}, path .. ".new")
+assert(vim.uv.fs_rename(path .. ".new", path))
+assert(vim.wait(3500, function() return arrow() == 0x123456 end),
+  "arrow colour did not reload")
 vim.o.background = "light"
 -- OptionSet is suppressed during startup, so explicitly emit the event.
 vim.api.nvim_exec_autocmds("OptionSet", {{pattern="background"}})
 assert(background() == 0xddeeff)
+assert(arrow() == 0x778899)
 local old = module.watcher
 module.setup()
 assert(old:is_closing(), "setup leaked a watcher")

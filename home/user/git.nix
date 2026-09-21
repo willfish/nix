@@ -301,9 +301,11 @@ in
 
       delta = {
         navigate = true;
-        light = false;
         features = "line-numbers decorations";
-        theme = "Github";
+        # Named ANSI colours follow Ghostty. Do not pin light or theme:
+        # delta ignores terminal detection when either is set.
+        "plus-style" = "syntax green";
+        "minus-style" = "syntax red";
       };
 
       alias = {

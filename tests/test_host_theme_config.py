@@ -50,6 +50,17 @@ class HostThemeConfigTest(unittest.TestCase):
                 )
                 self.assertIn('"$@"', profile["pi"])
 
+    def test_delta_follows_terminal_palette(self):
+        for name, profile in self.profiles.items():
+            with self.subTest(profile=name):
+                delta = profile["delta"]
+                self.assertTrue(delta["navigate"])
+                self.assertEqual(delta["features"], "line-numbers decorations")
+                self.assertNotIn("light", delta)
+                self.assertNotIn("theme", delta)
+                self.assertEqual(delta["plus-style"], "syntax green")
+                self.assertEqual(delta["minus-style"], "syntax red")
+
     def test_headless_mac_omits_ghostty_but_preserves_linux_palettes(self):
         for name, profile in self.profiles.items():
             with self.subTest(profile=name):

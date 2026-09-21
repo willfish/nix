@@ -147,9 +147,12 @@ vim.api.nvim_create_autocmd("User", {
 			"nvim-notify",
 			"noice.nvim",
 		})
-		require("notify").setup({
-			background_colour = "#000000",
-		})
+		local notify_opts = {}
+		local notify_background = require("host-theme").background()
+		if notify_background then
+			notify_opts.background_colour = notify_background
+		end
+		require("notify").setup(notify_opts)
 		noice.setup({
 			notify = {
 				view = "notify",
@@ -238,8 +241,6 @@ local function setup_nvim_tree()
 		"nvim-web-devicons",
 		"nvim-tree.lua",
 	})
-	vim.cmd([[ highlight NvimTreeFolderArrowClosed guifg=#3FC5FF ]])
-	vim.cmd([[ highlight NvimTreeFolderArrowOpen guifg=#3FC5FF ]])
 	nvimtree.setup({
 		filters = {
 			custom = { ".DS_Store" },
