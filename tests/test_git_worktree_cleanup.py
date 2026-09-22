@@ -16,6 +16,27 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+class GitSshIdentityTest(unittest.TestCase):
+    def test_git_uses_only_the_default_account_key(self):
+        git = (ROOT / "home/user/git.nix").read_text()
+        env = (ROOT / "home/user/environment.nix").read_text()
+        self.assertIn("IdentitiesOnly=yes", git)
+        self.assertIn(
+            "IdentityFile=${config.home.homeDirectory}/.ssh/id_ed25519",
+            git,
+        )
+        self.assertIn(
+            "home.sessionVariables.GIT_SSH_COMMAND = gitSshCommand",
+            git,
+        )
+        self.assertIn("systemd.user.services.ssh-add-default", git)
+        self.assertIn(
+            'ExecStart = "${pkgs.openssh}/bin/ssh-add"',
+            git,
+        )
+        self.assertNotIn("GIT_SSH_COMMAND", env)
+
+
 class GitWorktreeCleanupTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="git-cleanup-test-")

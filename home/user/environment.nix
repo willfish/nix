@@ -20,13 +20,6 @@ in
   home.sessionVariables = {
     EDITOR = "nvim";
     GIT_PAGER = "delta";
-    # Work around ssh client rejecting Nix store ssh_config snippets
-    # (e.g. systemd's 20-systemd-ssh-proxy.conf owned by nobody:0444).
-    # Without this, git@github.com operations fail with "Bad owner or
-    # permissions". -F /dev/null (or "none") skips all config files
-    # (safe here since no ~/.ssh/config is managed). Affects git pull/push
-    # etc. via GIT_SSH_COMMAND.
-    GIT_SSH_COMMAND = "ssh -F /dev/null";
     LESS = "-R";
     MANPAGER = "nvim +Man!";
     MUX_BACKEND = "herdr";

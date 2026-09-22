@@ -2,9 +2,18 @@
   config,
   lib,
   pkgs,
+  isGraphicalLinux,
   ...
 }:
 let
+  # -F /dev/null skips Nix store ssh_config.d snippets with bad ownership.
+  # IdentitiesOnly keeps git on the default account key, not whichever key
+  # the agent happens to offer first.
+  gitSshCommand = lib.concatStringsSep " " [
+    "ssh -F /dev/null"
+    "-o IdentitiesOnly=yes"
+    "-o IdentityFile=${config.home.homeDirectory}/.ssh/id_ed25519"
+  ];
   gitWithWorktreeDirenv = pkgs.writeShellScriptBin "git" ''
     set -euo pipefail
 
@@ -249,11 +258,7 @@ in
         excludesfile = "~/.gitignore_global";
         fsmonitor = true;
         untrackedCache = true;
-        # Permanent equivalent of GIT_SSH_COMMAND workaround for the
-        # "Bad owner or permissions" error on Nix store ssh_config.d files
-        # (e.g. systemd-ssh-proxy.conf). -F /dev/null skips broken system
-        # configs (no ~/.ssh/config is present anyway).
-        sshCommand = "ssh -F /dev/null";
+        sshCommand = gitSshCommand;
       };
 
       push = {
@@ -323,6 +328,26 @@ in
           required = true;
         };
       };
+    };
+  };
+
+  home.sessionVariables.GIT_SSH_COMMAND = gitSshCommand;
+
+  # gcr-ssh-agent starts empty after reboot and does not store keys.
+  # ssh-add with no arguments loads only the default identity.
+  systemd.user.services.ssh-add-default = lib.mkIf isGraphicalLinux {
+    Unit = {
+      Description = "Load the default SSH key into the session agent";
+      After = [ "gcr-ssh-agent.socket" ];
+      Wants = [ "gcr-ssh-agent.socket" ];
+      ConditionPathExists = "/etc/systemd/user/gcr-ssh-agent.socket";
+    };
+    Install.WantedBy = [ "default.target" ];
+    Service = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      Environment = [ "SSH_AUTH_SOCK=%t/gcr/ssh" ];
+      ExecStart = "${pkgs.openssh}/bin/ssh-add";
     };
   };
 }
