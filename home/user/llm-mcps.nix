@@ -40,6 +40,11 @@ rec {
         wrapper = "mcp-nixos";
       }
       {
+        name = "filesystem";
+        enabled = true;
+        wrapper = "mcp-filesystem";
+      }
+      {
         name = "dap";
         enabled = config.dotfiles.capabilities.development;
         wrapper = "mcp-dap";

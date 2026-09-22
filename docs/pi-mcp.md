@@ -11,6 +11,7 @@ the shared MCP server configuration:
 | Browser Playwright | `mcp-brave` |
 | Terraform | `mcp-terraform` |
 | NixOS | `mcp-nixos` |
+| Filesystem | `mcp-filesystem` |
 | DAP debugger | `mcp-dap` |
 | Slack | `mcp-slack` |
 
@@ -19,6 +20,12 @@ use `/reload` in an existing plain Pi session. The browser servers require
 the configured Brave browser to be running with CDP on port 9222. Authenticated
 servers use local sops secrets or session credentials through their wrappers.
 No credentials are copied into Pi's configuration.
+
+`mcp-filesystem` is the official `@modelcontextprotocol/server-filesystem`
+package from nixpkgs. It is registered on every host. The wrapper allows the
+home directory and `/tmp`, both read-write, including secrets under home. Its
+search matches file names, not file contents. Use ripgrep for content search.
+Paths outside those roots, including `/nix/store` and `/srv`, are refused.
 
 `mcp-dap` is a compiled Go server from the Delve project. It is registered only
 on development homes. It can spawn debuggees and evaluate expressions in them,
