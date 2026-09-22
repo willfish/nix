@@ -74,6 +74,8 @@ test('Pi settings defaults enable quiet startup without clobbering user keys', (
   assert.match(pi, /--drop openai/);
   assert.match(pi, /PI_OPENAI_CODEX_REFRESH/);
   assert.match(pi, /extensions\/goal\.ts/);
+  assert.match(pi, /extensions\/hidden-models\.ts/);
+  assert.match(pi, /hidden-models\.json/);
   assert.match(pi, /--drop opencode/);
   assert.doesNotMatch(pi, /extensions\/astra-subscription\.js/);
   const appearance = readFileSync(new URL('../home/user/appearance.nix', import.meta.url), 'utf8');

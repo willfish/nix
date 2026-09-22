@@ -126,6 +126,9 @@ in
   # OpenCode Zen is omitted on purpose: its Astra entry looks like ChatGPT
   # subscription Astra and 401s with this account.
   home.file.".pi/agent/models.json".source = piModelsJson;
+  # OpenCode console-disabled ids stay out of /model for Go and OpenRouter.
+  home.file.".pi/agent/hidden-models.json".source = ../config/pi/hidden-models.json;
+  home.file.".pi/agent/extensions/hidden-models.ts".source = ../config/pi/extensions/hidden-models.ts;
   home.file.".pi/agent/extensions/pi-qwen.ts".source = ../config/local-llm/pi-qwen.ts;
 
   home.file.".pi/agent/extensions/pi-voice.ts" = lib.mkIf voiceFeatures.stt {

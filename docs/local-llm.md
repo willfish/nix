@@ -285,8 +285,9 @@ Home Manager activation seeds `openai-codex` OAuth into `auth.json` when that
 provider is missing or is still an API key, and removes a leftover `openai` API
 key. Existing OAuth on a host is left alone so token refresh keeps working.
 OpenCode Zen is not attached, so it does not appear in `/model`. OpenCode Go
-and OpenRouter remain. After `hmswitch`, other hosts can use Astra without a
-browser login:
+and OpenRouter remain; models turned off in the OpenCode console stay hidden in
+both catalogs. After `hmswitch`, other hosts can use Astra without a browser
+login:
 
 ```sh
 pi --provider openai-codex --model gpt-6-astra --thinking medium
