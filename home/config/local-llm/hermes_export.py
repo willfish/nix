@@ -14,6 +14,7 @@ MANAGED_SCRIPTS = {
     "hmrc-vat-messages-check.sh",
     "hmrc-vat-messages-telegram.sh",
     "weekly-hermes-update.sh",
+    "mac-studio-512-check.sh",
     "apply-house-telegram.py",
 }
 
