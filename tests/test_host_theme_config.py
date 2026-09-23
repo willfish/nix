@@ -76,7 +76,6 @@ class HostThemeConfigTest(unittest.TestCase):
             )
             with self.subTest(profile=name):
                 self.assertEqual(profile["graphical"], graphical)
-                self.assertFalse(profile["cosmicModeManaged"])
                 self.assertFalse(profile["stylixAutoEnable"])
                 self.assertFalse(profile["gtkFixed"])
                 self.assertEqual(profile["gtkEnable"], graphical)
@@ -106,7 +105,6 @@ class HostThemeConfigTest(unittest.TestCase):
                     set(catalogue["palettes"]), set(profile["paletteNames"])
                 )
                 self.assertIn("theme-menu --reapply", profile["reapply"])
-                self.assertNotIn("cosmic", profile["reapply"].lower())
                 self.assertIn(
                     "/theme-menu/active/host-light.json", profile["pi"]
                 )
@@ -128,7 +126,6 @@ class HostThemeConfigTest(unittest.TestCase):
                     self.assertIn("width=55", voice)
                     self.assertIn("lines=10", voice)
                 for palette in catalogue["palettes"].values():
-                    self.assertNotIn("cosmic", palette)
                     self.assertIn(palette["nativeMode"], ("light", "dark"))
                     self.assertEqual(
                         set(palette["files"]),

@@ -88,10 +88,9 @@ precedence. Remote hosts retain their own palettes.
   When desktop publishing is enabled and `/var/lib/desktop-theme/william`
   already exists, the menu overwrites that regular file in place with the
   selected theme ID. A missing file is ignored. A symlink or non-regular path
-  is left unchanged. A leftover GTK CSS symlink to the old `gtk-4.0/cosmic`
-  stylesheet is replaced once; other CSS links are kept.
+  is left unchanged. GTK CSS symlinks and their targets are preserved.
 
 Fixed Stylix overrides remain disabled for shared consumers. Custom GTK CSS and
-unrelated symlinks are preserved rather than overwritten. Other Stylix targets,
+symlinks are preserved rather than overwritten. Other Stylix targets,
 macOS and headless hosts retain their declarative palette rather than following
 the graphical Linux menu. See [Hyprland](hyprland.md) for session controls.

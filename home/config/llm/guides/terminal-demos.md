@@ -65,7 +65,7 @@ agg demo.cast demo.gif --font-size 14 --speed 1
 
 Use this when the demo needs to show herdr panes, vim, htop, or other TUI applications that asciinema cannot capture.
 
-**Why not wf-recorder?** It requires wlroots protocols (Sway, Hyprland). For COSMIC, GNOME, KDE, use gpu-screen-recorder which works via xdg-desktop-portal.
+**Why not wf-recorder?** It requires wlroots protocols (Sway, Hyprland). For GNOME and KDE, use gpu-screen-recorder which works via xdg-desktop-portal.
 
 **1. Create a recording script (`demo/record-demo.sh`):**
 

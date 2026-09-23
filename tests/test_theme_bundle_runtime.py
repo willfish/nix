@@ -48,7 +48,6 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
                 with self.subTest(palette=key):
                     controller.apply(key)
                     self.assertEqual(controller.selection(), key)
-                    self.assertNotIn("cosmic", palette)
                     self.assertEqual(
                         (root / "state/mode").read_text().strip(),
                         palette["nativeMode"],
@@ -62,7 +61,6 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
                         (root / "state/active/herdr.toml").read_text()
                     )
                     self.assertEqual(herdr["theme"], palette["herdrTheme"])
-                    self.assertFalse((root / "config/cosmic").exists())
                     for mode_name in ("light", "dark"):
                         result = subprocess.run(
                             [

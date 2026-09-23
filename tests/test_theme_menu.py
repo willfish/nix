@@ -67,13 +67,12 @@ class ThemeMenuTest(unittest.TestCase):
         self.controller.apply("default")
         self.assertFalse((self.state / "selection").exists())
 
-    def test_apply_preserves_state_mode_and_does_not_write_cosmic(self):
+    def test_apply_preserves_state_mode(self):
         mode = self.state / "mode"
         mode.parent.mkdir(parents=True)
         mode.write_text("light\n")
         self.controller.apply("rose-pine")
         self.assertEqual(mode.read_text(), "light\n")
-        self.assertFalse((self.config / "cosmic").exists())
 
     def test_invalid_selection_and_missing_bundle_do_not_write(self):
         for invalid in ("../outside", "unknown"):
@@ -108,25 +107,19 @@ class ThemeMenuTest(unittest.TestCase):
             (self.state / "active/host-palettes.json").read_text(),
         )
 
-    def test_replaces_legacy_cosmic_gtk_link_without_writing_store_target(self):
+    def test_preserves_gtk_links_without_writing_store_target(self):
         source = self.state / "active/gtk.css"
         source.parent.mkdir(parents=True)
         source.write_bytes(b"/* Shared GTK and Brave colours and fonts */\n")
         store = self.root / "store-dark.css"
         store.write_text("store")
-        cosmic = self.config / "gtk-4.0/cosmic"
-        cosmic.mkdir(parents=True)
-        (cosmic / "dark.css").write_text("cosmic")
-        dest = self.config / "gtk-4.0/gtk.css"
-        dest.symlink_to(cosmic / "dark.css")
-        unrelated = self.config / "gtk-3.0/gtk.css"
-        unrelated.parent.mkdir(parents=True)
-        unrelated.symlink_to(store)
+        destinations = [self.config / relative for relative in menu.GTK_CSS]
+        for dest in destinations:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.symlink_to(store)
         self.assertEqual(self.controller._install_gtk_css(), [])
-        self.assertFalse(dest.is_symlink())
-        self.assertIn(b"Shared GTK", dest.read_bytes())
-        self.assertEqual((cosmic / "dark.css").read_text(), "cosmic")
-        self.assertTrue(unrelated.is_symlink())
+        for dest in destinations:
+            self.assertTrue(dest.is_symlink())
         self.assertEqual(store.read_text(), "store")
 
     def test_popup_cancel_and_invalid_output_do_not_apply(self):

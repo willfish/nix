@@ -48,11 +48,6 @@ let
       graphical = runtime;
       inherit catalogue;
       reapply = c.home.activation.applySelectedPalette.data or "";
-      cosmicModeManaged =
-        c.xdg.configFile ? "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
-        || c.home.activation ? rememberCosmicMode
-        || c.home.activation ? writableCosmicMode
-        || c.xdg.configFile ? "cosmic/com.system76.CosmicTk/v1/apply_theme_global";
       gtkFixed = c.stylix.targets.gtk.enable;
       gtkEnable = c.gtk.enable;
       dconfSettings = builtins.attrNames c.dconf.settings;

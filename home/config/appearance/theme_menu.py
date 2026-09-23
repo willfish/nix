@@ -370,13 +370,8 @@ class Themes:
         for relative in GTK_CSS:
             dest = self.config / relative
             if dest.is_symlink():
-                # One-time migration: COSMIC used to export these CSS links.
-                # Replace the link, never its target. Leave every other link.
-                cosmic_css = self.config / "gtk-4.0/cosmic"
-                if dest.resolve() not in (
-                    cosmic_css / "dark.css", cosmic_css / "light.css"
-                ):
-                    continue
+                # User-managed stylesheets and their targets stay untouched.
+                continue
             elif (
                 dest.exists()
                 and b"Shared GTK and Brave colours and fonts"

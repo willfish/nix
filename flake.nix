@@ -422,12 +422,10 @@
               assert !(server.systemd.user.services ? nm-auto-secret-agent);
               assert !(server.systemd.user.services ? wifi-auto-reconnect);
               assert !(server.home.activation ? importGraphicalSessionEnvironment);
-              assert !(server.home.activation ? fixCosmicScreenshotPortalConfig);
               assert !(server.home.sessionVariables ? BROWSER);
               assert !(server.home.sessionVariables ? TERMINAL);
               assert !(lib.any (p: lib.getName p == "gimp") server.home.packages);
               assert lib.any (p: lib.getName p == "gimp") desktop.home.packages;
-              assert !(server.xdg.configFile ? "cosmic/com.system76.CosmicComp/v1/autotile");
               assert server.home.file ? ".config/herdr/config.toml";
               assert desktop.programs.brave.enable && desktop.programs.google-chrome.enable;
               assert desktop.systemd.user.services ? nm-auto-secret-agent;
