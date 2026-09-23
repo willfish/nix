@@ -27,8 +27,8 @@
     gapsIn = 5;
     gapsOut = 8;
     floatGaps = 8;
-    activeOpacity = 1.0;
-    inactiveOpacity = 1.0;
+    activeOpacity = 0.95;
+    inactiveOpacity = 0.90;
     blur = true;
     shadow = true;
     shadowRange = 4;
