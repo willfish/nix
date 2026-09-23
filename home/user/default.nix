@@ -32,6 +32,7 @@
   imports = [
     ./capabilities.nix
     ./appearance.nix
+    ./hyprland.nix
     ./config.nix
     ./desktop-files.nix
     ./voice.nix

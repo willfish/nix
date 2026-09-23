@@ -3,8 +3,12 @@
   lib,
   pkgs,
   hostTheme,
+  isGraphicalLinux,
   ...
 }:
+let
+  inherit (import ../config/hyprland/settings.nix) appearance;
+in
 {
   stylix = {
     enable = true;
@@ -18,17 +22,19 @@
     fonts = {
       monospace = {
         package = pkgs.nerd-fonts.jetbrains-mono;
-        name = "JetBrainsMono Nerd Font";
+        name = if isGraphicalLinux then appearance.monoFont else "JetBrainsMono Nerd Font";
       };
       sansSerif = {
         package = pkgs.ubuntu-classic;
-        name = "Ubuntu";
+        name = if isGraphicalLinux then appearance.font else "Ubuntu";
       };
       serif = {
         package = pkgs.ubuntu-classic;
         name = "Ubuntu";
       };
     };
+
+    fonts.sizes.applications = lib.mkIf isGraphicalLinux appearance.fontSize;
 
     targets.font-packages.enable = true;
     targets.fontconfig.enable = true;

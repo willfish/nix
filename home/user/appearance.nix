@@ -8,6 +8,8 @@
 }:
 let
   catalogue = import ./themes/palettes.nix;
+  desktopAppearance = (import ../config/hyprland/settings.nix).appearance;
+  ghosttyConfig = builtins.readFile ../config/ghostty/config;
   defaultHost =
     if hostName != null && builtins.hasAttr hostName catalogue then hostName else "andromeda";
   theme = catalogue.${defaultHost};
@@ -57,7 +59,18 @@ in
         {
           name = "config";
           path = pkgs.writeText "ghostty-config" (
-            builtins.readFile ../config/ghostty/config
+            (
+              if isGraphicalLinux then
+                builtins.replaceStrings
+                  [ ''font-family = "JetBrainsMono Nerd Font"'' "font-size = 12" ]
+                  [
+                    ''font-family = "${desktopAppearance.monoFont}"''
+                    "font-size = ${toString desktopAppearance.fontSize}"
+                  ]
+                  ghosttyConfig
+              else
+                ghosttyConfig
+            )
             + ''
               theme = light:host-light,dark:host-dark
             ''

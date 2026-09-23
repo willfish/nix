@@ -5,12 +5,39 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
 
 
 COSMIC_NAMES = ("Light", "Dark", "Light.Builder", "Dark.Builder")
+GTK_CSS = ("gtk-3.0/gtk.css", "gtk-4.0/gtk.css")
+# User unit owned by the Hyprland module. systemctl --user stays in this UID.
+WAYBAR_UNIT = "waybar.service"
+
+
+def hyprland_session():
+    desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    parts = {
+        part.strip()
+        for part in desktop.replace(":", ";").split(";")
+        if part.strip()
+    }
+    return "hyprland" in parts or bool(
+        os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
+    )
+
+
+def theme_variables(text):
+    values = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("$theme_") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        values[key[1:].strip()] = value.strip()
+    return values
 
 
 def atomic_write(path, content):
@@ -82,6 +109,7 @@ class Themes:
                     )
             if not copied:
                 raise ValueError(f"Incomplete COSMIC palette: {variant}")
+        writes.update(self.projected_writes(self.current_mode(), palette))
         selection_path = self.state / "selection"
         previous_selection = (
             selection_path.read_bytes() if selection_path.exists() else None
@@ -116,17 +144,296 @@ class Themes:
     def mode_file(self):
         return self.config / "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
 
+    def current_mode(self):
+        # COSMIC ThemeMode remains authoritative when present, including for
+        # the greeter. Hyprland without that file uses theme-menu persistence.
+        if self.mode_file.exists():
+            return (
+                "light"
+                if self.mode_file.read_text().strip() == "false"
+                else "dark"
+            )
+        try:
+            mode = (self.state / "mode").read_text().strip()
+        except FileNotFoundError:
+            return "dark"
+        return mode if mode in ("light", "dark") else "dark"
+
     def is_light(self):
-        return (
-            self.mode_file.exists()
-            and self.mode_file.read_text().strip() == "false"
-        )
+        return self.current_mode() == "light"
+
+    def projected_writes(self, mode, palette=None):
+        if palette is None:
+            palette = self.resolve(self.selection())
+        session = (palette.get("session") or {}).get(mode) or {}
+        writes = {
+            self.state / "active" / name: Path(source).read_bytes()
+            for name, source in session.items()
+        }
+        writes[self.state / "mode"] = f"{mode}\n".encode()
+        return writes
+
+    def write_projected(self, mode, writes=None, palette=None):
+        if writes is None:
+            writes = self.projected_writes(mode, palette)
+        previous = {
+            path: path.read_bytes() if path.exists() else None
+            for path in writes
+        }
+        changed = []
+        try:
+            for path, content in writes.items():
+                if previous[path] != content or path.is_symlink():
+                    atomic_write(path, content)
+                    changed.append(path)
+        except OSError:
+            for path in reversed(changed):
+                if previous[path] is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    atomic_write(path, previous[path])
+            raise
 
     def set_mode(self, mode):
         if mode not in ("light", "dark"):
             raise ValueError(f"Unknown appearance mode: {mode}")
-        atomic_write(
-            self.mode_file, b"false\n" if mode == "light" else b"true\n"
+        # Resolve the bundle before touching ThemeMode so a missing catalogue
+        # cannot leave the greeter mode half-applied.
+        projected = self.projected_writes(mode)
+        content = b"false\n" if mode == "light" else b"true\n"
+        previous = (
+            self.mode_file.read_bytes() if self.mode_file.exists() else None
+        )
+        atomic_write(self.mode_file, content)
+        try:
+            self.write_projected(mode, projected)
+        except OSError:
+            if previous is None:
+                self.mode_file.unlink(missing_ok=True)
+            else:
+                atomic_write(self.mode_file, previous)
+            raise
+
+    def publish_session(self):
+        # Direct imports, including tests, must not touch the live desktop.
+        if os.environ.get("THEME_MENU_PUBLISH") != "1":
+            return []
+        if not hyprland_session():
+            return []
+        warnings = []
+        mode = self.current_mode()
+        conf = self.state / "active" / "hyprland.conf"
+        try:
+            variables = theme_variables(conf.read_text())
+        except FileNotFoundError:
+            variables = {}
+            warnings.append(
+                "Hyprland theme file is missing. Run theme-menu --reapply."
+            )
+        warnings.extend(self._publish_gtk(mode, variables))
+        warnings.extend(self._install_gtk_css())
+        warnings.extend(self._reload_hyprland(variables))
+        warnings.extend(self._reload_waybar())
+        try:
+            subprocess.run(
+                ["makoctl", "reload"],
+                capture_output=True, timeout=5, check=True
+            )
+        except (OSError, subprocess.SubprocessError):
+            warnings.append(
+                "Notifications will use the selected theme on next startup."
+            )
+        return warnings
+
+    def _publish_gtk(self, mode, variables):
+        scheme = variables.get(
+            "theme_color_scheme",
+            "prefer-dark" if mode == "dark" else "prefer-light",
+        )
+        gtk = variables.get(
+            "theme_gtk", "adw-gtk3-dark" if mode == "dark" else "adw-gtk3"
+        )
+        font = variables.get("theme_font", "Ubuntu")
+        mono = variables.get("theme_mono_font", "JetBrainsMono Nerd Font")
+        size = variables.get("theme_font_size", "12")
+        commands = [
+            [
+                "gsettings",
+                "set",
+                "org.gnome.desktop.interface",
+                "color-scheme",
+                scheme,
+            ],
+            [
+                "gsettings",
+                "set",
+                "org.gnome.desktop.interface",
+                "gtk-theme",
+                gtk,
+            ],
+            [
+                "gsettings",
+                "set",
+                "org.gnome.desktop.interface",
+                "font-name",
+                f"{font} {size}",
+            ],
+            [
+                "gsettings",
+                "set",
+                "org.gnome.desktop.interface",
+                "monospace-font-name",
+                f"{mono} {size}",
+            ],
+        ]
+        for command in commands:
+            try:
+                subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=True,
+                )
+            except (OSError, subprocess.SubprocessError) as error:
+                detail = getattr(error, "stderr", "") or str(error)
+                return [
+                    "Could not publish org.gnome.desktop.interface. "
+                    "Needs gsettings (glib), gsettings-desktop-schemas, "
+                    "and dconf. "
+                    + detail.strip()
+                ]
+        return []
+
+    def _install_gtk_css(self):
+        source = self.state / "active" / "gtk.css"
+        if not source.exists():
+            return []
+        content = source.read_bytes()
+        warnings = []
+        for relative in GTK_CSS:
+            dest = self.config / relative
+            if dest.is_symlink():
+                # COSMIC exports these links. Replace the link, never its
+                # target, when Hyprland takes over GTK appearance. Preserve
+                # unrelated user/Home Manager overrides.
+                cosmic_css = self.config / "gtk-4.0/cosmic"
+                if dest.resolve() not in (
+                    cosmic_css / "dark.css", cosmic_css / "light.css"
+                ):
+                    continue
+            elif (
+                dest.exists()
+                and b"Shared GTK and Brave colours and fonts"
+                not in dest.read_bytes()
+            ):
+                warnings.append(
+                    f"Preserved custom {relative}; "
+                    "it overrides desktop colours."
+                )
+                continue
+            try:
+                atomic_write(dest, content)
+            except OSError as error:
+                warnings.append(f"Could not install {relative}: {error}")
+        return warnings
+
+    def _reload_hyprland(self, variables):
+        if shutil.which("hyprctl") is None:
+            return [
+                "hyprctl is not installed. Hyprland colours apply on the "
+                "next reload. Package: hyprland."
+            ]
+        commands = []
+        mapping = (
+            ("theme_active_border", "general:col.active_border"),
+            ("theme_inactive_border", "general:col.inactive_border"),
+            ("theme_background", "misc:background_color"),
+            ("theme_rounding", "decoration:rounding"),
+            ("theme_border_size", "general:border_size"),
+        )
+        for key, keyword in mapping:
+            value = variables.get(key)
+            if value:
+                commands.append(["hyprctl", "keyword", keyword, value])
+        for command in commands:
+            try:
+                subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=True,
+                )
+            except (OSError, subprocess.SubprocessError) as error:
+                detail = getattr(error, "stderr", "") or str(error)
+                return [
+                    "hyprctl could not apply theme colours. "
+                    + detail.strip()
+                ]
+        return []
+
+    def _reload_waybar(self):
+        # Do not scan /proc. That signals every Waybar on the machine.
+        if shutil.which("systemctl") is None:
+            return [
+                "systemctl is not installed, so Waybar was not reloaded. "
+                "Package: systemd."
+            ]
+        try:
+            subprocess.run(
+                [
+                    "systemctl",
+                    "--user",
+                    "kill",
+                    "--signal=SIGUSR2",
+                    WAYBAR_UNIT,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=True,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            detail = getattr(error, "stderr", "") or str(error)
+            return [
+                f"Could not signal user unit {WAYBAR_UNIT}. "
+                "The Hyprland module should run Waybar as that unit. "
+                + detail.strip()
+            ]
+        return []
+
+    def launcher_style(self):
+        appearance = self.catalogue.get("appearance") or {}
+        font = appearance.get("monoFont", "JetBrainsMono Nerd Font")
+        size = appearance.get("fontSize", 12)
+        border = appearance.get("borderSize", 2)
+        radius = appearance.get("rounding", 12)
+        font_spec = f"{font}:size={size}"
+        try:
+            session = (
+                self.resolve(self.selection()).get("session") or {}
+            ).get(self.current_mode()) or {}
+            source = session.get("fuzzel.ini")
+        except (OSError, ValueError, KeyError):
+            source = None
+        if not source:
+            return font_spec, border, radius
+        section = ""
+        values = {}
+        for line in Path(source).read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                section = stripped[1:-1]
+                continue
+            if "=" not in stripped or stripped.startswith("#"):
+                continue
+            key, value = stripped.split("=", 1)
+            values[(section, key.strip())] = value.strip()
+        return (
+            values.get(("main", "font"), font_spec),
+            values.get(("border", "width"), border),
+            values.get(("border", "radius"), radius),
         )
 
     def choose(self):
@@ -159,14 +466,16 @@ class Themes:
 
         # Keep styling in an INI file, like voice-menu. The pinned Fuzzel's
         # --font argument also triggers an invalid free with --check-config.
+        font_spec, border_width, radius = self.launcher_style()
+        launcher = self.catalogue.get("launcher", {})
         settings = f"""[main]
-font=JetBrainsMono Nerd Font:size=12
-anchor=center
-layer=overlay
-width=40
-lines={len(rows)}
+font={font_spec}
+anchor={launcher.get('anchor', 'center')}
+layer={launcher.get('layer', 'overlay')}
+width={launcher.get('width', 40)}
+lines={min(len(rows), launcher.get('lines', len(rows)))}
 minimal-lines=yes
-match-mode=fzf
+match-mode={launcher.get('matchMode', 'fzf')}
 icons-enabled=no
 horizontal-pad=20
 vertical-pad=12
@@ -182,8 +491,8 @@ selection-match={colour("base0D", "b7bdf8")}
 match={colour("base0D", "b7bdf8")}
 border={colour("base0D", "b7bdf8")}
 [border]
-width=2
-radius=12
+width={border_width}
+radius={radius}
 """
         with tempfile.TemporaryDirectory(prefix="theme-menu-") as directory:
             config = Path(directory) / "fuzzel.ini"
@@ -307,6 +616,9 @@ def main():
                 raise RuntimeError(
                     "Another theme menu is open; close it and retry."
                 ) from None
+            default_mode = controller.catalogue.get("defaultMode")
+            if args.reapply and default_mode is not None:
+                controller.set_mode(default_mode)
             selected = controller.selection() if args.reapply else args.palette
             if selected is None:
                 selected = controller.choose()
@@ -317,6 +629,7 @@ def main():
                 title, label = "Appearance mode", f"{selected.title()} mode"
                 # COSMIC and terminals propagate mode changes natively. Do not
                 # rewrite the palette or disturb explicit application overrides.
+                # Hyprland session assets follow the selected mode separately.
                 warnings = []
             else:
                 controller.apply(selected)
@@ -325,6 +638,8 @@ def main():
                     controller.resolve(selected)["label"],
                 )
                 warnings = [] if args.no_reload else reload_apps()
+            if not args.no_reload:
+                warnings.extend(controller.publish_session())
         for warning in warnings:
             print(f"theme-menu: {warning}", file=sys.stderr)
         if not args.reapply and not args.no_reload:

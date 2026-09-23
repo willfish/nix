@@ -20,8 +20,13 @@ The command also accepts `default`, `rose-pine`, `tokyo-night`, `solarized`,
 `catppuccin` or `gruvbox`, for example `theme-menu rose-pine`.
 `theme-menu --reapply` restores generated files for the saved selection.
 
-The picker updates COSMIC's desktop and GTK/Qt exports, reloads Ghostty through
-its Linux D-Bus action and reloads the addressed Herdr server. Neovim instances
+The picker updates COSMIC's theme files in either desktop. In COSMIC, its
+settings daemon supplies GTK/Qt exports. In Hyprland, the picker updates the
+compositor, Waybar, launcher, lock and notification themes, publishes GTK
+appearance settings and installs the shared GTK CSS. Brave can follow these
+colours with **Settings → Appearance → Use GTK**; explicit browser themes and
+website styles remain independent. The picker reloads Ghostty through its
+Linux D-Bus action and reloads the addressed Herdr server. Neovim instances
 started after installing this configuration detect changes within about a second.
 Restart older Neovim instances once to install the watcher. Existing Pi sessions
 need restarting for named palette changes: its upstream watcher does not watch
@@ -36,11 +41,15 @@ configuration. macOS and headless hosts retain their declarative host palettes.
 
 In **Super+Shift+T**, the first action switches to light or dark mode, whichever
 is not currently active. It leaves your selected palette unchanged. You can also
-run `theme-menu light` or `theme-menu dark`, or use
-**COSMIC Settings → Desktop → Appearance**. These controls share the same setting.
+run `theme-menu light` or `theme-menu dark`. In COSMIC, you can also use
+**COSMIC Settings → Desktop → Appearance**. These controls share the same stored
+setting, but use `theme-menu` in Hyprland to refresh its shell and GTK consumers.
 On macOS, use the system appearance setting.
 Dark is the initial default; sunrise/sunset switching is off.
-Home Manager preserves the selected COSMIC mode rather than pinning it to dark.
+Home Manager preserves the selected COSMIC mode rather than pinning it to dark,
+unless `appearance.mode` in the shared Hyprland settings explicitly specifies a
+mode to reapply. COSMIC Greeter reads the selected user's theme and mode, so
+login colours follow the same selection.
 
 Ghostty follows system appearance. Herdr follows the terminal and passes its
 appearance reports to panes. Pi's launchers select a native `host-light/host-dark`
@@ -73,8 +82,13 @@ appearance reports; older multiplexers may require a restart or an explicit Pi
 - `home/user/themes/cosmic.py` produces ThemeBuilder inputs. The pinned
   `cosmic-settings appearance import` CLI builds complete themes in an isolated
   Nix sandbox. There is no custom reimplementation of COSMIC's component styling.
-- COSMIC owns GTK/Qt exports on graphical Linux. Fixed Stylix GTK, Qt and KDE
-  overrides are disabled there to avoid conflicting colour sources.
+- COSMIC owns GTK/Qt exports in COSMIC. In Hyprland, the picker replaces known
+  COSMIC GTK CSS links without modifying their targets; unrelated custom CSS
+  and symlinks are preserved. Fixed Stylix GTK, Qt and KDE overrides remain
+  disabled to avoid competing colour sources.
+- `home/config/hyprland/settings.nix` owns shared desktop/terminal font choices,
+  a default palette and optional Base16 colour overrides. See [Hyprland](hyprland.md)
+  for session configuration and screenshot controls.
 - Fish uses terminal ANSI roles, with no shell-emitted palette overrides.
 - Git delta uses terminal ANSI green and red for hunks and does not pin a delta theme or light/dark mode. Detection follows the terminal.
 - Neovim uses the same palettes, following its detected `background` option.

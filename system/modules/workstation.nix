@@ -1,6 +1,9 @@
 { pkgs, ... }:
 {
-  imports = [ ./base.nix ];
+  imports = [
+    ./base.nix
+    ./hyprland.nix
+  ];
 
   boot.kernelParams = [ "btiso.enable=1" ];
 
@@ -70,6 +73,8 @@
   };
 
   services.spice-vdagentd.enable = true;
+  # The greeter reads the selected user's COSMIC theme/mode, also maintained
+  # by theme-menu in Hyprland. Keep both sessions available for recovery.
   services.displayManager.cosmic-greeter.enable = true;
   services.desktopManager.cosmic.enable = true;
   # COSMIC enables acpid. It aborts after netlink ENOBUFS during input
