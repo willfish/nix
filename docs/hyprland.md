@@ -1,8 +1,18 @@
 # Hyprland
 
-Select **Hyprland**, not **Hyprland (uwsm-managed)**, at login. COSMIC remains
-available as a fallback. Like the COSMIC setup, editable settings live under
-`home/config/` and Home Manager wiring under `home/user/`.
+Hyprland is the only supported graphical session. There is no COSMIC session
+to fall back to. If login lists both, select **Hyprland**, not **Hyprland
+(uwsm-managed)**. Editable settings live under `home/config/` and Home Manager
+wiring under `home/user/`.
+
+ReGreet replaces COSMIC Greeter without reading your home directory. The
+precreated file `/var/lib/desktop-theme/william` is mode 0644 and owned by
+william. The directory is root-owned mode 0755, so writers must open that file
+in place. It holds only a theme ID, validated against the greeter's immutable
+theme catalogue. A saved theme-menu selection overrides the host
+default in `home/user/themes/host-defaults.nix`. The first reboot is required
+before that greeter is shown. Stage the system generation for the next boot; do
+not switch it into the running session.
 
 ## Configuration
 
@@ -10,13 +20,13 @@ Edit `home/config/hyprland/settings.nix` for keybindings, fonts, colours, gaps,
 tiling/floating rules, launcher, rail and session menu settings. Run `hmswitch`
 to apply changes. Do not edit the generated `~/.config/hypr/hyprland.conf`.
 
-Your chosen COSMIC shortcuts carry across: Super+WASD focus, Super+Shift+WASD
-movement, Super+1–9 workspaces, Super+Shift+1–9 moving windows, Super+Q close,
-Super+F fullscreen, Super+G floating, Super or Super+X launcher,
-Super+Shift+T appearance and Ctrl+Shift+S screenshots. Voice chords retain their
-host capability checks. Super+Shift+B uses Hyprland DPMS rather than COSMIC's
-output toggle. Dwindle tiling is not COSMIC's tiler; its behaviour is configured
-explicitly.
+Super+WASD focuses, Super+Shift+WASD moves windows, Super+1–9 switches
+workspaces and Super+Shift+1–9 moves windows between them. Super+Q closes,
+Super+F toggles fullscreen, Super+G toggles floating, and Super or Super+X
+opens the launcher. Super+Shift+T opens appearance and Ctrl+Shift+S takes a
+screenshot. Voice chords retain their host capability checks. Super+Shift+B
+uses Hyprland DPMS to power the display. Dwindle tiling behaviour is configured
+explicitly in `settings.nix`.
 
 ## Desktop controls
 
@@ -32,7 +42,7 @@ editor rather than running Omarchy's system-wide configuration scripts. QR
 sharing, speed tests and the optional media/OSD service are not hosted.
 
 The defaults use Nautilus for folders, Evince for PDFs, Neovim in Ghostty for text,
-and mpv with MPRIS for audio/video. These MIME defaults also apply in COSMIC.
+and mpv with MPRIS for audio/video.
 
 ## Screenshots
 
@@ -54,7 +64,7 @@ Grimblast and Satty from the pinned Nix packages.
 
 Super+Shift+T uses the existing shared palette menu for Ghostty, Neovim and Herdr,
 plus Hyprland, Waybar, the control panels, Fuzzel, Mako and Hyprlock. Use this menu in Hyprland to
-refresh desktop consumers, rather than changing appearance in COSMIC Settings.
+refresh those desktop consumers.
 
 The menu contains all built-in Omarchy themes without a name prefix or personal
 variants. Each selection applies its native mode and matching wallpaper.
@@ -65,17 +75,23 @@ image sizing and `wallpaper.overrides` accepts per-theme, per-mode image paths.
 Fonts must be installed. Neovim and Herdr inherit their terminal font. See
 [shared appearance](appearance.md) for sources and application overrides.
 
-COSMIC Greeter continues reading the selected user's shared theme and mode.
+Default Fuzzel and the voice menu both include
+`~/.local/state/theme-menu/active/fuzzel.ini`. Voice menu width and lines come
+from `menus.voice` in `settings.nix`. `bar.traySpacing` controls the gap between
+tray icons independently of the other bar widgets.
+
 For Brave, select **Settings → Appearance → Use GTK**. Browser extensions,
 explicit themes and website styling can override desktop colours.
 
 ## First login and recovery
 
-The system and Home Manager configurations must both be activated. After login,
-check `hyprctl configerrors`, your shortcuts, screenshot editing, theme changes,
-and lock/unlock before relying on idle locking or suspend. Check browser screen
+Home Manager can be activated for the user session. Stage the system generation
+and reboot once before expecting the new greeter. After that login, check
+`hyprctl configerrors`, your shortcuts, screenshot editing, theme changes, and
+lock/unlock before relying on idle locking or suspend. Check browser screen
 sharing through the portal. These need a real Hyprland session.
 
-If the session is unusable, select COSMIC at the next login or the previous NixOS
-generation at boot. Do not restart the display manager inside an active session.
-See [host operations](nixos-host-operations.md) for activation and rollback.
+If the new generation is unusable, select the previous NixOS generation from
+the systemd-boot menu. Login has no alternate desktop. Do not restart the
+display manager inside an active session. See
+[host operations](nixos-host-operations.md) for activation and rollback.

@@ -324,7 +324,6 @@ in
       (mpv.override { scripts = [ mpvScripts.mpris ]; })
       file-roller # Graphical archive manager for opening and extracting archives
       gimp # GNU Image Manipulation Program (the pinned package is Linux-only)
-      cosmic-ext-tweaks
       ghostty # GPU-accelerated terminal emulator (system package on NixOS; set as default via TERMINAL + xdg-terminal-exec)
       discord # Team collaboration and messaging app
       dropbox # Cloud storage and file synchronization service
@@ -339,8 +338,8 @@ in
       spotify # Music streaming application
       telegram-desktop # Desktop client for Telegram messaging
       vokoscreen-ng # Screen recording tool with audio support
-      wl-clipboard # Wayland clipboard tools used by Herdr helpers on COSMIC
-      wlopm # Wayland output power control used by the COSMIC display toggle shortcut
+      wl-clipboard # Wayland clipboard tools for Hyprland, voice and Neovim
+      wlopm # Wayland output power control used by toggle-display
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
     ]
     ++ lib.optionals (capabilities.work && capabilities.desktop) [ slack ]

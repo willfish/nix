@@ -114,82 +114,21 @@
         linuxSystem
         darwinSystem
       ];
-      mkOverlay =
-        system: _final: _prev:
-        {
-          inherit (sniffy.packages.${system}) sniffy;
-          inherit (smailer.packages.${system}) smailer;
-          mux = mux.packages.${system}.default;
-          herdr = herdr.packages.${system}.default;
-          forte = forte.packages.${system}.default;
-          inherit (walls.packages.${system}) walls;
-          pi-coding-agent = llm-agents.packages.${system}.pi;
-          hermes-agent = import ./home/user/hermes-package.nix {
-            hermesInput = inputs.hermes-agent;
-            inherit system;
-          };
-          # Static Go client; safe to pull from unstable while 26.05 lags.
-          inherit (nixpkgs-unstable.legacyPackages.${system}) tailscale;
-        }
-        # nixos-26.05 still ships COSMIC epoch 1.2. Chromium 151+ aborts
-        # fullscreen without presentation feedback from fullscreen surfaces,
-        # which epoch 1.6's cosmic-comp includes. Keep the 26.05 NixOS module
-        # and overlay the desktop packages only; Darwin has no COSMIC attrs.
-        // lib.optionalAttrs (system == linuxSystem) (
-          let
-            unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
-          in
-          {
-            inherit (unstablePkgs)
-              cosmic-app-library
-              cosmic-applets
-              cosmic-bg
-              cosmic-comp
-              cosmic-edit
-              cosmic-ext-applet-caffeine
-              cosmic-ext-applet-external-monitor-brightness
-              cosmic-ext-applet-mare-player
-              cosmic-ext-applet-minimon
-              cosmic-ext-applet-privacy-indicator
-              cosmic-ext-applet-sysinfo
-              cosmic-ext-applet-weather
-              cosmic-ext-applett-workspace-icons
-              cosmic-ext-calculator
-              cosmic-ext-ctl
-              cosmic-ext-tweaks
-              cosmic-files
-              cosmic-greeter
-              cosmic-icons
-              cosmic-idle
-              cosmic-initial-setup
-              cosmic-launcher
-              cosmic-monitor
-              cosmic-notifications
-              cosmic-osd
-              cosmic-panel
-              cosmic-player
-              cosmic-protocols
-              cosmic-randr
-              cosmic-reader
-              cosmic-screenshot
-              cosmic-session
-              cosmic-settings
-              cosmic-settings-daemon
-              cosmic-sound-theme
-              cosmic-store
-              cosmic-term
-              cosmic-viewer
-              cosmic-wallpapers
-              cosmic-workspaces-epoch
-              libcosmicAppHook
-              pop-icon-theme
-              pop-launcher
-              xdg-desktop-portal-cosmic
-              ;
-            # 26.05 module still names this cosmic-applibrary.
-            cosmic-applibrary = unstablePkgs.cosmic-app-library;
-          }
-        );
+      mkOverlay = system: _final: _prev: {
+        inherit (sniffy.packages.${system}) sniffy;
+        inherit (smailer.packages.${system}) smailer;
+        mux = mux.packages.${system}.default;
+        herdr = herdr.packages.${system}.default;
+        forte = forte.packages.${system}.default;
+        inherit (walls.packages.${system}) walls;
+        pi-coding-agent = llm-agents.packages.${system}.pi;
+        hermes-agent = import ./home/user/hermes-package.nix {
+          hermesInput = inputs.hermes-agent;
+          inherit system;
+        };
+        # Static Go client; safe to pull from unstable while 26.05 lags.
+        inherit (nixpkgs-unstable.legacyPackages.${system}) tailscale;
+      };
       mkPkgs =
         system:
         import nixpkgs {

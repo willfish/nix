@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import stat
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -30,21 +31,18 @@ class ThemeMenuTest(unittest.TestCase):
             (bundle / "host-palettes.json").write_text(
                 json.dumps({"dark": {"base00": name}})
             )
-            for variant in menu.COSMIC_NAMES:
-                cosmic = (
-                    bundle / f"cosmic/com.system76.CosmicTheme.{variant}/v1"
-                )
-                cosmic.mkdir(parents=True)
-                (cosmic / "background").write_text(name)
             self.palettes[name] = {
                 "label": name,
-                "cosmic": str(bundle),
+                "id": name,
                 "files": {
                     "host-palettes.json": str(bundle / "host-palettes.json")
                 },
             }
         self.catalogue = {"default": "tokyo-night", "palettes": self.palettes}
-        self.controller = menu.Themes(self.catalogue, self.state, self.config)
+        self.greeter = self.root / "greeter-theme"
+        self.controller = menu.Themes(
+            self.catalogue, self.state, self.config, self.greeter
+        )
 
     def test_default_override_reapply_and_reset(self):
         self.assertEqual(self.controller.selection(), "default")
@@ -69,19 +67,13 @@ class ThemeMenuTest(unittest.TestCase):
         self.controller.apply("default")
         self.assertFalse((self.state / "selection").exists())
 
-    def test_mode_and_unrelated_cosmic_settings_are_preserved(self):
-        mode = self.config / "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
+    def test_apply_preserves_state_mode_and_does_not_write_cosmic(self):
+        mode = self.state / "mode"
         mode.parent.mkdir(parents=True)
-        mode.write_text("false\n")
+        mode.write_text("light\n")
         self.controller.apply("rose-pine")
-        self.assertEqual(mode.read_text(), "false\n")
-        self.assertEqual(
-            (
-                self.config
-                / "cosmic/com.system76.CosmicTheme.Dark/v1/background"
-            ).read_text(),
-            "rose-pine",
-        )
+        self.assertEqual(mode.read_text(), "light\n")
+        self.assertFalse((self.config / "cosmic").exists())
 
     def test_invalid_selection_and_missing_bundle_do_not_write(self):
         for invalid in ("../outside", "unknown"):
@@ -102,7 +94,7 @@ class ThemeMenuTest(unittest.TestCase):
 
         def fail_once(path, content):
             nonlocal failed
-            if path.name == "background" and not failed:
+            if path.name == "host-palettes.json" and not failed:
                 failed = True
                 raise OSError("disk full")
             original(path, content)
@@ -116,17 +108,26 @@ class ThemeMenuTest(unittest.TestCase):
             (self.state / "active/host-palettes.json").read_text(),
         )
 
-    def test_replaces_legacy_cosmic_link_without_writing_store_target(self):
-        target = (
-            self.config / "cosmic/com.system76.CosmicTheme.Dark/v1/background"
-        )
-        target.parent.mkdir(parents=True)
-        old = self.root / "old-store-file"
-        old.write_text("old")
-        target.symlink_to(old)
-        self.controller.apply("rose-pine")
-        self.assertFalse(target.is_symlink())
-        self.assertEqual(old.read_text(), "old")
+    def test_replaces_legacy_cosmic_gtk_link_without_writing_store_target(self):
+        source = self.state / "active/gtk.css"
+        source.parent.mkdir(parents=True)
+        source.write_bytes(b"/* Shared GTK and Brave colours and fonts */\n")
+        store = self.root / "store-dark.css"
+        store.write_text("store")
+        cosmic = self.config / "gtk-4.0/cosmic"
+        cosmic.mkdir(parents=True)
+        (cosmic / "dark.css").write_text("cosmic")
+        dest = self.config / "gtk-4.0/gtk.css"
+        dest.symlink_to(cosmic / "dark.css")
+        unrelated = self.config / "gtk-3.0/gtk.css"
+        unrelated.parent.mkdir(parents=True)
+        unrelated.symlink_to(store)
+        self.assertEqual(self.controller._install_gtk_css(), [])
+        self.assertFalse(dest.is_symlink())
+        self.assertIn(b"Shared GTK", dest.read_bytes())
+        self.assertEqual((cosmic / "dark.css").read_text(), "cosmic")
+        self.assertTrue(unrelated.is_symlink())
+        self.assertEqual(store.read_text(), "store")
 
     def test_popup_cancel_and_invalid_output_do_not_apply(self):
         for code, output in ((1, ""), (0, "999\n"), (0, "bad\n")):
@@ -219,61 +220,70 @@ class ThemeMenuTest(unittest.TestCase):
         self.assertTrue(self.controller.is_light())
         self.assertEqual(self.controller.selection(), "rose-pine")
 
-    def test_missing_cosmic_directory_aborts_before_writes(self):
-        directory = (
-            Path(self.palettes["rose-pine"]["cosmic"])
-            / "cosmic/com.system76.CosmicTheme.Light/v1"
-        )
-        (directory / "background").unlink()
-        directory.rmdir()
+    def test_native_mode_is_written_to_state_and_rejects_override(self):
+        self.palettes["rose-pine"]["nativeMode"] = "light"
+        self.controller.apply("rose-pine")
+        self.assertEqual((self.state / "mode").read_text(), "light\n")
         with self.assertRaises(ValueError):
-            self.controller.apply("rose-pine")
-        self.assertFalse((self.state / "active/host-palettes.json").exists())
+            self.controller.set_mode("dark")
+        self.assertEqual((self.state / "mode").read_text(), "light\n")
 
-    def test_skips_empty_schema_directories(self):
-        bundle = Path(self.palettes["rose-pine"]["cosmic"])
-        for variant in menu.COSMIC_NAMES:
-            v1 = bundle / f"cosmic/com.system76.CosmicTheme.{variant}/v1"
-            (v1 / "background").unlink()
-            v2 = bundle / f"cosmic/com.system76.CosmicTheme.{variant}/v2"
-            v2.mkdir()
-            (v2 / "background").write_text("v2-only")
-        self.controller.apply("rose-pine")
-        self.assertEqual(
-            (
-                self.config
-                / "cosmic/com.system76.CosmicTheme.Dark/v2/background"
-            ).read_text(),
-            "v2-only",
-        )
-        self.assertFalse(
-            (
-                self.config
-                / "cosmic/com.system76.CosmicTheme.Dark/v1/background"
-            ).exists()
-        )
-
-    def test_copies_v2_schema_when_present(self):
-        bundle = Path(self.palettes["rose-pine"]["cosmic"])
-        for variant in menu.COSMIC_NAMES:
-            v2 = bundle / f"cosmic/com.system76.CosmicTheme.{variant}/v2"
-            v2.mkdir(parents=True)
-            (v2 / "background").write_text("v2-rose-pine")
-        self.controller.apply("rose-pine")
-        self.assertEqual(
-            (
-                self.config
-                / "cosmic/com.system76.CosmicTheme.Dark/v2/background"
-            ).read_text(),
-            "v2-rose-pine",
-        )
-        self.assertEqual(
-            (
-                self.config
-                / "cosmic/com.system76.CosmicTheme.Dark/v1/background"
-            ).read_text(),
-            "rose-pine",
-        )
+    def test_greeter_publish_is_in_place_and_refuses_unsafe_paths(self):
+        self.greeter.write_text("old\n")
+        target = self.root / "outside"
+        target.write_text("secret")
+        with patch.dict(os.environ, {"THEME_MENU_PUBLISH": "1"}):
+            self.assertEqual(self.controller.publish_greeter("default"), [])
+            self.assertEqual(self.greeter.read_text(), "tokyo-night\n")
+            link = self.root / "greeter-link"
+            link.symlink_to(target)
+            linked = menu.Themes(
+                self.catalogue, self.state, self.config, link
+            )
+            warnings = linked.publish_greeter("rose-pine")
+            self.assertTrue(warnings)
+            self.assertEqual(target.read_text(), "secret")
+            self.assertTrue(link.is_symlink())
+            directory = self.root / "greeter-dir"
+            directory.mkdir()
+            nested = menu.Themes(
+                self.catalogue, self.state, self.config, directory
+            )
+            self.assertTrue(nested.publish_greeter("rose-pine"))
+            self.assertFalse((directory / "rose-pine").exists())
+            fifo = self.root / "greeter-fifo"
+            os.mkfifo(fifo)
+            piped = menu.Themes(
+                self.catalogue, self.state, self.config, fifo
+            )
+            self.assertTrue(piped.publish_greeter("rose-pine"))
+            self.assertTrue(stat.S_ISFIFO(fifo.lstat().st_mode))
+            missing = menu.Themes(
+                self.catalogue,
+                self.state,
+                self.config,
+                self.root / "missing-greeter",
+            )
+            self.assertEqual(missing.publish_greeter("rose-pine"), [])
+            self.assertFalse((self.root / "missing-greeter").exists())
+            self.palettes["bad id"] = {
+                "label": "bad", "id": "bad id", "files": {}
+            }
+            unsafe = menu.Themes(
+                {
+                    "default": "tokyo-night",
+                    "palettes": self.catalogue["palettes"],
+                },
+                self.state,
+                self.config,
+                self.greeter,
+            )
+            self.greeter.write_text("keep\n")
+            self.assertTrue(unsafe.publish_greeter("bad id"))
+            self.assertEqual(self.greeter.read_text(), "keep\n")
+        self.greeter.write_text("untouched\n")
+        self.assertEqual(self.controller.publish_greeter("rose-pine"), [])
+        self.assertEqual(self.greeter.read_text(), "untouched\n")
 
     def test_reload_does_not_start_ghostty_and_reports_failures(self):
         with patch.object(menu.subprocess, "run") as run:

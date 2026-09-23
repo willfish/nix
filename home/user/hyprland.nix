@@ -107,19 +107,16 @@
       ];
       themeSeed = pkgs.writeShellApplication {
         name = "hypr-theme-seed";
-        runtimeInputs = [
-          pkgs.coreutils
-          pkgs.gnugrep
-        ];
+        runtimeInputs = [ pkgs.coreutils ];
         text = ''
           state="''${XDG_STATE_HOME:-$HOME/.local/state}/theme-menu/active"
           mkdir -p "$state"
-          mode=dark
-          cosmic_mode="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
+          mode=${selectedPalette.nativeMode}
+          if [ -f "$state/../mode" ]; then
+            mode="$(< "$state/../mode")"
+          fi
           if [ -n "''${HYPR_THEME_MODE:-}" ]; then
             mode="$HYPR_THEME_MODE"
-          elif [ -f "$cosmic_mode" ] && grep -qx false "$cosmic_mode"; then
-            mode=light
           fi
           case "$mode" in
             light | dark) ;;
@@ -397,7 +394,7 @@
               format = "{short}";
               tooltip = true;
             };
-            tray.spacing = 4;
+            tray.spacing = settings.bar.traySpacing;
             pulseaudio = {
               format = "{icon}";
               format-muted = "󰝟";
@@ -501,6 +498,8 @@
         style = waybarStyle;
       };
 
+      # Unqualified Fuzzel launches inherit the same style as explicit menus.
+      xdg.configFile."fuzzel/fuzzel.ini".source = fuzzelConfig;
       xdg.configFile."fuzzel/hyprland.ini".source = fuzzelConfig;
       xdg.configFile."satty/config.toml".source = sattyConfig;
       home.activation.screenshotDirectory = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -645,8 +644,8 @@
         Install.WantedBy = [ "hyprland-session.target" ];
       };
 
-      # COSMIC has its own agent. Do not use services.hyprpolkitagent: that
-      # unit follows graphical-session.target and would start in both sessions.
+      # Tie authentication to the compositor rather than an unrelated graphical
+      # session target, so the agent stops when Hyprland exits.
       systemd.user.services.hyprpolkitagent = {
         Unit = {
           Description = "Hyprland PolicyKit authentication agent";

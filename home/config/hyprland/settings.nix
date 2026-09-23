@@ -55,7 +55,7 @@
   window = {
     layout = "dwindle";
     preserveSplit = true;
-    # COSMIC focus_follows_cursor. Hyprland 0.55 has no cursor-follows-focus.
+    # Hyprland 0.55 has no cursor-follows-focus.
     focusFollowsCursor = true;
     resizeOnBorder = true;
     naturalScroll = true;
@@ -71,10 +71,17 @@
     layer = "overlay";
   };
 
+  # Menus share launcher placement and the active theme's fonts/colours.
+  menus.voice = {
+    width = 55;
+    lines = 10;
+  };
+
   bar = {
     position = "left";
     width = 48;
     opacity = 0.92;
+    traySpacing = 12;
     sessionLabel = "⏻";
     commands = {
       launcher = "hypr-launcher";
@@ -198,7 +205,7 @@
   };
 
   # Keys match the COSMIC map: WASD focus, Super+X launcher, Super+Shift+T
-  # theme menu. Super+Shift+B is DPMS, not cosmic toggle-display.
+  # theme menu. Super+Shift+B toggles output power through DPMS.
   # Super+Escape locks without a confirmation. The session menu confirms
   # logout, reboot and power off.
   # bind lines are the keybinds. mainMod is $mainMod. Number keys use

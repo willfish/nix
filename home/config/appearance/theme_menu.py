@@ -1,19 +1,24 @@
 """Apply immutable palette bundles to writable, watched application files."""
 
 import argparse
+import errno
 import fcntl
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
 
 
-COSMIC_NAMES = ("Light", "Dark", "Light.Builder", "Dark.Builder")
 GTK_CSS = ("gtk-3.0/gtk.css", "gtk-4.0/gtk.css")
+# NixOS creates a root-owned 0755 directory and william-owned 0644 file.
+GREETER_THEME_FILE = Path("/var/lib/desktop-theme/william")
+THEME_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 # User unit owned by the Hyprland module. systemctl --user stays in this UID.
 WAYBAR_UNIT = "waybar.service"
 
@@ -53,12 +58,15 @@ def atomic_write(path, content):
 
 
 class Themes:
-    def __init__(self, catalogue, state, config):
+    def __init__(
+        self, catalogue, state, config, greeter_path=GREETER_THEME_FILE
+    ):
         self.catalogue, self.state, self.config = (
             catalogue,
             Path(state),
             Path(config),
         )
+        self.greeter_path = Path(greeter_path)
 
     def selection(self):
         try:
@@ -85,44 +93,13 @@ class Themes:
     def apply(self, selected):
         palette = self.resolve(selected)
         # Read the whole bundle before touching active files. Native themes
-        # carry their upstream mode; paired legacy bundles retain the mode.
+        # carry their upstream mode; other bundles retain state/mode.
         writes = {
             self.state / "active" / name: Path(source).read_bytes()
             for name, source in palette["files"].items()
         }
-        cosmic = Path(palette["cosmic"]) / "cosmic"
-        for variant in COSMIC_NAMES:
-            variant_dir = cosmic / f"com.system76.CosmicTheme.{variant}"
-            versions = sorted(
-                path
-                for path in variant_dir.iterdir()
-                if path.is_dir() and path.name.startswith("v")
-            )
-            copied = False
-            for source_dir in versions:
-                sources = [
-                    path for path in source_dir.iterdir() if path.is_file()
-                ]
-                if not sources:
-                    continue
-                copied = True
-                relative = (
-                    Path("cosmic")
-                    / f"com.system76.CosmicTheme.{variant}"
-                    / source_dir.name
-                )
-                for source in sources:
-                    writes[self.config / relative / source.name] = (
-                        source.read_bytes()
-                    )
-            if not copied:
-                raise ValueError(f"Incomplete COSMIC palette: {variant}")
         mode = palette.get("nativeMode") or self.current_mode()
         writes.update(self.projected_writes(mode, palette))
-        if palette.get("nativeMode"):
-            writes[self.mode_file] = (
-                b"false\n" if mode == "light" else b"true\n"
-            )
         selection_path = self.state / "selection"
         previous_selection = (
             selection_path.read_bytes() if selection_path.exists() else None
@@ -153,19 +130,8 @@ class Themes:
                 atomic_write(selection_path, previous_selection)
             raise
 
-    @property
-    def mode_file(self):
-        return self.config / "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
-
     def current_mode(self):
-        # COSMIC ThemeMode remains authoritative when present, including for
-        # the greeter. Hyprland without that file uses theme-menu persistence.
-        if self.mode_file.exists():
-            return (
-                "light"
-                if self.mode_file.read_text().strip() == "false"
-                else "dark"
-            )
+        # ~/.local/state/theme-menu/mode is the only light/dark authority.
         try:
             mode = (self.state / "mode").read_text().strip()
         except FileNotFoundError:
@@ -216,30 +182,91 @@ class Themes:
                 f"This theme is {native}-only. "
                 f"Select a {mode} theme from the menu."
             )
-        # Resolve the bundle before touching ThemeMode so a missing catalogue
-        # cannot leave the greeter mode half-applied.
-        projected = self.projected_writes(mode)
-        content = b"false\n" if mode == "light" else b"true\n"
-        previous = (
-            self.mode_file.read_bytes() if self.mode_file.exists() else None
-        )
-        atomic_write(self.mode_file, content)
+        # Resolve before writing so a missing catalogue cannot change mode.
+        self.write_projected(mode)
+
+    def theme_id(self, selected):
+        key = self.catalogue["default"] if selected == "default" else selected
+        if (
+            key == "solarized"
+            and key not in self.catalogue["palettes"]
+            and "osaka-jade" in self.catalogue["palettes"]
+        ):
+            key = "osaka-jade"
+        if key not in self.catalogue["palettes"]:
+            raise ValueError(
+                f"Unknown palette: {selected}. Use theme-menu default to reset."
+            )
+        return key
+
+    def publish_greeter(self, selected):
+        """Publish a catalogue theme ID to the precreated greeter file.
+
+        The directory is not writable, so this overwrites the existing regular
+        file in place. It never creates a path, follows a symlink, or blocks
+        theme selection when the file is not there yet.
+        """
+        if os.environ.get("THEME_MENU_PUBLISH") != "1":
+            return []
         try:
-            self.write_projected(mode, projected)
+            theme_id = self.theme_id(selected)
+        except ValueError:
+            return ["Refused to publish an unknown greeter theme ID."]
+        payload = f"{theme_id}\n".encode()
+        if (
+            theme_id not in self.catalogue["palettes"]
+            or THEME_ID.fullmatch(theme_id) is None
+            or not payload.isascii()
+            or len(payload) > 64
+        ):
+            return [
+                "Refused to publish a greeter theme ID outside the catalogue."
+            ]
+        path = self.greeter_path
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            return []
         except OSError:
-            if previous is None:
-                self.mode_file.unlink(missing_ok=True)
-            else:
-                atomic_write(self.mode_file, previous)
-            raise
+            return []
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+            return ["Greeter theme path is not a regular file; left unchanged."]
+        flags = os.O_WRONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            descriptor = os.open(path, flags)
+        except FileNotFoundError:
+            return []
+        except OSError as error:
+            if error.errno in (errno.ELOOP, errno.EMLINK):
+                return ["Greeter theme path is a symlink; left unchanged."]
+            return ["Could not update the greeter theme ID."]
+        try:
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                return [
+                    "Greeter theme path is not a regular file; left unchanged."
+                ]
+            view = payload
+            while view:
+                written = os.write(descriptor, view)
+                if written == 0:
+                    raise OSError("short greeter theme write")
+                view = view[written:]
+            os.ftruncate(descriptor, len(payload))
+        except OSError:
+            return ["Could not update the greeter theme ID."]
+        finally:
+            os.close(descriptor)
+        return []
 
     def publish_session(self):
         # Direct imports, including tests, must not touch the live desktop.
         if os.environ.get("THEME_MENU_PUBLISH") != "1":
             return []
+        warnings = self.publish_greeter(self.selection())
         if not hyprland_session():
-            return []
-        warnings = []
+            return warnings
         mode = self.current_mode()
         conf = self.state / "active" / "hyprland.conf"
         try:
@@ -343,9 +370,8 @@ class Themes:
         for relative in GTK_CSS:
             dest = self.config / relative
             if dest.is_symlink():
-                # COSMIC exports these links. Replace the link, never its
-                # target, when Hyprland takes over GTK appearance. Preserve
-                # unrelated user/Home Manager overrides.
+                # One-time migration: COSMIC used to export these CSS links.
+                # Replace the link, never its target. Leave every other link.
                 cosmic_css = self.config / "gtk-4.0/cosmic"
                 if dest.resolve() not in (
                     cosmic_css / "dark.css", cosmic_css / "light.css"
@@ -577,7 +603,9 @@ def reload_btop(proc_root="/proc"):
 
 def reload_apps():
     warnings = []
-    reload_btop()
+    # Same opt-in as desktop publishing. Direct imports must not signal btop.
+    if os.environ.get("THEME_MENU_PUBLISH") == "1":
+        reload_btop()
     try:
         owner = subprocess.run(
             [
@@ -676,9 +704,9 @@ def main():
             if selected in ("light", "dark"):
                 controller.set_mode(selected)
                 title, label = "Appearance mode", f"{selected.title()} mode"
-                # COSMIC and terminals propagate mode changes natively. Do not
-                # rewrite the palette or disturb explicit application overrides.
-                # Hyprland session assets follow the selected mode separately.
+                # Mode lives in theme-menu state. Do not rewrite the palette
+                # or disturb explicit application overrides. Session assets
+                # follow the selected mode separately.
                 warnings = []
             else:
                 controller.apply(selected)

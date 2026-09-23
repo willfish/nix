@@ -48,7 +48,6 @@ let
   entries = lib.mapAttrs (
     host: theme:
     let
-      cosmic = import ./cosmic.nix { inherit pkgs theme; };
       herdr = (pkgs.formats.toml { }).generate "${host}-herdr.toml" (
         lib.recursiveUpdate (builtins.fromTOML (builtins.readFile ../../config/herdr/config.toml)) {
           theme = theme.herdr // {
@@ -66,7 +65,6 @@ let
       herdrTheme = theme.herdr // {
         custom = lib.genAttrs [ "light" "dark" ] (mode: render.herdr theme.${mode});
       };
-      cosmic = toString cosmic;
       session = lib.genAttrs [ "light" "dark" ] (
         mode:
         lib.mapAttrs (_: text: toString (pkgs.writeText "${host}-${mode}-hyprland-theme" text)) (

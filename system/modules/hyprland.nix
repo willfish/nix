@@ -1,6 +1,5 @@
 { pkgs, ... }:
 {
-  # Keep COSMIC selectable while the new session is exercised.
   programs.hyprland.enable = true;
   security.pam.services.hyprlock = { };
 

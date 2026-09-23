@@ -82,7 +82,7 @@ flowchart TD
         subgraph CONFIGS [Dotfiles]
             NVIM[nvim]
             GHOSTTY[ghostty]
-            COSMIC[cosmic]
+            HYPRLAND[hyprland]
             OTHER[bin...]
         end
     end
@@ -113,13 +113,13 @@ Framework 13 AMD AI-300 Series. Uses the `nixos-hardware` module for Framework-s
 
 ### terminus - Beelink NAS / headless host
 
-Headless server role with ZFS media storage, Immich, and Audiobookshelf. Its Home Manager profile also excludes workstation browsers, COSMIC settings, and graphical NetworkManager agents, while retaining Herdr for remote sessions. Desktop, audio, printing, Bluetooth, and workstation Docker configuration are excluded by the server boundary. `system/terminus/storage.nix` declares monthly ZFS scrubs and SMART monitoring. Terminus media is treated as replaceable and has no snapshot or off-host backup policy.
+Headless server role with ZFS media storage, Immich, and Audiobookshelf. Its Home Manager profile also excludes workstation browsers, graphical desktop settings, and graphical NetworkManager agents, while retaining Herdr for remote sessions. Desktop, audio, printing, Bluetooth, and workstation Docker configuration are excluded by the server boundary. `system/terminus/storage.nix` declares monthly ZFS scrubs and SMART monitoring. Terminus media is treated as replaceable and has no snapshot or off-host backup policy.
 
 ### System Roles
 
 All hosts share `system/modules/base.nix`, which provides boot, locale, Nix, the William user, OpenSSH, Tailscale, NetworkManager, Fish, and base command-line tools.
 
-- `system/modules/workstation.nix` adds COSMIC/X11, PipeWire, CUPS/Avahi, Bluetooth, Docker, fonts, and workstation user groups.
+- `system/modules/workstation.nix` adds the graphical workstation role, PipeWire, CUPS/Avahi, Bluetooth, Docker, fonts, and workstation user groups. Hyprland is the supported session; see [Hyprland](docs/hyprland.md).
 - `system/modules/server.nix` disables documentation and asserts that graphical services remain off.
 - Host modules layer hardware, kernel, service, and storage choices on their role.
 
@@ -185,7 +185,7 @@ Signed commits with GPG key `BC6DED9479D436F5`. Delta as the diff viewer with th
 
 ### Desktop (Linux only)
 
-COSMIC desktop with autotiling, focus-follows-cursor, and active window hints. Panel on the left (XS) with workspaces and status applets. Six static workspaces with `Super+1-9` switching. All settings managed declaratively via Home Manager.
+Hyprland is the supported graphical session. Editable settings live in `home/config/hyprland/` and are applied by Home Manager. Login, greeter theme input, and recovery are in [Hyprland](docs/hyprland.md).
 
 ### Neovim
 

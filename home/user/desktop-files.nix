@@ -2,7 +2,6 @@
   config,
   lib,
   pkgs,
-  hostName ? null,
   isGraphicalLinux,
   hostTheme,
   herdrThemeFile,
@@ -11,7 +10,6 @@
 let
   inherit (pkgs) stdenv;
   configDir = ../config;
-  voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   renderTheme = import ./themes/render.nix { inherit lib; };
   herdrTheme = hostTheme.herdr // {
     custom = {
@@ -207,105 +205,12 @@ in
       fi
     '';
 
-    # cosmic-screenshot crashes on launch when CosmicPortal remembers Window mode
-    # (NixOS/nixpkgs#409441). Reset only that broken persisted choice.
-    fixCosmicScreenshotPortalConfig = lib.mkIf isGraphicalLinux (
-      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        portalScreenshot="$HOME/.config/cosmic/com.system76.CosmicPortal/v1/screenshot"
-        if [ -f "$portalScreenshot" ] && grep -q 'choice: Window' "$portalScreenshot"; then
-          ${pkgs.gnused}/bin/sed -i 's/choice: Window/choice: Rectangle/' "$portalScreenshot"
-          echo "Reset cosmic screenshot mode from Window to Rectangle (avoids crash loop)"
-        elif [ ! -f "$portalScreenshot" ]; then
-          mkdir -p "$(dirname "$portalScreenshot")"
-          cp ${configDir}/cosmic/portal-screenshot "$portalScreenshot"
-          echo "Installed default cosmic screenshot portal config"
-        fi
-      ''
-    );
   };
 
-  xdg.configFile =
-    lib.optionalAttrs isGraphicalLinux {
-      "cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom" = {
-        source =
-          if voiceFeatures.stt then
-            pkgs.writeText "cosmic-shortcuts-with-voice" (
-              let
-                withDictation =
-                  builtins.replaceStrings
-                    [
-                      ''
-                        key: "space",
-                            ): Disable,''
-                    ]
-                    [
-                      ''
-                        key: "space",
-                            ): Spawn("pi-voice interact"),
-                            (
-                                modifiers: [Super, Shift],
-                                key: "space",
-                            ): Spawn("pi-voice send"),
-                            (
-                                modifiers: [Super, Shift],
-                                key: "v",
-                            ): Spawn("voice-menu"),''
-                    ]
-                    (builtins.readFile "${configDir}/cosmic/shortcuts");
-              in
-              if voiceFeatures.tts then
-                builtins.replaceStrings
-                  [ "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Disable," ]
-                  [
-                    "modifiers: [\n            Super,\n        ],\n        key: \"r\",\n    ): Spawn(\"pi-voice read\"),"
-                  ]
-                  withDictation
-              else
-                withDictation
-            )
-          else
-            "${configDir}/cosmic/shortcuts";
-        force = true;
-      };
-      "cosmic/com.system76.CosmicComp/v1/autotile" = {
-        source = "${configDir}/cosmic/autotile";
-        force = true;
-      };
-      "cosmic/com.system76.CosmicComp/v1/autotile_behavior" = {
-        source = "${configDir}/cosmic/autotile_behavior";
-        force = true;
-      };
-      "cosmic/com.system76.CosmicComp/v1/active_hint" = {
-        source = "${configDir}/cosmic/active_hint";
-        force = true;
-      };
-      "cosmic/com.system76.CosmicComp/v1/focus_follows_cursor" = {
-        source = "${configDir}/cosmic/focus_follows_cursor";
-        force = true;
-      };
-      "cosmic/com.system76.CosmicComp/v1/cursor_follows_focus" = {
-        source = "${configDir}/cosmic/cursor_follows_focus";
-        force = true;
-      };
-      "cosmic/com.system76.CosmicPanel.Panel/v1" = {
-        source = "${configDir}/cosmic/panel";
-        recursive = true;
-        force = true;
-      };
-      "cosmic/com.system76.CosmicPanel.Dock/v1" = {
-        source = "${configDir}/cosmic/dock";
-        recursive = true;
-        force = true;
-      };
-      "cosmic/com.system76.CosmicPanel/v1/entries" = {
-        source = "${configDir}/cosmic/panel-entries";
-        force = true;
-      };
-      "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
-    }
-    // lib.optionalAttrs isGraphicalLinux {
-      "mimeapps.list".force = true;
-    };
+  xdg.configFile = lib.optionalAttrs isGraphicalLinux {
+    "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
+    "mimeapps.list".force = true;
+  };
 
   xdg.dataFile = lib.optionalAttrs isGraphicalLinux {
     "applications/mimeapps.list".force = true;

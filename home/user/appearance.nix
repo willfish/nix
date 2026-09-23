@@ -10,15 +10,7 @@ let
   catalogue = import ./themes/palettes.nix;
   desktopAppearance = (import ../config/hyprland/settings.nix).appearance;
   ghosttyConfig = builtins.readFile ../config/ghostty/config;
-  defaultHost =
-    {
-      andromeda = "rose-pine";
-      foundation = "tokyo-night";
-      starfish = "osaka-jade";
-      terminus = "catppuccin";
-      relay = "gruvbox";
-    }
-    .${if hostName == null then "andromeda" else hostName} or "rose-pine";
+  defaultHost = (import ./themes/host-defaults.nix).forHost hostName;
   theme = catalogue.${defaultHost};
   runtime = import ./themes/runtime.nix {
     inherit
@@ -141,8 +133,6 @@ in
   }
   // lib.optionalAttrs isGraphicalLinux {
     "theme-menu/catalogue.json".source = runtime.manifest;
-    # COSMIC exports both variants and applies GTK/Qt when the mode changes.
-    "cosmic/com.system76.CosmicTk/v1/apply_theme_global".text = "true";
   };
 
   gtk = lib.mkIf isGraphicalLinux {
@@ -160,30 +150,8 @@ in
 
   home.activation = {
     applySelectedPalette = lib.mkIf isGraphicalLinux (
-      lib.hm.dag.entryAfter [ "linkGeneration" "writableCosmicMode" ] ''
-        run ${runtime.package}/bin/theme-menu --reapply
-      ''
-    );
-    rememberCosmicMode = lib.mkIf isGraphicalLinux (
-      lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] ''
-        cosmicModePath="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
-        savedCosmicMode=true
-        if [ -f "$cosmicModePath" ] && grep -qx false "$cosmicModePath"; then
-          savedCosmicMode=false
-        fi
-      ''
-    );
-    writableCosmicMode = lib.mkIf isGraphicalLinux (
       lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-        modeDir="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1"
-        mkdir -p "$modeDir"
-        if [ -L "$modeDir/is_dark" ] || [ ! -e "$modeDir/is_dark" ]; then
-          printf '%s\n' "$savedCosmicMode" > "$modeDir/.is_dark.new"
-          mv -f "$modeDir/.is_dark.new" "$modeDir/is_dark"
-        fi
-        # No sunrise/sunset scheduling. Leave the actual light/dark choice writable.
-        printf 'false\n' > "$modeDir/.auto_switch.new"
-        mv -f "$modeDir/.auto_switch.new" "$modeDir/auto_switch"
+        run ${runtime.package}/bin/theme-menu --reapply
       ''
     );
   };

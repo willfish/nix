@@ -1,10 +1,8 @@
 """Evaluate real Home Manager profiles, including headless and Darwin."""
 
 import json
-import os
 from pathlib import Path
 import subprocess
-import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,17 +62,21 @@ class HostThemeConfigTest(unittest.TestCase):
     def test_headless_mac_omits_ghostty_but_preserves_linux_palettes(self):
         for name, profile in self.profiles.items():
             with self.subTest(profile=name):
-                if name == "william-darwin":
+                if name in ("william-darwin", "william@relay"):
                     self.assertIsNone(profile["ghostty"])
                 else:
                     self.assertIsInstance(profile["ghostty"], str)
 
-    def test_cosmic_owns_only_graphical_linux(self):
+    def test_menu_owns_only_graphical_linux(self):
         for name, profile in self.profiles.items():
-            graphical = name not in ("william@terminus", "william-darwin")
+            graphical = name not in (
+                "william@terminus",
+                "william@relay",
+                "william-darwin",
+            )
             with self.subTest(profile=name):
-                self.assertEqual(profile["cosmic"], graphical)
-                self.assertTrue(profile["writableMode"])
+                self.assertEqual(profile["graphical"], graphical)
+                self.assertFalse(profile["cosmicModeManaged"])
                 self.assertFalse(profile["stylixAutoEnable"])
                 self.assertFalse(profile["gtkFixed"])
                 self.assertEqual(profile["gtkEnable"], graphical)
@@ -82,34 +84,52 @@ class HostThemeConfigTest(unittest.TestCase):
                     self.assertEqual(profile["dconfSettings"], [])
 
     def test_picker_catalogue_defaults_and_activation(self):
-        expected = {
-            "william@andromeda": "rose-pine",
-            "william@foundation": "tokyo-night",
-            "william@starfish": "solarized",
-        }
         for name, profile in self.profiles.items():
             with self.subTest(profile=name):
-                if name not in expected:
+                self.assertTrue(profile["themeMatchesHost"])
+                self.assertEqual(
+                    profile["voiceMenu"], {"width": 55, "lines": 10}
+                )
+                voice = profile["voiceFuzzel"]
+                if voice:
+                    self.assertNotIn("[colors]", voice)
+                    self.assertNotIn("[border]", voice)
+                    self.assertNotIn("font=", voice)
+                if not profile["graphical"]:
                     self.assertIsNone(profile["catalogue"])
                     self.assertEqual(profile["reapply"], "")
+                    self.assertIsNone(profile["fuzzelIni"])
                     continue
                 catalogue = profile["catalogue"]
-                self.assertEqual(catalogue["default"], expected[name])
+                self.assertEqual(catalogue["default"], profile["expectedTheme"])
                 self.assertEqual(
-                    set(catalogue["palettes"]),
-                    {
-                        "rose-pine",
-                        "tokyo-night",
-                        "solarized",
-                        "catppuccin",
-                        "gruvbox",
-                    },
+                    set(catalogue["palettes"]), set(profile["paletteNames"])
                 )
                 self.assertIn("theme-menu --reapply", profile["reapply"])
+                self.assertNotIn("cosmic", profile["reapply"].lower())
                 self.assertIn(
                     "/theme-menu/active/host-light.json", profile["pi"]
                 )
+                active = profile["activeFuzzel"]
+                self.assertIn(f"include={active}", profile["fuzzelIni"])
+                self.assertEqual(
+                    profile["fuzzelIni"], profile["hyprlandFuzzel"]
+                )
+                self.assertTrue(profile["sameDefaultFuzzel"])
+                voice = profile["voiceFuzzel"]
+                # Voice menu is installed only where speech-to-text is enabled.
+                if name in ("william@andromeda", "william@foundation"):
+                    self.assertIsNotNone(voice)
+                if voice:
+                    self.assertIn(f"include={active}", voice)
+                    self.assertNotIn("[colors]", voice)
+                    self.assertNotIn("[border]", voice)
+                    self.assertNotIn("font=", voice)
+                    self.assertIn("width=55", voice)
+                    self.assertIn("lines=10", voice)
                 for palette in catalogue["palettes"].values():
+                    self.assertNotIn("cosmic", palette)
+                    self.assertIn(palette["nativeMode"], ("light", "dark"))
                     self.assertEqual(
                         set(palette["files"]),
                         {
@@ -127,45 +147,6 @@ class HostThemeConfigTest(unittest.TestCase):
                             palette["nvim"][mode]["base00"],
                             palette["herdrTheme"]["custom"][mode]["panel_bg"],
                         )
-
-    def test_mode_migration_preserves_choice_and_remains_writable(self):
-        profile = self.profiles["william@foundation"]
-        for previous in (None, "true", "false"):
-            with (
-                self.subTest(previous=previous),
-                tempfile.TemporaryDirectory() as d,
-            ):
-                directory = Path(d) / ".config/cosmic"
-                mode = directory / "com.system76.CosmicTheme.Mode/v1/is_dark"
-                mode.parent.mkdir(parents=True)
-                if previous is not None:
-                    old = Path(d) / "old-mode"
-                    old.write_text(previous + "\n")
-                    mode.symlink_to(old)
-                # Home Manager removes the old managed mode symlink between
-                # these two activation entries. A second activation must also
-                # leave a subsequently selected light mode untouched.
-                script = (
-                    profile["rememberMode"] + '\nrm -f "$cosmicModePath"\n'
-                )
-                script += profile["writableModeScript"]
-                env = {**os.environ, "HOME": d}
-                subprocess.run(
-                    ["bash", "-eu", "-c", script], env=env, check=True
-                )
-                self.assertFalse(mode.is_symlink())
-                self.assertEqual(mode.read_text().strip(), previous or "true")
-                mode.write_text("false\n")
-                script = (
-                    profile["rememberMode"] + profile["writableModeScript"]
-                )
-                subprocess.run(
-                    ["bash", "-eu", "-c", script], env=env, check=True
-                )
-                self.assertEqual(mode.read_text().strip(), "false")
-                self.assertEqual(
-                    (mode.parent / "auto_switch").read_text().strip(), "false"
-                )
 
 
 if __name__ == "__main__":

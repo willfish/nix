@@ -6,9 +6,11 @@ using their plain names and native colours. There are no personal palette varian
 Their colour roles are mapped into the existing shared application renderers;
 Omarchy's application configurations, scripts and keybindings are not installed.
 
-Host defaults are Rosé Pine on Andromeda, Tokyo Night on Foundation, Osaka Jade
-on Starfish, Catppuccin on Terminus and Gruvbox on Relay. Other hosts use Rosé
-Pine. A previously saved Solarized selection migrates to Osaka Jade.
+Host defaults live in `home/user/themes/host-defaults.nix`: Rosé Pine on
+Andromeda, Tokyo Night on Foundation, Osaka Jade on Starfish, Catppuccin on
+Terminus and Gruvbox on Relay. Other hosts use Rosé Pine. A saved theme-menu
+selection overrides that default. A previously saved Solarized selection
+migrates to Osaka Jade.
 
 ## Choosing a theme
 
@@ -24,7 +26,7 @@ Each theme owns its native light/dark mode. Catppuccin Latte, Flexoki Light,
 Lupine, Rosé Pine and White are light themes; the others are dark. Select another
 theme to change mode. There is no synthetic light/dark variant or mode-toggle
 row. An incompatible `theme-menu light` or `theme-menu dark` request is rejected.
-Use this menu rather than COSMIC Settings to keep mode and palette aligned.
+Use this menu to keep mode and palette aligned.
 
 ## Wallpapers and applications
 
@@ -35,14 +37,23 @@ the Hyprland session only. Changing the theme replaces the wallpaper too.
 `home/config/hyprland/settings.nix` controls the default palette, fonts,
 Base16 overrides and wallpaper sizing. For a custom image, set an absolute path
 such as `wallpaper.overrides.tokyo-night.dark = "/home/william/Pictures/sky.png";`.
-The file must exist when applying the theme. This does not change COSMIC's
-wallpaper or install a wallpaper on the greeter.
+The file must exist when applying the theme. It is a Hyprland wallpaper, not a
+greeter wallpaper.
 
-The shared colours feed Ghostty, Neovim, Herdr, btop and the desktop shell. COSMIC
-Greeter reads the selected user's theme and native mode. In Hyprland, the picker
-also updates Waybar, Fuzzel, Hyprlock, Mako and GTK appearance. In Brave, select
-**Settings → Appearance → Use GTK**. Explicit browser themes, extensions and
-website styling can override desktop colours.
+The shared colours feed Ghostty, Neovim, Herdr, btop and the desktop shell. In
+Hyprland, the picker also updates Waybar, Fuzzel, Hyprlock, Mako and GTK
+appearance. Default Fuzzel and the voice menu include
+`~/.local/state/theme-menu/active/fuzzel.ini`. Voice menu width and lines come
+from `menus.voice` in `home/config/hyprland/settings.nix`.
+
+ReGreet does not read your home directory. The precreated file
+`/var/lib/desktop-theme/william` holds only a selected theme ID; the greeter
+validates it against its immutable theme catalogue and falls back to the host
+default if it is invalid. The first reboot activates the replacement greeter.
+Subsequent theme choices take effect when the greeter next starts.
+
+In Brave, select **Settings → Appearance → Use GTK**. Explicit browser themes,
+extensions and website styling can override desktop colours.
 
 btop reads `~/.config/btop/themes/host.theme`. On graphical Linux that file
 follows the selected theme, and a running btop reloads with it. Themes that
@@ -65,14 +76,20 @@ precedence. Remote hosts retain their own palettes.
 - `home/user/themes/palettes.nix` projects upstream colour roles into Base16.
 - `home/user/themes/omarchy.nix` supplies wallpapers and the upstream licence.
   The licence is installed at `~/.local/share/theme-menu/omarchy-LICENSE`.
-- `home/user/appearance.nix` chooses host defaults and wires application config.
+- `home/user/themes/host-defaults.nix` defines the host default theme IDs.
+- `home/user/appearance.nix` wires application config from that default unless a
+  saved selection overrides it.
 - `home/user/themes/runtime.nix` builds the catalogue. Active files and the saved
   selection live under `~/.local/state/theme-menu/`.
-- `home/config/appearance/theme_menu.py` publishes selected files and native mode.
-  Writes are individually atomic with rollback on failure, not a cross-app
-  transaction; applications may update at slightly different times.
-- `home/user/themes/cosmic.py` supplies the native COSMIC importer with colour
-  inputs. It does not reimplement COSMIC component styling.
+- `home/config/appearance/theme_menu.py` publishes selected files and writes
+  native mode to `~/.local/state/theme-menu/mode`, the only light/dark
+  authority. Writes are individually atomic with rollback on failure, not a
+  cross-app transaction; applications may update at slightly different times.
+  When desktop publishing is enabled and `/var/lib/desktop-theme/william`
+  already exists, the menu overwrites that regular file in place with the
+  selected theme ID. A missing file is ignored. A symlink or non-regular path
+  is left unchanged. A leftover GTK CSS symlink to the old `gtk-4.0/cosmic`
+  stylesheet is replaced once; other CSS links are kept.
 
 Fixed Stylix overrides remain disabled for shared consumers. Custom GTK CSS and
 unrelated symlinks are preserved rather than overwritten. Other Stylix targets,

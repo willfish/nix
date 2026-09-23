@@ -23,8 +23,9 @@
 
   Fix: headless secret agent that re-supplies the PSK already stored in the
   system connection (nmcli -s). REQUEST_NEW is treated like a normal request
-  — the password was never actually wrong. No nm-applet / extra tray UI;
-  Cosmic remains the only network UI for interactive setup.
+  - the password was never actually wrong. No nm-applet / extra tray UI.
+  Interactive setup uses the Hyprland network panel, nm-connection-editor,
+  nmtui, or nmcli --ask.
 
   Companion watcher re-ups Wi-Fi after unexpected disconnect, using an
   explicit passwd-file from the system secret so recovery does not depend
@@ -132,9 +133,10 @@ lib.mkIf isGraphicalLinux (
                   secrets_conn.add_setting(setting)
                   return secrets_conn.to_dbus(NM.ConnectionSerializationFlags.ALL)
 
-              # Not a stored Wi-Fi PSK profile — let activation fail fast rather
+              # Not a stored Wi-Fi PSK profile. Let activation fail fast rather
               # than block on a UI we do not own. Interactive setup still works
-              # via cosmic-settings / nmtui / nmcli --ask.
+              # via the Hyprland network panel, nm-connection-editor, nmtui, or
+              # nmcli --ask.
               raise RuntimeError(f"unsupported setting for auto agent: {setting_name}")
 
           def do_cancel_get_secrets(self, connection_path, setting_name):

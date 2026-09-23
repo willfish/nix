@@ -50,36 +50,16 @@ let
       '';
     };
   voice = makeVoice "pi";
-  # Match the managed COSMIC Macchiato/Lavender palette, without changing
-  # the user's application launcher or requiring another background service.
+  desktopSettings = import ../config/hyprland/settings.nix;
+  # Read the active style each time Fuzzel opens, not at build time.
   menuConfig = pkgs.writeText "voice-menu-fuzzel.ini" ''
-    [main]
-    font=JetBrainsMono Nerd Font:size=12
-    anchor=center
-    layer=overlay
-    width=55
-    lines=10
+    include=${config.xdg.stateHome}/theme-menu/active/fuzzel.ini
+    anchor=${desktopSettings.launcher.anchor}
+    layer=${desktopSettings.launcher.layer}
+    width=${toString desktopSettings.menus.voice.width}
+    lines=${toString desktopSettings.menus.voice.lines}
     minimal-lines=yes
-    match-mode=fzf
-    icons-enabled=no
-    horizontal-pad=20
-    vertical-pad=12
-    inner-pad=8
-
-    [colors]
-    background=24273aff
-    text=cad3f5ff
-    prompt=b7bdf8ff
-    input=cad3f5ff
-    match=b7bdf8ff
-    selection=494d64ff
-    selection-text=cad3f5ff
-    selection-match=b7bdf8ff
-    border=b7bdf8ff
-
-    [border]
-    width=2
-    radius=12
+    match-mode=${desktopSettings.launcher.matchMode}
   '';
   voiceMenu = pkgs.writeShellApplication {
     name = "voice-menu";

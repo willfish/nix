@@ -1,8 +1,14 @@
-{ pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 {
   imports = [
     ./base.nix
     ./hyprland.nix
+    ./greeter.nix
   ];
 
   boot.kernelParams = [ "btiso.enable=1" ];
@@ -62,9 +68,6 @@
   environment.systemPackages = with pkgs; [
     ghostty
     xclip
-    # 26.05 COSMIC module does not install these 1.6 extras.
-    cosmic-monitor
-    cosmic-sound-theme
   ];
 
   virtualisation.docker = {
@@ -73,17 +76,23 @@
   };
 
   services.spice-vdagentd.enable = true;
-  # The greeter reads the selected user's COSMIC theme/mode, also maintained
-  # by theme-menu in Hyprland. Keep both sessions available for recovery.
-  services.displayManager.cosmic-greeter.enable = true;
-  services.desktopManager.cosmic.enable = true;
-  # COSMIC enables acpid. It aborts after netlink ENOBUFS during input
-  # hotplug storms (common on Framework lid/dock events) and NixOS ships
-  # the unit without Restart=, which leaves the system degraded.
+  services.desktopManager.cosmic.enable = false;
+  services.displayManager.cosmic-greeter.enable = false;
+  # Keep the session services COSMIC used to enable. acpid aborts after
+  # netlink ENOBUFS during input hotplug storms and NixOS ships the unit
+  # without Restart=, which leaves the system degraded.
+  services.acpid.enable = true;
   systemd.services.acpid.serviceConfig = {
     Restart = "on-failure";
     RestartSec = "5s";
   };
+  services.upower.enable = true;
+  services.gvfs.enable = true;
+  services.gnome.gnome-keyring.enable = true;
+  security.polkit.enable = true;
+  services.power-profiles-daemon.enable = lib.mkDefault (
+    !config.hardware.system76.power-daemon.enable
+  );
   services.xserver = {
     enable = true;
     xkb.layout = "us";

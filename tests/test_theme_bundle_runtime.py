@@ -44,16 +44,15 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
             controller = menu.Themes(
                 self.catalogue, root / "state", root / "config"
             )
-            mode = (
-                root / "config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
-            )
-            mode.parent.mkdir(parents=True)
-            mode.write_text("false\n")
             for key, palette in self.catalogue["palettes"].items():
                 with self.subTest(palette=key):
                     controller.apply(key)
                     self.assertEqual(controller.selection(), key)
-                    self.assertEqual(mode.read_text(), "false\n")
+                    self.assertNotIn("cosmic", palette)
+                    self.assertEqual(
+                        (root / "state/mode").read_text().strip(),
+                        palette["nativeMode"],
+                    )
                     for name, source in palette["files"].items():
                         self.assertEqual(
                             (root / "state/active" / name).read_bytes(),
@@ -63,21 +62,7 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
                         (root / "state/active/herdr.toml").read_text()
                     )
                     self.assertEqual(herdr["theme"], palette["herdrTheme"])
-                    for variant in menu.COSMIC_NAMES:
-                        source_root = (
-                            Path(palette["cosmic"])
-                            / f"cosmic/com.system76.CosmicTheme.{variant}"
-                        )
-                        for field in source_root.glob("v*/*"):
-                            if field.is_file():
-                                self.assertEqual(
-                                    (
-                                        root
-                                        / "config"
-                                        / field.relative_to(palette["cosmic"])
-                                    ).read_bytes(),
-                                    field.read_bytes(),
-                                )
+                    self.assertFalse((root / "config/cosmic").exists())
                     for mode_name in ("light", "dark"):
                         result = subprocess.run(
                             [
@@ -105,15 +90,11 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
             controller = menu.Themes(
                 self.catalogue, root / "state", root / "config"
             )
-            mode = (
-                root / "config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
-            )
-            mode.parent.mkdir(parents=True)
             for key in self.catalogue["palettes"]:
                 controller.apply(key)
-                for value in ("true", "false"):
-                    mode.write_text(value)
-                    with self.subTest(palette=key, mode=value):
+                for mode_name in ("light", "dark"):
+                    (root / "state/mode").write_text(mode_name + "\n")
+                    with self.subTest(palette=key, mode=mode_name):
 
                         def check(args, **kwargs):
                             result = run(
@@ -124,8 +105,9 @@ class ThemeBundleRuntimeTest(unittest.TestCase):
                             self.assertEqual(
                                 result.returncode, 0, result.stderr
                             )
+                            # Native themes put default first, without mode.
                             return subprocess.CompletedProcess(
-                                args, 0, "1\n", ""
+                                args, 0, "0\n", ""
                             )
 
                         with patch.object(

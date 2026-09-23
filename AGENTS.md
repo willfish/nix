@@ -10,7 +10,7 @@ William's flake-based NixOS/Home Manager repo. Follow `home/config/llm/AGENTS.md
 - Terminus: Beelink NAS/headless host.
 - `flake.nix`: inputs, outputs, hosts; `system/`: per-host NixOS.
 - `home/user/`: Home Manager; optional `modules/` for reusable modules. Packages in `packages.nix`, programs in `programs.nix`, shell config in `shells.nix` + `programs.nix`. Fish is primary.
-- `home/config/`: static home/config symlinks, including declarative Cosmic DE settings.
+- `home/config/`: static home/config symlinks. Hyprland settings live under `home/config/hyprland/`.
 - `home/config/llm/`: canonical shared AGENTS, `skills/`, `guides/`, `process-skills/`, `references/`; deployed via Home Manager.
 - `~/Repositories/nixpkgs` is ONLY for overlaid packages (e.g. variety). Pi uses the `llm-agents.nix` input. Local tools include sniffy, smailer, mux and forte.
 

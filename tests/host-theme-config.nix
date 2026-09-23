@@ -1,6 +1,18 @@
 # Read-only contract query used by test_host_theme_config.py.
 let
   flake = builtins.getFlake (toString ../.);
+  settings = import ../home/config/hyprland/settings.nix;
+  palettes = import ../home/user/themes/palettes.nix;
+  expectedThemes = {
+    "william@andromeda" = "rose-pine";
+    "william@foundation" = "tokyo-night";
+    "william@starfish" = "osaka-jade";
+    "william@terminus" = "catppuccin";
+    "william@relay" = "gruvbox";
+    "william-darwin" = "gruvbox";
+    "william-linux" = "rose-pine";
+  };
+  textOf = file: if file == null then null else file.source.text or file.text or null;
   inspect =
     configuration:
     let
@@ -21,6 +33,10 @@ let
           { theme = selected.herdrTheme; }
         else
           builtins.fromJSON files.".config/herdr/config.toml".source.value;
+      expectedTheme = expectedThemes.${configuration};
+      fuzzel = c.xdg.configFile."fuzzel/fuzzel.ini" or null;
+      hyprlandFuzzel = c.xdg.configFile."fuzzel/hyprland.ini" or null;
+      voiceFuzzel = c.xdg.configFile."voice-menu/fuzzel.ini" or null;
     in
     {
       inherit (herdr) theme;
@@ -29,32 +45,34 @@ let
       pi = files.".local/bin/pi".text;
       nvim =
         if runtime then selected.nvim else builtins.fromJSON files.".config/nvim/host-palettes.json".text;
-      cosmic = runtime;
+      graphical = runtime;
       inherit catalogue;
       reapply = c.home.activation.applySelectedPalette.data or "";
-      writableMode = !(c.xdg.configFile ? "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark");
+      cosmicModeManaged =
+        c.xdg.configFile ? "cosmic/com.system76.CosmicTheme.Mode/v1/is_dark"
+        || c.home.activation ? rememberCosmicMode
+        || c.home.activation ? writableCosmicMode
+        || c.xdg.configFile ? "cosmic/com.system76.CosmicTk/v1/apply_theme_global";
       gtkFixed = c.stylix.targets.gtk.enable;
       gtkEnable = c.gtk.enable;
       dconfSettings = builtins.attrNames c.dconf.settings;
       stylixAutoEnable = c.stylix.autoEnable;
       fishFixed = c.stylix.targets.fish.enable;
       delta = c.programs.git.settings.delta or { };
-      cosmicSource = if runtime then selected.cosmic else null;
-      rememberMode = c.home.activation.rememberCosmicMode.data or "";
-      writableModeScript = c.home.activation.writableCosmicMode.data or "";
+      activeFuzzel = "${c.xdg.stateHome}/theme-menu/active/fuzzel.ini";
+      fuzzelIni = textOf fuzzel;
+      hyprlandFuzzel = textOf hyprlandFuzzel;
+      voiceFuzzel = textOf voiceFuzzel;
+      sameDefaultFuzzel = fuzzel != null && fuzzel.source == hyprlandFuzzel.source;
+      voiceMenu = settings.menus.voice;
+      inherit expectedTheme;
+      themeMatchesHost = c.lib.stylix.colors.base00 == palettes.${expectedTheme}.dark.base00;
+      paletteNames = builtins.attrNames palettes;
     };
 in
 builtins.listToAttrs (
-  map
-    (configuration: {
-      name = configuration;
-      value = inspect configuration;
-    })
-    [
-      "william@andromeda"
-      "william@foundation"
-      "william@starfish"
-      "william@terminus"
-      "william-darwin"
-    ]
+  map (configuration: {
+    name = configuration;
+    value = inspect configuration;
+  }) (builtins.attrNames expectedThemes)
 )
