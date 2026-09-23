@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -554,8 +555,29 @@ radius={radius}
         return keys[int(value)]
 
 
+def reload_btop(proc_root="/proc"):
+    """Ask running btop processes to reread the theme. SIGUSR2 is its reload."""
+    root = Path(proc_root)
+    if not root.is_dir():
+        return
+    for entry in root.iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            command = (entry / "comm").read_text().strip()
+        except OSError:
+            continue
+        if command != "btop":
+            continue
+        try:
+            os.kill(int(entry.name), signal.SIGUSR2)
+        except OSError:
+            continue
+
+
 def reload_apps():
     warnings = []
+    reload_btop()
     try:
         owner = subprocess.run(
             [

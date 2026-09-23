@@ -65,6 +65,68 @@ in
       peach = c.base09;
     };
 
+  # Omarchy's btop template, filled from the shared Base16 roles. blue is not a
+  # Base16 slot; pass the upstream blue when it differs from accent.
+  btop =
+    p:
+    let
+      c = hex p;
+      blue = c.blue or c.base0D;
+    in
+    ''
+      # Generated from the selected palette.
+      theme[main_bg]="${c.base00}"
+      theme[main_fg]="${c.base05}"
+      theme[title]="${c.base05}"
+      theme[hi_fg]="${c.base0D}"
+      theme[selected_bg]="${c.base02}"
+      theme[selected_fg]="${c.base0D}"
+      theme[inactive_fg]="${c.base03}"
+      theme[graph_text]="${c.base06}"
+      theme[meter_bg]="${c.base02}"
+      theme[proc_misc]="${c.base06}"
+      theme[cpu_box]="${c.base0E}"
+      theme[mem_box]="${c.base0B}"
+      theme[net_box]="${c.base08}"
+      theme[proc_box]="${c.base0D}"
+      theme[div_line]="${c.base03}"
+      theme[temp_start]="${c.base0B}"
+      theme[temp_mid]="${c.base0A}"
+      theme[temp_end]="${c.base08}"
+      theme[cpu_start]="${c.base0C}"
+      theme[cpu_mid]="${blue}"
+      theme[cpu_end]="${c.base0E}"
+      theme[free_start]="${c.base0E}"
+      theme[free_mid]="${blue}"
+      theme[free_end]="${c.base0C}"
+      theme[cached_start]="${blue}"
+      theme[cached_mid]="${c.base0C}"
+      theme[cached_end]="${c.base0E}"
+      theme[available_start]="${c.base0A}"
+      theme[available_mid]="${c.base08}"
+      theme[available_end]="${c.base08}"
+      theme[used_start]="${c.base0B}"
+      theme[used_mid]="${c.base0C}"
+      theme[used_end]="${blue}"
+      theme[download_start]="${c.base0A}"
+      theme[download_mid]="${c.base08}"
+      theme[download_end]="${c.base08}"
+      theme[upload_start]="${c.base0B}"
+      theme[upload_mid]="${c.base0C}"
+      theme[upload_end]="${blue}"
+      theme[process_start]="${c.base0C}"
+      theme[process_mid]="${blue}"
+      theme[process_end]="${c.base0E}"
+      theme[gradient_color_0]="${c.base00}"
+      theme[gradient_color_1]="${c.base01}"
+      theme[gradient_color_2]="${c.base02}"
+      theme[gradient_color_3]="${c.base03}"
+      theme[gradient_color_4]="${c.base04}"
+      theme[gradient_color_5]="${c.base05}"
+      theme[gradient_color_6]="${c.base06}"
+      theme[gradient_color_7]="${c.base07}"
+    '';
+
   ghostty =
     p:
     let

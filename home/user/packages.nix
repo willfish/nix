@@ -223,7 +223,6 @@ in
       inetutils
       nmap
       mtr
-      btop
       htop
       fastfetch
     ]

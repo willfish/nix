@@ -8,6 +8,7 @@
 let
   state = "${config.xdg.stateHome}/theme-menu";
   render = import ./render.nix { inherit lib; };
+  btopTheme = import ./btop.nix { inherit lib pkgs; };
   hyprland = import ./hyprland.nix { inherit lib; };
   omarchy = import ./omarchy.nix { inherit lib pkgs; };
   wallpaperSettings = (import ../../config/hyprland/settings.nix).wallpaper;
@@ -84,6 +85,7 @@ let
       files = {
         "herdr.toml" = toString herdr;
         "host-palettes.json" = toString (pkgs.writeText "${host}-nvim.json" (builtins.toJSON nvim));
+        "btop.theme" = toString (btopTheme theme.herdr.name theme.${theme.nativeMode or "dark"});
       }
       // lib.listToAttrs (
         lib.concatMap

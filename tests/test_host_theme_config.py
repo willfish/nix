@@ -119,6 +119,7 @@ class HostThemeConfigTest(unittest.TestCase):
                             "host-dark.json",
                             "ghostty-light",
                             "ghostty-dark",
+                            "btop.theme",
                         },
                     )
                     for mode in ("light", "dark"):

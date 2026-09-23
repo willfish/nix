@@ -30,6 +30,8 @@ let
       ;
   };
   render = import ./themes/render.nix { inherit lib; };
+  btopTheme = import ./themes/btop.nix { inherit lib pkgs; };
+  btopFile = btopTheme theme.herdr.name theme.${theme.nativeMode or "dark"};
   piThemes = lib.genAttrs [ "light" "dark" ] (
     mode: pkgs.writeText "host-${mode}.json" (builtins.toJSON (render.pi "host-${mode}" theme.${mode}))
   );
@@ -45,6 +47,18 @@ in
       "--theme ${piThemes.light} --theme ${piThemes.dark} --use-theme host-light/host-dark";
 
   home.packages = lib.optionals isGraphicalLinux [ runtime.package ];
+
+  programs.btop = {
+    enable = true;
+    settings = {
+      color_theme = "host";
+      theme_background = true;
+      truecolor = true;
+      # The config is managed. Saving on exit would rewrite the Nix file and
+      # can drop the selected theme name.
+      save_config_on_exit = false;
+    };
+  };
 
   # These applications have native runtime light/dark selection. Do not let a
   # second theming module replace their paired configuration with a fixed theme.
@@ -118,7 +132,14 @@ in
     ".config/nvim/lua/host-theme.lua".source = ../config/nvim/host-theme.lua;
   };
 
-  xdg.configFile = lib.mkIf isGraphicalLinux {
+  xdg.configFile = {
+    "btop/btop.conf".force = true;
+    "btop/themes/host.theme" = {
+      force = true;
+      source = if isGraphicalLinux then runtime.file "btop.theme" else btopFile;
+    };
+  }
+  // lib.optionalAttrs isGraphicalLinux {
     "theme-menu/catalogue.json".source = runtime.manifest;
     # COSMIC exports both variants and applies GTK/Qt when the mode changes.
     "cosmic/com.system76.CosmicTk/v1/apply_theme_global".text = "true";

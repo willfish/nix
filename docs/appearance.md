@@ -38,11 +38,18 @@ such as `wallpaper.overrides.tokyo-night.dark = "/home/william/Pictures/sky.png"
 The file must exist when applying the theme. This does not change COSMIC's
 wallpaper or install a wallpaper on the greeter.
 
-The shared colours feed Ghostty, Neovim, Herdr and the desktop shell. COSMIC
+The shared colours feed Ghostty, Neovim, Herdr, btop and the desktop shell. COSMIC
 Greeter reads the selected user's theme and native mode. In Hyprland, the picker
 also updates Waybar, Fuzzel, Hyprlock, Mako and GTK appearance. In Brave, select
 **Settings → Appearance → Use GTK**. Explicit browser themes, extensions and
 website styling can override desktop colours.
+
+btop reads `~/.config/btop/themes/host.theme`. On graphical Linux that file
+follows the selected theme, and a running btop reloads with it. Themes that
+ship their own `btop.theme` keep that file, so palette overrides do not retint
+them. Other themes are rendered from the same colour roles as the rest of the
+desktop. The managed btop config does not save changes on exit, so a btop
+settings screen cannot replace the selected theme.
 
 Ghostty reloads through its D-Bus action; Neovim instances with the installed
 watcher update automatically. Older Neovim instances need restarting once.
