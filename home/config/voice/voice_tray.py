@@ -1,4 +1,4 @@
-"""Optional COSMIC/StatusNotifier tray, independent of the audio worker."""
+"""Optional StatusNotifier tray, independent of the audio worker."""
 
 import asyncio
 import sys
@@ -238,7 +238,7 @@ def presentation(status):
 
 
 def icon_pixmap(colour, size=32, glyph="microphone"):
-    """Supply network-order ARGB so COSMIC preserves recording colours."""
+    """Supply network-order ARGB to preserve recording colours."""
     rgb = {
         "grey": (100, 110, 120),
         "red": (224, 48, 62),

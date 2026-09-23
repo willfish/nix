@@ -5,7 +5,7 @@
   ...
 }:
 /*
-  NetworkManager secret-agent fix for Cosmic (Linux).
+  NetworkManager secret agent for automatic Wi-Fi recovery (Linux).
 
   Symptom (andromeda / FishFamille roam failure):
     NetworkManager[…]: device (wlp68s0): no secrets: No agents were available for this request.
@@ -13,8 +13,8 @@
     nm-applet[…]: No keyring secrets found for FishFamille/802-11-wireless-security; asking user.
 
   After a 4-way handshake timeout, wpa_supplicant reports WRONG_KEY and NM
-  re-requests secrets with REQUEST_NEW. Cosmic's network applet does not
-  reliably act as an NM secret agent (and dbus rejects some of its calls).
+  re-requests secrets with REQUEST_NEW. Recovery needs a secret agent even
+  when no interactive network applet is running.
 
   nm-applet *does* register as a secret agent, but for system connections
   (psk-flags=0) it only looks in the user keyring, finds nothing, and opens

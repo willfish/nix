@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # Session actions for the Hyprland menu. Destructive menu rows require the
-# explicit confirm choice. Display off is DPMS, not the COSMIC output toggle.
+# explicit confirm choice. Display off uses DPMS.
 # The menu file is label, action, confirm, confirmText separated by tabs.
 # Actions are a fixed set; the file cannot supply a shell command.
 

@@ -204,7 +204,7 @@
     anchor = "top-right";
   };
 
-  # Keys match the COSMIC map: WASD focus, Super+X launcher, Super+Shift+T
+  # Shortcuts: WASD focus, Super+X launcher, Super+Shift+T
   # theme menu. Super+Shift+B toggles output power through DPMS.
   # Super+Escape locks without a confirmation. The session menu confirms
   # logout, reboot and power off.

@@ -76,11 +76,8 @@
   };
 
   services.spice-vdagentd.enable = true;
-  services.desktopManager.cosmic.enable = false;
-  services.displayManager.cosmic-greeter.enable = false;
-  # Keep the session services COSMIC used to enable. acpid aborts after
-  # netlink ENOBUFS during input hotplug storms and NixOS ships the unit
-  # without Restart=, which leaves the system degraded.
+  # acpid aborts after netlink ENOBUFS during input hotplug storms.
+  # NixOS ships the unit without Restart=, leaving the system degraded.
   services.acpid.enable = true;
   systemd.services.acpid.serviceConfig = {
     Restart = "on-failure";

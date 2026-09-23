@@ -290,7 +290,6 @@ in
     ]
     ++ lib.optionals (capabilities.personal && !(stdenv.isLinux && capabilities.desktop)) [ mpv ]
     ++ lib.optionals (stdenv.isDarwin && capabilities.desktop) [
-      aerospace # i3-like tiling window manager for macOS
       brave # Privacy-focused browser
     ]
     ++ lib.optionals stdenv.isDarwin [

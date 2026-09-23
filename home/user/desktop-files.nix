@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   pkgs,
   isGraphicalLinux,
@@ -8,7 +7,6 @@
   ...
 }:
 let
-  inherit (pkgs) stdenv;
   configDir = ../config;
   renderTheme = import ./themes/render.nix { inherit lib; };
   herdrTheme = hostTheme.herdr // {
@@ -160,9 +158,6 @@ in
     );
     ".config/herdr/plugins/config/herdr-navigator/config.toml" =
       sourceFile "${configDir}/herdr/agent-picker.toml";
-  }
-  // lib.optionalAttrs (stdenv.isDarwin && config.dotfiles.capabilities.desktop) {
-    ".aerospace.toml" = sourceFile "${configDir}/aerospace/aerospace.toml";
   };
 
   home.activation = {

@@ -3,7 +3,7 @@
 Use nix-darwin for system services and Home Manager for the user's CLI and agent
 configuration. Required services must not depend on a graphical login. Apple's
 login window and WindowServer remain intact. Safari remains built in; Nix does
-not install it. Ghostty, Brave, AeroSpace and their desktop configuration are
+not install it. Ghostty, Brave and their desktop configuration are
 excluded from the headless profile. SSH uses the connecting machine's terminal.
 
 ## Ownership

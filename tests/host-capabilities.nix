@@ -145,11 +145,9 @@ let
         && !(c.home.sessionVariables ? TERMINAL)
         && builtins.all (p: !(builtins.elem p packageNames)) [
           "brave"
-          "aerospace"
           "telegram-desktop"
         ]
         && !(has ".config/ghostty")
-        && !(has ".aerospace.toml")
         && !(c.home.activation ? fixDarwinBraveSignature)
         && !(c.home.activation ? relayServerTrim)
         && !(c.home.sessionVariables ? BROWSER)

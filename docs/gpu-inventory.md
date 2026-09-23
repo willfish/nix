@@ -46,7 +46,7 @@ because product lines can have different CPU/GPU options.
 
 The current speech package uses Vulkan and disables native CPU specialization,
 so it can be shared between the x86_64 Linux workstations. Voice services and
-COSMIC hotkeys are enabled for Andromeda and Foundation. Foundation's declared
+Hyprland hotkeys are enabled for Andromeda and Foundation. Foundation's declared
 AMD driver supports the Radeon Vulkan manifest used on Andromeda. Its Home
 Manager configuration still needs activation on the laptop, followed by its
 own model downloads, memory checks, inference measurements and microphone
