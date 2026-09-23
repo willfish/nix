@@ -64,6 +64,12 @@ class Themes:
             selected = (self.state / "selection").read_text().strip()
         except FileNotFoundError:
             return "default"
+        # Solarized was a personal palette, not an upstream default.
+        if (
+            selected == "solarized"
+            and selected not in self.catalogue["palettes"]
+        ):
+            selected = "osaka-jade"
         self.resolve(selected)
         return selected
 
@@ -77,7 +83,8 @@ class Themes:
 
     def apply(self, selected):
         palette = self.resolve(selected)
-        # Read the whole bundle before touching active files. Never modify mode.
+        # Read the whole bundle before touching active files. Native themes
+        # carry their upstream mode; paired legacy bundles retain the mode.
         writes = {
             self.state / "active" / name: Path(source).read_bytes()
             for name, source in palette["files"].items()
@@ -109,7 +116,12 @@ class Themes:
                     )
             if not copied:
                 raise ValueError(f"Incomplete COSMIC palette: {variant}")
-        writes.update(self.projected_writes(self.current_mode(), palette))
+        mode = palette.get("nativeMode") or self.current_mode()
+        writes.update(self.projected_writes(mode, palette))
+        if palette.get("nativeMode"):
+            writes[self.mode_file] = (
+                b"false\n" if mode == "light" else b"true\n"
+            )
         selection_path = self.state / "selection"
         previous_selection = (
             selection_path.read_bytes() if selection_path.exists() else None
@@ -197,6 +209,12 @@ class Themes:
     def set_mode(self, mode):
         if mode not in ("light", "dark"):
             raise ValueError(f"Unknown appearance mode: {mode}")
+        native = self.resolve(self.selection()).get("nativeMode")
+        if native and mode != native:
+            raise ValueError(
+                f"This theme is {native}-only. "
+                f"Select a {mode} theme from the menu."
+            )
         # Resolve the bundle before touching ThemeMode so a missing catalogue
         # cannot leave the greeter mode half-applied.
         projected = self.projected_writes(mode)
@@ -234,6 +252,16 @@ class Themes:
         warnings.extend(self._install_gtk_css())
         warnings.extend(self._reload_hyprland(variables))
         warnings.extend(self._reload_waybar())
+        try:
+            subprocess.run(
+                [
+                    "systemctl", "--user", "try-restart",
+                    "hypr-wallpaper.service",
+                ],
+                capture_output=True, timeout=10, check=True,
+            )
+        except (OSError, subprocess.SubprocessError):
+            warnings.append("Could not refresh the Hyprland wallpaper.")
         try:
             subprocess.run(
                 ["makoctl", "reload"],
@@ -451,6 +479,8 @@ class Themes:
             f"Host default ({self.resolve('default')['label']})",
             *[palettes[key]["label"] for key in keys[2:]],
         ]
+        if self.resolve(current).get("nativeMode"):
+            keys, labels = keys[1:], labels[1:]
         rows = [
             f"{'*' if key == current else ' '} {label}"
             for key, label in zip(keys, labels)
@@ -616,9 +646,6 @@ def main():
                 raise RuntimeError(
                     "Another theme menu is open; close it and retry."
                 ) from None
-            default_mode = controller.catalogue.get("defaultMode")
-            if args.reapply and default_mode is not None:
-                controller.set_mode(default_mode)
             selected = controller.selection() if args.reapply else args.palette
             if selected is None:
                 selected = controller.choose()

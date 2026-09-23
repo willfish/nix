@@ -40,12 +40,14 @@ Super+Shift+T uses the existing shared palette menu for Ghostty, Neovim and Herd
 plus Hyprland, Waybar, Fuzzel, Mako and Hyprlock. Use this menu in Hyprland to
 refresh desktop consumers, rather than changing appearance in COSMIC Settings.
 
-`appearance.palette` selects the default by host key or palette ID; a saved menu
-selection takes precedence. `appearance.mode = null` preserves light/dark mode;
-setting `"light"` or `"dark"` reapplies it at activation and session start.
-`appearance.paletteOverrides.light` and `.dark` accept Base16 overrides such as
-`base00 = "191724";`. Fonts must be installed. Neovim and Herdr inherit their
-terminal font. See [shared appearance](appearance.md) for application overrides.
+The menu contains all built-in Omarchy themes without a name prefix or personal
+variants. Each selection applies its native mode and matching wallpaper.
+`appearance.palette` selects the default by theme ID, such as `"nord"`; a saved
+menu selection takes precedence. `appearance.paletteOverrides.light` and `.dark`
+accept Base16 overrides such as `base00 = "191724";`. `wallpaper.mode` controls
+image sizing and `wallpaper.overrides` accepts per-theme, per-mode image paths.
+Fonts must be installed. Neovim and Herdr inherit their terminal font. See
+[shared appearance](appearance.md) for sources and application overrides.
 
 COSMIC Greeter continues reading the selected user's shared theme and mode.
 For Brave, select **Settings → Appearance → Use GTK**. Browser extensions,

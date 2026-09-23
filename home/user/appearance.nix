@@ -11,7 +11,14 @@ let
   desktopAppearance = (import ../config/hyprland/settings.nix).appearance;
   ghosttyConfig = builtins.readFile ../config/ghostty/config;
   defaultHost =
-    if hostName != null && builtins.hasAttr hostName catalogue then hostName else "andromeda";
+    {
+      andromeda = "rose-pine";
+      foundation = "tokyo-night";
+      starfish = "osaka-jade";
+      terminus = "catppuccin";
+      relay = "gruvbox";
+    }
+    .${if hostName == null then "andromeda" else hostName} or "rose-pine";
   theme = catalogue.${defaultHost};
   runtime = import ./themes/runtime.nix {
     inherit

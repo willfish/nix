@@ -9,6 +9,8 @@ let
   state = "${config.xdg.stateHome}/theme-menu";
   render = import ./render.nix { inherit lib; };
   hyprland = import ./hyprland.nix { inherit lib; };
+  omarchy = import ./omarchy.nix { inherit lib pkgs; };
+  wallpaperSettings = (import ../../config/hyprland/settings.nix).wallpaper;
   configuredAppearance = (import ../../config/hyprland/settings.nix).appearance;
   preferredPalette = configuredAppearance.palette;
   defaultPalette =
@@ -42,13 +44,6 @@ let
       dark = theme.dark // paletteOverrides "dark";
     }
   ) catalogue;
-  names = {
-    andromeda = "Rosé Pine";
-    foundation = "Tokyo Night";
-    starfish = "Solarized";
-    terminus = "Catppuccin";
-    relay = "Gruvbox";
-  };
   entries = lib.mapAttrs (
     host: theme:
     let
@@ -63,7 +58,8 @@ let
       nvim = lib.genAttrs [ "light" "dark" ] (mode: lib.mapAttrs (_: c: "#${c}") theme.${mode});
     in
     {
-      label = names.${host};
+      inherit (theme) label;
+      nativeMode = theme.nativeMode or null;
       id = theme.herdr.name;
       inherit nvim;
       herdrTheme = theme.herdr // {
@@ -79,6 +75,11 @@ let
             appearance = configuredAppearance;
           }
         )
+        // {
+          "wallpaper.png" = toString (
+            wallpaperSettings.overrides.${theme.herdr.name}.${mode} or omarchy.wallpapers.${theme.herdr.name}
+          );
+        }
       );
       files = {
         "herdr.toml" = toString herdr;
@@ -108,7 +109,6 @@ let
   manifest = pkgs.writeText "theme-catalogue.json" (
     builtins.toJSON {
       default = defaultPalette;
-      defaultMode = configuredAppearance.mode;
       appearance = configuredAppearance;
       inherit (import ../../config/hyprland/settings.nix) launcher;
       palettes = lib.mapAttrs' (_: entry: lib.nameValuePair entry.id entry) entries;
@@ -140,5 +140,6 @@ let
 in
 {
   inherit state manifest package;
+  inherit (omarchy) license;
   file = name: config.lib.file.mkOutOfStoreSymlink "${state}/active/${name}";
 }

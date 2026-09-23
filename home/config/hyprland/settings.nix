@@ -1,6 +1,6 @@
 # User-facing Hyprland session settings. The theme renderer imports this file
 # and reads appearance.font, monoFont, fontSize, rounding and borderSize.
-# Leave palette and mode null to follow the host theme-menu selection.
+# Leave palette null to follow the host's default theme-menu selection.
 # paletteOverrides are six-digit Base16 tokens, no hash, merged onto every
 # named palette before desktop assets are rendered.
 #
@@ -13,12 +13,9 @@
 # widgets; the main config owns every lock-screen widget.
 {
   appearance = {
-    # null uses the host catalogue default. A value is a host key
-    # (andromeda) or a herdr palette id (rose-pine). appearance.nix owns
-    # applying this as the theme-menu default.
+    # null uses the host default; otherwise use a theme ID such as "nord".
+    # A saved theme-menu selection takes precedence. Each theme owns its mode.
     palette = null;
-    # null follows COSMIC is_dark. "light" or "dark" is an explicit preference.
-    mode = null;
     font = "Ubuntu";
     monoFont = "JetBrainsMono Nerd Font";
     fontSize = 12;
@@ -45,6 +42,14 @@
       light = { };
       dark = { };
     };
+  };
+
+  # All upstream default themes include their matching wallpaper.
+  wallpaper = {
+    mode = "fill";
+    # Optional absolute image paths by palette ID and mode, e.g.
+    # overrides.tokyo-night.dark = "/home/william/Pictures/wallpaper.png";
+    overrides = { };
   };
 
   window = {

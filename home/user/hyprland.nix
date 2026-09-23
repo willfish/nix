@@ -11,6 +11,7 @@
   config = lib.mkIf isGraphicalLinux (
     let
       settings = import ../config/hyprland/settings.nix;
+      omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
       catalogue = import ./themes/palettes.nix;
       themeRender = import ./themes/hyprland.nix { inherit lib; };
       voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
@@ -34,6 +35,14 @@
               builtins.head (lib.attrValues matches)
           );
       selectedPalette = paletteFor settings.appearance.palette;
+      fallbackWallpaper = omarchy.wallpapers.${selectedPalette.herdr.name};
+      wallpaper = pkgs.writeShellScript "hypr-wallpaper" ''
+        image=${lib.escapeShellArg (themeFile "wallpaper.png")}
+        if [ ! -s "$image" ]; then
+          image=${lib.escapeShellArg (toString fallbackWallpaper)}
+        fi
+        exec ${pkgs.swaybg}/bin/swaybg --image "$image" --mode ${lib.escapeShellArg settings.wallpaper.mode}
+      '';
       base16Tokens = [
         "base00"
         "base01"
@@ -484,6 +493,23 @@
         icons=1
         max-visible=5
       '';
+
+      xdg.dataFile."theme-menu/omarchy-LICENSE".source = omarchy.license;
+
+      systemd.user.services.hypr-wallpaper = {
+        Unit = {
+          Description = "Theme wallpaper for the Hyprland session";
+          PartOf = [ "hyprland-session.target" ];
+          After = [ "hyprland-session.target" ];
+          ConditionEnvironment = "WAYLAND_DISPLAY";
+        };
+        Service = {
+          ExecStart = toString wallpaper;
+          Restart = "on-failure";
+          RestartSec = 2;
+        };
+        Install.WantedBy = [ "hyprland-session.target" ];
+      };
 
       systemd.user.services.waybar = {
         Unit = {

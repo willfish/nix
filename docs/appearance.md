@@ -1,116 +1,73 @@
-# Host appearance
+# Desktop appearance
 
-`home/user/themes/palettes.nix` owns the host palettes. Each has a dark variant
-and a warm, lower-brightness light variant. Host identity is independent of mode:
-Andromeda uses Rosé Pine, Foundation Tokyo Night, Starfish Solarized, Terminus
-Catppuccin, and Relay Gruvbox. Unknown hosts use Andromeda's palette.
+The theme menu offers all 22 built-in themes from the pinned
+[Omarchy source](https://github.com/omacom/omarchy/tree/28ceaae70ebac3a0edcc21f2faa77a90dc6d404c/themes),
+using their plain names and native colours. There are no personal palette variants.
+Their colour roles are mapped into the existing shared application renderers;
+Omarchy's application configurations, scripts and keybindings are not installed.
 
-## Choosing a palette
+Host defaults are Rosé Pine on Andromeda, Tokyo Night on Foundation, Osaka Jade
+on Starfish, Catppuccin on Terminus and Gruvbox on Relay. Other hosts use Rosé
+Pine. A previously saved Solarized selection migrates to Osaka Jade.
 
-On graphical Linux, **Super+Shift+T** opens `theme-menu`, a Fuzzel popup like the
-voice menu. Choose Rosé Pine, Tokyo Night, Solarized, Catppuccin or Gruvbox.
-The current selection is marked with `*`; Escape leaves it unchanged.
+## Choosing a theme
 
-**Host default** is the initial selection and follows the host mapping above.
-Named selections are local overrides, preserved across Home Manager switches.
-Selecting Host default clears the override. Neither selection changes light/dark
-mode or the host's declarative palette.
+On graphical Linux, **Super+Shift+T** opens the Fuzzel theme menu. The current
+selection is marked with `*`; Escape leaves it unchanged. **Host default** clears
+the local override. Named selections survive Home Manager activation.
 
-The command also accepts `default`, `rose-pine`, `tokyo-night`, `solarized`,
-`catppuccin` or `gruvbox`, for example `theme-menu rose-pine`.
-`theme-menu --reapply` restores generated files for the saved selection.
+Use plain command-line IDs, for example `theme-menu nord`,
+`theme-menu catppuccin-latte` or `theme-menu default`.
+`theme-menu --reapply` restores the saved selection's generated files.
 
-The picker updates COSMIC's theme files in either desktop. In COSMIC, its
-settings daemon supplies GTK/Qt exports. In Hyprland, the picker updates the
-compositor, Waybar, launcher, lock and notification themes, publishes GTK
-appearance settings and installs the shared GTK CSS. Brave can follow these
-colours with **Settings → Appearance → Use GTK**; explicit browser themes and
-website styles remain independent. The picker reloads Ghostty through its
-Linux D-Bus action and reloads the addressed Herdr server. Neovim instances
-started after installing this configuration detect changes within about a second.
-Restart older Neovim instances once to install the watcher. Existing Pi sessions
-need restarting for named palette changes: its upstream watcher does not watch
-these launcher-loaded files. Light/dark changes still propagate without restart.
+Each theme owns its native light/dark mode. Catppuccin Latte, Flexoki Light,
+Lupine, Rosé Pine and White are light themes; the others are dark. Select another
+theme to change mode. There is no synthetic light/dark variant or mode-toggle
+row. An incompatible `theme-menu light` or `theme-menu dark` request is rejected.
+Use this menu rather than COSMIC Settings to keep mode and palette aligned.
 
-If a reload fails, the notification gives the manual fallback. Additional Herdr
-servers need their own `herdr server reload-config` with the relevant socket
-selected. A remote host keeps its own palette; this popup does not change remote
-configuration. macOS and headless hosts retain their declarative host palettes.
+## Wallpapers and applications
 
-## Choosing a mode
+In Hyprland, each theme uses its first sorted upstream wallpaper, matching
+Omarchy's default selection order. Swaybg displays it on all outputs and follows
+the Hyprland session only. Changing the theme replaces the wallpaper too.
 
-In **Super+Shift+T**, the first action switches to light or dark mode, whichever
-is not currently active. It leaves your selected palette unchanged. You can also
-run `theme-menu light` or `theme-menu dark`. In COSMIC, you can also use
-**COSMIC Settings → Desktop → Appearance**. These controls share the same stored
-setting, but use `theme-menu` in Hyprland to refresh its shell and GTK consumers.
-On macOS, use the system appearance setting.
-Dark is the initial default; sunrise/sunset switching is off.
-Home Manager preserves the selected COSMIC mode rather than pinning it to dark,
-unless `appearance.mode` in the shared Hyprland settings explicitly specifies a
-mode to reapply. COSMIC Greeter reads the selected user's theme and mode, so
-login colours follow the same selection.
+`home/config/hyprland/settings.nix` controls the default palette, fonts,
+Base16 overrides and wallpaper sizing. For a custom image, set an absolute path
+such as `wallpaper.overrides.tokyo-night.dark = "/home/william/Pictures/sky.png";`.
+The file must exist when applying the theme. This does not change COSMIC's
+wallpaper or install a wallpaper on the greeter.
 
-Ghostty follows system appearance. Herdr follows the terminal and passes its
-appearance reports to panes. Pi's launchers select a native `host-light/host-dark`
-pair without overwriting saved Pi settings. Explicit `--use-theme` arguments take
-precedence; selecting a fixed theme in Pi affects that session. Restart with the
-normal launcher to return to system following.
+The shared colours feed Ghostty, Neovim, Herdr and the desktop shell. COSMIC
+Greeter reads the selected user's theme and native mode. In Hyprland, the picker
+also updates Waybar, Fuzzel, Hyprlock, Mako and GTK appearance. In Brave, select
+**Settings → Appearance → Use GTK**. Explicit browser themes, extensions and
+website styling can override desktop colours.
 
-After the first Home Manager switch, open a fresh Ghostty window and restart Pi
-sessions to pick up the new launcher. Existing Fish shells may have already set
-terminal colour overrides; a fresh terminal avoids carrying those forward.
-Subsequent mode changes do not require restarting Pi.
-
-Remote Herdr/Pi keep the remote host's palette. The attached terminal supplies the
-mode, not a remote desktop setting. This depends on the terminal chain forwarding
-appearance reports; older multiplexers may require a restart or an explicit Pi
-`--use-theme host-light` / `--use-theme host-dark` override.
+Ghostty reloads through its D-Bus action; Neovim instances with the installed
+watcher update automatically. Older Neovim instances need restarting once.
+The addressed Herdr server reloads; other servers need their own
+`herdr server reload-config` with the appropriate socket selected.
+Existing Pi sessions need restarting for named palette changes because their
+watcher does not watch launcher-loaded files. Explicit Pi theme choices take
+precedence. Remote hosts retain their own palettes.
 
 ## Ownership
 
-- `home/user/appearance.nix` wires the palette into Home Manager.
-- `home/user/themes/runtime.nix` builds the graphical Linux palette catalogue.
-  The picker keeps its selection and active application files under
-  `~/.local/state/theme-menu/`. Home Manager links application configuration to
-  those stable writable files and reapplies the selected bundle after activation.
-- `home/config/appearance/theme_menu.py` owns runtime selection and COSMIC theme
-  files. It leaves COSMIC mode and unrelated desktop settings untouched. Palette
-  writes are individually atomic, with rollback on write failure; there is no
-  cross-application transaction, so live updates may briefly arrive separately.
-- `home/user/themes/render.nix` generates Herdr, Ghostty and Pi colours.
-- `home/user/themes/cosmic.py` produces ThemeBuilder inputs. The pinned
-  `cosmic-settings appearance import` CLI builds complete themes in an isolated
-  Nix sandbox. There is no custom reimplementation of COSMIC's component styling.
-- COSMIC owns GTK/Qt exports in COSMIC. In Hyprland, the picker replaces known
-  COSMIC GTK CSS links without modifying their targets; unrelated custom CSS
-  and symlinks are preserved. Fixed Stylix GTK, Qt and KDE overrides remain
-  disabled to avoid competing colour sources.
-- `home/config/hyprland/settings.nix` owns shared desktop/terminal font choices,
-  a default palette and optional Base16 colour overrides. See [Hyprland](hyprland.md)
-  for session configuration and screenshot controls.
-- Fish uses terminal ANSI roles, with no shell-emitted palette overrides.
-- Git delta uses terminal ANSI green and red for hunks and does not pin a delta theme or light/dark mode. Detection follows the terminal.
-- Neovim uses the same palettes, following its detected `background` option.
-  `:set background=light` or `:set background=dark` is an explicit fallback when a
-  terminal does not update background detection.
-- Remaining Stylix targets receive the host's dark palette as a fallback. This
-  is not a universal live-switch mechanism for arbitrary third-party apps.
+- `home/user/themes/omarchy-source.nix` pins the upstream source and hash.
+- `home/user/themes/palettes.nix` projects upstream colour roles into Base16.
+- `home/user/themes/omarchy.nix` supplies wallpapers and the upstream licence.
+  The licence is installed at `~/.local/share/theme-menu/omarchy-LICENSE`.
+- `home/user/appearance.nix` chooses host defaults and wires application config.
+- `home/user/themes/runtime.nix` builds the catalogue. Active files and the saved
+  selection live under `~/.local/state/theme-menu/`.
+- `home/config/appearance/theme_menu.py` publishes selected files and native mode.
+  Writes are individually atomic with rollback on failure, not a cross-app
+  transaction; applications may update at slightly different times.
+- `home/user/themes/cosmic.py` supplies the native COSMIC importer with colour
+  inputs. It does not reimplement COSMIC component styling.
 
-Layout stays deliberately restrained: opaque terminal backgrounds, small window
-margins, and a one-column Pi editor inset unless already customised. Thinking,
-tool visibility, keyboard shortcuts and conversation layout are unchanged.
-
-## Checks
-
-Build and activate using `docs/nixos-host-operations.md`. Run the complete offline
-behavioral gate against the built generation; it includes palette contrast,
-host ownership, mode migration, and Pi PTY light/dark switching at narrow/wide
-sizes. `nix flake check` covers formatting and module checks.
-
-For a live smoke test, select each named palette and return to Host default.
-Check that Escape cancels, the current selection is marked and a Home Manager
-switch preserves a named override. Switch dark → light → dark in system settings
-with Pi inside Herdr. Check the terminal background, Herdr borders, Pi text and desktop
-controls together. Verify remote propagation separately before assuming every
-SSH or nested-multiplexer path supports it.
+Fixed Stylix overrides remain disabled for shared consumers. Custom GTK CSS and
+unrelated symlinks are preserved rather than overwritten. Other Stylix targets,
+macOS and headless hosts retain their declarative palette rather than following
+the graphical Linux menu. See [Hyprland](hyprland.md) for session controls.
