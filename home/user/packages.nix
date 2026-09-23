@@ -286,10 +286,10 @@ in
     ++ lib.optionals capabilities.personal [
       # Audio tools
       ffmpeg # Audio/video conversion and inspection tools
-      mpv # Media player (provides libmpv for forte and other apps)
       sox # Sound processing tool - used for Claude Code notification chimes
 
     ]
+    ++ lib.optionals (capabilities.personal && !(stdenv.isLinux && capabilities.desktop)) [ mpv ]
     ++ lib.optionals (stdenv.isDarwin && capabilities.desktop) [
       aerospace # i3-like tiling window manager for macOS
       brave # Privacy-focused browser
@@ -318,6 +318,11 @@ in
       immich-go # Import Google Photos takeouts into Immich
     ]
     ++ lib.optionals (stdenv.isLinux && capabilities.desktop) [
+      cliamp # Terminal music player
+      evince # Omarchy's PDF reader
+      nautilus # Omarchy's file manager; GVfs is provided by the desktop service
+      sushi # Nautilus file previews
+      (mpv.override { scripts = [ mpvScripts.mpris ]; })
       file-roller # Graphical archive manager for opening and extracting archives
       gimp # GNU Image Manipulation Program (the pinned package is Linux-only)
       cosmic-ext-tweaks

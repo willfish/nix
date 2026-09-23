@@ -24,8 +24,8 @@
     gapsIn = 5;
     gapsOut = 8;
     floatGaps = 8;
-    activeOpacity = 0.95;
-    inactiveOpacity = 0.90;
+    activeOpacity = 0.92;
+    inactiveOpacity = 0.87;
     blur = true;
     shadow = true;
     shadowRange = 4;
@@ -74,23 +74,41 @@
   bar = {
     position = "left";
     width = 48;
-    sessionLabel = "PWR";
+    opacity = 0.92;
+    sessionLabel = "⏻";
     commands = {
-      audio = "cosmic-settings sound";
-      network = "cosmic-settings network";
-      bluetooth = "cosmic-settings bluetooth";
-      power = "cosmic-settings power";
+      launcher = "hypr-launcher";
+      files = "nautilus --new-window";
+      audio = "hypr-controls audio";
+      network = "hypr-controls network";
+      bluetooth = "hypr-controls bluetooth";
+      monitor = "ghostty -e btop";
+      music = "ghostty -e cliamp";
+      power = "hypr-session menu";
     };
-    modulesLeft = [ "hyprland/workspaces" ];
-    modulesCenter = [ "clock" ];
+    modulesLeft = [
+      "custom/launcher"
+      "hyprland/workspaces"
+    ];
+    modulesCenter = [
+      "clock"
+      "hyprland/language"
+    ];
     modulesRight = [
       "tray"
+      "mpris"
       "pulseaudio"
+      "pulseaudio#microphone"
       "network"
       "bluetooth"
+      "cpu"
+      "backlight"
+      "idle_inhibitor"
       "battery"
       "custom/session"
     ];
+    # Native Waybar options override individual widget defaults.
+    widgets = { };
   };
 
   workspaces = 9;

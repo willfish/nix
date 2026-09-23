@@ -24,7 +24,7 @@ let
     lib.recursiveUpdate herdrConfig { theme = herdrTheme; }
   );
   defaultImageViewer = "org.gnome.Loupe.desktop";
-  pdfDesktop = "com.system76.CosmicReader.desktop";
+  pdfDesktop = "org.gnome.Evince.desktop";
   browserDesktop = "brave-browser.desktop";
   telegramDesktop = "org.telegram.desktop.desktop";
   imageMimeTypes = [
@@ -93,12 +93,33 @@ let
       "x-scheme-handler/magnet"
     ] (_: "org.qbittorrent.qBittorrent.desktop")
     // lib.genAttrs [
+      "text/plain"
       "application/json"
       "application/yaml"
       "application/x-yaml"
       "text/yaml"
       "text/x-yaml"
-    ] (_: "com.system76.CosmicEdit.desktop")
+    ] (_: "neovim-ghostty.desktop")
+    // lib.genAttrs [
+      "audio/aac"
+      "audio/flac"
+      "audio/mp4"
+      "audio/mpeg"
+      "audio/ogg"
+      "audio/opus"
+      "audio/wav"
+      "audio/x-flac"
+      "audio/x-matroska"
+      "audio/x-wav"
+      "video/mp4"
+      "video/mpeg"
+      "video/ogg"
+      "video/quicktime"
+      "video/webm"
+      "video/x-matroska"
+      "video/x-msvideo"
+      "application/ogg"
+    ] (_: "mpv.desktop")
     // lib.genAttrs [
       "application/zip"
       "application/x-tar"
@@ -118,6 +139,7 @@ let
       "application/x-rar-compressed"
     ] (_: "org.gnome.FileRoller.desktop");
   existingMimeDefaults = {
+    "inode/directory" = "org.gnome.Nautilus.desktop";
     "application/pdf" = pdfDesktop;
     "x-scheme-handler/mailto" = browserDesktop;
     "x-scheme-handler/tg" = telegramDesktop;
@@ -287,6 +309,32 @@ in
 
   xdg.dataFile = lib.optionalAttrs isGraphicalLinux {
     "applications/mimeapps.list".force = true;
+  };
+
+  xdg.desktopEntries = lib.mkIf isGraphicalLinux {
+    neovim-ghostty = {
+      name = "Neovim";
+      genericName = "Text Editor";
+      exec = "ghostty -e nvim %F";
+      icon = "nvim";
+      terminal = false;
+      categories = [
+        "Utility"
+        "TextEditor"
+      ];
+    };
+    cliamp = {
+      name = "CLIamp";
+      genericName = "Music Player";
+      exec = "ghostty -e cliamp";
+      icon = "audio-x-generic";
+      terminal = false;
+      categories = [
+        "AudioVideo"
+        "Audio"
+        "Player"
+      ];
+    };
   };
 
   xdg.mimeApps = lib.mkIf isGraphicalLinux {

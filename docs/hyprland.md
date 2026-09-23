@@ -18,6 +18,22 @@ host capability checks. Super+Shift+B uses Hyprland DPMS rather than COSMIC's
 output toggle. Dwindle tiling is not COSMIC's tiler; its behaviour is configured
 explicitly.
 
+## Desktop controls
+
+Waybar stays the only bar. Its audio, Bluetooth and network buttons open the
+actual pinned Omarchy Quickshell panels, hosted beside the rail rather than in
+Omarchy's full shell. Configure rail modules, commands and native widget overrides
+under `bar` in `settings.nix`. Scroll audio or brightness to adjust them;
+right-click audio to mute. Right-click playback to open CLIamp.
+
+Bluetooth pairing opens Blueman for confirmation and PIN entry. Advanced network
+settings, including DNS and enterprise Wi-Fi profiles, open NetworkManager's
+editor rather than running Omarchy's system-wide configuration scripts. QR
+sharing, speed tests and the optional media/OSD service are not hosted.
+
+The defaults use Nautilus for folders, Evince for PDFs, Neovim in Ghostty for text,
+and mpv with MPRIS for audio/video. These MIME defaults also apply in COSMIC.
+
 ## Screenshots
 
 Ctrl+Shift+S runs **Grimblast → Satty** directly. Drag to select a region or
@@ -37,7 +53,7 @@ Grimblast and Satty from the pinned Nix packages.
 ## Appearance and login
 
 Super+Shift+T uses the existing shared palette menu for Ghostty, Neovim and Herdr,
-plus Hyprland, Waybar, Fuzzel, Mako and Hyprlock. Use this menu in Hyprland to
+plus Hyprland, Waybar, the control panels, Fuzzel, Mako and Hyprlock. Use this menu in Hyprland to
 refresh desktop consumers, rather than changing appearance in COSMIC Settings.
 
 The menu contains all built-in Omarchy themes without a name prefix or personal

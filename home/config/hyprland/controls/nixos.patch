@@ -1,0 +1,142 @@
+--- a/shell/Commons/Color.qml
++++ b/shell/Commons/Color.qml
+@@ -17 +17 @@
+-  readonly property string currentThemePath: stateHome + "/omarchy/current/theme"
++  readonly property string currentThemePath: Quickshell.env("HYPR_CONTROLS_THEME")
+@@ -222,2 +222 @@
+-  // Startup load only. Runtime theme switches push the payload explicitly
+-  // through shell IPC.
++  // theme-menu publishes these files atomically; no Omarchy shell IPC.
+@@ -227 +226,2 @@
+-    watchChanges: false
++    watchChanges: true
++    onFileChanged: reload()
+@@ -234 +234,2 @@
+-    watchChanges: false
++    watchChanges: true
++    onFileChanged: reload()
+@@ -244,2 +245,2 @@
+-    path: root.home + "/.config/omarchy/shell.toml"
+-    watchChanges: true
++    path: "" // Central settings.nix owns appearance overrides.
++    watchChanges: false
+--- a/shell/Ui/KeyboardPanel.qml
++++ b/shell/Ui/KeyboardPanel.qml
+@@ -80 +80 @@
+-  screen: anchorWindow ? anchorWindow.screen : null
++  screen: bar.externalScreen
+@@ -126,0 +127,8 @@
++    // The real Waybar receives clicks directly, including popup switching.
++    Region {
++      intersection: Intersection.Subtract
++      x: root.barPos === "right" ? root.screenW - root.bar.barSize : 0
++      y: root.barPos === "bottom" ? root.screenH - root.bar.barSize : 0
++      width: root.bar.vertical ? root.bar.barSize : root.screenW
++      height: root.bar.vertical ? root.screenH : root.bar.barSize
++    }
+@@ -146 +154,2 @@
+-    if (!anchorItem || !anchorWindow) return Qt.point(0, 0)
++    if (!anchorWindow) return Qt.point(bar.externalAnchor.x - anchorW / 2,
++                                      bar.externalAnchor.y - anchorH / 2)
+@@ -192,2 +201,2 @@
+-  readonly property real barW: anchorWindow ? anchorWindow.width : screenW
+-  readonly property real barH: anchorWindow ? anchorWindow.height : 0
++  readonly property real barW: bar.vertical ? bar.barSize : screenW
++  readonly property real barH: bar.vertical ? screenH : bar.barSize
+--- a/shell/plugins/panels/network/Panel.qml
++++ b/shell/plugins/panels/network/Panel.qml
+@@ -128 +128 @@
+-  readonly property bool canShareWifi: info.type === "wifi" && canShareNetwork(connectedWifiNetwork)
++  readonly property bool canShareWifi: false // Optional plugin not hosted.
+@@ -141 +141 @@
+-  readonly property var dnsProviders: ["DHCP", "Cloudflare", "Google", "Custom"]
++  readonly property var dnsProviders: ["Advanced settings"]
+@@ -166 +166 @@
+-  readonly property bool canRunSpeedTest: !!info.iface
++  readonly property bool canRunSpeedTest: false // Optional plugin not hosted.
+@@ -529,4 +528,0 @@
+-    if (!dnsProc.running) {
+-      dnsProc.command = ["bash", "-c", root.dnsCommand("")]
+-      dnsProc.running = true
+-    }
+@@ -723,12 +719,2 @@
+-    if (!root.bar || !provider || actionProc.running) return
+-
+-    if (provider === "Custom") {
+-      var launcher = "omarchy-launch-floating-terminal-with-presentation"
+-      root.bar.run(launcher + " " + Util.shellQuote(root.dnsCommand(provider)))
+-      root.close()
+-      return
+-    }
+-
+-    root.pendingDnsProvider = provider
+-    actionProc.command = ["bash", "-c", root.dnsCommand(provider)]
+-    actionProc.running = true
++    // NixOS owns /etc. Edit NetworkManager profiles rather than applying
++    // Omarchy's system-wide DNS script and its Arch privilege assumptions.
+@@ -735,0 +722 @@
++    Quickshell.execDetached(["nm-connection-editor"])
+@@ -742,0 +730,7 @@
++    var network = networkForSsid(ssid)
++    if (network && (network.security === WifiSecurityType.WpaEap
++        || network.security === WifiSecurityType.Wpa2Eap
++        || network.security === WifiSecurityType.Wpa3SuiteB192)) {
++      setDns("Advanced settings")
++      return
++    }
+@@ -823,5 +817,2 @@
+-    runNetworkAction("connect", networkForSsid(ssid), function(network) {
+-      enterpriseConnect.secret = passphrase
+-      enterpriseConnect.command = ["bash", "-c", Model.enterpriseConnectScript, "nmcli-eap", ssid, identity]
+-      enterpriseConnect.running = true
+-    })
++    cancelPasswordPrompt()
++    setDns("Advanced settings")
+@@ -1525 +1516 @@
+-          text: "DNS PROVIDER"
++          text: "NETWORK PROFILES"
+@@ -1535,3 +1525,0 @@
+-          readonly property int count: 4
+-          readonly property real cellWidth: (width - spacing * (count - 1)) / count
+-
+@@ -1539 +1527 @@
+-            provider: "DHCP"
++            provider: "Advanced settings"
+@@ -1541,26 +1529,2 @@
+-            tooltipText: "Use DNS from DHCP"
+-            width: dnsRow.cellWidth
+-            onClicked: root.setDns(provider)
+-          }
+-
+-          DnsProviderPill {
+-            provider: "Cloudflare"
+-            index: 1
+-            tooltipText: "Set DNS to Cloudflare"
+-            width: dnsRow.cellWidth
+-            onClicked: root.setDns(provider)
+-          }
+-
+-          DnsProviderPill {
+-            provider: "Google"
+-            index: 2
+-            tooltipText: "Set DNS to Google"
+-            width: dnsRow.cellWidth
+-            onClicked: root.setDns(provider)
+-          }
+-
+-          DnsProviderPill {
+-            provider: "Custom"
+-            index: 3
+-            tooltipText: "Set custom DNS servers"
+-            width: dnsRow.cellWidth
++            tooltipText: "Edit DNS, VPN and enterprise connection profiles"
++            width: dnsRow.width
+--- a/shell/plugins/panels/bluetooth/Panel.qml
++++ b/shell/plugins/panels/bluetooth/Panel.qml
+@@ -279 +279,5 @@
+-    else runDeviceAction(device, "pair", "connecting")
++    else {
++      // BlueZ pairing needs an interactive agent, not unattended trust.
++      root.close()
++      Quickshell.execDetached(["blueman-manager"])
++    }

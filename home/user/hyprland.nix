@@ -8,6 +8,8 @@
   ...
 }:
 {
+  imports = [ ./hyprland-panels.nix ];
+
   config = lib.mkIf isGraphicalLinux (
     let
       settings = import ../config/hyprland/settings.nix;
@@ -126,7 +128,7 @@
               exit 1
               ;;
           esac
-          for name in hyprland.conf fuzzel.ini waybar.css hyprlock.conf gtk.css mako.conf; do
+          for name in hyprland.conf fuzzel.ini waybar.css hyprlock.conf gtk.css mako.conf colors.toml shell.toml; do
             if [ ! -s "$state/$name" ]; then
               install -m 0644 ${themeFallback}/"$mode/$name" "$state/$name"
             fi
@@ -239,6 +241,12 @@
 
         window#waybar {
           padding: 4px 0;
+          background: alpha(@background, ${toString settings.bar.opacity});
+        }
+
+        tooltip {
+          background: @background;
+          color: @text;
         }
 
         #workspaces button {
@@ -251,14 +259,16 @@
           background: @selection;
         }
 
-        #clock,
-        #tray,
-        #pulseaudio,
-        #network,
-        #bluetooth,
-        #battery,
-        #custom-session {
-          padding: 6px 0;
+        .module {
+          padding: 5px 0;
+        }
+
+        #battery.critical:not(.charging), #pulseaudio.muted {
+          color: @red;
+        }
+
+        #idle_inhibitor.activated {
+          color: @accent;
         }
       '';
     in
@@ -269,7 +279,6 @@
         session
         themeSeed
         pkgs.brightnessctl
-        pkgs.cosmic-settings
         pkgs.playerctl
         pkgs.fuzzel
         pkgs.grim
@@ -354,7 +363,7 @@
         enable = true;
         systemd.enable = false;
         settings = [
-          {
+          (lib.recursiveUpdate {
             layer = "top";
             position = settings.bar.position;
             width = settings.bar.width;
@@ -367,36 +376,122 @@
               on-click = "activate";
               all-outputs = true;
             };
+            "custom/launcher" = {
+              format = "󱄅";
+              tooltip-format = "Applications · right-click Files";
+              on-click = settings.bar.commands.launcher;
+              on-click-right = settings.bar.commands.files;
+            };
             clock = {
               format = "{:%H\n%M}";
-              tooltip-format = "{:%A %d %B}";
+              format-alt = "{:%d\n%b}";
+              tooltip-format = "<big>{:%A %d %B %Y}</big>\n<tt>{calendar}</tt>";
+              calendar.mode = "month";
+            };
+            "hyprland/language" = {
+              format = "{short}";
+              tooltip = true;
             };
             tray.spacing = 4;
             pulseaudio = {
               format = "{icon}";
-              format-muted = "M";
+              format-muted = "󰝟";
+              format-icons.default = [
+                ""
+                ""
+                ""
+              ];
+              tooltip-format = "Output: {volume}% · {desc}";
               on-click = settings.bar.commands.audio;
+              on-click-right = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
+              on-scroll-up = "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+";
+              on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-";
+            };
+            "pulseaudio#microphone" = {
+              format = "{format_source}";
+              format-source = "";
+              format-source-muted = "";
+              tooltip-format = "Microphone: {volume_source}%";
+              on-click = settings.bar.commands.audio;
+              on-click-right = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
+              on-scroll-up = "wpctl set-volume -l 1 @DEFAULT_AUDIO_SOURCE@ 5%+";
+              on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-";
+            };
+            mpris = {
+              format = "{status_icon}";
+              format-paused = "{status_icon}";
+              status-icons = {
+                playing = "";
+                paused = "";
+                stopped = "";
+              };
+              tooltip-format = "{player}: {artist} · {title}";
+              on-click = "playerctl play-pause";
+              on-click-middle = "playerctl next";
+              on-click-right = settings.bar.commands.music;
             };
             network = {
-              format-wifi = "W";
-              format-ethernet = "E";
-              format-disconnected = "X";
+              format-wifi = "";
+              format-ethernet = "󰈀";
+              format-disconnected = "󰤭";
+              tooltip-format-wifi = "{essid} · {signalStrength}%\n{ipaddr}/{cidr}";
+              tooltip-format-ethernet = "{ifname}\n{ipaddr}/{cidr}";
+              tooltip-format-disconnected = "Disconnected · click to connect";
               on-click = settings.bar.commands.network;
             };
             bluetooth = {
-              format = "B";
+              format = "";
+              format-connected = "󰂱";
+              format-disabled = "󰂲";
+              tooltip-format = "Bluetooth: {status}";
+              tooltip-format-connected = "{device_enumerate}";
+              tooltip-format-enumerate-connected = "{device_alias}";
               on-click = settings.bar.commands.bluetooth;
             };
+            cpu = {
+              format = "";
+              tooltip-format = "CPU: {usage}% · click for system monitor";
+              on-click = settings.bar.commands.monitor;
+            };
+            backlight = {
+              format = "󰃠";
+              tooltip-format = "Brightness: {percent}% · scroll to adjust";
+              on-scroll-up = "brightnessctl -e4 -n2 set 5%+";
+              on-scroll-down = "brightnessctl -e4 -n2 set 5%-";
+            };
+            idle_inhibitor = {
+              format = "{icon}";
+              format-icons = {
+                activated = "󰅶";
+                deactivated = "󰾪";
+              };
+              tooltip-format-activated = "Stay awake enabled · click to restore idle locking";
+              tooltip-format-deactivated = "Click to stay awake";
+            };
             battery = {
-              format = "{capacity}";
+              format = "{icon}";
+              format-charging = "󰂄";
+              format-full = "";
+              format-icons = [
+                ""
+                ""
+                ""
+                ""
+                ""
+              ];
+              states = {
+                warning = 25;
+                critical = 10;
+              };
+              tooltip-format = "{capacity}% · {timeTo}";
               on-click = settings.bar.commands.power;
             };
             "custom/session" = {
               format = settings.bar.sessionLabel;
-              on-click = "hypr-session menu";
-              tooltip = false;
+              on-click = settings.bar.commands.power;
+              tooltip-format = "Lock, suspend, log out and power";
             };
-          }
+          } settings.bar.widgets)
         ];
         style = waybarStyle;
       };
