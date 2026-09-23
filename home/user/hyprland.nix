@@ -267,6 +267,11 @@
           color: @red;
         }
 
+        /* Optical centring for the asymmetric Wi-Fi glyph. */
+        #network.wifi {
+          padding-right: 4px;
+        }
+
         #idle_inhibitor.activated {
           color: @accent;
         }
