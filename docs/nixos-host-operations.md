@@ -31,59 +31,14 @@ for host in andromeda starfish foundation terminus; do
 done
 ```
 
-### Automatic push gate
+### Configuration checks
 
-Entering the dev shell (`direnv allow` or `nix develop`) installs the existing
-commit hooks. Only Andromeda installs the automatic `pre-push` build gate.
-Other hosts remove that managed hook on dev-shell entry; unmanaged hooks are
-left alone. The gate also checks the hostname at runtime, so an updated hook
-cannot trigger automatic builds elsewhere. Manual `--base` checks remain
-available on every host.
+Entering the dev shell (`direnv allow` or `nix develop`) installs commit hooks.
+Pushes do not build NixOS systems, Home Manager configurations, or flake checks.
+Build and activate the selected host before relying on a change. Other-platform
+targets still need a native build before deployment.
 
-The push gate checks clean snapshots
-of the pushed tips, not dirty files or whichever branch is checked out. Failures
-block the push; checks never activate a generation or contact hosts to deploy it.
-An existing unmanaged push hook is not overwritten.
-
-Selection is maintained in `scripts/check-affected.py`:
-
-| Changed paths | Configuration checks |
-|---|---|
-| `system/<linux-host>/` | That NixOS host only |
-| `system/modules/workstation.nix` | Andromeda, Foundation and Starfish |
-| `system/modules/server.nix` | Terminus |
-| Other `system/modules/` files | All Linux systems |
-| `system/darwin/` | Relay system, home and headless assertions |
-| `home/` | All distinct homes, profile assertions and Relay's home-dependent system |
-| Flake, lock file or unmapped paths | All systems, homes and profile assertions |
-| `docs/`, `plans/`, `.github/`, root README, AGENTS and gitignore | No configuration checks |
-
-Selected configurations are evaluated, then built on their native platform.
-Other-platform targets are explicitly reported as evaluation-only; those still
-need native builds before deployment. The existing flake `pre-commit` check runs
-for configuration changes. Shared changes can legitimately select every host.
-Update the mapping when adding hosts or changing import boundaries.
-
-New branches compare commits against the remote's advertised tips, not stale
-tracking refs. Unavailable local history widens selection; an unavailable remote
-or missing old tip blocks the check. Multiple pushed refs are checked independently
-and identical tips are combined. Deletions are skipped.
-
-For pre-commit verification, use the same gate on the current worktree:
-
-```bash
-direnv exec . dotfiles-pre-push --base HEAD --plan  # selection only
-direnv exec . dotfiles-pre-push --base HEAD         # evaluate and build
-```
-
-The plan includes tracked and untracked changes. Stage intended new files before
-running checks: manual builds use the Git flake so ignored files and private local
-state never enter the source. Push checks always use committed sources. The hook
-automates configuration checks, not the offline behavioral gate or post-activation
-runtime and service checks below. Local hooks remain bypassable
-and are not a substitute for protected remote checks.
-
-Run repository-wide checks when explicitly needed, rather than on every push:
+Run repository-wide checks when explicitly needed:
 
 ```bash
 nix fmt -- --ci

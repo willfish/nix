@@ -460,23 +460,6 @@
                   if system == darwinSystem then "william-darwin" else "william-linux"
                 }.config.programs.pi-agent-bus.package;
             };
-            affected-push =
-              pkgs.runCommand "affected-push-tests"
-                {
-                  nativeBuildInputs = with pkgs; [
-                    git
-                    python3
-                  ];
-                }
-                ''
-                  export HOME="$TMPDIR/home"
-                  export GIT_CONFIG_NOSYSTEM=1
-                  mkdir -p "$HOME" scripts tests
-                  cp ${./scripts/check-affected.py} scripts/check-affected.py
-                  cp ${./tests/test_check_affected.py} tests/test_check_affected.py
-                  python3 -m unittest discover -s tests -v
-                  touch "$out"
-                '';
             headless-darwin = import ./tests/headless-darwin.nix {
               inherit lib pkgs;
               darwin = inputs.self.darwinConfigurations.relay;
@@ -536,17 +519,6 @@
                   (import ./home/user/darwin-browser.nix { inherit pkgs; }).executable
                 else
                   "${pkgs.playwright-driver.browsers-chromium}/chromium-${chromiumRevision}/chrome-linux/chrome";
-              prePush = pkgs.writeShellApplication {
-                name = "dotfiles-pre-push";
-                runtimeInputs = with pkgs; [
-                  git
-                  nix
-                  python3
-                ];
-                text = ''
-                  exec python3 ${./scripts/check-affected.py} "$@"
-                '';
-              };
               mmdc = pkgs.writeShellScriptBin "mmdc" ''
                 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
                 export PUPPETEER_EXECUTABLE_PATH=${chromiumExecutable}
@@ -559,7 +531,6 @@
                 ++ [
                   config.treefmt.build.wrapper
                   mmdc
-                  prePush
                 ]
                 ++ (with pkgs; [
                   bats
@@ -581,7 +552,10 @@
               shellHook =
                 preCommitCheck.shellHook
                 + ''
-                  ${pkgs.python3}/bin/python3 ${./scripts/check-affected.py} --install ${prePush}/bin/dotfiles-pre-push || return 1
+                  hook="$(git rev-parse --git-path hooks/pre-push 2>/dev/null || true)"
+                  if [ -n "$hook" ] && [ -L "$hook" ] && [ "$(basename "$(readlink "$hook")")" = dotfiles-pre-push ]; then
+                    rm -f "$hook"
+                  fi
                 ''
                 + lib.optionalString (system == darwinSystem) ''
                   echo "Diagram tools available: d2, mmdc, nodejs"

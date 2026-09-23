@@ -16,9 +16,9 @@ William's flake-based NixOS/Home Manager repo. Follow `home/config/llm/AGENTS.md
 
 ## Development
 
-The dev shell installs commit checks and an affected-configuration pre-push gate; let the gate own push-time configuration checks rather than duplicating manual builds or broad flake checks. See `docs/nixos-host-operations.md` for selection rules, manual checks, runtime tests, switches and recovery.
+The dev shell installs commit checks. Pushes do not build NixOS or Home Manager configurations. See `docs/nixos-host-operations.md` for manual checks, runtime tests, switches and recovery.
 
-Use `hmswitch` for Home Manager activation. After module changes, build the selected host, activate and verify before committing, subject to authorization; a push check does not replace deployment checks. Verify added packages exist in inputs/nixpkgs. Never commit secrets/private data.
+Use `hmswitch` for Home Manager activation. After module changes, build the selected host, activate and verify before committing, subject to authorization. Verify added packages exist in inputs/nixpkgs. Never commit secrets/private data.
 
 Brave debugging is configured in programs.nix on port 9222; probe `/json/version`. Use browser MCP first, prefer evaluate_script to snapshots for extraction. For GitHub use MCP first, then gh rather than scraping.
 
