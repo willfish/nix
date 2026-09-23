@@ -16,6 +16,9 @@
     # null uses the host default; otherwise use a theme ID such as "nord".
     # A saved theme-menu selection takes precedence. Each theme owns its mode.
     palette = null;
+    # Boot artwork is embedded in the initrd: rebuild the system to change it.
+    # null uses the host default; unlike palette, menu selections cannot win.
+    bootPalette = null;
     font = "Ubuntu";
     monoFont = "JetBrainsMono Nerd Font";
     fontSize = 12;

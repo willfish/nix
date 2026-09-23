@@ -6,65 +6,89 @@
 }:
 let
   hostDefaults = import ../../home/user/themes/host-defaults.nix;
-  rendered = import ./greeter-themes.nix {
-    inherit lib pkgs;
-    timeZone = config.time.timeZone;
-  };
+  rendered = import ./greeter-themes.nix { inherit lib pkgs; };
   selectionDir = "/var/lib/desktop-theme";
   selectionName = "william";
   selectionFile = "${selectionDir}/${selectionName}";
+  runtimeDir = "/run/desktop-login";
   fallback = hostDefaults.forHost config.networking.hostName;
-  fallbackTheme = rendered.catalogue.${fallback};
-  themes = lib.genAttrs rendered.names (name: {
-    nativeMode = rendered.nativeMode name;
-    config = "${rendered.configFile name}";
-    css = "${rendered.cssFile name}";
-  });
-  manifest = pkgs.writeText "greeter-themes.json" (
+  manifest = pkgs.writeText "sddm-themes.json" (
     builtins.toJSON {
-      inherit fallback selectionDir selectionName;
-      sessionShare = "${config.services.displayManager.sessionData.desktops}/share";
-      dbus = lib.getExe' pkgs.dbus "dbus-run-session";
-      cage = lib.getExe pkgs.cage;
-      cageArgs = config.programs.regreet.cageArgs;
-      regreet = lib.getExe config.programs.regreet.package;
-      inherit themes;
+      inherit
+        fallback
+        selectionDir
+        selectionName
+        runtimeDir
+        ;
+      themes = lib.genAttrs rendered.names (name: {
+        path = rendered.greeterThemePath name;
+      });
     }
   );
-  launcher = pkgs.writeShellScript "regreet-themed" ''
-    exec ${pkgs.python3}/bin/python3 ${./greeter_select.py} ${manifest}
-  '';
 in
 {
   assertions = [
     {
       assertion = rendered.catalogue ? ${fallback};
-      message = "greeter host default ${fallback} is not in the Omarchy catalogue";
+      message = "login host default ${fallback} must be in the theme catalogue";
+    }
+    {
+      assertion = !(config.services.displayManager.sddm.settings ? Autologin);
+      message = "the login theme must not bypass password authentication";
     }
   ];
 
-  programs.regreet = {
-    enable = true;
-    theme = {
-      package = pkgs.adw-gtk3;
-      name = rendered.gtkThemeName fallbackTheme.nativeMode;
+  services.displayManager = {
+    autoLogin.enable = false;
+    defaultSession = "hyprland";
+    sddm = {
+      enable = true;
+      package = pkgs.kdePackages.sddm;
+      theme = "${runtimeDir}/omarchy";
+      settings.Users.EnableAvatars = false;
     };
-    font = {
-      package = pkgs."ubuntu-classic";
-      name = rendered.configuredAppearance.font;
-      size = rendered.configuredAppearance.fontSize;
-    };
-    settings = rendered.settingsFor fallback;
   };
-
-  services.greetd.settings.default_session.command = lib.mkForce launcher;
-  security.pam.services.greetd.enableGnomeKeyring = true;
   services.libinput.enable = true;
 
-  # Type f creates the file only when it is missing. It must not be f+, which
-  # would reset a saved ID on the next boot. An empty or rejected file falls
-  # back in the reader; nothing privileged rewrites it.
+  # Refresh only the allowlisted asset link, never restart a login session.
+  systemd.services.desktop-login-theme = {
+    description = "Select immutable login theme assets";
+    after = [ "systemd-tmpfiles-setup.service" ];
+    before = [ "display-manager.service" ];
+    unitConfig.RequiresMountsFor = selectionDir;
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.python3}/bin/python3 ${./greeter_select.py} ${manifest}";
+      User = "root";
+      UMask = "0022";
+      NoNewPrivileges = true;
+      PrivateTmp = true;
+      ProtectHome = true;
+      ProtectSystem = "strict";
+      ReadWritePaths = [ runtimeDir ];
+      RestrictAddressFamilies = [ "AF_UNIX" ];
+    };
+  };
+  systemd.services.display-manager = {
+    requires = [ "desktop-login-theme.service" ];
+    after = [ "desktop-login-theme.service" ];
+  };
+  systemd.paths.desktop-login-theme = {
+    wantedBy = [ "multi-user.target" ];
+    pathConfig = {
+      PathChanged = selectionFile;
+      Unit = "desktop-login-theme.service";
+    };
+  };
+
+  # Keep both directories root-owned. The desktop can write only the bounded
+  # ID file, never a path, QML file, or privileged executable.
   systemd.tmpfiles.settings.desktop-theme = {
+    ${runtimeDir}.d = {
+      mode = "0755";
+      user = "root";
+      group = "root";
+    };
     ${selectionDir}.d = {
       mode = "0755";
       user = "root";

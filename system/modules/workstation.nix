@@ -9,6 +9,7 @@
     ./base.nix
     ./hyprland.nix
     ./greeter.nix
+    ./plymouth.nix
   ];
 
   boot.kernelParams = [ "btiso.enable=1" ];

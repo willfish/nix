@@ -6,7 +6,7 @@ import json
 import os
 import re
 import stat
-import sys
+import tempfile
 
 ID_RE = rb"^[a-z0-9]+(?:-[a-z0-9]+)*\n?$"
 MAX_BYTES = 64
@@ -68,42 +68,33 @@ def resolve(theme_id, themes, fallback):
         if fallback not in themes:
             raise SystemExit("greeter fallback is not in the allowlist")
         entry = themes[fallback]
-    for key in ("config", "css"):
-        if not store_path(entry.get(key)):
-            raise SystemExit("refusing non-store theme asset")
+    if not store_path(entry.get("path")):
+        raise SystemExit("refusing non-store theme asset")
     return entry
 
 
-def command_for(manifest, theme_id):
-    for key in ("dbus", "cage", "regreet"):
-        if not store_path(manifest[key]):
-            raise SystemExit("refusing non-store greeter executable")
+def publish(manifest, theme_id):
     entry = resolve(theme_id, manifest["themes"], manifest["fallback"])
-    argv = [
-        manifest["dbus"],
-        manifest["cage"],
-        *manifest["cageArgs"],
-        "--",
-        manifest["regreet"],
-        "--config",
-        entry["config"],
-        "--style",
-        entry["css"],
-    ]
-    current = os.environ.get("XDG_DATA_DIRS", "/run/current-system/sw/share")
-    share = manifest["sessionShare"]
-    env = os.environ.copy()
-    if share and share not in current.split(":"):
-        env["XDG_DATA_DIRS"] = share + ":" + current
-    return argv, env
+    directory = manifest["runtimeDir"]
+    # The service creates this root-owned directory with tmpfiles. Refuse
+    # redirects; no user-provided output paths enter this manifest.
+    info = os.lstat(directory)
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid():
+        raise SystemExit("refusing unowned runtime directory")
+    if info.st_mode & 0o022:
+        raise SystemExit("refusing writable runtime directory")
+    # A private temporary directory prevents following preexisting files.
+    with tempfile.TemporaryDirectory(prefix=".theme-", dir=directory) as tmp:
+        link = os.path.join(tmp, "omarchy")
+        os.symlink(entry["path"], link)
+        os.replace(link, os.path.join(directory, "omarchy"))
 
 
 def launch(manifest_path):
     with open(manifest_path, encoding="utf-8") as handle:
         manifest = json.load(handle)
     theme_id = read_bounded(manifest["selectionDir"], manifest["selectionName"])
-    argv, env = command_for(manifest, theme_id)
-    os.execvpe(argv[0], argv, env)
+    publish(manifest, theme_id)
 
 
 def main(argv=None):

@@ -1,17 +1,21 @@
 # Hyprland
 
-Hyprland is the only supported graphical session. If login lists both,
-select **Hyprland**, not **Hyprland (uwsm-managed)**. Editable settings live
-under `home/config/` and Home Manager wiring under `home/user/`.
+Hyprland is the only supported graphical session. Editable settings live under
+`home/config/` and Home Manager wiring under `home/user/`.
 
-ReGreet themes the login screen without reading your home directory. The
+SDDM uses Omarchy's QML login theme without reading your home directory. The
 precreated file `/var/lib/desktop-theme/william` is mode 0644 and owned by
 william. The directory is root-owned mode 0755, so writers must open that file
 in place. It holds only a theme ID, validated against the greeter's immutable
 theme catalogue. A saved theme-menu selection overrides the host
-default in `home/user/themes/host-defaults.nix`. The first reboot is required
-before that greeter is shown. Stage the system generation for the next boot; do
-not switch it into the running session.
+default in `home/user/themes/host-defaults.nix`. A system service refreshes the
+immutable theme link when that selection changes, without restarting SDDM.
+Plymouth's matching boot artwork uses `appearance.bootPalette` in the central
+settings file, or the host default when null. It requires a system rebuild.
+Stage the system generation for the next boot; do not switch it into the running
+session. The first reboot activates SDDM and Plymouth. Password login remains
+required. The upstream layout offers no user or session chooser; it logs William
+into Hyprland. Use a TTY or the previous boot generation for recovery.
 
 ## Configuration
 

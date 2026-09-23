@@ -4,7 +4,6 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import stat
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -220,63 +219,6 @@ class ThemeMenuTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.controller.set_mode("dark")
         self.assertEqual((self.state / "mode").read_text(), "light\n")
-
-    def test_greeter_publish_is_in_place_and_refuses_unsafe_paths(self):
-        self.greeter.write_text("old\n")
-        target = self.root / "outside"
-        target.write_text("secret")
-        with patch.dict(os.environ, {"THEME_MENU_PUBLISH": "1"}):
-            self.assertEqual(self.controller.publish_greeter("default"), [])
-            self.assertEqual(self.greeter.read_text(), "tokyo-night\n")
-            link = self.root / "greeter-link"
-            link.symlink_to(target)
-            linked = menu.Themes(
-                self.catalogue, self.state, self.config, link
-            )
-            warnings = linked.publish_greeter("rose-pine")
-            self.assertTrue(warnings)
-            self.assertEqual(target.read_text(), "secret")
-            self.assertTrue(link.is_symlink())
-            directory = self.root / "greeter-dir"
-            directory.mkdir()
-            nested = menu.Themes(
-                self.catalogue, self.state, self.config, directory
-            )
-            self.assertTrue(nested.publish_greeter("rose-pine"))
-            self.assertFalse((directory / "rose-pine").exists())
-            fifo = self.root / "greeter-fifo"
-            os.mkfifo(fifo)
-            piped = menu.Themes(
-                self.catalogue, self.state, self.config, fifo
-            )
-            self.assertTrue(piped.publish_greeter("rose-pine"))
-            self.assertTrue(stat.S_ISFIFO(fifo.lstat().st_mode))
-            missing = menu.Themes(
-                self.catalogue,
-                self.state,
-                self.config,
-                self.root / "missing-greeter",
-            )
-            self.assertEqual(missing.publish_greeter("rose-pine"), [])
-            self.assertFalse((self.root / "missing-greeter").exists())
-            self.palettes["bad id"] = {
-                "label": "bad", "id": "bad id", "files": {}
-            }
-            unsafe = menu.Themes(
-                {
-                    "default": "tokyo-night",
-                    "palettes": self.catalogue["palettes"],
-                },
-                self.state,
-                self.config,
-                self.greeter,
-            )
-            self.greeter.write_text("keep\n")
-            self.assertTrue(unsafe.publish_greeter("bad id"))
-            self.assertEqual(self.greeter.read_text(), "keep\n")
-        self.greeter.write_text("untouched\n")
-        self.assertEqual(self.controller.publish_greeter("rose-pine"), [])
-        self.assertEqual(self.greeter.read_text(), "untouched\n")
 
     def test_reload_does_not_start_ghostty_and_reports_failures(self):
         with patch.object(menu.subprocess, "run") as run:

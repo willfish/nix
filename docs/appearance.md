@@ -46,11 +46,18 @@ appearance. Default Fuzzel and the voice menu include
 `~/.local/state/theme-menu/active/fuzzel.ini`. Voice menu width and lines come
 from `menus.voice` in `home/config/hyprland/settings.nix`.
 
-ReGreet does not read your home directory. The precreated file
-`/var/lib/desktop-theme/william` holds only a selected theme ID; the greeter
-validates it against its immutable theme catalogue and falls back to the host
-default if it is invalid. The first reboot activates the replacement greeter.
-Subsequent theme choices take effect when the greeter next starts.
+SDDM uses Omarchy's QML login layout and theme-specific unlock artwork.
+It does not read your home directory. The precreated file
+`/var/lib/desktop-theme/william` holds only a selected theme ID. A system
+service validates it against immutable assets, falls back to the host default
+if invalid, and updates the login theme link without restarting your session.
+The next greeter uses the updated assets once that service has finished.
+
+Plymouth uses the matching Omarchy boot and disk-unlock artwork. Its palette
+comes from `appearance.bootPalette` in `home/config/hyprland/settings.nix`;
+`null` uses the host default. Boot artwork is embedded in the initrd, so changing
+it requires a system rebuild and reboot. The desktop menu cannot change the
+boot image. Neither theme enables automatic login or changes disk encryption.
 
 In Brave, select **Settings → Appearance → Use GTK**. Explicit browser themes,
 extensions and website styling can override desktop colours.

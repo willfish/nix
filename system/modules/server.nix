@@ -7,8 +7,8 @@
   assertions = [
     {
       assertion =
-        !config.services.greetd.enable
-        && !config.programs.regreet.enable
+        !config.services.displayManager.sddm.enable
+        && !config.boot.plymouth.enable
         && !config.services.xserver.enable;
       message = "server role must remain headless";
     }
