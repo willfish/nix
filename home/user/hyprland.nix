@@ -394,10 +394,37 @@
           };
           bind = settings.bindings.bind ++ workspaceBinds ++ voiceBinds;
           inherit (settings.bindings) bindr bindm bindle;
-          windowrule = map (rule: {
-            inherit (rule) name float;
-            "match:class" = rule.class;
-          }) settings.floating.rules;
+          windowrule =
+            map (rule: {
+              inherit (rule) name float;
+              "match:class" = rule.class;
+            }) settings.floating.rules
+            ++ [
+              {
+                name = "daily-agenda";
+                "match:class" = "^com\\.mitchellh\\.ghostty$";
+                "match:title" = "^Today$";
+                float = true;
+                center = true;
+                size = "760 460";
+              }
+              {
+                name = "daily-notes";
+                "match:class" = "^com\\.mitchellh\\.ghostty$";
+                "match:title" = "^Today's notes$";
+                float = true;
+                center = true;
+                size = "1000 700";
+              }
+              {
+                name = "brave-web-apps";
+                "match:class" =
+                  "^brave-(mail[.]google[.]com|drive[.]google[.]com|docs[.]google[.]com|www[.]youtube[.]com).*";
+                float = true;
+                center = true;
+                size = "1100 800";
+              }
+            ];
         };
       };
 

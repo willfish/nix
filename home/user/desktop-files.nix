@@ -20,6 +20,38 @@ let
   defaultImageViewer = "org.gnome.Loupe.desktop";
   pdfDesktop = "org.gnome.Evince.desktop";
   browserDesktop = "brave-browser.desktop";
+  webApps = [
+    {
+      id = "aghbiahbpaijignceidepookljebhfak";
+      name = "Google Drive";
+      url = "https://drive.google.com/";
+    }
+    {
+      id = "agimnkijcaahngcdmfeangaknmldooml";
+      name = "YouTube";
+      url = "https://www.youtube.com/";
+    }
+    {
+      id = "fhihpiojkbmbpdjeoajapmgkhlnakfjf";
+      name = "Sheets";
+      url = "https://docs.google.com/spreadsheets/";
+    }
+    {
+      id = "fmgjjmmmlfnkbppncabfkddbjimcfncm";
+      name = "Gmail";
+      url = "https://mail.google.com/";
+    }
+    {
+      id = "kefjledonklijopmnomlcbpllchaibag";
+      name = "Slides";
+      url = "https://docs.google.com/presentation/";
+    }
+    {
+      id = "mpnpojknpmmopombnjdcgaaiekajbnjb";
+      name = "Docs";
+      url = "https://docs.google.com/document/";
+    }
+  ];
   telegramDesktop = "org.telegram.desktop.desktop";
   imageMimeTypes = [
     "image/avif"
@@ -205,9 +237,28 @@ in
     "mimeapps.list".force = true;
   };
 
-  xdg.dataFile = lib.optionalAttrs isGraphicalLinux {
-    "applications/mimeapps.list".force = true;
-  };
+  xdg.dataFile = lib.optionalAttrs isGraphicalLinux (
+    {
+      "applications/mimeapps.list".force = true;
+    }
+    // builtins.listToAttrs (
+      map (app: {
+        name = "applications/chrome-${app.id}-Default.desktop";
+        value = {
+          force = true;
+          text = ''
+            [Desktop Entry]
+            Type=Application
+            Name=${app.name}
+            Exec=brave --app=${app.url}
+            Icon=chrome-${app.id}-Default
+            Terminal=false
+            Categories=Network;WebBrowser;
+          '';
+        };
+      }) webApps
+    )
+  );
 
   xdg.desktopEntries = lib.mkIf isGraphicalLinux {
     neovim-ghostty = {
