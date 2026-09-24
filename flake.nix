@@ -84,14 +84,6 @@
       url = "git+https://github.com/JJDizz1L/aetheria?shallow=1";
       flake = false;
     };
-    omarchy-theme-all-hallow-s-eve = {
-      url = "git+https://github.com/guilhermetk/omarchy-all-hallows-eve-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-amberbyte = {
-      url = "git+https://github.com/tahfizhabib/omarchy-amberbyte-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-arc-blueberry = {
       url = "git+https://github.com/vale-c/omarchy-arc-blueberry?shallow=1";
       flake = false;
@@ -104,10 +96,6 @@
       url = "git+https://github.com/tahfizhabib/omarchy-artzen-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-ash = {
-      url = "git+https://github.com/bjarneo/omarchy-ash-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-atelier = {
       url = "git+https://github.com/atif-1402/omarchy-atelier-theme?shallow=1";
       flake = false;
@@ -116,32 +104,8 @@
       url = "git+https://github.com/bjarneo/omarchy-aura-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-ayaka = {
-      url = "git+https://github.com/abhijeet-swami/omarchy-ayaka-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-azure-glow = {
       url = "git+https://github.com/Hydradevx/omarchy-azure-glow-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-batman = {
-      url = "git+https://github.com/OldJobobo/omarchy-batman-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-batou = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-batou-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-bauhaus = {
-      url = "git+https://github.com/somerocketeer/omarchy-bauhaus-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-biscuit-de-mar-dark = {
-      url = "git+https://github.com/OldJobobo/omarchy-biscuit-de-mar-dark-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-black-arch = {
-      url = "git+https://github.com/ankur311sudo/black_arch?shallow=1";
       flake = false;
     };
     omarchy-theme-black-gold = {
@@ -152,88 +116,12 @@
       url = "git+https://github.com/pkovzz/omarchy-black-sand-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-black-turq = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-blackturq-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-blue-ridge-dark = {
-      url = "git+https://github.com/hipsterusername/omarchy-blueridge-dark-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-bluedotrb = {
-      url = "git+https://github.com/dotsilva/omarchy-bluedotrb-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-castle-on-a-lake = {
-      url = "git+https://github.com/shmall03/omarchy-castle-on-a-lake-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-catppuccin-mocha-dark = {
-      url = "git+https://github.com/Luquatic/omarchy-catppuccin-dark?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-cincinnati = {
-      url = "git+https://github.com/jkwuc89/omarchy-cincinnati-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-citrus-cynapse = {
-      url = "git+https://github.com/Grey-007/citrus-cynapse?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-city-783 = {
-      url = "git+https://github.com/OldJobobo/omarchy-city-783-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-cobalt2 = {
-      url = "git+https://github.com/hoblin/omarchy-cobalt2-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-coffee = {
-      url = "git+https://github.com/megabyte0x/omarchy-coffee-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-coffee-latte = {
-      url = "git+https://github.com/megabyte0x/omarchy-coffee-latte-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-commit = {
-      url = "git+https://github.com/c0ze/omarchy-commit-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-cpunk = {
-      url = "git+https://github.com/stannorbvb-cmd/cpunk?shallow=1";
-      flake = false;
-    };
     omarchy-theme-crimson-gold = {
       url = "git+https://github.com/knappkevin/omarchy-crimson-gold-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-darcula = {
-      url = "git+https://github.com/noahljungberg/omarchy-darcula-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-demon = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-demon-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-dos-moos = {
       url = "git+https://github.com/HANCORE-linux/omarchy-dos-moos-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-dotrb = {
-      url = "git+https://github.com/dotsilva/omarchy-dotrb-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-drac = {
-      url = "git+https://github.com/ShehabShaef/omarchy-drac-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-dracula = {
-      url = "git+https://github.com/catlee/omarchy-dracula-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-eldritch = {
-      url = "git+https://github.com/eldritch-theme/omarchy?shallow=1";
       flake = false;
     };
     omarchy-theme-event-horizon = {
@@ -244,20 +132,12 @@
       url = "git+https://github.com/celsobenedetti/omarchy-evergarden?shallow=1";
       flake = false;
     };
-    omarchy-theme-felix = {
-      url = "git+https://github.com/TyRichards/omarchy-felix-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-fireside = {
       url = "git+https://github.com/bjarneo/omarchy-fireside-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-flat-dracula = {
       url = "git+https://github.com/OldJobobo/omarchy-flat-dracula-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-flexoki-dark = {
-      url = "git+https://github.com/euandeas/omarchy-flexoki-dark-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-forest-green = {
@@ -268,10 +148,6 @@
       url = "git+https://github.com/bjarneo/omarchy-frost-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-fuchsblau = {
-      url = "git+https://github.com/fuchsblau/omarchy-fuchsblau-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-futurism = {
       url = "git+https://github.com/bjarneo/omarchy-futurism-theme?shallow=1";
       flake = false;
@@ -280,56 +156,20 @@
       url = "git+https://github.com/benwillems/omarchy-futurist-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-gand = {
-      url = "git+https://github.com/c0ze/omarchy-gand-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-ghost-pastel = {
-      url = "git+https://github.com/row-huh/omarchy-ghost-pastel-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-gold-rush = {
       url = "git+https://github.com/tahayvr/omarchy-gold-rush-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-golden-brown = {
-      url = "git+https://github.com/atif-1402/omarchy-golden-brown-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-greek-noir = {
       url = "git+https://github.com/HANCORE-linux/omarchy-greek-noir-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-green-garden = {
-      url = "git+https://github.com/kalk-ak/omarchy-green-garden-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-gruvbox-material = {
       url = "git+https://github.com/curbol/omarchy-gruvbox-material?shallow=1";
       flake = false;
     };
-    omarchy-theme-harbor = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-harbor-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-harbor-dark = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-harbordark-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-hermarchy = {
-      url = "git+https://github.com/archer-clawbot/omarchy-hermarchy-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-hinterlands = {
       url = "git+https://github.com/OldJobobo/omarchy-hinterlands-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-infernium = {
-      url = "git+https://github.com/RiO7MAKK3R/omarchy-infernium-dark-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-inky-pinky = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-inkypinky-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-japan-night = {
@@ -340,96 +180,24 @@
       url = "git+https://github.com/thisisgm/omarchy-lamplight-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-lawson-night = {
-      url = "git+https://github.com/phuclh/omarchy-lawson-night-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-map-quest = {
-      url = "git+https://github.com/ItsABigIgloo/omarchy-mapquest-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-mars = {
       url = "git+https://github.com/steve-lohmeyer/omarchy-mars-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-matrix = {
-      url = "git+https://github.com/BVisagie/omarchy-matrix-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-mechanoonna = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-mechanoonna-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-midnight = {
       url = "git+https://github.com/JaxonWright/omarchy-midnight-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-milky-matcha = {
-      url = "git+https://github.com/hipsterusername/omarchy-milkmatcha-light-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-mini-jcw = {
-      url = "git+https://github.com/davydotcom/omarchy-mini-jcw-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-monochrome = {
-      url = "git+https://github.com/Swarnim114/omarchy-monochrome-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-monokai = {
-      url = "git+https://github.com/bjarneo/omarchy-monokai-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-moodpeak = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-moodpeak-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-nagai-poolside = {
       url = "git+https://github.com/somerocketeer/omarchy-nagai-poolside-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-naysayer = {
-      url = "git+https://github.com/brianblakely/omarchy-naysayer-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-neo-sploosh = {
-      url = "git+https://github.com/monoooki/omarchy-neo-sploosh-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-neon-dusk = {
       url = "git+https://github.com/daniel-felipe/omarchy-neon-dusk-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-neovoid = {
-      url = "git+https://github.com/RiO7MAKK3R/omarchy-neovoid-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-neptune-blue = {
-      url = "git+https://github.com/davydotcom/omarchy-neptune-blue-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-nes = {
-      url = "git+https://github.com/bjarneo/omarchy-nes-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-noir = {
-      url = "git+https://github.com/tahadx/omarchy-noir-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-nujabes = {
-      url = "git+https://github.com/HalmyLyseas/omarchy-nujabes-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-oligarchy = {
       url = "git+https://github.com/EF-Code/omarchy-oligarchy-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-omacarchy = {
-      url = "git+https://github.com/RiO7MAKK3R/omarchy-omacarchy-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-omaled = {
-      url = "git+https://github.com/brianblakely/omarchy-omaled-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-one-dark = {
@@ -444,14 +212,6 @@
       url = "git+https://github.com/HANCORE-linux/omarchy-oxocarbon-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-pagan = {
-      url = "git+https://github.com/c0ze/omarchy-pagan-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-pandora = {
-      url = "git+https://github.com/imbypass/omarchy-pandora-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-periphery = {
       url = "git+https://github.com/r-bart/omarchy-periphery-theme?shallow=1";
       flake = false;
@@ -460,68 +220,20 @@
       url = "git+https://github.com/bjarneo/omarchy-pina-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-pink-blood = {
-      url = "git+https://github.com/ITSZXY/pink-blood-omarchy-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-pulsar = {
       url = "git+https://github.com/bjarneo/omarchy-pulsar-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-purple-moon = {
-      url = "git+https://github.com/Grey-007/purple-moon?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-purplewave = {
-      url = "git+https://github.com/dotsilva/omarchy-purplewave-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-quattrocento-light = {
-      url = "git+https://github.com/r-bart/omarchy-quattrocento-light-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-rainy-night = {
       url = "git+https://github.com/atif-1402/omarchy-rainynight-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-red-monarch = {
-      url = "git+https://github.com/kamatealif/omarchy-red-monarch-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-red-pill = {
-      url = "git+https://github.com/ferlemes/omarchy-red-pill-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-retropc = {
       url = "git+https://github.com/rondilley/omarchy-retropc-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-ristretto-light = {
-      url = "git+https://github.com/brokkoli71/omarchy-ristretto-light-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-robzee84 = {
-      url = "git+https://github.com/robzolkos/omarchy-robzee84-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-rose-of-dune = {
       url = "git+https://github.com/HANCORE-linux/omarchy-roseofdune-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-rose-pine-dark = {
-      url = "git+https://github.com/guilhermetk/omarchy-rose-pine-dark?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-rose-pine-moon = {
-      url = "git+https://github.com/Memnoc/omarchy-rose-pine-moon-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-ryu = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-ryu-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-saga = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-saga-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-sakura = {
@@ -532,36 +244,8 @@
       url = "git+https://github.com/OldJobobo/omarchy-sakura-mochi-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-sapphire = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-sapphire-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-shades-of-jade = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-shadesofjade-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-snow = {
       url = "git+https://github.com/bjarneo/omarchy-snow-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-snow-black = {
-      url = "git+https://github.com/ankur311sudo/snow_black?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-solarized = {
-      url = "git+https://github.com/Gazler/omarchy-solarized-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-solarized-light = {
-      url = "git+https://github.com/dfrico/omarchy-solarized-light-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-solarized-osaka = {
-      url = "git+https://github.com/motorsss/omarchy-solarizedosaka-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-space-monkey = {
-      url = "git+https://github.com/TyRichards/omarchy-space-monkey-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-starry-night = {
@@ -572,20 +256,8 @@
       url = "git+https://github.com/r-bart/omarchy-starsend-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-sunset = {
-      url = "git+https://github.com/rondilley/omarchy-sunset-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-sunset-drive = {
       url = "git+https://github.com/tahayvr/omarchy-sunset-drive-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-super-game-bro = {
-      url = "git+https://github.com/TyRichards/omarchy-super-game-bro-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-synthwave-84 = {
-      url = "git+https://github.com/omacom-io/omarchy-synthwave84-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-temerald = {
@@ -596,28 +268,12 @@
       url = "git+https://github.com/r-bart/omarchy-terminus-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-the-greek = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-thegreek-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-tokyo-night-oled = {
-      url = "git+https://github.com/Justin-De-Sio/omarchy-tokyoled-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-tycho = {
-      url = "git+https://github.com/leonardobetti/omarchy-tycho?shallow=1";
-      flake = false;
-    };
     omarchy-theme-van-gogh = {
       url = "git+https://github.com/Nirmal314/omarchy-van-gogh-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-vault = {
       url = "git+https://github.com/r-bart/omarchy-vault-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-velvet-night = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-velvetnight-theme?shallow=1";
       flake = false;
     };
     omarchy-theme-venice-from-above = {
@@ -628,36 +284,12 @@
       url = "git+https://github.com/thmoee/omarchy-vesper-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-vhs-80 = {
-      url = "git+https://github.com/tahayvr/omarchy-vhs80-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-void = {
-      url = "git+https://github.com/vyrx-dev/omarchy-void-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-vulkanite = {
       url = "git+https://github.com/kyerpotts/omarchy-vulkanite-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-waffle-cat = {
-      url = "git+https://github.com/OldJobobo/omarchy-waffle-cat-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-waveform-dark = {
-      url = "git+https://github.com/hipsterusername/omarchy-waveform-dark-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-white-gold = {
       url = "git+https://github.com/HANCORE-linux/omarchy-whitegold-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-windows-dark-mode = {
-      url = "git+https://github.com/oldjobobo/omarchy-windows-dark-mode-theme?shallow=1";
-      flake = false;
-    };
-    omarchy-theme-winslow = {
-      url = "git+https://github.com/chipkoziara/omarchy-winslow-theme?shallow=1";
       flake = false;
     };
     # END generated Omarchy community inputs

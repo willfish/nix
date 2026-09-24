@@ -10,11 +10,8 @@ let
   # These themes sort a solid-colour image before their illustrated wallpapers.
   preferredWallpaper =
     {
-      community-felix = "01-clouds.png";
       community-midnight = "2-hand-of-adam.png";
       community-oxo-carbon = "BG3.jpg";
-      community-robzee84 = "robzee84-wallpaper-2.jpg";
-      community-super-game-bro = "02-last-warrior.png";
     }
     .${theme.name} or "";
   wallpaper = lib.findFirst (
