@@ -98,10 +98,11 @@ let
   sessionBlock = [
     "  property int sessionIndex: {"
     "    // SDDM SessionModel::FileRole, not Qt.DisplayRole (which is empty)."
-    "    // Use the desktop filename, independent of ordering and translated names."
+    "    // FileRole returns an absolute path. Match its exact basename."
     "    var fileRole = Qt.UserRole + 2"
     "    for (var i = 0; i < sessionModel.rowCount(); i++) {"
-    "      if (sessionModel.data(sessionModel.index(i, 0), fileRole) === \"hyprland.desktop\")"
+    "      var file = sessionModel.data(sessionModel.index(i, 0), fileRole)"
+    "      if (typeof file === \"string\" && file.split(\"/\").pop() === \"hyprland.desktop\")"
     "        return i"
     "    }"
     "    return -1"

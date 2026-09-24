@@ -45,7 +45,10 @@ class Sessions(QAbstractListModel):
         if not index.isValid() or not 0 <= index.row() < len(self.files):
             return None
         if role == self.FILE:
-            return self.files[index.row()]
+            # Session::setTo stores QDir::absoluteFilePath, not a basename.
+            return "/nix/store/fixture-desktops/share/wayland-sessions/" + (
+                self.files[index.row()]
+            )
         if role == self.NAME:
             return "A translated display name"
         return None
@@ -153,6 +156,14 @@ class SddmQmlTests(unittest.TestCase):
             source, r"case FileRole:\s*return session->fileName\(\);",
         )
         self.assertNotIn("case Qt::DisplayRole:", source)
+        session = (SOURCE / "src/common/Session.cpp").read_text()
+        self.assertIn(
+            "m_fileName = m_dir.absoluteFilePath(fileName);", session,
+        )
+        self.assertRegex(
+            session, r"QString Session::fileName\(\) const\s*"
+            r"\{\s*return m_fileName;",
+        )
         model = Sessions(["hyprland.desktop"])
         self.assertIsNone(model.data(model.index(0, 0), Qt.DisplayRole))
 
