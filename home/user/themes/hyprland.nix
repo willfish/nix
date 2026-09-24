@@ -265,6 +265,7 @@ in
         }
 
         .item-image-text {
+            font-family: "${cssString mono}";
             font-size: 28px;
         }
 

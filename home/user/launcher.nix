@@ -53,8 +53,8 @@ let
       ${builtins.readFile ../config/launcher/launch.sh}
     '';
   };
-  action = text: keywords: command: {
-    inherit text keywords;
+  action = icon: text: keywords: command: {
+    inherit icon text keywords;
     actions."menus:default" = command;
   };
   openUrl = url: "${pkgs.xdg-utils}/bin/xdg-open ${lib.escapeShellArg url}";
@@ -185,26 +185,26 @@ in
         icon = "preferences-system";
         history = true;
         entries = [
-          (action "Appearance" [ "theme" "colours" "wallpaper" ] "${profileBin}/theme-menu")
-          (action "Audio controls" [ "volume" "microphone" "sound" ] "${profileBin}/hypr-controls audio")
-          (action "Bluetooth controls" [ "headphones" "pair" ] "${profileBin}/hypr-controls bluetooth")
-          (action "Network controls" [ "wifi" "internet" "vpn" ] "${profileBin}/hypr-controls network")
-          (action "Session menu" [
+          (action "󰸌" "Appearance" [ "theme" "colours" "wallpaper" ] "${profileBin}/theme-menu")
+          (action "󰕾" "Audio controls" [ "volume" "microphone" "sound" ] "${profileBin}/hypr-controls audio")
+          (action "" "Bluetooth controls" [ "headphones" "pair" ] "${profileBin}/hypr-controls bluetooth")
+          (action "󰖩" "Network controls" [ "wifi" "internet" "vpn" ] "${profileBin}/hypr-controls network")
+          (action "" "Session menu" [
             "lock"
             "logout"
             "reboot"
             "power"
             "suspend"
           ] "${profileBin}/hypr-session menu")
-          (action "Qwen chat on Relay" [ "ai" "llama" "assistant" "remote" ] (
+          (action "󰚩" "Qwen chat on Relay" [ "ai" "llama" "assistant" "remote" ] (
             openUrl "http://relay.taile09696.ts.net:8081"
           ))
         ]
         ++ lib.optionals (import ./voice-supported.nix { inherit pkgs hostName; }).stt [
-          (action "Voice picker" [ "dictation" "speech" "model" ] "${profileBin}/voice-menu")
+          (action "󰍬" "Voice picker" [ "dictation" "speech" "model" ] "${profileBin}/voice-menu")
         ]
         ++ lib.optionals (hostName == "andromeda") [
-          (action "Qwen chat on Andromeda" [ "ai" "llama" "assistant" "local" ] (
+          (action "󰚩" "Qwen chat on Andromeda" [ "ai" "llama" "assistant" "local" ] (
             openUrl "http://127.0.0.1:8081"
           ))
         ];

@@ -148,6 +148,10 @@ in
       name = "adw-gtk3";
     };
     gtk4.theme = null;
+    iconTheme = {
+      package = pkgs.yaru-theme;
+      name = "Yaru-blue";
+    };
   };
 
   # Same pointer as an Omarchy session: Adwaita at 24px, including the

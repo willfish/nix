@@ -26,6 +26,8 @@ let
         entry:
         flake.inputs.nixpkgs.lib.hasInfix (builtins.unsafeDiscardStringContext "${c.services.elephant.package}/bin") entry
       ) c.systemd.user.services.walker.Service.Environment;
+    assert !graphical || c.gtk.iconTheme.name == "Yaru-blue";
+    assert !graphical || c.gtk.iconTheme.package.pname == "yaru";
     assert !graphical || c.services.elephant.settings == { };
     assert !graphical || c.xdg.configFile ? "elephant/elephant.toml";
     assert !graphical || c.xdg.configFile ? "fuzzel/fuzzel.ini";
