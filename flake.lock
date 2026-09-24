@@ -1001,20 +1001,2469 @@
         "type": "github"
       }
     },
+    "omarchy-theme-aetheria": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786992572,
+        "narHash": "sha256-qCaRww1GCtMaLz7UA+tEK/OEZUVpes1dlSs42WhhMeg=",
+        "ref": "refs/heads/omarchy-aetheria-theme",
+        "rev": "dcf698e2a16226b8ec8b5a70fe8b1fd153daf0d7",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/JJDizz1L/aetheria"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/JJDizz1L/aetheria"
+      }
+    },
+    "omarchy-theme-all-hallow-s-eve": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1758052750,
+        "narHash": "sha256-ks99ypeiLQkN47u3JVdkpuMFRrJIFMh3ok9hoeQh3cg=",
+        "ref": "refs/heads/master",
+        "rev": "21aa0f7d354aabe7b278117144773a07708db942",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/guilhermetk/omarchy-all-hallows-eve-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/guilhermetk/omarchy-all-hallows-eve-theme"
+      }
+    },
+    "omarchy-theme-amberbyte": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1766757210,
+        "narHash": "sha256-ZRkRSuPuGLCempf8mgjhgp7fLnfFX4PZTHPK1lT//pM=",
+        "ref": "refs/heads/main",
+        "rev": "8ea68b3471f9f67d5b10921f401737e99d53fb24",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahfizhabib/omarchy-amberbyte-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahfizhabib/omarchy-amberbyte-theme"
+      }
+    },
+    "omarchy-theme-arc-blueberry": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787483974,
+        "narHash": "sha256-PKRong9R7LagqpIYjBiE8sW6vdpb6JQ5I1eHRinWNrk=",
+        "ref": "refs/heads/main",
+        "rev": "56c0679f161ef7198ba089d070dd8cad0bad5b87",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/vale-c/omarchy-arc-blueberry"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/vale-c/omarchy-arc-blueberry"
+      }
+    },
+    "omarchy-theme-archwave": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769229267,
+        "narHash": "sha256-QWYQyp0y7PLQi58GTiGn+6SDAgZkeY37pu1h+cyGPr4=",
+        "ref": "refs/heads/main",
+        "rev": "b3e6b814989dc5dd58b25bc4c73667b4827bcb4c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/davidguttman/archwave"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/davidguttman/archwave"
+      }
+    },
+    "omarchy-theme-artzen": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1762925603,
+        "narHash": "sha256-JLM5MegrZFNf3DApC1bd6KSv84GtL2xV4mO3hYcOQW4=",
+        "ref": "refs/heads/main",
+        "rev": "d4255350a0ca7acd3f681b5da49e46bd15f41b9a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahfizhabib/omarchy-artzen-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahfizhabib/omarchy-artzen-theme"
+      }
+    },
+    "omarchy-theme-ash": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091651,
+        "narHash": "sha256-eL9yeMU+Atglm51HQM22jyitBMHJbYFh/ihC4Ce1erA=",
+        "ref": "refs/heads/main",
+        "rev": "7f793a2e7bdf2dcf486c7c3253e6bceb756aa188",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-ash-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-ash-theme"
+      }
+    },
+    "omarchy-theme-atelier": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1779468549,
+        "narHash": "sha256-QyzlWRcVYbEIOXPeKPAvhXhQRPN95UGhEEMl7JTf1N8=",
+        "ref": "refs/heads/main",
+        "rev": "4f68facf7a763aa5ab7fe02867e6b30536428908",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/atif-1402/omarchy-atelier-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/atif-1402/omarchy-atelier-theme"
+      }
+    },
+    "omarchy-theme-aura": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091652,
+        "narHash": "sha256-Eg54OYLD6fEz6wkEApgYy3NXX0pPoDCAbimwrd7siEQ=",
+        "ref": "refs/heads/main",
+        "rev": "f63d3dbffe844886be1e0fa555d2ddc16b5fa366",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-aura-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-aura-theme"
+      }
+    },
+    "omarchy-theme-ayaka": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767337581,
+        "narHash": "sha256-Nujz/fki/SxHzVgtUUmfAryKUFFOStSJQmYl3W3tHrw=",
+        "ref": "refs/heads/main",
+        "rev": "00ae286b3513894c7911498c6de1709650a72bc4",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/abhijeet-swami/omarchy-ayaka-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/abhijeet-swami/omarchy-ayaka-theme"
+      }
+    },
+    "omarchy-theme-azure-glow": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1754996068,
+        "narHash": "sha256-b1HKoxzBIyAVwxtzpCxBoTJOs/oX6zSg2LmIOgvdMd0=",
+        "ref": "refs/heads/main",
+        "rev": "72992693e04c303d1fb76fddb43eaeaba86572bf",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Hydradevx/omarchy-azure-glow-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Hydradevx/omarchy-azure-glow-theme"
+      }
+    },
+    "omarchy-theme-batman": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786515413,
+        "narHash": "sha256-dxOqyMGhcwa02Zunx2PyvJit7/m+IldmuM29u4BTpz8=",
+        "ref": "refs/heads/master",
+        "rev": "f7dac498aa3570b13bd10f50657dea4eb92345f8",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-batman-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-batman-theme"
+      }
+    },
+    "omarchy-theme-batou": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785879085,
+        "narHash": "sha256-ChyKt1aIcZ/R/b/EmHjs27RxboFq1MsRmBtg7LBI9rs=",
+        "ref": "refs/heads/main",
+        "rev": "d6d07c87995f524f70dc487e5bf5c52357a0fa5e",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-batou-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-batou-theme"
+      }
+    },
+    "omarchy-theme-bauhaus": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1760203628,
+        "narHash": "sha256-qq3HEKkCxfH0F/slsklU+ovFF8GA2tZS7mt8nr5NEIY=",
+        "ref": "refs/heads/main",
+        "rev": "bfcabfddb89dc56e95441b7a43919c662a468a14",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/somerocketeer/omarchy-bauhaus-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/somerocketeer/omarchy-bauhaus-theme"
+      }
+    },
+    "omarchy-theme-biscuit-de-mar-dark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786683537,
+        "narHash": "sha256-ydJ1VytCyYlwKUSwPcsAqrufCaxBRhq7p3V9X8SDbIY=",
+        "ref": "refs/heads/master",
+        "rev": "e87f5f2eba826c2a2863ba038fd708a7a38a1016",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-biscuit-de-mar-dark-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-biscuit-de-mar-dark-theme"
+      }
+    },
+    "omarchy-theme-black-arch": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787732961,
+        "narHash": "sha256-8ocCiTRYL4VLmDCXxWyuTg2t6HHTIwgmQ7a60oO+N5k=",
+        "ref": "refs/heads/main",
+        "rev": "fe2c966306d1d2ea64973aaea56696bf59db8dbe",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ankur311sudo/black_arch"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ankur311sudo/black_arch"
+      }
+    },
+    "omarchy-theme-black-gold": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785879085,
+        "narHash": "sha256-V3fowiFpIHeRyD8Bpjd93JSLtMuG+aNb8GYOGVpjBVI=",
+        "ref": "refs/heads/V2-Blackgold",
+        "rev": "79e26a50f1133f95c056a77857fcd416b6a03766",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-blackgold-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-blackgold-theme"
+      }
+    },
+    "omarchy-theme-black-sand": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787910467,
+        "narHash": "sha256-EEbeM4Sewk+IG0W12eX8zQ1WWmqfAgUgamxbWavNLIA=",
+        "ref": "refs/heads/master",
+        "rev": "d4b77e86095160ea091209524442285f254e3ea8",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/pkovzz/omarchy-black-sand-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/pkovzz/omarchy-black-sand-theme"
+      }
+    },
+    "omarchy-theme-black-turq": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785879085,
+        "narHash": "sha256-m2thA+voHoUXpu1IAefxLp0cfyy42nByrPlS9J8gYQE=",
+        "ref": "refs/heads/main",
+        "rev": "b9f90f8a8a53fea35158023e998fa2ed67f343a9",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-blackturq-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-blackturq-theme"
+      }
+    },
+    "omarchy-theme-blue-ridge-dark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1756223462,
+        "narHash": "sha256-aaxOYuhkK68iGJWsmKTrEvAciaSOdEIQcmPN8GTtFuE=",
+        "ref": "refs/heads/main",
+        "rev": "a9e8226138116491c17b3af4b434f3469d456096",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/hipsterusername/omarchy-blueridge-dark-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/hipsterusername/omarchy-blueridge-dark-theme"
+      }
+    },
+    "omarchy-theme-bluedotrb": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772626701,
+        "narHash": "sha256-woqYSE6mBENklK3PG4jdFAxzpiEVU0aQanX5u8naQas=",
+        "ref": "refs/heads/main",
+        "rev": "2afc3c2d225bbaee9ba4cca8132876047c797d53",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dotsilva/omarchy-bluedotrb-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dotsilva/omarchy-bluedotrb-theme"
+      }
+    },
+    "omarchy-theme-castle-on-a-lake": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787700255,
+        "narHash": "sha256-0XbOWZtMUHZ4iFH5grWFeRbJHfzQUIxw+ZL1y6hJChc=",
+        "ref": "refs/heads/main",
+        "rev": "ea91f869674eaa73537952c9b19b619316cbacd1",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/shmall03/omarchy-castle-on-a-lake-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/shmall03/omarchy-castle-on-a-lake-theme"
+      }
+    },
+    "omarchy-theme-catppuccin-mocha-dark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788533503,
+        "narHash": "sha256-JPs8P+ZvmFuRjQppl0zEg1E1F0N9QmKiBiX6Z0WY5gE=",
+        "ref": "refs/heads/master",
+        "rev": "54b98a5c7302783298df05238ab55f312ec327ea",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Luquatic/omarchy-catppuccin-dark"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Luquatic/omarchy-catppuccin-dark"
+      }
+    },
+    "omarchy-theme-cincinnati": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787774827,
+        "narHash": "sha256-7CiQr1Rl0Czu6IWPnrkTp+02YvQ4DU8k3nmuCMRFr/w=",
+        "ref": "refs/heads/main",
+        "rev": "d89506161928cac5047f2102abe978cb55a5fc33",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/jkwuc89/omarchy-cincinnati-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/jkwuc89/omarchy-cincinnati-theme"
+      }
+    },
+    "omarchy-theme-citrus-cynapse": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1763182089,
+        "narHash": "sha256-7ZUjpOcweSyeatpH+jO039qSbRWRlKiXVjBjEiXd/1A=",
+        "ref": "refs/heads/main",
+        "rev": "831ef747cfeaf4765dfcb824832f4656f9617c12",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Grey-007/citrus-cynapse"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Grey-007/citrus-cynapse"
+      }
+    },
+    "omarchy-theme-city-783": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787799985,
+        "narHash": "sha256-kUdd3uq2WDE3wHFKAqUcwcWX1uq7Uf9ez/CdubJHEYQ=",
+        "ref": "refs/heads/master",
+        "rev": "a9ef3ae0a2e16ec1e4664a9b7625e5450080059e",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-city-783-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-city-783-theme"
+      }
+    },
+    "omarchy-theme-cobalt2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788607575,
+        "narHash": "sha256-+CEHcq9tn6VM97xRP+J/EC2OOzdfq9+XctSfk4d3Pvk=",
+        "ref": "refs/heads/main",
+        "rev": "579fb7d8890000d315da9e18da6c0885de008ea3",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/hoblin/omarchy-cobalt2-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/hoblin/omarchy-cobalt2-theme"
+      }
+    },
+    "omarchy-theme-coffee": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788008790,
+        "narHash": "sha256-CPmSqyG+P55rPWORzFhip+DN2qhxP8IjQ39X/BWayWM=",
+        "ref": "refs/heads/main",
+        "rev": "5ee3a2ce7519398b7423e11f5a722806087de14f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/megabyte0x/omarchy-coffee-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/megabyte0x/omarchy-coffee-theme"
+      }
+    },
+    "omarchy-theme-coffee-latte": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788008804,
+        "narHash": "sha256-W5I6iE+HrfjV5rtOJDHPaZ6Dnhc8+d+tzljVzHATLNs=",
+        "ref": "refs/heads/main",
+        "rev": "39d003d9344fe48ec75b5e6490a3f2e63d33cc70",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/megabyte0x/omarchy-coffee-latte-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/megabyte0x/omarchy-coffee-latte-theme"
+      }
+    },
+    "omarchy-theme-commit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788889315,
+        "narHash": "sha256-cHmw16aR3EQX/N5YBHqvp2UjzGm1eUlPWtzQ/0vXJzg=",
+        "ref": "refs/heads/main",
+        "rev": "ba19bec9fbf72aff2a6de641a6fe0abb7c5486f7",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/c0ze/omarchy-commit-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/c0ze/omarchy-commit-theme"
+      }
+    },
+    "omarchy-theme-cpunk": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1773857078,
+        "narHash": "sha256-ybhEQb5sRzshUixx/319qEUM0FYwHW9kLE6RFg1+EtQ=",
+        "ref": "refs/heads/main",
+        "rev": "c4d726bea9e6e4b3feb477c052e25bfcb2832ea4",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/stannorbvb-cmd/cpunk"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/stannorbvb-cmd/cpunk"
+      }
+    },
+    "omarchy-theme-crimson-gold": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789260613,
+        "narHash": "sha256-3TSuFZ4kgrBFntPlVzu5WUzdhQj3xnJXU084zxtql2w=",
+        "ref": "refs/heads/main",
+        "rev": "e0829993b3543207ea7fc74282685794378b0dda",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/knappkevin/omarchy-crimson-gold-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/knappkevin/omarchy-crimson-gold-theme"
+      }
+    },
+    "omarchy-theme-darcula": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772394386,
+        "narHash": "sha256-L3o5L+g/r0Vo0TasQqZXQ4brwE5w2syFJ3FZCSqebDI=",
+        "ref": "refs/heads/main",
+        "rev": "f331656230901350d4ae9908b566f5d29f1f556a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/noahljungberg/omarchy-darcula-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/noahljungberg/omarchy-darcula-theme"
+      }
+    },
+    "omarchy-theme-demon": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785879085,
+        "narHash": "sha256-iZiueNMGRyQdcfasla2aojqHIH5IAbddUhibdUkXPDs=",
+        "ref": "refs/heads/main",
+        "rev": "e9e17e59c0d0e6d31713fe587bccf3d8a61846ae",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-demon-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-demon-theme"
+      }
+    },
+    "omarchy-theme-dos-moos": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786608468,
+        "narHash": "sha256-kUH78aOA9CC95uDJxZyfr9wDJ5Lv0O354dLpTPIfHNM=",
+        "ref": "refs/heads/main",
+        "rev": "85ed3d208130639efb033d1c5fe25d754322cee3",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-dos-moos-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-dos-moos-theme"
+      }
+    },
+    "omarchy-theme-dotrb": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772623631,
+        "narHash": "sha256-dmfnLpmcVWVySh8s/nOmC+pje+xYVhSVOdTaDb/1ZPI=",
+        "ref": "refs/heads/main",
+        "rev": "db1411af644663564fde386ace849e8e4aa81197",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dotsilva/omarchy-dotrb-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dotsilva/omarchy-dotrb-theme"
+      }
+    },
+    "omarchy-theme-drac": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1764756521,
+        "narHash": "sha256-1W/AxQG6UM9e2LJcqP9wSz186PaH0dLd+zur45sZoJc=",
+        "ref": "refs/heads/main",
+        "rev": "6fd9e1ac553fea7eedd8d18a67e7f795246ae63f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ShehabShaef/omarchy-drac-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ShehabShaef/omarchy-drac-theme"
+      }
+    },
+    "omarchy-theme-dracula": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787366662,
+        "narHash": "sha256-JbFhsovbDZjF7ApynITB12Xwj6THMoxWNbdzwqOJM0c=",
+        "ref": "refs/heads/main",
+        "rev": "12a71a9e300a223d4c0f0890465c0ac4373a0889",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/catlee/omarchy-dracula-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/catlee/omarchy-dracula-theme"
+      }
+    },
+    "omarchy-theme-eldritch": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771613822,
+        "narHash": "sha256-pnpw6z+Gy522BbV2lofMrm4goafhgRVjjZhC9rdk22g=",
+        "ref": "refs/heads/master",
+        "rev": "714ed4420c6bc72f46b8dfc023980847169f59fe",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/eldritch-theme/omarchy"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/eldritch-theme/omarchy"
+      }
+    },
+    "omarchy-theme-event-horizon": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786519781,
+        "narHash": "sha256-argu53N/W6UZqcICul7SHVGMxHkCIFPYpAl+Szy2vuk=",
+        "ref": "refs/heads/master",
+        "rev": "3e306a897442da05c147f32ac98cf9e7896294ae",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-event-horizon-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-event-horizon-theme"
+      }
+    },
+    "omarchy-theme-evergarden": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1779904521,
+        "narHash": "sha256-M02vFDpcOrgkjLUDIvf3D1hZiS+PpC8ZKly5sRtE16o=",
+        "ref": "refs/heads/master",
+        "rev": "1e5196cf9167e74c3a4fafb5be964cb15a3dc299",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/celsobenedetti/omarchy-evergarden"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/celsobenedetti/omarchy-evergarden"
+      }
+    },
+    "omarchy-theme-felix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789348906,
+        "narHash": "sha256-p9aZ11MpQ8uA0uBQwzwurpgr73fmLSiIVtJFFGaFRcM=",
+        "ref": "refs/heads/main",
+        "rev": "39fa9f3a8383f826488b0300ab78cbaa3f9b7f44",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/TyRichards/omarchy-felix-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/TyRichards/omarchy-felix-theme"
+      }
+    },
+    "omarchy-theme-fireside": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091652,
+        "narHash": "sha256-NmZov1aAdYPT4IPEZQVDs3p36VYatvL1cT5naFYHoA4=",
+        "ref": "refs/heads/main",
+        "rev": "d392f4cb697501388bd896300b5575ce5a461e65",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-fireside-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-fireside-theme"
+      }
+    },
+    "omarchy-theme-flat-dracula": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790004310,
+        "narHash": "sha256-PmdE8Bx7K0UgtcnUTm4C+HsdQUM3HgjdRlEweSk5X8Y=",
+        "ref": "refs/heads/master",
+        "rev": "9c32902e6d7846e75aad7127727090b970895ae6",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-flat-dracula-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-flat-dracula-theme"
+      }
+    },
+    "omarchy-theme-flexoki-dark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784377290,
+        "narHash": "sha256-IauiBcyaSLLoG6DyUJ7Y5o+tDmWMKC5cwiQXoryhxrE=",
+        "ref": "refs/heads/main",
+        "rev": "aa418ffb68ec1eaa72a85b02970ada07ce6f3d26",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/euandeas/omarchy-flexoki-dark-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/euandeas/omarchy-flexoki-dark-theme"
+      }
+    },
+    "omarchy-theme-forest-green": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767337637,
+        "narHash": "sha256-uXNjJCIFxddQ3WS6Ckuu95x2G8r3JbYXAtRfcYZ9LZ0=",
+        "ref": "refs/heads/main",
+        "rev": "b17f9fef702c6e51fb60599bf7df55099c97b1d0",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/abhijeet-swami/omarchy-forest-green-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/abhijeet-swami/omarchy-forest-green-theme"
+      }
+    },
+    "omarchy-theme-frost": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091651,
+        "narHash": "sha256-OHdhH45KvOjdtIsCJHaPtVvsWbggd5Q6ue/NIQ3gKGM=",
+        "ref": "refs/heads/main",
+        "rev": "f702a288630c2c740101e6c677ed4c325a598df2",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-frost-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-frost-theme"
+      }
+    },
+    "omarchy-theme-fuchsblau": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787055609,
+        "narHash": "sha256-wW3yQ3KUulCB6/1spsG/O8uJdLbzAnhc7sKxm5V3xo0=",
+        "ref": "refs/heads/master",
+        "rev": "aa7fde043ae60603c3ecc6fd6ac3b6674cacab04",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/fuchsblau/omarchy-fuchsblau-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/fuchsblau/omarchy-fuchsblau-theme"
+      }
+    },
+    "omarchy-theme-futurism": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091653,
+        "narHash": "sha256-Vd2RrqeLU0Qc8EvSU4IFjKn8UJnn9Zartv6UgLeAESc=",
+        "ref": "refs/heads/main",
+        "rev": "e60be451d92565da43bd7976c488af3e983370bc",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-futurism-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-futurism-theme"
+      }
+    },
+    "omarchy-theme-futurist": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787193425,
+        "narHash": "sha256-uxM9vHBeNUO2FIItwXrYtgyzfrKXfia6kCeXHEoMb2o=",
+        "ref": "refs/heads/master",
+        "rev": "8cd246945344c350d23ee8189a3004a2b2a5bf9d",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/benwillems/omarchy-futurist-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/benwillems/omarchy-futurist-theme"
+      }
+    },
+    "omarchy-theme-gand": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788889315,
+        "narHash": "sha256-h47TWbWjd59u2QxUoG5/ocA7Q9OZZC+vHXmTh6nHvmw=",
+        "ref": "refs/heads/main",
+        "rev": "cf1bc5fc01eeaea429372574f24e83db4712e2e4",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/c0ze/omarchy-gand-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/c0ze/omarchy-gand-theme"
+      }
+    },
+    "omarchy-theme-ghost-pastel": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785165536,
+        "narHash": "sha256-iIB9W6Ne4PN+UGnwLmQSFOuA0xFZ9t1hKkjpOQQGAGI=",
+        "ref": "refs/heads/master",
+        "rev": "d8e1b554412737240c6d6ba19c652d64c433092b",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/row-huh/omarchy-ghost-pastel-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/row-huh/omarchy-ghost-pastel-theme"
+      }
+    },
+    "omarchy-theme-gold-rush": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789673573,
+        "narHash": "sha256-snYPEhv4TnLv+tyYHsgCK7pty8DiYHkWYndZ/OZaBtY=",
+        "ref": "refs/heads/main",
+        "rev": "157d3a1a67b924abafbd65d4dcbdc070b04c8ef7",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahayvr/omarchy-gold-rush-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahayvr/omarchy-gold-rush-theme"
+      }
+    },
+    "omarchy-theme-golden-brown": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1779545941,
+        "narHash": "sha256-e7FfrBJ+reOvQmS8iH5NAF/ApfDzeKrR9eYHn2+bfSs=",
+        "ref": "refs/heads/main",
+        "rev": "7cea2f2ffd84af2f46ad27b3db00774155dd7380",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/atif-1402/omarchy-golden-brown-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/atif-1402/omarchy-golden-brown-theme"
+      }
+    },
+    "omarchy-theme-greek-noir": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786324706,
+        "narHash": "sha256-TOvW7XUx8G5tN7VZE6pONlZFmTf9QWP/HqQkVdchWzM=",
+        "ref": "refs/heads/main",
+        "rev": "4dde93cb42f775af791957d828ae8ff9728f7796",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-greek-noir-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-greek-noir-theme"
+      }
+    },
+    "omarchy-theme-green-garden": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770134763,
+        "narHash": "sha256-zQlkZkMIkvk30ui2+ScWfLt7t9lVXnZfIaUvcBaJlHA=",
+        "ref": "refs/heads/main",
+        "rev": "bffbe36fcf004b90b130456ad3fabae47d48cccb",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/kalk-ak/omarchy-green-garden-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/kalk-ak/omarchy-green-garden-theme"
+      }
+    },
+    "omarchy-theme-gruvbox-material": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788148135,
+        "narHash": "sha256-H8zOCIVB+keS/jkGrc5wUUy5Ecw0hi3gbmYWhsgFA5I=",
+        "ref": "refs/heads/main",
+        "rev": "1bcf7f9339ce99fc7a93e1757da66d8ac7c5d47d",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/curbol/omarchy-gruvbox-material"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/curbol/omarchy-gruvbox-material"
+      }
+    },
+    "omarchy-theme-harbor": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785925122,
+        "narHash": "sha256-svX2nYU8aMrb4VE4JbqbZTgYs5eDARpLqQvpljwT8FQ=",
+        "ref": "refs/heads/main",
+        "rev": "27a7f3b5f9eb1306995f89573f4b7647eaeed8e4",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-harbor-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-harbor-theme"
+      }
+    },
+    "omarchy-theme-harbor-dark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785963205,
+        "narHash": "sha256-taWwULR4ZacZ24RLz1A+eyDcOB3nmba293t9SjuqHuw=",
+        "ref": "refs/heads/main",
+        "rev": "5203f4d4e4910a718925c4c3e996d794772a0531",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-harbordark-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-harbordark-theme"
+      }
+    },
+    "omarchy-theme-hermarchy": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788028293,
+        "narHash": "sha256-RtDyKxOipCd14GQH2OBOVxSSrBq+EqSRT2Ex/WPQCUw=",
+        "ref": "refs/heads/main",
+        "rev": "12f3c5257f87237fa3fd549cf7be3f9fba76f9c8",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/archer-clawbot/omarchy-hermarchy-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/archer-clawbot/omarchy-hermarchy-theme"
+      }
+    },
+    "omarchy-theme-hinterlands": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782057182,
+        "narHash": "sha256-pXTTklZVj0VZ/pT4dVLxh7E5FR8DmJ/EFS6TTb9mVAI=",
+        "ref": "refs/heads/master",
+        "rev": "24f8759e7e52a2d953383b59241c256ea8138160",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-hinterlands-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-hinterlands-theme"
+      }
+    },
+    "omarchy-theme-infernium": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1759585861,
+        "narHash": "sha256-B7Bl0QZ9Q2rxTH5q1yHm5JmDy3Iy//9U2TSlBYsYaQQ=",
+        "ref": "refs/heads/main",
+        "rev": "d5c3f288ee644e1f25f1e16cde2665361134a076",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/RiO7MAKK3R/omarchy-infernium-dark-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/RiO7MAKK3R/omarchy-infernium-dark-theme"
+      }
+    },
+    "omarchy-theme-inky-pinky": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785923322,
+        "narHash": "sha256-SMuXvfYYFuPM06yWJKHmz7ZYZegOWinOPzBTInZuOjc=",
+        "ref": "refs/heads/main",
+        "rev": "1e5e79929ca061f904dd8fb6fbe127791d0036e6",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-inkypinky-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-inkypinky-theme"
+      }
+    },
+    "omarchy-theme-japan-night": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787180977,
+        "narHash": "sha256-lW7uZ8b+hx+0tLZk3CgS33WmrABXxfzC46PIay2ZO/A=",
+        "ref": "refs/heads/main",
+        "rev": "dc25d9f18a9655c0b42a10b451f81e2693eeea55",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/devgtv/omarchy-japan-night-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/devgtv/omarchy-japan-night-theme"
+      }
+    },
+    "omarchy-theme-lamplight": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786920390,
+        "narHash": "sha256-TyyCYcU4u8/0PoEwJoQDGtm+m8BtRsDigFYzz4gh5Xg=",
+        "ref": "refs/heads/main",
+        "rev": "55d6be776b9338c54a30985f05280c42f7b51c95",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/thisisgm/omarchy-lamplight-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/thisisgm/omarchy-lamplight-theme"
+      }
+    },
+    "omarchy-theme-lawson-night": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787942503,
+        "narHash": "sha256-hmdLZiLE7HSdNCLoV74S69DBpZQajgqG30TNmHihtl4=",
+        "ref": "refs/heads/main",
+        "rev": "28dfc0086cabb3c7a9032880bdd027e35dd968a0",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/phuclh/omarchy-lawson-night-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/phuclh/omarchy-lawson-night-theme"
+      }
+    },
+    "omarchy-theme-map-quest": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1764829468,
+        "narHash": "sha256-Em8N3rkodirQaaTJJB1sqaWN8BRAFVQATVrEvc/h6Dw=",
+        "ref": "refs/heads/main",
+        "rev": "262598215854442321e89ead1b2be61e2697e181",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ItsABigIgloo/omarchy-mapquest-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ItsABigIgloo/omarchy-mapquest-theme"
+      }
+    },
+    "omarchy-theme-mars": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1761401348,
+        "narHash": "sha256-6aPbfY4dXmlqRx2W/rohK5NMFZljV1Z2PmfF862XLxY=",
+        "ref": "refs/heads/master",
+        "rev": "255a8cb5331fc41cc9f976c643dbe5f9db38f4fd",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/steve-lohmeyer/omarchy-mars-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/steve-lohmeyer/omarchy-mars-theme"
+      }
+    },
+    "omarchy-theme-matrix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789310295,
+        "narHash": "sha256-xWr/N6t8Kr/LltyIkE5TvIcWBBMT59Hkoh2nmvmVDDY=",
+        "ref": "refs/heads/main",
+        "rev": "01b09c3603db68f4623923cb79d82bc49369075a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/BVisagie/omarchy-matrix-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/BVisagie/omarchy-matrix-theme"
+      }
+    },
+    "omarchy-theme-mechanoonna": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787446837,
+        "narHash": "sha256-aZ+LYiBXHPMG4oA+yuvYHWlPUeuBli2WExV9SaBKLM8=",
+        "ref": "refs/heads/mechanoonna-v2",
+        "rev": "1e241448ff6f91376769b0eb41c96141f2072f23",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-mechanoonna-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-mechanoonna-theme"
+      }
+    },
+    "omarchy-theme-midnight": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785380293,
+        "narHash": "sha256-qXU7I5/JnPsxw/J3fN7chAuUtHE5/MB6DMMCS8TbRJw=",
+        "ref": "refs/heads/master",
+        "rev": "e5f73f6d8d2cea929b730347d1f27e6d6b5da9dd",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/JaxonWright/omarchy-midnight-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/JaxonWright/omarchy-midnight-theme"
+      }
+    },
+    "omarchy-theme-milky-matcha": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1756223480,
+        "narHash": "sha256-TMy7BcfKMJgTub1FcF9h4e8mN6SHSqQ21PiwaxmJW+k=",
+        "ref": "refs/heads/main",
+        "rev": "f6383965db0779d51e1c89aeb0917779fe0c25a5",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/hipsterusername/omarchy-milkmatcha-light-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/hipsterusername/omarchy-milkmatcha-light-theme"
+      }
+    },
+    "omarchy-theme-mini-jcw": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787436833,
+        "narHash": "sha256-Ja4VICdqMHydeU61c5orECL2cfHK6VJ6qrGMSAK5IMs=",
+        "ref": "refs/heads/main",
+        "rev": "53c25ab31b241ef69a3f80da4dbf6e64cf59453f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/davydotcom/omarchy-mini-jcw-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/davydotcom/omarchy-mini-jcw-theme"
+      }
+    },
+    "omarchy-theme-monochrome": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1754714785,
+        "narHash": "sha256-locXJJk+5TXdnmMyoFsGVVuE6Zsa+iBKdzbe01mNKtE=",
+        "ref": "refs/heads/main",
+        "rev": "10aa54d4b31284f24d73c5aa5532795f4bc85046",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Swarnim114/omarchy-monochrome-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Swarnim114/omarchy-monochrome-theme"
+      }
+    },
+    "omarchy-theme-monokai": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091653,
+        "narHash": "sha256-1q4fS6ocLGc9I6hu7Cr/l2WhVrJhw7Www3nrQ/zot0A=",
+        "ref": "refs/heads/main",
+        "rev": "619b66e36f160b30bec5a421948316310aba32ab",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-monokai-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-monokai-theme"
+      }
+    },
+    "omarchy-theme-moodpeak": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785963355,
+        "narHash": "sha256-bk3DTCNs9e91YjKIe66b98qkkxKx3I5BfAblXCAUNHw=",
+        "ref": "refs/heads/moodpeak-v2",
+        "rev": "678f3c45b6a5899215c5ed2bd31c1c758600fbbb",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-moodpeak-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-moodpeak-theme"
+      }
+    },
+    "omarchy-theme-nagai-poolside": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1758574197,
+        "narHash": "sha256-icvZA2NqnIQ2JuEiw0+A4uUBoC204HEhuM5RhuhteSA=",
+        "ref": "refs/heads/main",
+        "rev": "37b9f95e26fd3e1152bfee2a8766328bdb5eb13a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/somerocketeer/omarchy-nagai-poolside-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/somerocketeer/omarchy-nagai-poolside-theme"
+      }
+    },
+    "omarchy-theme-naysayer": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787255277,
+        "narHash": "sha256-TBXml+RoDK0bAS14Xpb7lRx5RWRreOB8RsNsmBWRudc=",
+        "ref": "refs/heads/master",
+        "rev": "8d8a1805c6e36d966dbeeda7dc1a7dec326e38f7",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/brianblakely/omarchy-naysayer-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/brianblakely/omarchy-naysayer-theme"
+      }
+    },
+    "omarchy-theme-neo-sploosh": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1763003089,
+        "narHash": "sha256-4r5jYPbz2irVtJpQb+Gtx5Fj0gW6f9Bv6T30QgInU08=",
+        "ref": "refs/heads/main",
+        "rev": "0f526bd1b5c7a1dcdc0a263bc8f74733ef619c81",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/monoooki/omarchy-neo-sploosh-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/monoooki/omarchy-neo-sploosh-theme"
+      }
+    },
+    "omarchy-theme-neon-dusk": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787952962,
+        "narHash": "sha256-o/Z9W00Z81CL9675apWFdVHt7HL8KoiibwYiIDeGIao=",
+        "ref": "refs/heads/main",
+        "rev": "4817b64fa54af20d1cc98abdd18c80c67f1801d5",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/daniel-felipe/omarchy-neon-dusk-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/daniel-felipe/omarchy-neon-dusk-theme"
+      }
+    },
+    "omarchy-theme-neovoid": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1761137693,
+        "narHash": "sha256-Xt9tbsE6RGNveDoxh4HFUH1NZg/S7uJ9b2jt9bg4bBg=",
+        "ref": "refs/heads/main",
+        "rev": "7f4cde21d17aa6c91ac2f940f2756028eac985c8",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/RiO7MAKK3R/omarchy-neovoid-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/RiO7MAKK3R/omarchy-neovoid-theme"
+      }
+    },
+    "omarchy-theme-neptune-blue": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787436837,
+        "narHash": "sha256-zsYBGfTq4zKn5SRWqeKCTSJgOpnI9G4efaTHG8nmH0M=",
+        "ref": "refs/heads/main",
+        "rev": "e9e9ca978f9ab8455a9aeb104e7737e873528ee3",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/davydotcom/omarchy-neptune-blue-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/davydotcom/omarchy-neptune-blue-theme"
+      }
+    },
+    "omarchy-theme-nes": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091653,
+        "narHash": "sha256-bw0RTsoBvZJX0MWpjvSNt60+YLHzB76unM7zkZ7N0wY=",
+        "ref": "refs/heads/main",
+        "rev": "4ab5a95f4212848ef615c3f349c3f7d7376f4654",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-nes-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-nes-theme"
+      }
+    },
+    "omarchy-theme-noir": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788099844,
+        "narHash": "sha256-9ouaxWZBY2qGZiZ1vAUfhsiiLlFWCmF8AYwcFM3FGAU=",
+        "ref": "refs/heads/main",
+        "rev": "9a7b9adc045fda639216fcec3bb8ac6805392d8a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahadx/omarchy-noir-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahadx/omarchy-noir-theme"
+      }
+    },
+    "omarchy-theme-nujabes": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789244091,
+        "narHash": "sha256-EYIJ8gX6tngf3EeNkNfV50zzhia3en+HPLdWGhjPHmY=",
+        "ref": "refs/heads/main",
+        "rev": "eb1d09f835f7c87a27094f602478613263d72109",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HalmyLyseas/omarchy-nujabes-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HalmyLyseas/omarchy-nujabes-theme"
+      }
+    },
+    "omarchy-theme-oligarchy": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787842729,
+        "narHash": "sha256-WIVL/DZGOBLhiZZq32JMd9fX4H0w7LC68JBhUStASqc=",
+        "ref": "refs/heads/main",
+        "rev": "0ac0d3b70dea13454bae6ecfd86744a0c499da9d",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/EF-Code/omarchy-oligarchy-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/EF-Code/omarchy-oligarchy-theme"
+      }
+    },
+    "omarchy-theme-omacarchy": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1768207440,
+        "narHash": "sha256-QdrzmEaYNbiNczxSM4Iw3CjUFwfCsEoHhbPedZQ4794=",
+        "ref": "refs/heads/main",
+        "rev": "ea60640c2e3113f9a4e1a74955c567efef4e47a0",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/RiO7MAKK3R/omarchy-omacarchy-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/RiO7MAKK3R/omarchy-omacarchy-theme"
+      }
+    },
+    "omarchy-theme-omaled": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787168697,
+        "narHash": "sha256-NQUpYYDNQIjEYilJnXfkG11f+QlzEieZPmelh32Zat0=",
+        "ref": "refs/heads/master",
+        "rev": "3912f2a2e264bda821457e759d8387ff586fc5df",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/brianblakely/omarchy-omaled-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/brianblakely/omarchy-omaled-theme"
+      }
+    },
+    "omarchy-theme-one-dark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787865171,
+        "narHash": "sha256-uFK0MlzzSZqWGabm4AOtk8zvitn5R8ktizxELVb6ep0=",
+        "ref": "refs/heads/master",
+        "rev": "a21d0775fc72a71147e8b626cc8530b87eb65bea",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/joaopinto15/omarchy-one-dark-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/joaopinto15/omarchy-one-dark-theme"
+      }
+    },
+    "omarchy-theme-one-dark-pro": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787365754,
+        "narHash": "sha256-ueTFFPZ4BUxNXgXdWeb1b6IITuUIFJENIlL41ZcP/v0=",
+        "ref": "refs/heads/main",
+        "rev": "0874b66bf30f4525442f55fc88a443ce56a7decf",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/sc0ttman/omarchy-one-dark-pro-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/sc0ttman/omarchy-one-dark-pro-theme"
+      }
+    },
+    "omarchy-theme-oxo-carbon": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785930466,
+        "narHash": "sha256-XA8UjwVciC3DFIDN8dQqO47M3lxqasYWpe7sBw4BwyA=",
+        "ref": "refs/heads/main",
+        "rev": "237496f82c404bcf4a13f0e9cb2113b6266edf40",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-oxocarbon-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-oxocarbon-theme"
+      }
+    },
+    "omarchy-theme-pagan": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788889315,
+        "narHash": "sha256-9SjLypp89I8szyyGeuFjqEiL+4hBmBQLplsq2SpiFiY=",
+        "ref": "refs/heads/main",
+        "rev": "f4f95885310feb8586b26aba6b52ee034c8bc419",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/c0ze/omarchy-pagan-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/c0ze/omarchy-pagan-theme"
+      }
+    },
+    "omarchy-theme-pandora": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1766664317,
+        "narHash": "sha256-XQyddknYPfXWWMQ+6XqJxPzbz8pr+JrJaE6nv1nv3RA=",
+        "ref": "refs/heads/main",
+        "rev": "c57bc90f77b4fbe856b8f747ba14b33423315b9b",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/imbypass/omarchy-pandora-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/imbypass/omarchy-pandora-theme"
+      }
+    },
+    "omarchy-theme-periphery": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787936403,
+        "narHash": "sha256-7pHUJaJ3X1G4yIZEY3O+OURwkiGPeYo9cei2uE7TU5E=",
+        "ref": "refs/heads/main",
+        "rev": "44d17f5289fd2213e59f1d879f9f4bc83d9bcedf",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-periphery-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-periphery-theme"
+      }
+    },
+    "omarchy-theme-pina": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091654,
+        "narHash": "sha256-PHCTL9XCl520CJlqUUjk1JJRm1Kira6bXUKpOUOV4xk=",
+        "ref": "refs/heads/main",
+        "rev": "1a65543445d76ecc52a4a83b9b35be8c90a97ad0",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-pina-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-pina-theme"
+      }
+    },
+    "omarchy-theme-pink-blood": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1761369272,
+        "narHash": "sha256-3xlicvFmyywgjWhherk1WR1ngz2fPUn2O/VQq78td4k=",
+        "ref": "refs/heads/main",
+        "rev": "2c704c2f656e14d1cc8e93aaec8b65b9e9d27064",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ITSZXY/pink-blood-omarchy-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ITSZXY/pink-blood-omarchy-theme"
+      }
+    },
+    "omarchy-theme-pulsar": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091654,
+        "narHash": "sha256-i3AD4mBYo7+Q0/a72w4jcZntnfe7KvWo+JNP4KC7ve4=",
+        "ref": "refs/heads/main",
+        "rev": "b9af6225b5fb5731b9634d1a94cfa2fb06a3b5c9",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-pulsar-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-pulsar-theme"
+      }
+    },
+    "omarchy-theme-purple-moon": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787376812,
+        "narHash": "sha256-/Sh2NbDplbFSHLLmQkEEoUaCXaS3BvhKphZGBZKFvDc=",
+        "ref": "refs/heads/main",
+        "rev": "8a1e89036b8d8387dd4bf0f240c5ebf4ede200b6",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Grey-007/purple-moon"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Grey-007/purple-moon"
+      }
+    },
+    "omarchy-theme-purplewave": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1778804440,
+        "narHash": "sha256-QKxLNfbFcE30gKf3NJ4RZ1aWL999+hsEwTMIaV840vA=",
+        "ref": "refs/heads/main",
+        "rev": "ce01e9c583ce42b33fe63f5e6b9e6da13b9644ba",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dotsilva/omarchy-purplewave-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dotsilva/omarchy-purplewave-theme"
+      }
+    },
+    "omarchy-theme-quattrocento-light": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788033214,
+        "narHash": "sha256-KXBDn4akWgKABmYkYM0NNDPv9OofPomQWO7dJV/5eWk=",
+        "ref": "refs/heads/main",
+        "rev": "c3e4cbaf0b7b5fc1f42df98cd9623f5f0aa6a9c4",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-quattrocento-light-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-quattrocento-light-theme"
+      }
+    },
+    "omarchy-theme-rainy-night": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1779469085,
+        "narHash": "sha256-48GlNYKpDyBM15mXkq+A8JiiPYZXAEp9oGnVxgIJ6k0=",
+        "ref": "refs/heads/main",
+        "rev": "03fdd3f8552ca443c70d2e3d2b698ddd2ad785ec",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/atif-1402/omarchy-rainynight-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/atif-1402/omarchy-rainynight-theme"
+      }
+    },
+    "omarchy-theme-red-monarch": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787376589,
+        "narHash": "sha256-HhWOdSufibROV9NtC7bfWFu+6/2CqJymX5zdg78/jk8=",
+        "ref": "refs/heads/main",
+        "rev": "678355c69795dddff8ea46a10abeb5186823cd82",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/kamatealif/omarchy-red-monarch-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/kamatealif/omarchy-red-monarch-theme"
+      }
+    },
+    "omarchy-theme-red-pill": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787963707,
+        "narHash": "sha256-GZEabxzJjxYmqyFJvK3oHFUC8gZPv9qLWmL4gPNQXLk=",
+        "ref": "refs/heads/main",
+        "rev": "644c4a2ba19985c8a0ab20e58d896b4bbe5b5c0f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ferlemes/omarchy-red-pill-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ferlemes/omarchy-red-pill-theme"
+      }
+    },
+    "omarchy-theme-retropc": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1763799683,
+        "narHash": "sha256-vql91RQ5WdTKMq6V4f1H2s1ljawmjfi1MQitKOP3C+w=",
+        "ref": "refs/heads/main",
+        "rev": "9cfab92e2b708dc6a4afca3f144b8f1c011ab379",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/rondilley/omarchy-retropc-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/rondilley/omarchy-retropc-theme"
+      }
+    },
+    "omarchy-theme-ristretto-light": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787065970,
+        "narHash": "sha256-RFQJE8+p+8FGnQ/Iz9iB4ljOZIVB76JHbJZTKn9Kf8s=",
+        "ref": "refs/heads/master",
+        "rev": "e9abefc5088485c994fc708a11f73f48c46457c9",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/brokkoli71/omarchy-ristretto-light-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/brokkoli71/omarchy-ristretto-light-theme"
+      }
+    },
+    "omarchy-theme-robzee84": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1777941517,
+        "narHash": "sha256-kiu0J+mt/6j0Fwd9U5Gtv1NnDjns7aY3Hg7o2XElKao=",
+        "ref": "refs/heads/master",
+        "rev": "814d02ea415a7aa95f2bfb0d6d2baada56503e44",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/robzolkos/omarchy-robzee84-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/robzolkos/omarchy-robzee84-theme"
+      }
+    },
+    "omarchy-theme-rose-of-dune": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785940503,
+        "narHash": "sha256-bY28YTfyiDASJyg4jc0EDG874D/2kCEgqWacj71j8c4=",
+        "ref": "refs/heads/main",
+        "rev": "d6dc57d6482fdd41fdc08dad9784cffaabaeb0cd",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-roseofdune-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-roseofdune-theme"
+      }
+    },
+    "omarchy-theme-rose-pine-dark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789079538,
+        "narHash": "sha256-NavtYWh80K7B9we6YkiZha2aKFrg2RIUkvbFZl/wPto=",
+        "ref": "refs/heads/master",
+        "rev": "ebe6ad030abd32cb6689b081ba0767c785441cb0",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/guilhermetk/omarchy-rose-pine-dark"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/guilhermetk/omarchy-rose-pine-dark"
+      }
+    },
+    "omarchy-theme-rose-pine-moon": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787120384,
+        "narHash": "sha256-5Z/WU65J9sdjquSU0EGFeGSTcjDMMj6HvtbLibEVLeI=",
+        "ref": "refs/heads/main",
+        "rev": "e44dcc84ac6c49f52340dc4aa53955b7143a4ccd",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Memnoc/omarchy-rose-pine-moon-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Memnoc/omarchy-rose-pine-moon-theme"
+      }
+    },
+    "omarchy-theme-ryu": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785963618,
+        "narHash": "sha256-hb/sRD32zD63nBGbmSgS4DM6JsZqaxp8+thIttqWOYE=",
+        "ref": "refs/heads/main",
+        "rev": "cc550bb5a8453ce71e868b6b5f08de0a83465e0a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-ryu-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-ryu-theme"
+      }
+    },
+    "omarchy-theme-saga": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785964443,
+        "narHash": "sha256-BFOEI8yqbgQ5kk4LVRN6pG9bZI6khpTUPyrhrrs4dyI=",
+        "ref": "refs/heads/main",
+        "rev": "7af52aae19d2dc7c3f27fa0981b57b8bba9313ea",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-saga-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-saga-theme"
+      }
+    },
     "omarchy-theme-sakura": {
       "flake": false,
       "locked": {
         "lastModified": 1788091653,
         "narHash": "sha256-BwDFweva7PL1fDxGdU/XcN6NNM0shUm1NW/1GRzLMHo=",
-        "owner": "bjarneo",
-        "repo": "omarchy-sakura-theme",
+        "ref": "refs/heads/main",
         "rev": "dfeae9b8d245af05e16cf8bf3b89b743c94573d3",
-        "type": "github"
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-sakura-theme"
       },
       "original": {
-        "owner": "bjarneo",
-        "repo": "omarchy-sakura-theme",
-        "type": "github"
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-sakura-theme"
+      }
+    },
+    "omarchy-theme-sakura-mochi": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786766441,
+        "narHash": "sha256-gqaNqvSArJ7LnrwmG0BJmNm8ZMkudJoiieXmurGZHiU=",
+        "ref": "refs/heads/master",
+        "rev": "a64fd93e43838366eab7884db6c49721e4d0d27c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-sakura-mochi-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-sakura-mochi-theme"
+      }
+    },
+    "omarchy-theme-sapphire": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785964843,
+        "narHash": "sha256-rZbMtHygVFN4T6pRfQ8FEL9usem5NjQ2vMek1Z5OjMA=",
+        "ref": "refs/heads/main",
+        "rev": "2084a563d2ccba4f2a2763c50c80d6b8bdbf16ba",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-sapphire-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-sapphire-theme"
+      }
+    },
+    "omarchy-theme-shades-of-jade": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785965343,
+        "narHash": "sha256-DeKE2cdN4l8ZKSX3DXp1/lMWfNYGBJmI/9aaFkFctxc=",
+        "ref": "refs/heads/main",
+        "rev": "7552edeb81b73d64834fc6541b4ea1915cd50427",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-shadesofjade-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-shadesofjade-theme"
+      }
+    },
+    "omarchy-theme-snow": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091653,
+        "narHash": "sha256-yR5tBIYo+P7TJXhan/lAt4i3xQnDxa3CT8Z5r8tBKPs=",
+        "ref": "refs/heads/main",
+        "rev": "bfccca5bda969bc619af9db9f37da91e9fd52947",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-snow-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/bjarneo/omarchy-snow-theme"
+      }
+    },
+    "omarchy-theme-snow-black": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784910565,
+        "narHash": "sha256-H0l5JsddViAm7ha5bbIAklezFYoE9Z2sZC1l1JzjJ40=",
+        "ref": "refs/heads/main",
+        "rev": "394d5d9f128b8c281c92a4e50ee15bcc16a825ed",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ankur311sudo/snow_black"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/ankur311sudo/snow_black"
+      }
+    },
+    "omarchy-theme-solarized": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1753709765,
+        "narHash": "sha256-DAG2Xg+rUNNnbOe3yOH626gUCNeNBTbecLsu8vMbTfM=",
+        "ref": "refs/heads/master",
+        "rev": "236840f05449f1becfafd1f5995c2c5c9c79ca70",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Gazler/omarchy-solarized-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Gazler/omarchy-solarized-theme"
+      }
+    },
+    "omarchy-theme-solarized-light": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1753700674,
+        "narHash": "sha256-lCpc9ywjnT9RQQ+WBMlq+272oVUEKhjzbJjM2ypAI+I=",
+        "ref": "refs/heads/main",
+        "rev": "e7cd8f3024f34105e31faa8d83db1852a5131850",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dfrico/omarchy-solarized-light-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dfrico/omarchy-solarized-light-theme"
+      }
+    },
+    "omarchy-theme-solarized-osaka": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1753831825,
+        "narHash": "sha256-DyDpFHAlEc5mWqUAaFaVh5Evb8RLuGgjo0RF8CucUDA=",
+        "ref": "refs/heads/main",
+        "rev": "4cb12e9d4321f76dd7b7fdbb22c93a4d5633be95",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/motorsss/omarchy-solarizedosaka-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/motorsss/omarchy-solarizedosaka-theme"
+      }
+    },
+    "omarchy-theme-space-monkey": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789419181,
+        "narHash": "sha256-Lbe0skLA7n+XkrWt5TwCbkf6biHHA49VZ1YoVcImV4g=",
+        "ref": "refs/heads/main",
+        "rev": "814af8923d701e779d2894bd1b2b1d4cbec820ff",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/TyRichards/omarchy-space-monkey-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/TyRichards/omarchy-space-monkey-theme"
+      }
+    },
+    "omarchy-theme-starry-night": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787616408,
+        "narHash": "sha256-F7jmxq3Ntfpv5egrNZSYDWlU98fXAiVWk0a7TBqo91Q=",
+        "ref": "refs/heads/main",
+        "rev": "025b35a68d65ba8deeff7d3a63681e3ccf25fc3a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/juangalt/omarchy-starry-night-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/juangalt/omarchy-starry-night-theme"
+      }
+    },
+    "omarchy-theme-starsend": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787936405,
+        "narHash": "sha256-Rr4PhwCTsltXCMgDwrVedX1YI1EilM3NF9Y6OMLApgw=",
+        "ref": "refs/heads/main",
+        "rev": "3fe4b3a0148b1cd65b772aa96c93578c1efd67ec",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-starsend-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-starsend-theme"
+      }
+    },
+    "omarchy-theme-sunset": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1760130002,
+        "narHash": "sha256-3FgAIGBP6FNuWNVU3oTHrOMyTUxrncrGvkcI8Qo10/0=",
+        "ref": "refs/heads/main",
+        "rev": "48d01770e062f0cd6fff7bb9b7dc48f8b1d65731",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/rondilley/omarchy-sunset-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/rondilley/omarchy-sunset-theme"
+      }
+    },
+    "omarchy-theme-sunset-drive": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771747383,
+        "narHash": "sha256-oL49bERDpGds6vsD5EtZaSA590iFxXw34LZhG8x9c78=",
+        "ref": "refs/heads/main",
+        "rev": "1e6804ed91d531c23fb7487b65db81bb5818c485",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahayvr/omarchy-sunset-drive-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahayvr/omarchy-sunset-drive-theme"
+      }
+    },
+    "omarchy-theme-super-game-bro": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1758165690,
+        "narHash": "sha256-eY/+Za4WHv6fXTcjEl5HhEW+3Qnv5We/mnevl6MM5xs=",
+        "ref": "refs/heads/main",
+        "rev": "940e5a056a2324871bdde166eb82c6809a68a94f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/TyRichards/omarchy-super-game-bro-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/TyRichards/omarchy-super-game-bro-theme"
+      }
+    },
+    "omarchy-theme-synthwave-84": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1753563489,
+        "narHash": "sha256-zmemeQ1Fay/38BnYjbhY/eAlVPhgHXdU+sUiOpWkGi8=",
+        "ref": "refs/heads/master",
+        "rev": "283dbcf17c3a500b7d3ddfce081e1dc2b3641172",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/omacom-io/omarchy-synthwave84-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/omacom-io/omarchy-synthwave84-theme"
+      }
+    },
+    "omarchy-theme-temerald": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1768575827,
+        "narHash": "sha256-zZ2kOj3jDqzsAVswORmwTBHFym7NP+6Gd0Vs7XTx160=",
+        "ref": "refs/heads/main",
+        "rev": "d3c12b1881058860fede00ccf9f222f86dd94f6f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Ahmad-Mtr/omarchy-temerald-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Ahmad-Mtr/omarchy-temerald-theme"
+      }
+    },
+    "omarchy-theme-terminus": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787936408,
+        "narHash": "sha256-eAFpQnuU1imH0C0hV/dbh6X8mrSNbJJ1cKKsRbETE4I=",
+        "ref": "refs/heads/main",
+        "rev": "097faba47b7bae83be4bd2b13478359df70f5f6d",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-terminus-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-terminus-theme"
+      }
+    },
+    "omarchy-theme-the-greek": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785966129,
+        "narHash": "sha256-gDYAS5tHH7Wi8g8jWIETpj+wBcU40byeXXB3ZjPevJE=",
+        "ref": "refs/heads/main",
+        "rev": "678f70c07a433a0522ed5aba260bbe0a0b42eb5e",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-thegreek-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-thegreek-theme"
+      }
+    },
+    "omarchy-theme-tokyo-night-oled": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769427859,
+        "narHash": "sha256-N2RobU5ABkEjBFKveMSmI3FeCxMmH6ofPWr0Unf1kZY=",
+        "ref": "refs/heads/main",
+        "rev": "0dee4c1e1a783b5a8b3c4f4161e4e054e8e011c7",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Justin-De-Sio/omarchy-tokyoled-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Justin-De-Sio/omarchy-tokyoled-theme"
+      }
+    },
+    "omarchy-theme-tycho": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1773173339,
+        "narHash": "sha256-Yj+m20Z/BFR/NkaIpSaXDs/dmX9F2h36TEoVLxwMPsc=",
+        "ref": "refs/heads/main",
+        "rev": "8f759e7b568b3917544c42c52b4960c28fac7107",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/leonardobetti/omarchy-tycho"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/leonardobetti/omarchy-tycho"
+      }
+    },
+    "omarchy-theme-van-gogh": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789411665,
+        "narHash": "sha256-zymqn2XbfFSuflo18v1WlH/+j2Sx2Os70VK+xwri6tg=",
+        "ref": "refs/heads/main",
+        "rev": "4afc00a392d7ee416e50b3634d429f0043166d9a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Nirmal314/omarchy-van-gogh-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/Nirmal314/omarchy-van-gogh-theme"
+      }
+    },
+    "omarchy-theme-vault": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787936410,
+        "narHash": "sha256-Z8B/MhBihkP8cRaqCVklfqcGajZneBMeJUXV3gValqE=",
+        "ref": "refs/heads/main",
+        "rev": "8c4c10d4969e4aaa329508be17602ab0a4f736c5",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-vault-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/r-bart/omarchy-vault-theme"
+      }
+    },
+    "omarchy-theme-velvet-night": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785967051,
+        "narHash": "sha256-h3mr4G5yoTZmrW4sPVXtjjaNDAXBb//pNcqD50AfAE0=",
+        "ref": "refs/heads/main",
+        "rev": "eaf94df5def90acbaa7ff49b87da3a8eeb06b67b",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-velvetnight-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-velvetnight-theme"
+      }
+    },
+    "omarchy-theme-venice-from-above": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787840686,
+        "narHash": "sha256-xICGf6WMRd5ZMNS3X+XP9X/woMuh/g2DRBwnF2HZrso=",
+        "ref": "refs/heads/main",
+        "rev": "f19b64add63932b855d9b3b4cd2cb8e46f16fdb3",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/mattbbia/venice-from-above-omarchy"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/mattbbia/venice-from-above-omarchy"
+      }
+    },
+    "omarchy-theme-vesper": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1763800347,
+        "narHash": "sha256-HoNTh9Wje/Hj+Tw8oDv3z338qThrW6wbc9/QVRHIxhE=",
+        "ref": "refs/heads/main",
+        "rev": "427bb540bdba152cd48f7f1e4274f96a11cd591e",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/thmoee/omarchy-vesper-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/thmoee/omarchy-vesper-theme"
+      }
+    },
+    "omarchy-theme-vhs-80": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771856914,
+        "narHash": "sha256-Vtjj2K4VYrDiEuq5RL24KXj6ZeucITS/59tGW6mOjBY=",
+        "ref": "refs/heads/main",
+        "rev": "c43b2397b5d6a46c14c4ea1072d807d97ae43621",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahayvr/omarchy-vhs80-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/tahayvr/omarchy-vhs80-theme"
+      }
+    },
+    "omarchy-theme-void": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1776212232,
+        "narHash": "sha256-nP22PJaQzVOHc5vJdSj3xi+7FdH/abJuv2ZJ+wJsBTI=",
+        "ref": "refs/heads/master",
+        "rev": "c1fc95a579bf5c5e1d3b9edd43b1df501b5bd5c9",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/vyrx-dev/omarchy-void-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/vyrx-dev/omarchy-void-theme"
+      }
+    },
+    "omarchy-theme-vulkanite": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787836874,
+        "narHash": "sha256-WDTVN9TCUtkms+sqFfym9Qio5qeE4ZZcOcPb1jEO5bk=",
+        "ref": "refs/heads/main",
+        "rev": "8383b5cb1d451d3b76d60445b2f8f00b1d2a702a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/kyerpotts/omarchy-vulkanite-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/kyerpotts/omarchy-vulkanite-theme"
+      }
+    },
+    "omarchy-theme-waffle-cat": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786892694,
+        "narHash": "sha256-vxaaaytelcjQYgKVvnqurauVUIaJ1mkQ/lR+e/yFDg8=",
+        "ref": "refs/heads/master",
+        "rev": "8ffff576d47cac48ca6606513b128bffa0c227fb",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-waffle-cat-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/OldJobobo/omarchy-waffle-cat-theme"
+      }
+    },
+    "omarchy-theme-waveform-dark": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1756223498,
+        "narHash": "sha256-DXdmZAH7c6YvLlzj/eZaepzChWc/xPUWUrnOQ5hvvyQ=",
+        "ref": "refs/heads/main",
+        "rev": "9283fc20d116ab8f620820f797849857a0e3024a",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/hipsterusername/omarchy-waveform-dark-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/hipsterusername/omarchy-waveform-dark-theme"
+      }
+    },
+    "omarchy-theme-white-gold": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785967390,
+        "narHash": "sha256-TAGe1lOTju6nwTB7rP5cRJff/crG1ZojffqWurx54Ug=",
+        "ref": "refs/heads/main",
+        "rev": "27f32655c85fee5b723d629dfcec9b08373187c7",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-whitegold-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/HANCORE-linux/omarchy-whitegold-theme"
+      }
+    },
+    "omarchy-theme-windows-dark-mode": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783918776,
+        "narHash": "sha256-ji7R/TQIuxrOF4mjI4uW9ou6TNllp3aH2xuAmozY1y4=",
+        "ref": "refs/heads/master",
+        "rev": "d21208fe6973f1fe9bbe9bfc5eee063473cccece",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/oldjobobo/omarchy-windows-dark-mode-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/oldjobobo/omarchy-windows-dark-mode-theme"
+      }
+    },
+    "omarchy-theme-winslow": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786839970,
+        "narHash": "sha256-FYUbckUt6lqiNWZsUy/8VKjJtYwplt+FM8C7x/T7oDQ=",
+        "ref": "refs/heads/master",
+        "rev": "be08a1d6d36e79e8d11d59a76fbc5dc3e7076c65",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/chipkoziara/omarchy-winslow-theme"
+      },
+      "original": {
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/chipkoziara/omarchy-winslow-theme"
       }
     },
     "pi-fixture": {
@@ -1234,7 +3683,151 @@
         "nixpkgs": "nixpkgs_5",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "omarchy": "omarchy",
+        "omarchy-theme-aetheria": "omarchy-theme-aetheria",
+        "omarchy-theme-all-hallow-s-eve": "omarchy-theme-all-hallow-s-eve",
+        "omarchy-theme-amberbyte": "omarchy-theme-amberbyte",
+        "omarchy-theme-arc-blueberry": "omarchy-theme-arc-blueberry",
+        "omarchy-theme-archwave": "omarchy-theme-archwave",
+        "omarchy-theme-artzen": "omarchy-theme-artzen",
+        "omarchy-theme-ash": "omarchy-theme-ash",
+        "omarchy-theme-atelier": "omarchy-theme-atelier",
+        "omarchy-theme-aura": "omarchy-theme-aura",
+        "omarchy-theme-ayaka": "omarchy-theme-ayaka",
+        "omarchy-theme-azure-glow": "omarchy-theme-azure-glow",
+        "omarchy-theme-batman": "omarchy-theme-batman",
+        "omarchy-theme-batou": "omarchy-theme-batou",
+        "omarchy-theme-bauhaus": "omarchy-theme-bauhaus",
+        "omarchy-theme-biscuit-de-mar-dark": "omarchy-theme-biscuit-de-mar-dark",
+        "omarchy-theme-black-arch": "omarchy-theme-black-arch",
+        "omarchy-theme-black-gold": "omarchy-theme-black-gold",
+        "omarchy-theme-black-sand": "omarchy-theme-black-sand",
+        "omarchy-theme-black-turq": "omarchy-theme-black-turq",
+        "omarchy-theme-blue-ridge-dark": "omarchy-theme-blue-ridge-dark",
+        "omarchy-theme-bluedotrb": "omarchy-theme-bluedotrb",
+        "omarchy-theme-castle-on-a-lake": "omarchy-theme-castle-on-a-lake",
+        "omarchy-theme-catppuccin-mocha-dark": "omarchy-theme-catppuccin-mocha-dark",
+        "omarchy-theme-cincinnati": "omarchy-theme-cincinnati",
+        "omarchy-theme-citrus-cynapse": "omarchy-theme-citrus-cynapse",
+        "omarchy-theme-city-783": "omarchy-theme-city-783",
+        "omarchy-theme-cobalt2": "omarchy-theme-cobalt2",
+        "omarchy-theme-coffee": "omarchy-theme-coffee",
+        "omarchy-theme-coffee-latte": "omarchy-theme-coffee-latte",
+        "omarchy-theme-commit": "omarchy-theme-commit",
+        "omarchy-theme-cpunk": "omarchy-theme-cpunk",
+        "omarchy-theme-crimson-gold": "omarchy-theme-crimson-gold",
+        "omarchy-theme-darcula": "omarchy-theme-darcula",
+        "omarchy-theme-demon": "omarchy-theme-demon",
+        "omarchy-theme-dos-moos": "omarchy-theme-dos-moos",
+        "omarchy-theme-dotrb": "omarchy-theme-dotrb",
+        "omarchy-theme-drac": "omarchy-theme-drac",
+        "omarchy-theme-dracula": "omarchy-theme-dracula",
+        "omarchy-theme-eldritch": "omarchy-theme-eldritch",
+        "omarchy-theme-event-horizon": "omarchy-theme-event-horizon",
+        "omarchy-theme-evergarden": "omarchy-theme-evergarden",
+        "omarchy-theme-felix": "omarchy-theme-felix",
+        "omarchy-theme-fireside": "omarchy-theme-fireside",
+        "omarchy-theme-flat-dracula": "omarchy-theme-flat-dracula",
+        "omarchy-theme-flexoki-dark": "omarchy-theme-flexoki-dark",
+        "omarchy-theme-forest-green": "omarchy-theme-forest-green",
+        "omarchy-theme-frost": "omarchy-theme-frost",
+        "omarchy-theme-fuchsblau": "omarchy-theme-fuchsblau",
+        "omarchy-theme-futurism": "omarchy-theme-futurism",
+        "omarchy-theme-futurist": "omarchy-theme-futurist",
+        "omarchy-theme-gand": "omarchy-theme-gand",
+        "omarchy-theme-ghost-pastel": "omarchy-theme-ghost-pastel",
+        "omarchy-theme-gold-rush": "omarchy-theme-gold-rush",
+        "omarchy-theme-golden-brown": "omarchy-theme-golden-brown",
+        "omarchy-theme-greek-noir": "omarchy-theme-greek-noir",
+        "omarchy-theme-green-garden": "omarchy-theme-green-garden",
+        "omarchy-theme-gruvbox-material": "omarchy-theme-gruvbox-material",
+        "omarchy-theme-harbor": "omarchy-theme-harbor",
+        "omarchy-theme-harbor-dark": "omarchy-theme-harbor-dark",
+        "omarchy-theme-hermarchy": "omarchy-theme-hermarchy",
+        "omarchy-theme-hinterlands": "omarchy-theme-hinterlands",
+        "omarchy-theme-infernium": "omarchy-theme-infernium",
+        "omarchy-theme-inky-pinky": "omarchy-theme-inky-pinky",
+        "omarchy-theme-japan-night": "omarchy-theme-japan-night",
+        "omarchy-theme-lamplight": "omarchy-theme-lamplight",
+        "omarchy-theme-lawson-night": "omarchy-theme-lawson-night",
+        "omarchy-theme-map-quest": "omarchy-theme-map-quest",
+        "omarchy-theme-mars": "omarchy-theme-mars",
+        "omarchy-theme-matrix": "omarchy-theme-matrix",
+        "omarchy-theme-mechanoonna": "omarchy-theme-mechanoonna",
+        "omarchy-theme-midnight": "omarchy-theme-midnight",
+        "omarchy-theme-milky-matcha": "omarchy-theme-milky-matcha",
+        "omarchy-theme-mini-jcw": "omarchy-theme-mini-jcw",
+        "omarchy-theme-monochrome": "omarchy-theme-monochrome",
+        "omarchy-theme-monokai": "omarchy-theme-monokai",
+        "omarchy-theme-moodpeak": "omarchy-theme-moodpeak",
+        "omarchy-theme-nagai-poolside": "omarchy-theme-nagai-poolside",
+        "omarchy-theme-naysayer": "omarchy-theme-naysayer",
+        "omarchy-theme-neo-sploosh": "omarchy-theme-neo-sploosh",
+        "omarchy-theme-neon-dusk": "omarchy-theme-neon-dusk",
+        "omarchy-theme-neovoid": "omarchy-theme-neovoid",
+        "omarchy-theme-neptune-blue": "omarchy-theme-neptune-blue",
+        "omarchy-theme-nes": "omarchy-theme-nes",
+        "omarchy-theme-noir": "omarchy-theme-noir",
+        "omarchy-theme-nujabes": "omarchy-theme-nujabes",
+        "omarchy-theme-oligarchy": "omarchy-theme-oligarchy",
+        "omarchy-theme-omacarchy": "omarchy-theme-omacarchy",
+        "omarchy-theme-omaled": "omarchy-theme-omaled",
+        "omarchy-theme-one-dark": "omarchy-theme-one-dark",
+        "omarchy-theme-one-dark-pro": "omarchy-theme-one-dark-pro",
+        "omarchy-theme-oxo-carbon": "omarchy-theme-oxo-carbon",
+        "omarchy-theme-pagan": "omarchy-theme-pagan",
+        "omarchy-theme-pandora": "omarchy-theme-pandora",
+        "omarchy-theme-periphery": "omarchy-theme-periphery",
+        "omarchy-theme-pina": "omarchy-theme-pina",
+        "omarchy-theme-pink-blood": "omarchy-theme-pink-blood",
+        "omarchy-theme-pulsar": "omarchy-theme-pulsar",
+        "omarchy-theme-purple-moon": "omarchy-theme-purple-moon",
+        "omarchy-theme-purplewave": "omarchy-theme-purplewave",
+        "omarchy-theme-quattrocento-light": "omarchy-theme-quattrocento-light",
+        "omarchy-theme-rainy-night": "omarchy-theme-rainy-night",
+        "omarchy-theme-red-monarch": "omarchy-theme-red-monarch",
+        "omarchy-theme-red-pill": "omarchy-theme-red-pill",
+        "omarchy-theme-retropc": "omarchy-theme-retropc",
+        "omarchy-theme-ristretto-light": "omarchy-theme-ristretto-light",
+        "omarchy-theme-robzee84": "omarchy-theme-robzee84",
+        "omarchy-theme-rose-of-dune": "omarchy-theme-rose-of-dune",
+        "omarchy-theme-rose-pine-dark": "omarchy-theme-rose-pine-dark",
+        "omarchy-theme-rose-pine-moon": "omarchy-theme-rose-pine-moon",
+        "omarchy-theme-ryu": "omarchy-theme-ryu",
+        "omarchy-theme-saga": "omarchy-theme-saga",
         "omarchy-theme-sakura": "omarchy-theme-sakura",
+        "omarchy-theme-sakura-mochi": "omarchy-theme-sakura-mochi",
+        "omarchy-theme-sapphire": "omarchy-theme-sapphire",
+        "omarchy-theme-shades-of-jade": "omarchy-theme-shades-of-jade",
+        "omarchy-theme-snow": "omarchy-theme-snow",
+        "omarchy-theme-snow-black": "omarchy-theme-snow-black",
+        "omarchy-theme-solarized": "omarchy-theme-solarized",
+        "omarchy-theme-solarized-light": "omarchy-theme-solarized-light",
+        "omarchy-theme-solarized-osaka": "omarchy-theme-solarized-osaka",
+        "omarchy-theme-space-monkey": "omarchy-theme-space-monkey",
+        "omarchy-theme-starry-night": "omarchy-theme-starry-night",
+        "omarchy-theme-starsend": "omarchy-theme-starsend",
+        "omarchy-theme-sunset": "omarchy-theme-sunset",
+        "omarchy-theme-sunset-drive": "omarchy-theme-sunset-drive",
+        "omarchy-theme-super-game-bro": "omarchy-theme-super-game-bro",
+        "omarchy-theme-synthwave-84": "omarchy-theme-synthwave-84",
+        "omarchy-theme-temerald": "omarchy-theme-temerald",
+        "omarchy-theme-terminus": "omarchy-theme-terminus",
+        "omarchy-theme-the-greek": "omarchy-theme-the-greek",
+        "omarchy-theme-tokyo-night-oled": "omarchy-theme-tokyo-night-oled",
+        "omarchy-theme-tycho": "omarchy-theme-tycho",
+        "omarchy-theme-van-gogh": "omarchy-theme-van-gogh",
+        "omarchy-theme-vault": "omarchy-theme-vault",
+        "omarchy-theme-velvet-night": "omarchy-theme-velvet-night",
+        "omarchy-theme-venice-from-above": "omarchy-theme-venice-from-above",
+        "omarchy-theme-vesper": "omarchy-theme-vesper",
+        "omarchy-theme-vhs-80": "omarchy-theme-vhs-80",
+        "omarchy-theme-void": "omarchy-theme-void",
+        "omarchy-theme-vulkanite": "omarchy-theme-vulkanite",
+        "omarchy-theme-waffle-cat": "omarchy-theme-waffle-cat",
+        "omarchy-theme-waveform-dark": "omarchy-theme-waveform-dark",
+        "omarchy-theme-white-gold": "omarchy-theme-white-gold",
+        "omarchy-theme-windows-dark-mode": "omarchy-theme-windows-dark-mode",
+        "omarchy-theme-winslow": "omarchy-theme-winslow",
         "pre-commit-hooks": "pre-commit-hooks_3",
         "smailer": "smailer",
         "sniffy": "sniffy",

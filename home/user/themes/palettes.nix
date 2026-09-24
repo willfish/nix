@@ -15,6 +15,7 @@ let
       licenseSource = source;
     };
   }) names;
+  communityNames = (builtins.fromJSON (builtins.readFile ./community.json)).themes;
   communityInputs = builtins.filter (name: name != "omarchy") (builtins.attrNames inputs);
   community = map (
     input:
@@ -26,7 +27,9 @@ let
       inherit name;
       value = import ./import-theme.nix {
         inherit name;
-        displayName = "${slug} (community)";
+        displayName = "${
+          communityNames.${slug}.label or (builtins.replaceStrings [ "-" ] [ " " ] slug)
+        } (Community)";
         source = inputs.${input}.outPath;
       };
     }

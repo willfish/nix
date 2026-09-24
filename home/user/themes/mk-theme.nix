@@ -18,6 +18,7 @@ let
       backgrounds = map builtins.baseNameOf theme.backgrounds;
     }
   );
+  colours = (pkgs.formats.toml { }).generate "${theme.name}-colors.toml" theme.colours;
   copy = destination: file: "install -m 0644 ${lib.escapeShellArg file} \"$out/${destination}/\"";
 in
 pkgs.runCommand "omarchy-theme-${theme.name}"
@@ -27,7 +28,7 @@ pkgs.runCommand "omarchy-theme-${theme.name}"
   ''
     mkdir -p "$out/backgrounds" "$out/licenses"
     install -m 0644 ${metadata} "$out/theme.json"
-    install -m 0644 ${lib.escapeShellArg "${theme.source}/colors.toml"} "$out/colors.toml"
+    install -m 0644 ${colours} "$out/colors.toml"
     ${lib.concatMapStringsSep "\n" (copy "backgrounds") theme.backgrounds}
     ${lib.concatMapStringsSep "\n" (copy "licenses") theme.licenses}
     ${lib.optionalString (theme.btop != null) ''

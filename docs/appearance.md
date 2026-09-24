@@ -23,26 +23,40 @@ Use plain command-line IDs, for example `theme-menu nord`,
 `theme-menu --reapply` restores the saved selection's generated files.
 
 Each theme owns its native light/dark mode. Catppuccin Latte, Flexoki Light,
-Lupine, Rosé Pine and White are light themes; the others are dark. Select another
-theme to change mode. There is no synthetic light/dark variant or mode-toggle
-row. An incompatible `theme-menu light` or `theme-menu dark` request is rejected.
+Lupine, Rosé Pine and White are light built-in themes. Community themes also
+include light palettes. Select another theme to change mode. There is no
+synthetic light/dark variant or mode-toggle row. An incompatible `theme-menu light` or `theme-menu dark` request is rejected.
 Use this menu to keep mode and palette aligned.
 
 ## Adding and updating themes
 
-Declare a community repository in `flake.nix`, using its slug as the input suffix:
+The catalogue includes 145 publicly available repositories from
+[Omarchy's extra themes page](https://omarchy.org/themes/), alongside the bundled
+themes. Gruvu's listed repository returns 404 and is recorded in
+`home/user/themes/community-unavailable.json` rather than breaking every build.
+Picker labels are capitalised, preserving names such as NES and Tokyo Night OLED.
+
+Declare additional repositories outside the generated community block in
+`flake.nix`, using a slug as the input suffix:
 
 ```nix
 omarchy-theme-sakura = {
-  url = "github:bjarneo/omarchy-sakura-theme";
+  url = "git+https://github.com/bjarneo/omarchy-sakura-theme?shallow=1";
   flake = false;
 };
 ```
 
-The importer discovers it as `community-sakura`; no palette table or label entry
-is needed. Sakura is included as an example. Repositories must provide the current
-Omarchy `colors.toml` format with an explicit light/dark mode and six-digit RGB
-colours. Legacy themes requiring installation scripts are not supported.
+The importer discovers it as `community-sakura`; no palette table is needed.
+Shallow Git inputs avoid GitHub's anonymous API rate limit when resolving the
+whole catalogue. Every input has `flake = false`: repository code is never
+imported as Nix.
+
+The importer reads semantic or legacy ANSI `colors.toml`, falling back to colour
+data in `alacritty.toml`. It follows Omarchy's canonical-name, short-name and ANSI
+fallbacks. Mode comes from `mode`, then `theme_type`, then a `light.mode` marker
+or the background brightness. RGB colours are validated. Alacritty files are
+parsed as data, not installed; shell commands, terminal settings and theme
+installers are never executed.
 
 ```sh
 direnv exec . nix flake update omarchy omarchy-theme-sakura
@@ -55,6 +69,23 @@ A full `nix flake update` updates all declared theme inputs too. New upstream
 built-in directories are discovered automatically; new community repositories
 must first be declared as inputs. There is no live website crawl during a build.
 All revisions and content hashes live in `flake.lock`.
+
+To refresh the official website list, choose a reviewed `omacom/omarchy-site`
+commit and download its HTML as data:
+
+```sh
+site_rev=71cd3ed9e83511875ab9472127616989deb68bf5
+url="https://raw.githubusercontent.com/omacom/omarchy-site/$site_rev/themes/index.html"
+page=$(nix store prefetch-file --json "$url" | jq -r .storePath)
+python3 scripts/import-omarchy-community.py "$page" "$url"
+direnv exec . nix flake lock
+```
+
+The helper refreshes only the marked input block and `community.json`, which
+records website names, repository links and the source revision. Review the
+diff and the unavailable list, then build and activate Home Manager. Remove an
+unavailable entry before regenerating if its repository becomes public again.
+The helper does not fetch theme contents or run their scripts.
 
 Theme packages retain supplied licences and all supported background images.
 The desktop uses the first sorted image, or a solid native background if none
@@ -120,8 +151,9 @@ precedence. Remote hosts retain their own palettes.
 - `flake.nix` declares sources; `flake.lock` pins them.
   `home/user/themes/inputs.nix` resolves those same locked sources for pure
   imports outside the flake module graph.
-- `home/user/themes/palettes.nix` discovers the catalogue; `import-theme.nix`
-  validates and maps native colour roles into Base16 without evaluating repo code.
+- `home/user/themes/palettes.nix` discovers the catalogue; `normalize-colours.nix`
+  resolves current and legacy palette data, and `import-theme.nix` validates and
+  maps native colour roles into Base16 without evaluating repo code.
 - `home/user/themes/mk-theme.nix` packages supported assets as derivations.
 - `home/user/themes/omarchy.nix` exposes packages, wallpapers and the upstream licence.
   The licence is installed at `~/.local/share/theme-menu/omarchy-LICENSE`.

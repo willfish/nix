@@ -2,17 +2,20 @@
 {
   name,
   source,
-  displayName ? name,
+  displayName ? builtins.replaceStrings [ "-" ] [ " " ] name,
   licenseSource ? source,
 }:
 let
   files = builtins.readDir source;
   regular = file: (files.${file} or null) == "regular";
-  colours =
-    if regular "colors.toml" then
-      builtins.fromTOML (builtins.readFile "${source}/colors.toml")
-    else
-      throw "Theme ${name}: a regular colors.toml is required (legacy script-only themes are unsupported)";
+  colours = import ./normalize-colours.nix { inherit name source; };
+  letters = text: builtins.genList (index: builtins.substring index 1 text) 26;
+  capitalise =
+    word:
+    builtins.replaceStrings (letters "abcdefghijklmnopqrstuvwxyz")
+      (letters "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+      (builtins.substring 0 1 word)
+    + builtins.substring 1 (-1) word;
   hex =
     value:
     if builtins.isString value && builtins.match "#[0-9a-fA-F]{6}" value != null then
@@ -96,7 +99,9 @@ builtins.deepSeq palette {
     colours
     palette
     ;
-  label = builtins.replaceStrings [ "-" ] [ " " ] displayName;
+  label = builtins.concatStringsSep " " (
+    map capitalise (builtins.filter builtins.isString (builtins.split " +" displayName))
+  );
   nativeMode = colours.mode;
   backgrounds = map (file: "${source}/backgrounds/${file}") images;
   unlock = if regular "unlock.png" then "${source}/unlock.png" else null;
