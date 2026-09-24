@@ -280,6 +280,14 @@ class Themes:
         warnings.extend(self._install_gtk_css())
         warnings.extend(self._reload_hyprland(variables))
         warnings.extend(self._reload_waybar())
+        if shutil.which("walker"):
+            try:
+                subprocess.run(
+                    ["systemctl", "--user", "try-restart", "walker.service"],
+                    capture_output=True, timeout=10, check=True,
+                )
+            except (OSError, subprocess.SubprocessError):
+                warnings.append("Launcher will use the theme on next startup.")
         try:
             subprocess.run(
                 [

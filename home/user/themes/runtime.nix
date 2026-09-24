@@ -67,13 +67,19 @@ let
       herdrTheme = herdrConfig;
       session = lib.genAttrs [ "light" "dark" ] (
         mode:
-        lib.mapAttrs (_: text: toString (pkgs.writeText "${host}-${mode}-hyprland-theme" text)) (
-          hyprland.render {
+        let
+          rendered = hyprland.render {
             inherit mode;
             palette = theme.${mode};
             appearance = configuredAppearance;
-          }
-        )
+          };
+        in
+        # Seed and publish every desktop asset, including walker.css. Wallpaper
+        # stays beside them; it is not a generated text asset.
+        assert lib.assertMsg (
+          lib.subtractLists (builtins.attrNames rendered) hyprland.assets == [ ]
+        ) "Hyprland theme render is missing a seed asset";
+        lib.mapAttrs (_: text: toString (pkgs.writeText "${host}-${mode}-hyprland-theme" text)) rendered
         // {
           "wallpaper.png" = toString (
             wallpaperSettings.overrides.${theme.herdr.name}.${mode} or omarchy.wallpapers.${theme.herdr.name}

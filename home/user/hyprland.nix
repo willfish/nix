@@ -8,7 +8,10 @@
   ...
 }:
 {
-  imports = [ ./hyprland-panels.nix ];
+  imports = [
+    ./hyprland-panels.nix
+    ./launcher.nix
+  ];
 
   config = lib.mkIf isGraphicalLinux (
     let
@@ -125,7 +128,7 @@
               exit 1
               ;;
           esac
-          for name in hyprland.conf fuzzel.ini waybar.css hyprlock.conf gtk.css mako.conf colors.toml shell.toml; do
+          for name in hyprland.conf fuzzel.ini walker.css waybar.css hyprlock.conf gtk.css mako.conf colors.toml shell.toml; do
             if [ ! -s "$state/$name" ]; then
               install -m 0644 ${themeFallback}/"$mode/$name" "$state/$name"
             fi
@@ -143,7 +146,7 @@
         minimal-lines=yes
       '';
       launcher = pkgs.writeShellApplication {
-        name = "hypr-launcher";
+        name = "hypr-launcher-fallback";
         runtimeInputs = [
           pkgs.fuzzel
           themeSeed

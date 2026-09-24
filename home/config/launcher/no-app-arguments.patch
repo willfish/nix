@@ -1,0 +1,11 @@
+diff --git a/internal/providers/desktopapplications/activate.go b/internal/providers/desktopapplications/activate.go
+--- a/internal/providers/desktopapplications/activate.go
++++ b/internal/providers/desktopapplications/activate.go
+@@ -31,1 +31,7 @@
+ func Activate(single bool, identifier, action string, query string, args string, format uint8, conn net.Conn) {
++	// Desktop entries are trusted commands; query suffixes are not. Walker's
++	// argument delimiter must not turn application search into a shell runner.
++	if args != "" {
++		slog.Warn(Name, "activate", "query arguments are disabled")
++		return
++	}
