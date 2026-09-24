@@ -91,12 +91,14 @@ in
         # No query text is ever routed to a shell runner or network provider.
         providers = {
           default = [
+            "menus:daily"
             "desktopapplications"
             "windows"
             "menus:projects"
             "menus:desktop"
           ];
           empty = [
+            "menus:daily"
             "desktopapplications"
             "menus:desktop"
           ];
@@ -124,6 +126,15 @@ in
             }
           ];
           actions = {
+            "menus:daily" = [
+              {
+                action = "menus:default";
+                label = "open";
+                default = true;
+                bind = "Return";
+                after = "Close";
+              }
+            ];
             "menus:desktop" = [
               {
                 action = "menus:default";
@@ -179,6 +190,21 @@ in
         show_actions = true;
         show_actions_without_query = false;
       };
+      "elephant/menus/daily.toml".source = toml.generate "daily-menu.toml" {
+        name = "daily";
+        name_pretty = "Daily";
+        fixed_order = true;
+        history = false;
+        entries = [
+          (action "󰎞" "Today's notes" [ "today" "notes" "daily" ] "${profileBin}/daily-workflow notes")
+          (action "󰃭" "Today's agenda" [
+            "reminders"
+            "calendar"
+            "meetings"
+            "daily"
+          ] "${profileBin}/daily-workflow agenda")
+        ];
+      };
       "elephant/menus/desktop.toml".source = toml.generate "desktop-menu.toml" {
         name = "desktop";
         name_pretty = "Desktop";
@@ -192,13 +218,6 @@ in
             "dot"
             "daily"
           ] "${profileBin}/daily-workflow workspace")
-          (action "󰎞" "Today's notes" [ "today" "notes" "daily" ] "${profileBin}/daily-workflow notes")
-          (action "󰃭" "Today's agenda" [
-            "reminders"
-            "calendar"
-            "meetings"
-            "daily"
-          ] "${profileBin}/daily-workflow agenda")
           (action "󰃢" "System cleanup (confirm)" [
             "gcall"
             "garbage"
