@@ -37,6 +37,7 @@
     ./desktop-files.nix
     ./voice.nix
     ./darwin.nix
+    ./daily-workflow.nix
     ./email.nix
     ./environment.nix
     ./git.nix

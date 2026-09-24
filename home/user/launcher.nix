@@ -185,6 +185,26 @@ in
         icon = "preferences-system";
         history = true;
         entries = [
+          (action "" "Pi workspace" [
+            "pi"
+            "mux"
+            "herdr"
+            "dot"
+            "daily"
+          ] "${profileBin}/daily-workflow workspace")
+          (action "󰎞" "Today's notes" [ "today" "notes" "daily" ] "${profileBin}/daily-workflow notes")
+          (action "󰃭" "Today's agenda" [
+            "reminders"
+            "calendar"
+            "meetings"
+            "daily"
+          ] "${profileBin}/daily-workflow agenda")
+          (action "󰃢" "System cleanup (confirm)" [
+            "gcall"
+            "garbage"
+            "generations"
+            "nix"
+          ] "${profileBin}/daily-workflow cleanup")
           (action "󰸌" "Appearance" [ "theme" "colours" "wallpaper" ] "${profileBin}/theme-menu")
           (action "󰕾" "Audio controls" [ "volume" "microphone" "sound" ] "${profileBin}/hypr-controls audio")
           (action "" "Bluetooth controls" [ "headphones" "pair" ] "${profileBin}/hypr-controls bluetooth")

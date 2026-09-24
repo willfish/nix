@@ -1076,13 +1076,15 @@
                   d2
                   just
                   nodejs
-                  # Runtime parsers/HTTP client exercised by the local-assistant tests.
+                  # Runtime dependencies exercised by local-assistant and agenda tests.
                   (python3.withPackages (ps: [
                     ps.pyyaml
                     ps.httpx
                     ps.beautifulsoup4
                     ps.jinja2
                     ps.dbus-next
+                    ps.icalendar
+                    ps.recurring-ical-events
                   ]))
                 ]);
               shellHook =
