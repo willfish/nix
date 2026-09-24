@@ -6,6 +6,26 @@ import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+HERDR_THEMES = {
+    "catppuccin",
+    "catppuccin-latte",
+    "terminal",
+    "tokyo-night",
+    "tokyo-night-day",
+    "dracula",
+    "nord",
+    "gruvbox",
+    "gruvbox-light",
+    "one-dark",
+    "one-light",
+    "solarized",
+    "solarized-light",
+    "kanagawa",
+    "kanagawa-lotus",
+    "rose-pine",
+    "rose-pine-dawn",
+    "vesper",
+}
 
 
 class HostThemeConfigTest(unittest.TestCase):
@@ -47,6 +67,30 @@ class HostThemeConfigTest(unittest.TestCase):
                     "--use-theme host-light/host-dark", profile["pi"]
                 )
                 self.assertIn('"$@"', profile["pi"])
+                for key in ("name", "dark_name", "light_name"):
+                    self.assertIn(profile["theme"][key], HERDR_THEMES)
+
+    def test_unknown_palette_names_use_a_herdr_builtin_base(self):
+        catalogue = self.profiles["william-linux"]["catalogue"]["palettes"]
+        self.assertEqual(
+            catalogue["rose-pine"]["herdrTheme"]["name"], "rose-pine"
+        )
+        self.assertEqual(
+            catalogue["everforest"]["herdrTheme"]["name"], "catppuccin"
+        )
+        self.assertEqual(
+            catalogue["everforest"]["herdrTheme"]["dark_name"], "catppuccin"
+        )
+        self.assertEqual(
+            catalogue["everforest"]["herdrTheme"]["light_name"], "catppuccin"
+        )
+        self.assertEqual(
+            catalogue["flexoki-light"]["herdrTheme"]["name"], "catppuccin-latte"
+        )
+        for name, palette in catalogue.items():
+            with self.subTest(palette=name):
+                for key in ("name", "dark_name", "light_name"):
+                    self.assertIn(palette["herdrTheme"][key], HERDR_THEMES)
 
     def test_delta_follows_terminal_palette(self):
         for name, profile in self.profiles.items():

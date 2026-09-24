@@ -8,6 +8,7 @@
 let
   state = "${config.xdg.stateHome}/theme-menu";
   render = import ./render.nix { inherit lib; };
+  herdrTheme = import ./herdr.nix { };
   btopTheme = import ./btop.nix { inherit lib pkgs; };
   hyprland = import ./hyprland.nix { inherit lib; };
   omarchy = import ./omarchy.nix { inherit lib pkgs; };
@@ -48,11 +49,12 @@ let
   entries = lib.mapAttrs (
     host: theme:
     let
+      herdrConfig = herdrTheme.configTheme theme (
+        lib.genAttrs [ "light" "dark" ] (mode: render.herdr theme.${mode})
+      );
       herdr = (pkgs.formats.toml { }).generate "${host}-herdr.toml" (
         lib.recursiveUpdate (builtins.fromTOML (builtins.readFile ../../config/herdr/config.toml)) {
-          theme = theme.herdr // {
-            custom = lib.genAttrs [ "light" "dark" ] (mode: render.herdr theme.${mode});
-          };
+          theme = herdrConfig;
         }
       );
       nvim = lib.genAttrs [ "light" "dark" ] (mode: lib.mapAttrs (_: c: "#${c}") theme.${mode});
@@ -62,9 +64,7 @@ let
       nativeMode = theme.nativeMode or null;
       id = theme.herdr.name;
       inherit nvim;
-      herdrTheme = theme.herdr // {
-        custom = lib.genAttrs [ "light" "dark" ] (mode: render.herdr theme.${mode});
-      };
+      herdrTheme = herdrConfig;
       session = lib.genAttrs [ "light" "dark" ] (
         mode:
         lib.mapAttrs (_: text: toString (pkgs.writeText "${host}-${mode}-hyprland-theme" text)) (

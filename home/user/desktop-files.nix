@@ -9,11 +9,9 @@
 let
   configDir = ../config;
   renderTheme = import ./themes/render.nix { inherit lib; };
-  herdrTheme = hostTheme.herdr // {
-    custom = {
-      light = renderTheme.herdr hostTheme.light;
-      dark = renderTheme.herdr hostTheme.dark;
-    };
+  herdrTheme = (import ./themes/herdr.nix { }).configTheme hostTheme {
+    light = renderTheme.herdr hostTheme.light;
+    dark = renderTheme.herdr hostTheme.dark;
   };
   herdrConfig = builtins.fromTOML (builtins.readFile "${configDir}/herdr/config.toml");
   herdrConfigFile = (pkgs.formats.toml { }).generate "herdr-config.toml" (

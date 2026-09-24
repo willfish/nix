@@ -40,7 +40,10 @@ such as `wallpaper.overrides.tokyo-night.dark = "/home/william/Pictures/sky.png"
 The file must exist when applying the theme. It is a Hyprland wallpaper, not a
 greeter wallpaper.
 
-The shared colours feed Ghostty, Neovim, Herdr, btop and the desktop shell. In
+The shared colours feed Ghostty, Neovim, Herdr, btop and the desktop shell.
+Herdr only accepts its built-in theme names. A palette it does not know keeps
+those colours as overrides on Catppuccin, or Catppuccin Latte when the palette
+is light. The menu and wallpaper still use the palette's own name. In
 Hyprland, the picker also updates Waybar, Fuzzel, Hyprlock, Mako and GTK
 appearance. Default Fuzzel and the voice menu include
 `~/.local/state/theme-menu/active/fuzzel.ini`. Voice menu width and lines come
