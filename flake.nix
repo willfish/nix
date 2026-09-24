@@ -1026,7 +1026,11 @@
               pkgs.runCommand "home-profile-boundaries" { } "touch $out";
           }
           // lib.optionalAttrs (system == linuxSystem) {
-            sddm = import ./tests/sddm.nix { inherit pkgs; };
+            sddm = import ./tests/sddm.nix {
+              inherit pkgs;
+              greeterEnvironment =
+                inputs.self.nixosConfigurations.foundation.config.services.displayManager.sddm.settings.General.GreeterEnvironment;
+            };
           }
           // lib.optionalAttrs (system == darwinSystem) {
             headless-browser =

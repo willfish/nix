@@ -46,6 +46,10 @@ in
       package = pkgs.kdePackages.sddm;
       theme = "${runtimeDir}/omarchy";
       settings.Users.EnableAvatars = false;
+      # Qt keys compiled QML by URL and mtime. The runtime symlink has a
+      # stable URL and every Nix-built theme has the same normalized mtime,
+      # so disk caching can silently retain an older theme's login code.
+      settings.General.GreeterEnvironment = "QML_DISABLE_DISK_CACHE=1";
     };
   };
   services.libinput.enable = true;

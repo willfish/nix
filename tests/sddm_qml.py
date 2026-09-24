@@ -5,8 +5,13 @@ These tests cover QML behaviour, not PAM or a real compositor session.
 """
 import itertools
 import json
+import os
 from pathlib import Path
+import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 
 from PySide6.QtCore import (
@@ -16,7 +21,8 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtQuick import QQuickView
 from PySide6.QtTest import QTest
 
-THEMES = json.loads(Path(sys.argv.pop(1)).read_text())
+THEMES_FILE = Path(sys.argv.pop(1))
+THEMES = json.loads(THEMES_FILE.read_text())
 SOURCE = Path(sys.argv.pop(1))
 APP = QGuiApplication([])
 
@@ -89,6 +95,52 @@ class SddmQmlTests(unittest.TestCase):
         self.view.setSource(QUrl())
         self.view.deleteLater()
         APP.processEvents()
+
+    def test_replaced_theme_ignores_stale_disk_cache(self):
+        theme = Path(THEMES["tokyo-night"])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old = root / "old"
+            shutil.copytree(theme, old)
+            qml = old / "Main.qml"
+            text, count = re.subn(
+                r"  property int sessionIndex: \{.*?\n  \}",
+                "  property int sessionIndex: 0",
+                qml.read_text(), count=1, flags=re.DOTALL,
+            )
+            self.assertEqual(count, 1)
+            qml.chmod(0o600)
+            qml.write_text(text)
+            os.utime(qml, ns=(
+                (theme / "Main.qml").stat().st_atime_ns,
+                (theme / "Main.qml").stat().st_mtime_ns,
+            ))
+            current = root / "current"
+            current.symlink_to(old)
+            env = dict(os.environ, XDG_CACHE_HOME=str(root / "cache"))
+            env.pop("QML_DISABLE_DISK_CACHE", None)
+            env["QML_FORCE_DISK_CACHE"] = "1"
+
+            def probe(environment):
+                result = subprocess.run(
+                    [sys.executable, __file__, str(THEMES_FILE),
+                     str(SOURCE), "--cache-probe", str(current)],
+                    env=environment, capture_output=True, text=True,
+                    check=True, timeout=30,
+                )
+                return json.loads(result.stdout)
+
+            self.assertEqual(probe(env), 0)
+            self.assertTrue(list((root / "cache").rglob("*.qmlc")))
+            current.unlink()
+            current.symlink_to(theme)
+            # Control: the same URL and Nix mtime reuse the bad selector.
+            self.assertEqual(probe(env), 0)
+            configured = dict(item.split("=", 1) for item in
+                              os.environ["SDDM_GREETER_ENVIRONMENT"].split(","))
+            env.pop("QML_FORCE_DISK_CACHE")
+            env.update(configured)
+            self.assertEqual(probe(env), 1)
 
     def test_model_contract_matches_pinned_sddm(self):
         header = (SOURCE / "src/greeter/SessionModel.h").read_text()
@@ -165,4 +217,10 @@ class SddmQmlTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    if len(sys.argv) > 1 and sys.argv[1] == "--cache-probe":
+        probe = SddmQmlTests()
+        probe.load(sys.argv[2], ["hyprland-uwsm.desktop", "hyprland.desktop"])
+        print(json.dumps(probe.root.property("sessionIndex")))
+        probe.close()
+    else:
+        unittest.main(verbosity=2)
