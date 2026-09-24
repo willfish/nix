@@ -8,6 +8,13 @@
 }:
 let
   inherit (import ../config/hyprland/settings.nix) appearance;
+  omarchyFonts = {
+    inherit (appearance) font serifFont monoFont;
+    emoji = "Noto Color Emoji";
+    arabic = "Noto Naskh Arabic";
+    urdu = "Noto Nastaliq Urdu";
+  };
+  omarchyFontconfig = import ../config/fontconfig/omarchy-conf.nix omarchyFonts;
 in
 {
   stylix = {
@@ -22,15 +29,19 @@ in
     fonts = {
       monospace = {
         package = pkgs.nerd-fonts.jetbrains-mono;
-        name = if isGraphicalLinux then appearance.monoFont else "JetBrainsMono Nerd Font";
+        name = omarchyFonts.monoFont;
       };
       sansSerif = {
-        package = pkgs.ubuntu-classic;
-        name = if isGraphicalLinux then appearance.font else "Ubuntu";
+        package = pkgs.liberation_ttf;
+        name = omarchyFonts.font;
       };
       serif = {
-        package = pkgs.ubuntu-classic;
-        name = "Ubuntu";
+        package = pkgs.liberation_ttf;
+        name = omarchyFonts.serifFont;
+      };
+      emoji = {
+        package = pkgs.noto-fonts-color-emoji;
+        name = omarchyFonts.emoji;
       };
     };
 
@@ -40,6 +51,22 @@ in
     targets.fontconfig.enable = true;
 
     # Paired, runtime-switchable targets are owned by appearance.nix.
+  };
+
+  # Coverage fonts are not stylix roles. Noto Sans includes Naskh and Nastaliq.
+  home.packages = lib.optionals isGraphicalLinux [
+    pkgs.noto-fonts
+    pkgs.noto-fonts-cjk-sans
+  ];
+
+  fonts.fontconfig = {
+    enable = true;
+    configFile.omarchy = {
+      enable = true;
+      label = "omarchy";
+      priority = 90;
+      text = omarchyFontconfig;
+    };
   };
 
   dconf.enable = lib.mkIf (!config.dotfiles.capabilities.desktop) false;

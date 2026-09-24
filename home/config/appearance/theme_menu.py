@@ -317,7 +317,7 @@ class Themes:
         gtk = variables.get(
             "theme_gtk", "adw-gtk3-dark" if mode == "dark" else "adw-gtk3"
         )
-        font = variables.get("theme_font", "Ubuntu")
+        font = variables.get("theme_font", "Liberation Sans")
         mono = variables.get("theme_mono_font", "JetBrainsMono Nerd Font")
         size = variables.get("theme_font_size", "12")
         commands = [

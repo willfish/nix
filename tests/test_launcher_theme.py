@@ -64,7 +64,11 @@ LIGHT = {
 
 
 def render(
-    mode, palette, font="Ubuntu", mono="JetBrainsMono Nerd Font", font_size=12
+    mode,
+    palette,
+    font="Liberation Sans",
+    mono="JetBrainsMono Nerd Font",
+    font_size=12,
 ):
     expression = f"""
       let
@@ -129,7 +133,10 @@ class LauncherThemeTest(unittest.TestCase):
         self.assertIn("@define-color selection #020202;", css)
         self.assertIn("@define-color muted #040404;", css)
         self.assertIn("@define-color error_bg_color #080808;", css)
-        self.assertIn('font-family: "Ubuntu", "JetBrainsMono Nerd Font";', css)
+        self.assertIn(
+            'font-family: "Liberation Sans", "JetBrainsMono Nerd Font";',
+            css,
+        )
         self.assertIn("font-size: 12pt;", css)
         self.assertIn("font-size: 10pt;", css)
         self.assertIn("border-radius: 8px;", css)

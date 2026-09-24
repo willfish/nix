@@ -99,9 +99,23 @@
 
   fonts.packages = with pkgs; [
     adwaita-icon-theme
-    jetbrains-mono
+    liberation_ttf
     nerd-fonts.jetbrains-mono
-    nerd-fonts.ubuntu
-    nerd-fonts.ubuntu-mono
+    noto-fonts
+    noto-fonts-cjk-sans
+    noto-fonts-color-emoji
   ];
+
+  # Same generic-family mapping as the home fontconfig snippet. System
+  # services and the greeter do not read the user config.
+  fonts.fontconfig.localConf =
+    let
+      inherit (import ../../home/config/hyprland/settings.nix) appearance;
+    in
+    import ../../home/config/fontconfig/omarchy-conf.nix {
+      inherit (appearance) font serifFont monoFont;
+      emoji = "Noto Color Emoji";
+      arabic = "Noto Naskh Arabic";
+      urdu = "Noto Nastaliq Urdu";
+    };
 }

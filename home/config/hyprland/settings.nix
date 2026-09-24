@@ -19,7 +19,11 @@
     # Boot artwork is embedded in the initrd: rebuild the system to change it.
     # null uses the host default; unlike palette, menu selections cannot win.
     bootPalette = null;
-    font = "Ubuntu";
+    # Omarchy defaults: Liberation Sans/Serif for proportional text,
+    # JetBrainsMono Nerd Font for terminal, bar, and monospace.
+    # Size stays 12. Omarchy's terminal default is 9pt; its shell base is 12px.
+    font = "Liberation Sans";
+    serifFont = "Liberation Serif";
     monoFont = "JetBrainsMono Nerd Font";
     fontSize = 12;
     rounding = 8;
