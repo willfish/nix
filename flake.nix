@@ -433,6 +433,9 @@
               assert hasNetcat desktop && hasNetcat server && !hasNetcat darwin;
               pkgs.runCommand "home-profile-boundaries" { } "touch $out";
           }
+          // lib.optionalAttrs (system == linuxSystem) {
+            sddm = import ./tests/sddm.nix { inherit pkgs; };
+          }
           // lib.optionalAttrs (system == darwinSystem) {
             headless-browser =
               pkgs.runCommand "darwin-headless-browser"

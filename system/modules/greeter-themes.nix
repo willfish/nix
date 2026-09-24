@@ -96,22 +96,14 @@ let
   userBlock = [ ''property string currentUser: "william"'' ];
   sessionBlock = [
     "  property int sessionIndex: {"
-    "    var exact = -1"
-    "    var firstValid = -1"
+    "    // SDDM SessionModel::FileRole, not Qt.DisplayRole (which is empty)."
+    "    // Use the desktop filename, independent of ordering and translated names."
+    "    var fileRole = Qt.UserRole + 2"
     "    for (var i = 0; i < sessionModel.rowCount(); i++) {"
-    "      var name = (sessionModel.data(sessionModel.index(i, 0), Qt.DisplayRole) || \"\").toString()"
-    "      if (name.length === 0)"
-    "        continue"
-    "      if (firstValid < 0)"
-    "        firstValid = i"
-    "      if (name === \"Hyprland\")"
-    "        exact = i"
+    "      if (sessionModel.data(sessionModel.index(i, 0), fileRole) === \"hyprland.desktop\")"
+    "        return i"
     "    }"
-    "    if (exact >= 0)"
-    "      return exact"
-    "    if (firstValid >= 0)"
-    "      return firstValid"
-    "    return 0"
+    "    return -1"
     "  }"
   ];
   qmlStructure =
@@ -125,9 +117,22 @@ let
       withSession = splice withUser (sessionAt + (builtins.length userBlock - 1)) (
         lastAt - sessionAt + 2
       ) sessionBlock;
-      withFont = lib.replaceStrings [ ''"JetBrainsMono Nerd Font"'' ] [ (builtins.toJSON monoFont) ] (
-        lib.concatStringsSep "\n" withSession
-      );
+      withLogin =
+        lib.replaceStrings
+          [
+            "Keys.onPressed: {"
+            "sddm.login(root.currentUser, password.text, root.sessionIndex)"
+            "root.loginFailed = true\n      password.text = \"\""
+          ]
+          [
+            "Keys.onPressed: function(event) {"
+            "if (root.sessionIndex >= 0) sddm.login(root.currentUser, password.text, root.sessionIndex)"
+            "password.text = \"\"\n      root.loginFailed = true"
+          ]
+          (lib.concatStringsSep "\n" withSession);
+      withFont =
+        lib.replaceStrings [ ''"JetBrainsMono Nerd Font"'' ] [ (builtins.toJSON monoFont) ]
+          withLogin;
     in
     assert lib.assertMsg (
       userAt != null && sessionAt != null && lastAt != null && lastAt > sessionAt
