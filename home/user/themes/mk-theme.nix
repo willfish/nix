@@ -7,6 +7,19 @@
 }:
 theme:
 let
+  # These themes sort a solid-colour image before their illustrated wallpapers.
+  preferredWallpaper =
+    {
+      community-felix = "01-clouds.png";
+      community-midnight = "2-hand-of-adam.png";
+      community-oxo-carbon = "BG3.jpg";
+      community-robzee84 = "robzee84-wallpaper-2.jpg";
+      community-super-game-bro = "02-last-warrior.png";
+    }
+    .${theme.name} or "";
+  wallpaper = lib.findFirst (
+    file: builtins.baseNameOf file == preferredWallpaper
+  ) (builtins.head theme.backgrounds) theme.backgrounds;
   metadata = pkgs.writeText "${theme.name}-metadata.json" (
     builtins.toJSON {
       inherit (theme)
@@ -41,7 +54,7 @@ pkgs.runCommand "omarchy-theme-${theme.name}"
         ''
       else
         ''
-          magick ${lib.escapeShellArg (builtins.head theme.backgrounds)} PNG:"$out/wallpaper.png"
+          magick ${lib.escapeShellArg wallpaper} PNG:"$out/wallpaper.png"
         ''
     }
     ${
