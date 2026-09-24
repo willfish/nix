@@ -8,7 +8,9 @@
 }:
 let
   catalogue = import ./themes/palettes.nix;
-  desktopAppearance = (import ../config/hyprland/settings.nix).appearance;
+  desktopSettings = import ../config/hyprland/settings.nix;
+  desktopAppearance = desktopSettings.appearance;
+  pointer = desktopSettings.cursor;
   ghosttyConfig = builtins.readFile ../config/ghostty/config;
   defaultHost = (import ./themes/host-defaults.nix).forHost hostName;
   theme = catalogue.${defaultHost};
@@ -147,6 +149,16 @@ in
     };
     gtk4.theme = null;
   };
+
+  # Same pointer as an Omarchy session: Adwaita at 24px, including the
+  # default theme index Arch's default-cursors package would install.
+  home.pointerCursor = lib.mkIf isGraphicalLinux {
+    package = pkgs.adwaita-icon-theme;
+    inherit (pointer) name size;
+    gtk.enable = true;
+    x11.enable = true;
+  };
+  home.sessionVariables.HYPRCURSOR_SIZE = lib.mkIf isGraphicalLinux (toString pointer.size);
 
   home.activation = {
     applySelectedPalette = lib.mkIf isGraphicalLinux (

@@ -55,6 +55,16 @@
     overrides = { };
   };
 
+  # Omarchy does not name a pointer theme. Arch default-cursors inherits
+  # Adwaita, and default/hypr/envs.lua sets both cursor sizes to 24.
+  # looknfeel.lua hides the pointer while typing and warps it on workspace change.
+  cursor = {
+    theme = "Adwaita";
+    size = 24;
+    hideOnKeyPress = true;
+    warpOnChangeWorkspace = 1;
+  };
+
   window = {
     layout = "dwindle";
     preserveSplit = true;

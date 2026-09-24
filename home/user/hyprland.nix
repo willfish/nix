@@ -334,6 +334,15 @@
             };
           };
           dwindle.preserve_split = settings.window.preserveSplit;
+          env = [
+            "XCURSOR_THEME,${settings.cursor.theme}"
+            "XCURSOR_SIZE,${toString settings.cursor.size}"
+            "HYPRCURSOR_SIZE,${toString settings.cursor.size}"
+          ];
+          cursor = {
+            hide_on_key_press = settings.cursor.hideOnKeyPress;
+            warp_on_change_workspace = settings.cursor.warpOnChangeWorkspace;
+          };
           input = {
             kb_layout = settings.window.keyboardLayout;
             follow_mouse = if settings.window.focusFollowsCursor then 1 else 0;
