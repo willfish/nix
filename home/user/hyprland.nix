@@ -153,8 +153,9 @@
           exec fuzzel --config ${fuzzelConfig}
         '';
       };
-      # Focus an existing window whose class is one of the |-separated names,
-      # otherwise launch the command. Used by the daily-app Super binds.
+      # Focus an existing window whose class is one of the :-separated names,
+      # otherwise launch the command. The separator is a colon because Hyprland
+      # runs bind commands through a shell, where a pipe would split the command.
       openApp = pkgs.writeShellApplication {
         name = "hypr-open";
         runtimeInputs = [
@@ -165,11 +166,11 @@
           class_alts="$1"
           shift
           if [ -z "$class_alts" ] || [ "$#" -eq 0 ]; then
-            echo "usage: hypr-open CLASS[|CLASS...] COMMAND..." >&2
+            echo "usage: hypr-open CLASS[:CLASS...] COMMAND..." >&2
             exit 2
           fi
           address="$(hyprctl clients -j | jq -r --arg alts "$class_alts" '
-            ($alts | split("|") ) as $want
+            ($alts | split(":") ) as $want
             | first(.[] | select(.class as $c | $want | index($c)) | .address) // empty
           ')"
           if [ -n "$address" ]; then
