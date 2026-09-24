@@ -26,7 +26,10 @@ to apply changes. Do not edit the generated `~/.config/hypr/hyprland.conf`.
 Super+WASD focuses, Super+Shift+WASD moves windows, Super+1–9 switches
 workspaces and Super+Shift+1–9 moves windows between them. Super+Q closes,
 Super+F toggles fullscreen, Super+G toggles floating, and Super or Super+X
-opens the launcher. Super+Shift+T opens appearance and Ctrl+Shift+S takes a
+opens the launcher. Super+Enter opens a new Ghostty. Super+B, Super+C,
+Super+T and Super+E focus Brave, Slack, Telegram or Nautilus if one is open,
+otherwise they launch it. Discord, Spotify and LibreOffice stay on the launcher.
+Super+Shift+T opens appearance and Ctrl+Shift+S takes a
 screenshot. Voice chords retain their host capability checks. Super+Shift+B
 uses Hyprland DPMS to power the display. Dwindle tiling behaviour is configured
 explicitly in `settings.nix`.

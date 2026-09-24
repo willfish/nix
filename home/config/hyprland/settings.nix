@@ -221,6 +221,10 @@
   # theme menu. Super+Shift+B toggles output power through DPMS.
   # Super+Escape locks without a confirmation. The session menu confirms
   # logout, reboot and power off.
+  # Daily apps: Super+Enter opens a new Ghostty. Hyprland names that
+  # key Return. Super+B, Super+C, Super+T and Super+E focus Brave,
+  # Slack, Telegram or Nautilus, or launch them when they are not open.
+  # Discord, Spotify and LibreOffice stay on the launcher.
   # bind lines are the keybinds. mainMod is $mainMod. Number keys use
   # workspaceMod and workspaceMoveMod; they are not hardcoded in the module.
   bindings = {
@@ -240,6 +244,11 @@
       "SUPER SHIFT, S, movewindow, d"
       "SUPER SHIFT, D, movewindow, r"
       "SUPER, X, exec, hypr-launcher"
+      "SUPER, Return, exec, ghostty"
+      "SUPER, B, exec, hypr-open brave-browser brave"
+      "SUPER, C, exec, hypr-open slack|Slack slack"
+      "SUPER, T, exec, hypr-open org.telegram.desktop|TelegramDesktop Telegram"
+      "SUPER, E, exec, hypr-open org.gnome.Nautilus nautilus --new-window"
       "SUPER SHIFT, T, exec, theme-menu"
       "SUPER SHIFT, B, exec, hypr-session display-toggle"
       "SUPER, Escape, exec, hypr-session lock"

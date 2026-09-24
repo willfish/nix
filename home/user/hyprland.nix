@@ -153,6 +153,32 @@
           exec fuzzel --config ${fuzzelConfig}
         '';
       };
+      # Focus an existing window whose class is one of the |-separated names,
+      # otherwise launch the command. Used by the daily-app Super binds.
+      openApp = pkgs.writeShellApplication {
+        name = "hypr-open";
+        runtimeInputs = [
+          pkgs.hyprland
+          pkgs.jq
+        ];
+        text = ''
+          class_alts="$1"
+          shift
+          if [ -z "$class_alts" ] || [ "$#" -eq 0 ]; then
+            echo "usage: hypr-open CLASS[|CLASS...] COMMAND..." >&2
+            exit 2
+          fi
+          address="$(hyprctl clients -j | jq -r --arg alts "$class_alts" '
+            ($alts | split("|") ) as $want
+            | first(.[] | select(.class as $c | $want | index($c)) | .address) // empty
+          ')"
+          if [ -n "$address" ]; then
+            hyprctl dispatch focuswindow "address:$address"
+          else
+            exec "$@"
+          fi
+        '';
+      };
       sessionField =
         value:
         if lib.hasInfix "\t" value || lib.hasInfix "\n" value then
@@ -277,6 +303,7 @@
     {
       home.packages = [
         launcher
+        openApp
         pkgs.grimblast
         session
         themeSeed
