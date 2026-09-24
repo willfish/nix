@@ -97,7 +97,7 @@ def main(argv=None):
                 cleanup()
                 if args[0] == "_cleanup"
                 else subprocess.run(
-                    ["daily-agenda", "--refresh"], check=False
+                    ["daily-agenda"], check=False
                 ).returncode
             )
             try:

@@ -39,7 +39,7 @@ in
 {
   home.packages = [ agenda ] ++ lib.optional isGraphicalLinux workflow;
 
-  # Refresh runs when the agenda opens and on this timer, not on launcher keystrokes.
+  # The launcher reads cached events; refresh runs separately on this timer.
   # A missing feed file leaves the timer inert.
   systemd.user.services.daily-agenda-refresh = lib.mkIf isGraphicalLinux {
     Unit = {

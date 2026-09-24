@@ -13,9 +13,11 @@ opening the launcher or the confirmation terminal does not collect garbage.
 ## Agenda
 
 `daily-agenda` displays today's notes with cached events from named private Google
-Calendar iCal feeds, merged by time and labelled by calendar. `daily-agenda
---refresh` fetches all feeds first; the launcher uses this form. `daily-agenda --status` reports whether the feed file is present
-and usable, and the cache age, without printing the secret URL.
+Calendar iCal feeds, merged by time and labelled by calendar. The launcher reads
+cached events immediately, without waiting for the network, and shows the last
+refresh time. The background timer refreshes every fifteen minutes.
+`daily-agenda --refresh` fetches all feeds on demand. `daily-agenda --status`
+reports configuration and cache age without printing secret URLs.
 
 The notes source is `~/Notes/YYYY-MM-DD/today.md`. Unfinished checkboxes and bullets
 under Reminders or What I plan to do today are shown; completed checkboxes are

@@ -747,7 +747,7 @@ def main(argv=None):
         message = (
             "Calendar temporarily unavailable · showing saved events"
             if any("Calendar" in w or "calendar" in w for w in warnings)
-            else "Synced with your calendar"
+            else status
         )
         print("\n  \033[2m" + message + "\033[0m")
     else:
