@@ -985,6 +985,38 @@
         "type": "github"
       }
     },
+    "omarchy": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790188786,
+        "narHash": "sha256-wxvTIkTGJCwQI65KxAErhXhTrnpbWgIvNfDLG4pfJKs=",
+        "owner": "basecamp",
+        "repo": "omarchy",
+        "rev": "28ceaae70ebac3a0edcc21f2faa77a90dc6d404c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "basecamp",
+        "repo": "omarchy",
+        "type": "github"
+      }
+    },
+    "omarchy-theme-sakura": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788091653,
+        "narHash": "sha256-BwDFweva7PL1fDxGdU/XcN6NNM0shUm1NW/1GRzLMHo=",
+        "owner": "bjarneo",
+        "repo": "omarchy-sakura-theme",
+        "rev": "dfeae9b8d245af05e16cf8bf3b89b743c94573d3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "bjarneo",
+        "repo": "omarchy-sakura-theme",
+        "type": "github"
+      }
+    },
     "pi-fixture": {
       "inputs": {
         "bun2nix": "bun2nix",
@@ -1201,6 +1233,8 @@
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_5",
         "nixpkgs-unstable": "nixpkgs-unstable",
+        "omarchy": "omarchy",
+        "omarchy-theme-sakura": "omarchy-theme-sakura",
         "pre-commit-hooks": "pre-commit-hooks_3",
         "smailer": "smailer",
         "sniffy": "sniffy",

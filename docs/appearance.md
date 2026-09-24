@@ -1,10 +1,10 @@
 # Desktop appearance
 
-The theme menu offers all 22 built-in themes from the pinned
-[Omarchy source](https://github.com/omacom/omarchy/tree/28ceaae70ebac3a0edcc21f2faa77a90dc6d404c/themes),
-using their plain names and native colours. There are no personal palette variants.
-Their colour roles are mapped into the existing shared application renderers;
-Omarchy's application configurations, scripts and keybindings are not installed.
+The theme menu discovers built-in themes from the `omarchy` flake input and
+community themes from data-only inputs named `omarchy-theme-*`. Each theme is
+packaged as a Nix derivation with its native colours and supplied artwork.
+Colour roles feed the shared application renderers; upstream installation
+scripts, application configurations and keybindings are not executed or installed.
 
 Host defaults live in `home/user/themes/host-defaults.nix`: Rosé Pine on
 Andromeda, Tokyo Night on Foundation, Osaka Jade on Starfish, Catppuccin on
@@ -27,6 +27,41 @@ Lupine, Rosé Pine and White are light themes; the others are dark. Select anoth
 theme to change mode. There is no synthetic light/dark variant or mode-toggle
 row. An incompatible `theme-menu light` or `theme-menu dark` request is rejected.
 Use this menu to keep mode and palette aligned.
+
+## Adding and updating themes
+
+Declare a community repository in `flake.nix`, using its slug as the input suffix:
+
+```nix
+omarchy-theme-sakura = {
+  url = "github:bjarneo/omarchy-sakura-theme";
+  flake = false;
+};
+```
+
+The importer discovers it as `community-sakura`; no palette table or label entry
+is needed. Sakura is included as an example. Repositories must provide the current
+Omarchy `colors.toml` format with an explicit light/dark mode and six-digit RGB
+colours. Legacy themes requiring installation scripts are not supported.
+
+```sh
+direnv exec . nix flake update omarchy omarchy-theme-sakura
+direnv exec . nix build .#theme-community-sakura
+hmswitch
+theme-menu community-sakura
+```
+
+A full `nix flake update` updates all declared theme inputs too. New upstream
+built-in directories are discovered automatically; new community repositories
+must first be declared as inputs. There is no live website crawl during a build.
+All revisions and content hashes live in `flake.lock`.
+
+Theme packages retain supplied licences and all supported background images.
+The desktop uses the first sorted image, or a solid native background if none
+exists. Missing login artwork falls back to Omarchy's logo recoloured with the
+palette's foreground. Adding themes to the desktop needs only Home Manager
+activation. The system greeter's allowlist and boot artwork still require a
+system rebuild; desktop activation does not restart the display manager.
 
 ## Wallpapers and applications
 
@@ -82,9 +117,13 @@ precedence. Remote hosts retain their own palettes.
 
 ## Ownership
 
-- `home/user/themes/omarchy-source.nix` pins the upstream source and hash.
-- `home/user/themes/palettes.nix` projects upstream colour roles into Base16.
-- `home/user/themes/omarchy.nix` supplies wallpapers and the upstream licence.
+- `flake.nix` declares sources; `flake.lock` pins them.
+  `home/user/themes/inputs.nix` resolves those same locked sources for pure
+  imports outside the flake module graph.
+- `home/user/themes/palettes.nix` discovers the catalogue; `import-theme.nix`
+  validates and maps native colour roles into Base16 without evaluating repo code.
+- `home/user/themes/mk-theme.nix` packages supported assets as derivations.
+- `home/user/themes/omarchy.nix` exposes packages, wallpapers and the upstream licence.
   The licence is installed at `~/.local/share/theme-menu/omarchy-LICENSE`.
 - `home/user/themes/host-defaults.nix` defines the host default theme IDs.
 - `home/user/appearance.nix` wires application config from that default unless a

@@ -74,6 +74,15 @@
     llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent/08a2e7dbccfc9aafbf6715965963d8b31347f37d";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+    # Data-only theme inputs. omarchy-theme-* inputs are discovered automatically.
+    omarchy = {
+      url = "github:basecamp/omarchy";
+      flake = false;
+    };
+    omarchy-theme-sakura = {
+      url = "github:bjarneo/omarchy-sakura-theme";
+      flake = false;
+    };
     # Remote branch used only for packages under review (e.g. bootdev-cli PR).
     # Remove this input once the package is available in the pinned nixpkgs release.
     # nixpkgs-local.url = "github:willfish/nixpkgs/bootdev-cli-1.30.0";
@@ -354,7 +363,12 @@
         {
           _module.args.pkgs = mkPkgs system;
 
-          packages.mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix { };
+          packages = {
+            mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix { };
+          }
+          //
+            lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)
+              (import ./home/user/themes/omarchy.nix { inherit lib pkgs; }).packages;
 
           treefmt = {
             projectRootFile = "flake.nix";

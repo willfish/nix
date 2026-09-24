@@ -8,6 +8,7 @@
 let
   source = import ../../home/user/themes/omarchy-source.nix;
   catalogue = import ../../home/user/themes/palettes.nix;
+  themes = import ../../home/user/themes/omarchy.nix { inherit lib pkgs; };
   configuredAppearance = (import ../../home/config/hyprland/settings.nix).appearance;
   sddmSource = "${source}/default/sddm/omarchy";
   plymouthSource = "${source}/default/plymouth";
@@ -208,7 +209,7 @@ let
         recolor ${plymouthSource}/lock.png "$ply/lock.png"
         recolor ${plymouthSource}/progress_bar.png "$ply/progress_bar.png"
         install -m 0644 ${plymouthSource}/progress_box.png "$ply/progress_box.png"
-        install -m 0644 ${source}/themes/${name}/unlock.png "$ply/logo.png"
+        install -m 0644 ${themes.packages.${name}}/unlock.png "$ply/logo.png"
 
         install -m 0644 "$ply/bullet.png" "$sddm/bullet.png"
         install -m 0644 "$ply/entry.png" "$sddm/entry.png"

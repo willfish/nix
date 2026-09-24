@@ -3,16 +3,22 @@
 # blue kept distinct from accent.
 { lib, pkgs }:
 let
-  source = import ./omarchy-source.nix;
+  catalogue = import ./palettes.nix;
+  themes = import ./omarchy.nix { inherit lib pkgs; };
   render = import ./render.nix { inherit lib; };
 in
 name: palette:
 let
-  custom = "${source}/themes/${name}/btop.theme";
-  colours = builtins.fromTOML (builtins.readFile "${source}/themes/${name}/colors.toml");
-  blue = lib.removePrefix "#" (colours.blue or ("#" + palette.base0D));
+  inherit (catalogue.${name}) colours;
+  custom = catalogue.${name}.btop;
+  blueValue = colours.blue or ("#" + palette.base0D);
+  blue =
+    assert lib.assertMsg (
+      builtins.isString blueValue && builtins.match "#[0-9a-fA-F]{6}" blueValue != null
+    ) "Theme ${name}: blue must be a six-digit #RRGGBB colour";
+    lib.removePrefix "#" blueValue;
 in
-if builtins.pathExists custom then
-  custom
+if custom != null then
+  "${themes.packages.${name}}/btop.theme"
 else
   pkgs.writeText "btop-${name}.theme" (render.btop (palette // { inherit blue; }))
