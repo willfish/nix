@@ -154,7 +154,8 @@ in
   # default theme index Arch's default-cursors package would install.
   home.pointerCursor = lib.mkIf isGraphicalLinux {
     package = pkgs.adwaita-icon-theme;
-    inherit (pointer) name size;
+    name = pointer.theme;
+    inherit (pointer) size;
     gtk.enable = true;
     x11.enable = true;
   };
