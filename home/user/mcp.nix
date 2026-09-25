@@ -108,6 +108,7 @@ in
           dap = mcpDapServer;
           slack = slackMcpServer;
           telegram = telegramMcpServer;
+          himalaya = pkgs.himalaya-mcp;
         }
         .${server.name}
       )
@@ -207,6 +208,17 @@ in
       set -euo pipefail
 
       exec ${pkgs.terraform-mcp-server}/bin/terraform-mcp-server stdio
+    '';
+  };
+
+  home.file.".local/bin/mcp-himalaya" = lib.mkIf (enabled "himalaya") {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      export HIMALAYA_BINARY=${pkgs.himalaya}/bin/himalaya
+      exec ${pkgs.himalaya-mcp}/bin/himalaya-mcp
     '';
   };
 

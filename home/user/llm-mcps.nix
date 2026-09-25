@@ -64,6 +64,11 @@ rec {
         enabled = config.dotfiles.capabilities.telegram;
         wrapper = "mcp-telegram";
       }
+      {
+        name = "himalaya";
+        enabled = config.dotfiles.capabilities.email;
+        wrapper = "mcp-himalaya";
+      }
     ]
     ++ map (server: server // { private = true; }) config.privateConfig.mcpServers
   );

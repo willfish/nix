@@ -59,6 +59,10 @@
       url = "github:willfish/mux";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    himalaya-mcp = {
+      url = "github:willfish/himalaya-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Official release binary. Do not follow nixpkgs: store paths must match herdr.cachix.org.
     herdr.url = "github:herdrdev/herdr-nix";
     # Source for the Pi integration asset. Keep this on the same stable tag as herdr-nix.
@@ -319,6 +323,7 @@
       sniffy,
       smailer,
       mux,
+      himalaya-mcp,
       herdr,
       herdr-source,
       forte,
@@ -341,6 +346,7 @@
         inherit (sniffy.packages.${system}) sniffy;
         inherit (smailer.packages.${system}) smailer;
         mux = mux.packages.${system}.default;
+        himalaya-mcp = himalaya-mcp.packages.${system}.default;
         herdr = herdr.packages.${system}.default;
         herdr-source = herdr-source.outPath;
         forte = forte.packages.${system}.default;

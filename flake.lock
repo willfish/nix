@@ -648,6 +648,26 @@
         "type": "github"
       }
     },
+    "himalaya-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790332391,
+        "narHash": "sha256-l26WEEH7U+JD26q1XE4LFYcHfsbW1W57iRRbJaYZ2Q4=",
+        "owner": "willfish",
+        "repo": "himalaya-mcp",
+        "rev": "fc5572719f0ec37fe9a2d46b702299fcc338e3cd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "willfish",
+        "repo": "himalaya-mcp",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -758,11 +778,11 @@
     },
     "nix-config": {
       "locked": {
-        "lastModified": 1790316576,
-        "narHash": "sha256-Rda1wIk9y++ppFkabpz6v1bfzNPsq6RG0DdeXug7zsw=",
+        "lastModified": 1790332445,
+        "narHash": "sha256-TcdmXK0kB8zfsheLHpgB5QViFDaIpgJYwak+Wqxec04=",
         "ref": "refs/heads/master",
-        "rev": "f048c202580d036c4b57974a99537b183e4cd08f",
-        "revCount": 26,
+        "rev": "5d90bfe38579af6d09d79c91c481dfe2355c5999",
+        "revCount": 27,
         "type": "git",
         "url": "ssh://git@github.com/willfish/nix-config.git"
       },
@@ -2159,6 +2179,7 @@
         "herdr": "herdr",
         "herdr-source": "herdr-source",
         "hermes-agent": "hermes-agent",
+        "himalaya-mcp": "himalaya-mcp",
         "home-manager": "home-manager_3",
         "llm-agents": "llm-agents",
         "mux": "mux",
