@@ -1,6 +1,8 @@
 { pkgs, ... }:
 {
   programs.hyprland.enable = true;
+  # Region capture uses the KMS helper. The wrapper is what makes that promptless.
+  programs.gpu-screen-recorder.enable = true;
   security.pam.services.hyprlock = { };
 
   xdg.portal = {

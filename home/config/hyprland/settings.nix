@@ -112,6 +112,7 @@
     };
     modulesLeft = [
       "custom/launcher"
+      "custom/recording"
       "hyprland/workspaces"
     ];
     modulesCenter = [
@@ -222,7 +223,8 @@
   };
 
   # Shortcuts: WASD focus, Super+X launcher, Super+Shift+T
-  # theme menu. Super+Shift+B toggles output power through DPMS.
+  # theme menu. Super+V records a region; press it again to stop.
+  # Super+Shift+B toggles output power through DPMS.
   # Super+Escape locks without a confirmation. The session menu confirms
   # logout, reboot and power off.
   # Daily apps: Super+Enter opens a new Ghostty. Hyprland names that

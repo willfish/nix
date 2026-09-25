@@ -216,6 +216,20 @@
             + "\n"
         ) settings.session.entries
       );
+      record = pkgs.writeShellApplication {
+        name = "hypr-record";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.ffmpeg
+          pkgs.gpu-screen-recorder
+          pkgs.libnotify
+          pkgs.nautilus
+          pkgs.procps
+          pkgs.slurp
+          pkgs.wl-clipboard
+        ];
+        text = builtins.readFile ../config/hyprland/record.sh;
+      };
       session = pkgs.writeShellApplication {
         name = "hypr-session";
         runtimeInputs = [
@@ -290,7 +304,7 @@
           padding: 5px 0;
         }
 
-        #battery.critical:not(.charging), #pulseaudio.muted {
+        #battery.critical:not(.charging), #pulseaudio.muted, #custom-recording {
           color: @red;
         }
 
@@ -309,6 +323,7 @@
         launcher
         openApp
         pkgs.grimblast
+        record
         session
         themeSeed
         pkgs.brightnessctl
@@ -392,7 +407,13 @@
             "col.border_locked_active" = "$theme_check";
             "col.border_locked_inactive" = "$theme_muted";
           };
-          bind = settings.bindings.bind ++ workspaceBinds ++ voiceBinds;
+          bind =
+            settings.bindings.bind
+            ++ [
+              "SUPER, V, exec, ${record}/bin/hypr-record"
+            ]
+            ++ workspaceBinds
+            ++ voiceBinds;
           inherit (settings.bindings) bindr bindm bindle;
           windowrule =
             map (rule: {
@@ -450,6 +471,14 @@
               tooltip-format = "Applications · right-click Files";
               on-click = settings.bar.commands.launcher;
               on-click-right = settings.bar.commands.files;
+            };
+            "custom/recording" = {
+              exec = "printf '%s' '●'";
+              exec-if = "${record}/bin/hypr-record status";
+              signal = 8;
+              interval = "once";
+              tooltip = "Recording · Super+V to stop";
+              on-click = "${record}/bin/hypr-record";
             };
             clock = {
               format = "{:%H\n%M}";
