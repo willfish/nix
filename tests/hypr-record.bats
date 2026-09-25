@@ -45,6 +45,12 @@ run_record() {
   [ ! -d "$XDG_RUNTIME_DIR/hypr-record/lock" ]
 }
 
+@test "the camera square sits in the bottom-right of the region" {
+  run bash -o errexit -o nounset -o pipefail "$SCRIPT" box 1920 1080 100 40
+  [ "$status" -eq 0 ]
+  [ "$output" = "1726 826 270" ]
+}
+
 @test "a leftover lock does not block a new recording" {
   mkdir -p "$XDG_RUNTIME_DIR/hypr-record/lock"
   touch "$HYPR_RECORD_KMS_SERVER"

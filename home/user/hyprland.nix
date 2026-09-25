@@ -222,7 +222,10 @@
           pkgs.coreutils
           pkgs.ffmpeg
           pkgs.gpu-screen-recorder
+          pkgs.hyprland
+          pkgs.jq
           pkgs.libnotify
+          pkgs.mpv
           pkgs.nautilus
           pkgs.procps
           pkgs.slurp
@@ -411,6 +414,7 @@
             settings.bindings.bind
             ++ [
               "SUPER, V, exec, ${record}/bin/hypr-record"
+              "SUPER ALT, V, exec, ${record}/bin/hypr-record face"
             ]
             ++ workspaceBinds
             ++ voiceBinds;
@@ -436,6 +440,13 @@
                 float = true;
                 center = true;
                 size = "1000 700";
+              }
+              {
+                name = "webcam-overlay";
+                "match:class" = "^WebcamOverlay$";
+                float = true;
+                pin = true;
+                no_initial_focus = true;
               }
               {
                 name = "brave-web-apps";

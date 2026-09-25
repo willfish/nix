@@ -224,6 +224,7 @@
 
   # Shortcuts: WASD focus, Super+X launcher, Super+Shift+T
   # theme menu. Super+V records a region; press it again to stop.
+  # Super+Alt+V does the same with a camera square and the microphone.
   # Super+Shift+B toggles output power through DPMS.
   # Super+Escape locks without a confirmation. The session menu confirms
   # logout, reboot and power off.
