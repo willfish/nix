@@ -175,5 +175,10 @@ in
     enable = true;
     defaultApplications = mimeDefaults;
     associations.added = mimeDefaults;
+    # Himalaya also claims mailto and .eml. Mail is Gmail in Brave, so drop that claim.
+    associations.removed = {
+      "message/rfc822" = [ "himalaya.desktop" ];
+      "x-scheme-handler/mailto" = [ "himalaya.desktop" ];
+    };
   };
 }
