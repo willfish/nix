@@ -233,6 +233,17 @@
         ];
         text = builtins.readFile ../config/hyprland/record.sh;
       };
+      agentAwake = pkgs.writeShellApplication {
+        name = "herdr-agent-awake";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.python3
+          pkgs.systemd
+        ];
+        text = ''
+          exec python3 ${../config/hyprland/agent_awake.py}
+        '';
+      };
       session = pkgs.writeShellApplication {
         name = "hypr-session";
         runtimeInputs = [
@@ -745,6 +756,22 @@
           ExecStartPre = "${themeSeed}/bin/hypr-theme-seed";
           ExecStart = "${pkgs.mako}/bin/mako";
           ExecReload = "${pkgs.mako}/bin/makoctl reload";
+          Restart = "on-failure";
+          RestartSec = 2;
+        };
+        Install.WantedBy = [ "hyprland-session.target" ];
+      };
+
+      # Herdr reports working, blocked, idle and done. Hold logind idle and
+      # sleep only while an agent is working. A missing socket fails open.
+      systemd.user.services.herdr-agent-awake = {
+        Unit = {
+          Description = "Hold idle and sleep while a Herdr agent is working";
+          PartOf = [ "hyprland-session.target" ];
+          After = [ "hyprland-session.target" ];
+        };
+        Service = {
+          ExecStart = "${agentAwake}/bin/herdr-agent-awake";
           Restart = "on-failure";
           RestartSec = 2;
         };

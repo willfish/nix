@@ -21,7 +21,8 @@ run_action() {
   lock) exec hyprlock ;;
   display-off) exec hyprctl dispatch dpms off ;;
   display-toggle) exec hyprctl dispatch dpms toggle ;;
-  suspend) exec systemctl suspend ;;
+  # Explicit menu suspend overrides a working-agent idle/sleep inhibitor.
+  suspend) exec systemctl suspend --ignore-inhibitors ;;
   # A Waybar-launched helper shares its service cgroup. Let compositor exit
   # trigger cleanup, rather than killing this helper before it can dispatch.
   logout) exec hyprctl dispatch exit ;;

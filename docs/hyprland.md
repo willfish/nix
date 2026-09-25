@@ -50,6 +50,13 @@ sharing, speed tests and the optional media/OSD service are not hosted.
 The defaults use Nautilus for folders, Evince for PDFs, Neovim in Ghostty for text,
 and mpv with MPRIS for audio/video.
 
+Idle lock and display-off still follow `idle` in `settings.nix`. A session
+service watches Herdr and holds a logind block inhibitor for idle and sleep
+only while an agent is working. Blocked, idle, done and unknown agents do not
+hold the machine awake. If Herdr is not running, sleep stays allowed. The
+session menu suspend action ignores that inhibitor. Super+Escape still locks
+immediately.
+
 ## Screenshots
 
 Ctrl+Shift+S runs **Grimblast → Satty** directly. Drag to select a region or
