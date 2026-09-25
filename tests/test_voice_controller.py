@@ -316,32 +316,22 @@ class VoiceTests(unittest.TestCase):
         self.assertEqual(self.app.thread, "pi-next")
         self.assertEqual(self.app.target["session"], "pi-next")
 
-    def test_launcher_keeps_wrappers_and_uses_installed_pi_extension_once(self):
+    def test_launcher_keeps_wrappers_without_a_pi_extension(self):
         for harness in ("pi", "qwen-pi"):
-            with patch.object(
-                self.voice, 'installed_pi_extension'
-            ) as installed:
-                command = self.voice.launcher_command(
-                    harness, ["--continue"], Path(self.tmp.name), "notify"
-                )
-            installed.assert_called_once_with()
+            command = self.voice.launcher_command(
+                harness, ["--continue"], Path(self.tmp.name), "notify"
+            )
             self.assertEqual(command, [harness, '--continue'])
+            self.assertEqual(
+                self.voice.launcher_command(
+                    harness, ["--no-extensions"], Path(self.tmp.name), "notify"
+                ),
+                [harness, "--no-extensions"],
+            )
             with self.assertRaisesRegex(RuntimeError, "interactive"):
                 self.voice.launcher_command(
                     harness, ["--mode", "rpc"], Path(self.tmp.name), "notify"
                 )
-
-    def test_launcher_rejects_missing_or_disabled_pi_bridge(self):
-        with patch.object(
-            self.voice.Path, 'home', return_value=Path(self.tmp.name)
-        ):
-            with self.assertRaisesRegex(RuntimeError, 'hmswitch'):
-                self.voice.launcher_command(
-                    'pi', [], Path(self.tmp.name), 'notify')
-        for flag in ('--no-extensions', '-ne'):
-            with self.assertRaisesRegex(RuntimeError, 'requires.*extension'):
-                self.voice.launcher_command(
-                    'pi', [flag], Path(self.tmp.name), 'notify')
 
     def test_failed_launcher_cleans_up_without_stopping_other_sessions(self):
         for sessions in ([], [{"token": "another-session"}]):
@@ -361,7 +351,6 @@ class VoiceTests(unittest.TestCase):
                 patch.object(
                     self.voice, "call", return_value={"sessions": sessions}
                 ),
-                patch.object(self.voice, 'installed_pi_extension'),
                 patch.object(self.voice.subprocess, "run") as service_commands,
                 patch.object(
                     self.voice.subprocess,

@@ -98,14 +98,11 @@ test('voice installation and explicit Qwen loading share the supported-host pred
   const standard = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
   const qwen = readFileSync(new URL('../home/user/local-llm.nix', import.meta.url), 'utf8');
   const voice = readFileSync(new URL('../home/user/voice.nix', import.meta.url), 'utf8');
-  for (const source of [standard, qwen, voice]) {
-    assert.match(source, /voiceFeatures = import \.\/voice-supported\.nix \{ inherit pkgs hostName; \};/);
-  }
-  assert.match(standard, /home\.file\."\.pi\/agent\/extensions\/pi-voice\.ts" = lib\.mkIf voiceFeatures\.stt \{\s*source = \.\.\/config\/pi\/extensions\/pi-voice\.ts;\s*\};/);
-  assert.equal((standard.match(/home\.file\."\.pi\/agent\/extensions\/pi-voice\.ts"/g) ?? []).length, 1);
-  assert.match(qwen, /lib\.optionalString voiceFeatures\.stt "export PI_VOICE_HARNESS=qwen-pi"/);
-  assert.match(qwen, /lib\.optionalString voiceFeatures\.stt "--extension \$\{config\.home\.homeDirectory\}\/\.pi\/agent\/extensions\/pi-voice\.ts"/);
-  assert.equal((qwen.match(/\/extensions\/pi-voice\.ts/g) ?? []).length, 1);
+    assert.match(voice, /voiceFeatures = import \.\/voice-supported\.nix \{ inherit pkgs hostName; \};/);
+  assert.equal((standard.match(/voiceFeatures/g) ?? []).length, 0);
+  assert.equal((qwen.match(/voiceFeatures/g) ?? []).length, 0);
+  assert.equal((standard.match(/pi-voice\.ts/g) ?? []).length, 0);
+  assert.equal((qwen.match(/pi-voice\.ts/g) ?? []).length, 0);
   assert.match(voice, /config = lib\.mkIf voiceStt/);
 });
 
