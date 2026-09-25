@@ -4,11 +4,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
-import traceback
+import warnings
 
 import portal
 from constants import DEFAULT_REGION
+
+warnings.filterwarnings("ignore")
+logging.disable(logging.CRITICAL)
 
 PROTOCOL = "2024-11-05"
 INSTRUCTIONS = (
@@ -119,40 +123,85 @@ def fail(message_id, message):
     sys.stdout.flush()
 
 
-def tool_result(payload, is_error=False):
+def tool_result(text, is_error=False):
     return {
-        "content": [{"type": "text", "text": json.dumps(payload, indent=2)}],
+        "content": [{"type": "text", "text": text.rstrip() + "\n"}],
         "isError": is_error,
     }
+
+
+def format_status(payload):
+    if not payload.get("logged_in"):
+        return "Not signed in."
+    expiry = payload.get("expires_at", "unknown")
+    return f"Signed in until {expiry}."
+
+
+def format_login(payload):
+    if payload.get("opened_tab"):
+        return "Signed in. Background tab closed."
+    return "Already signed in."
+
+
+def format_accounts(payload):
+    lines = [
+        f"{item['account_name']} {item['account_id']}"
+        for item in payload.get("accounts") or []
+    ]
+    return "\n".join(lines) or "No accounts."
+
+
+def format_roles(payload):
+    gated = set(payload.get("production_admin_approval_required") or [])
+    lines = [f"{payload.get('account_name')} {payload.get('account_id')}"]
+    for role in payload.get("roles") or []:
+        suffix = " (approval required)" if role in gated else ""
+        lines.append(f"{role}{suffix}")
+    return "\n".join(lines)
+
+
+def format_export(payload):
+    cached = " cached" if payload.get("cached") else ""
+    return (
+        f"{payload['account_name']} {payload['role_name']}{cached}\n"
+        f"until {payload['expiration']}\n"
+        f"{payload['source']}"
+    )
 
 
 def call_tool(name, arguments):
     arguments = arguments or {}
     client = portal.PortalClient()
     if name == "status":
-        return tool_result(portal.session_status(client))
+        return tool_result(format_status(portal.session_status(client)))
     if name == "login":
         if portal.session_status(client).get("logged_in"):
-            return tool_result({"logged_in": True, "opened_tab": False})
-        return tool_result(portal.login_if_needed(client))
+            return tool_result(format_login({"opened_tab": False}))
+        return tool_result(format_login(portal.login_if_needed(client)))
     if name == "list_accounts":
-        return tool_result({"accounts": portal.list_accounts(client)})
+        return tool_result(
+            format_accounts({"accounts": portal.list_accounts(client)})
+        )
     if name == "list_roles":
         return tool_result(
-            portal.list_roles(
-                client,
-                account_id=arguments.get("account_id"),
-                account_name=arguments.get("account_name"),
+            format_roles(
+                portal.list_roles(
+                    client,
+                    account_id=arguments.get("account_id"),
+                    account_name=arguments.get("account_name"),
+                )
             )
         )
     if name == "export_credentials":
         return tool_result(
-            portal.export_credentials(
-                client,
-                role_name=arguments.get("role_name"),
-                account_id=arguments.get("account_id"),
-                account_name=arguments.get("account_name"),
-                region=arguments.get("region") or DEFAULT_REGION,
+            format_export(
+                portal.export_credentials(
+                    client,
+                    role_name=arguments.get("role_name"),
+                    account_id=arguments.get("account_id"),
+                    account_name=arguments.get("account_name"),
+                    region=arguments.get("region") or DEFAULT_REGION,
+                )
             )
         )
     raise portal.PortalError(f"unknown tool {name}")
@@ -188,16 +237,12 @@ def handle(message):
                 call_tool(params.get("name"), params.get("arguments")),
             )
         except portal.PortalError as error:
-            respond(
-                message_id,
-                tool_result({"error": portal.redact(str(error))}, True),
-            )
+            respond(message_id, tool_result(portal.redact(str(error)), True))
         except Exception as error:
-            sys.stderr.write(portal.redact(traceback.format_exc()) + "\n")
             respond(
                 message_id,
                 tool_result(
-                    {"error": portal.redact(str(error)) or "internal error"},
+                    portal.redact(str(error)) or "internal error",
                     True,
                 ),
             )

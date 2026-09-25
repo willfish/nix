@@ -95,6 +95,23 @@ class FakePortal:
 
 
 class ServerTests(unittest.TestCase):
+    def test_tool_text_is_plain(self):
+        text = server.format_export(
+            {
+                "account_name": "Development",
+                "role_name": "TariffReadOnlyAccess",
+                "expiration": "2026-09-25T19:32:54Z",
+                "source": "source /tmp/role.env",
+                "cached": False,
+            }
+        )
+        self.assertNotIn("{", text)
+        self.assertIn("source /tmp/role.env", text)
+        self.assertEqual(
+            server.format_status({"logged_in": True, "expires_at": "16:50Z"}),
+            "Signed in until 16:50Z.",
+        )
+
     def test_initialize_and_tools(self):
         with tempfile.TemporaryDirectory() as directory:
             env = os.environ.copy()
