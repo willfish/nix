@@ -171,5 +171,15 @@ in
         run ${runtime.package}/bin/theme-menu --reapply
       ''
     );
+    # GTK file dialogs keep the previous interface font for the life of
+    # xdg-desktop-portal-gtk. Restart it after a font switch so it cannot
+    # keep requesting a family whose files are gone.
+    reloadGtkPortal = lib.mkIf isGraphicalLinux (
+      lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        if [ -n "''${XDG_RUNTIME_DIR:-}" ] && [ -S "''${XDG_RUNTIME_DIR}/bus" ]; then
+          run ${pkgs.systemd}/bin/systemctl --user try-restart xdg-desktop-portal-gtk.service || true
+        fi
+      ''
+    );
   };
 }

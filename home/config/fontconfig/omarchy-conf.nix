@@ -13,6 +13,41 @@
   <?xml version="1.0"?>
   <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
   <fontconfig>
+    <!-- Ubuntu fonts were removed. A long-running GTK portal can still
+         request that family and then fail to open the missing files. -->
+    <match target="pattern">
+      <test name="family" qual="any">
+        <string>Ubuntu</string>
+      </test>
+      <edit name="family" mode="assign" binding="strong">
+        <string>${font}</string>
+      </edit>
+    </match>
+    <match target="pattern">
+      <test name="family" qual="any">
+        <string>Ubuntu Sans</string>
+      </test>
+      <edit name="family" mode="assign" binding="strong">
+        <string>${font}</string>
+      </edit>
+    </match>
+    <match target="pattern">
+      <test name="family" qual="any">
+        <string>Ubuntu Condensed</string>
+      </test>
+      <edit name="family" mode="assign" binding="strong">
+        <string>${font}</string>
+      </edit>
+    </match>
+    <match target="pattern">
+      <test name="family" qual="any">
+        <string>Ubuntu Mono</string>
+      </test>
+      <edit name="family" mode="assign" binding="strong">
+        <string>${monoFont}</string>
+      </edit>
+    </match>
+
     <match target="pattern">
       <test name="family" qual="any">
         <string>sans-serif</string>
