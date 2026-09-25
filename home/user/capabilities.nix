@@ -120,6 +120,7 @@ in
     # Only declarations change: all hosts retain the shared decryption identity.
     privateConfig.secretGroups = [
       "coding"
+      "search"
     ]
     ++ lib.optional cfg.capabilities.work "work"
     ++ lib.optional cfg.capabilities.accounting "accounting"

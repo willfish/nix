@@ -58,6 +58,7 @@ let
     };
   };
   slackMcpServer = pkgs.callPackage ./mcp-packages/slack-mcp-server.nix { };
+  braveSearchMcpServer = pkgs.callPackage ./mcp-packages/brave-search-mcp-server.nix { };
   telegramMcpServer = pkgs.callPackage ./mcp-packages/telegram-mcp.nix { };
   mcpDapServer = pkgs.callPackage ./mcp-packages/mcp-dap-server.nix { };
   # One-time Telethon login for the file-based session used by mcp-telegram.
@@ -98,6 +99,7 @@ in
         {
           jira = pkgs.uv;
           github = pkgs.github-mcp-server;
+          "web-search" = braveSearchMcpServer;
           browser = agentBrowser;
           browser-playwright = pkgs.playwright-mcp;
           terraform = pkgs.terraform-mcp-server;
@@ -119,6 +121,26 @@ in
           ])
         ) servers
       );
+
+  home.file.".local/bin/mcp-web-search" = lib.mkIf (enabled "web-search") {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      # The official server reads this file itself. Do not copy the key into the environment.
+      key_file=${lib.escapeShellArg config.sops.secrets.BRAVE_API_KEY.path}
+      if [ ! -s "$key_file" ]; then
+        echo "BRAVE_API_KEY is missing from sops-nix secrets" >&2
+        exit 1
+      fi
+      exec ${braveSearchMcpServer}/bin/brave-search-mcp-server \
+        --transport stdio \
+        --logging-level error \
+        --brave-api-key-file "$key_file" \
+        --enabled-tools brave_web_search brave_llm_context
+    '';
+  };
 
   home.file.".local/bin/mcp-github" = lib.mkIf (enabled "github") {
     executable = true;

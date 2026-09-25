@@ -20,6 +20,11 @@ rec {
         wrapper = "mcp-github";
       }
       {
+        name = "web-search";
+        enabled = true;
+        wrapper = "mcp-web-search";
+      }
+      {
         name = "browser";
         enabled = config.dotfiles.capabilities.playwright;
         wrapper = "mcp-agent-browser";
