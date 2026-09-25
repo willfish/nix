@@ -10,6 +10,7 @@ pid_file="$runtime_dir/pid"
 path_file="$runtime_dir/path"
 log_file="$runtime_dir/log"
 lock_dir="$runtime_dir/lock"
+kms_server="${HYPR_RECORD_KMS_SERVER:-/run/wrappers/bin/gsr-kms-server}"
 
 recording() {
   [[ -f $pid_file ]] || return 1
@@ -109,6 +110,10 @@ stop_recording() {
 
 start_recording() {
   local geom w h x y region dir path pid
+  if [[ ! -x $kms_server ]]; then
+    fail "GPU capture is not enabled yet. Switch the NixOS system so gsr-kms-server is available."
+    return
+  fi
   geom=$(slurp -f '%w %h %x %y') || return 0
   read -r w h x y <<<"$geom"
   w=$(even_size "$w") || {
@@ -123,10 +128,6 @@ start_recording() {
   dir=$(output_dir)
   mkdir -p "$dir"
   path="$dir/screenrecording-$(date +%Y-%m-%d_%H-%M-%S).mp4"
-  if [[ ! -x /run/wrappers/bin/gsr-kms-server ]]; then
-    fail "GPU capture is not enabled yet. Switch the NixOS system so gsr-kms-server is available."
-    return
-  fi
   pid=$(launch -w "$region" -f 60 -fm cfr -k auto -fallback-cpu-encoding yes -a default_output -ac aac -o "$path")
   if ! wait_started "$pid" "$path"; then
     rm -f "$path"
@@ -143,13 +144,35 @@ start_recording() {
   notify-send -t 2500 "Recording" "Super+V stops and opens the file."
 }
 
+release_lock() {
+  rmdir "$lock_dir" 2>/dev/null || true
+}
+
+# A previous run can die under errexit before its RETURN trap fires. An empty
+# lock with no other recorder is that leftover, not a live selection.
+lock_is_stale() {
+  local pid
+  while read -r pid; do
+    [[ -z $pid || $pid -eq $$ ]] && continue
+    return 1
+  done < <(pgrep -x hypr-record || true)
+  return 0
+}
+
 with_lock() {
   if ! mkdir "$lock_dir" 2>/dev/null; then
-    notify-send -t 2000 "Screen recording" "Already busy."
-    return 1
+    if lock_is_stale && release_lock && mkdir "$lock_dir" 2>/dev/null; then
+      :
+    else
+      notify-send -t 2000 "Screen recording" "Already busy."
+      return 1
+    fi
   fi
-  trap 'rmdir "$lock_dir" 2>/dev/null || true' RETURN
+  # errexit leaves the shell without returning from this function, so RETURN
+  # is too late. EXIT still runs.
+  trap release_lock EXIT
   "$@"
+  release_lock
 }
 
 case ${1:-} in
