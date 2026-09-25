@@ -54,8 +54,7 @@ using. After the last session leaves, engines stop once active work has drained.
 | Super+Shift+Space | Explicitly send the dictated draft |
 | Super+R | Read the latest completed summary; press again to stop speaking |
 | Super+Shift+V | Open the keyboard voice/session/action picker |
-| Alt+M | In Pi, start or stop dictation for this session (does not send) |
-| Alt+N | In Pi, cancel in-flight dictation |
+| Alt+N | In Pi, cancel in-flight dictation without transcribing it |
 
 Super is the Windows key. While dictation is active, a floating card at the
 top of the focused monitor shows the selected session and a live level. It
@@ -69,8 +68,7 @@ punctuation-only output and non-speech markers are skipped. The recorder already
 splits on pauses; a small vocabulary prompt helps with names such as Herdr,
 Qwen, NixOS and the configured hosts.
 
-The usual flow uses Super+Space to start, stop, then send, or Alt+M in Pi to
-start and stop without sending. Text may already be
+The usual flow uses Super+Space to start, stop, then send. Text may already be
 in the prompt before you stop. Wait for the green ready state before sending.
 If the selected agent is busy, the take is kept and sent when that agent goes
 idle. Super+Space while it is busy queues that send instead of dropping the draft. The hotkey applies across all four launchers and never

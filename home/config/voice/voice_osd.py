@@ -98,7 +98,7 @@ def compact_destination(text):
 
 
 def level_to_block(level):
-    """Same peak cells as the old Alt+M terminal meter."""
+    """Peak cells for the dictation card meter."""
     try:
         level = float(level or 0)
     except (TypeError, ValueError):

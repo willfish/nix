@@ -71,17 +71,12 @@ if (existsSync(extensionPath)) {
       setSession: (value) => { session = value; } };
   }
 
-  test('Alt+M toggles controller dictation without a terminal meter', async (t) => {
-    const f = await fixture(t, (event) => {
-      if (event.action === 'dictate' || event.action === 'status')
-        return { ok: true, phase: 'recording', input_level: 0.4 };
-      return { ok: true, accepted: true, attached: { state: 'ready', token: 'token' } };
-    });
-    assert.ok(f.shortcuts['alt+m']);
+  test('Alt+M is not bound and Alt+N still cancels dictation', async (t) => {
+    const f = await fixture(t, () => (
+      { ok: true, accepted: true, attached: { state: 'ready', token: 'token' } }
+    ));
+    assert.equal(f.shortcuts['alt+m'], undefined);
     assert.ok(f.shortcuts['alt+n']);
-    await f.shortcuts['alt+m'].handler(f.ctx);
-    assert.ok(f.events.some((event) => event.action === 'dictate' && event.token === 'token'));
-    assert.equal(f.statuses.filter((entry) => entry[0] === 'voice').length, 0);
     await f.shortcuts['alt+n'].handler(f.ctx);
     assert.ok(f.events.some((event) => event.action === 'dictate-cancel'));
   });

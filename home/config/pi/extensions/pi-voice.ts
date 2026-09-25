@@ -406,10 +406,6 @@ export function registerVoice(pi, env = process.env, options = {}) {
 export default function voice(pi) { registerVoice(pi); }
 
 export function registerVoiceShortcuts(pi, getActive = () => undefined) {
-  pi.registerShortcut?.('alt+m', {
-    description: 'Toggle voice dictation',
-    handler: async ctx => getActive()?.dictate(ctx),
-  });
   pi.registerShortcut?.('alt+n', {
     description: 'Cancel voice dictation',
     handler: async ctx => getActive()?.cancelDictate(ctx),
