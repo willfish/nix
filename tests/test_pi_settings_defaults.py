@@ -77,6 +77,25 @@ class PiSettingsDefaultsTest(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(self.settings.stat().st_mtime_ns, stamp)
 
+    def test_flips_previous_om_default_once(self):
+        self.settings.parent.mkdir(parents=True)
+        self.settings.write_text(
+            json.dumps({
+                "observational-memory-jev": {"enabledByDefault": True},
+            }) + "\n"
+        )
+        merged = self.run_merge()
+        self.assertFalse(
+            merged["observational-memory-jev"]["enabledByDefault"]
+        )
+        self.settings.write_text(
+            json.dumps({
+                "observational-memory-jev": {"enabledByDefault": True},
+            }) + "\n"
+        )
+        again = self.run_merge()
+        self.assertTrue(again["observational-memory-jev"]["enabledByDefault"])
+
     def test_rejects_non_object_settings(self):
         self.settings.parent.mkdir(parents=True)
         self.settings.write_text("[]\n")

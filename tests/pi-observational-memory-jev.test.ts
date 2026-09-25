@@ -64,7 +64,7 @@ test('pi-observational-memory-jev ships Jev observational memory with Alvar /om 
 
   const defaults = readFileSync(join(root, '../../settings-defaults.json'), 'utf8');
   assert.match(defaults, /observational-memory-jev/);
-  assert.match(defaults, /enabledByDefault/);
+  assert.match(defaults, /"enabledByDefault": false/);
 });
 
 test('html excerpts become markdown the compaction card can render', () => {
