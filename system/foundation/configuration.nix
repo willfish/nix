@@ -39,9 +39,6 @@
 
   services.power-profiles-daemon.enable = true;
 
-  # graphical-desktop turns speechd on with X. Nothing on this host uses it.
-  services.speechd.enable = false;
-
   environment.systemPackages = with pkgs; [
     android-tools
   ];

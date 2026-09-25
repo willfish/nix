@@ -60,6 +60,9 @@
     settings.KbdInteractiveAuthentication = false;
   };
 
+  # graphical-desktop turns speechd on with X. Nothing on these hosts uses it.
+  services.speechd.enable = false;
+
   documentation.nixos.enable = false;
 
   nix = {
