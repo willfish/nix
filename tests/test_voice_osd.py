@@ -32,7 +32,7 @@ class OsdTests(unittest.TestCase):
             }],
         })
         self.assertTrue(shown["visible"])
-        self.assertEqual(shown["detail"], "pi · notes · selected")
+        self.assertEqual(shown["detail"], "notes")
 
     def test_recording_names_the_selected_session_and_level(self):
         view = self.osd.osd_view({
@@ -45,7 +45,8 @@ class OsdTests(unittest.TestCase):
         })
         self.assertTrue(view["visible"])
         self.assertEqual(view["title"], "Listening 01:05")
-        self.assertEqual(view["detail"], "pi · tariff")
+        self.assertEqual(view["detail"], "tariff")
+        self.assertEqual(view["meter"][-1], "█")
         self.assertEqual(view["level"], 1.0)
         rendered = " ".join(str(value) for value in view.values())
         self.assertNotIn("secret", rendered)
@@ -62,6 +63,20 @@ class OsdTests(unittest.TestCase):
         self.assertNotIn(
             "do not show", " ".join(str(value) for value in view.values())
         )
+
+    def test_session_line_drops_model_and_selection_flags(self):
+        view = self.osd.osd_view({
+            "phase": "recording",
+            "recording_label": (
+                "pi · dot · 5 dictation like omarchy · medium · "
+                "grok-4.7 · selected"
+            ),
+        })
+        self.assertEqual(view["detail"], "dot · 5 dictation like omarchy")
+        self.assertEqual(self.osd.level_to_block(0), "▁")
+        self.assertEqual(self.osd.level_to_block(1), "█")
+        self.assertEqual(len(self.osd.meter_blocks([0.4])), 8)
+        self.assertTrue(self.osd.meter_blocks([1]).endswith("█"))
 
     def test_no_session_is_explicit(self):
         view = self.osd.osd_view({"phase": "starting", "osd": True})

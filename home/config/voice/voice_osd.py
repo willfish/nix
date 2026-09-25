@@ -5,6 +5,7 @@ dictated text or assistant replies.
 """
 
 import json
+import math
 import os
 from pathlib import Path
 import socket
@@ -13,6 +14,12 @@ import sys
 
 
 ACTIVE = {"starting", "recording", "stopping", "transcribing"}
+METER_CELLS = 8
+METER_FLOOR_DB = -50
+METER_CEILING_DB = -10
+PEAK_BLOCKS = ("▁", "▂", "▃", "▄", "▅", "▆", "▇", "█")
+THINKING = {"off", "minimal", "low", "medium", "high", "xhigh", "max"}
+FLAGS = {"selected", "team", "pi", "qwen-pi", "qwen pi"}
 DEFAULT_COLOURS = {
     "background": "#222222",
     "text": "#c2c2b0",
@@ -65,6 +72,52 @@ def popup_colours(text):
     return colours
 
 
+def fit_label(text, limit=46):
+    text = public_label(text, 200)
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
+
+
+def compact_destination(text):
+    """Keep the workspace and tab. Drop harness, model and selection flags."""
+    parts = []
+    for part in str(text or "").split(" · "):
+        piece = part.strip()
+        lowered = piece.lower()
+        if not piece or lowered in THINKING or lowered in FLAGS:
+            continue
+        if piece.startswith("@") or ":" in piece:
+            continue
+        if any(char.isdigit() for char in piece) and (
+            "-" in piece or "." in piece
+        ):
+            continue
+        parts.append(piece)
+    return fit_label(" · ".join(parts))
+
+
+def level_to_block(level):
+    """Same peak cells as the old Alt+M terminal meter."""
+    try:
+        level = float(level or 0)
+    except (TypeError, ValueError):
+        level = 0.0
+    if not level > 0:
+        return PEAK_BLOCKS[0]
+    db = 20 * math.log10(min(1.0, level))
+    span = METER_CEILING_DB - METER_FLOOR_DB
+    scale = max(0.0, min(1.0, (db - METER_FLOOR_DB) / span))
+    index = min(len(PEAK_BLOCKS) - 1, int(scale * (len(PEAK_BLOCKS) - 1)))
+    return PEAK_BLOCKS[index]
+
+
+def meter_blocks(levels):
+    cells = list(levels or [])[-METER_CELLS:]
+    cells = [0.0] * (METER_CELLS - len(cells)) + cells
+    return "".join(level_to_block(level) for level in cells)
+
+
 def destination(status, phase):
     rows = status.get("sessions")
     rows = rows if isinstance(rows, list) else []
@@ -83,12 +136,9 @@ def destination(status, phase):
     )
     if not label and not status.get("pane"):
         return "No Pi session selected"
-    text = public_label(label or status.get("pane") or "Selected Pi session")
-    harness = status.get("harness") or selected.get("harness") or ""
-    pretty = {"pi": "Pi", "qwen-pi": "Qwen Pi"}.get(harness, "")
-    if pretty and pretty.lower() not in text.lower():
-        return f"{pretty}: {text}"
-    return text
+    return compact_destination(
+        label or status.get("pane") or "Selected Pi session"
+    ) or "Selected Pi session"
 
 
 def osd_view(status):
@@ -132,6 +182,7 @@ def osd_view(status):
         "title": title,
         "detail": detail,
         "level": level,
+        "meter": meter_blocks([level] if phase == "recording" else []),
         "recording": phase == "recording",
         "transcribing": phase == "transcribing",
     }
@@ -211,7 +262,7 @@ def run():
         theme_path().read_text() if theme_path().is_file() else ""
     )
     app = Gtk.Application(application_id="uk.hues.pi-voice-osd")
-    state = {"connector": None, "pulse": 0, "levels": [0.0] * 28}
+    state = {"connector": None, "levels": [0.0] * METER_CELLS}
 
     def apply_monitor():
         connector = focused_connector(read_json(["hyprctl", "monitors", "-j"]))
@@ -239,25 +290,15 @@ def run():
         apply_monitor()
         title.set_label(view["title"])
         detail.set_label(view["detail"])
-        state["pulse"] = (state["pulse"] + 1) % len(state["levels"])
         if view["recording"]:
             state["levels"] = state["levels"][1:] + [view["level"]]
-        elif view["transcribing"]:
-            state["levels"] = [
-                0.85 if index == state["pulse"] else 0.18
-                for index in range(len(state["levels"]))
-            ]
-        else:
-            state["levels"] = [
-                max(0.0, level * 0.72) for level in state["levels"]
-            ]
-        for bar, level in zip(bars, state["levels"]):
-            height = 4 + int(level * 28)
-            bar.set_size_request(5, height)
+        elif not view["transcribing"]:
+            state["levels"] = [0.0] * METER_CELLS
+        meter.set_label(meter_blocks(state["levels"]))
         return True
 
     def activate(_app):
-        global window, title, detail, bars
+        global window, title, detail, meter
         window = Gtk.ApplicationWindow(application=app)
         window.set_decorated(False)
         window.set_resizable(False)
@@ -270,30 +311,24 @@ def run():
         Gtk4LayerShell.set_exclusive_zone(window, 0)
         Gtk4LayerShell.set_anchor(window, Gtk4LayerShell.Edge.TOP, True)
         Gtk4LayerShell.set_margin(window, Gtk4LayerShell.Edge.TOP, 18)
-        card = Gtk.Box(
-            orientation=Gtk.Orientation.VERTICAL, spacing=8
-        )
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         card.add_css_class("card")
-        card.set_margin_top(14)
-        card.set_margin_bottom(14)
-        card.set_margin_start(18)
-        card.set_margin_end(18)
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
         title = Gtk.Label(label="Voice", xalign=0)
+        title.set_halign(Gtk.Align.START)
+        meter = Gtk.Label(label=meter_blocks([]), xalign=1)
+        meter.add_css_class("meter")
+        meter.set_halign(Gtk.Align.END)
+        meter.set_hexpand(True)
+        header.append(title)
+        header.append(meter)
         detail = Gtk.Label(label="", xalign=0)
+        detail.add_css_class("detail")
+        detail.set_halign(Gtk.Align.START)
         detail.set_ellipsize(Pango.EllipsizeMode.END)
-        detail.set_max_width_chars(48)
-        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
-        row.set_valign(Gtk.Align.END)
-        bars = []
-        for _ in range(28):
-            bar = Gtk.Box()
-            bar.set_size_request(5, 4)
-            bar.add_css_class("level")
-            row.append(bar)
-            bars.append(bar)
-        card.append(title)
+        detail.set_max_width_chars(46)
+        card.append(header)
         card.append(detail)
-        card.append(row)
         window.set_child(card)
         style = Gtk.CssProvider()
         style.load_from_data(
@@ -302,23 +337,28 @@ def run():
               background: transparent;
             }}
             .card {{
-              background: alpha({colours["background"]}, 0.94);
+              background: alpha({colours["background"]}, 0.96);
               color: {colours["text"]};
-              border: 1px solid {colours["border"]};
-              border-radius: 14px;
-              min-width: 420px;
+              border: 2px solid {colours["border"]};
+              border-radius: 16px;
+              padding: 12px 16px 13px;
             }}
             label {{
               color: {colours["text"]};
               font-size: 15px;
             }}
             label.title {{
-              font-weight: 600;
+              font-weight: 650;
             }}
-            .level {{
-              background: {colours["accent"]};
-              border-radius: 2px;
-              min-width: 5px;
+            label.detail {{
+              font-size: 13px;
+              opacity: 0.78;
+            }}
+            label.meter {{
+              color: {colours["accent"]};
+              font-family: monospace;
+              font-size: 18px;
+              letter-spacing: 1px;
             }}
             """.encode(),
             -1,
