@@ -7,6 +7,7 @@ dictated text or assistant replies.
 import json
 import os
 from pathlib import Path
+import socket
 import subprocess
 import sys
 
@@ -143,6 +144,31 @@ def command_env():
     return env
 
 
+def status_from_response(payload):
+    if not isinstance(payload, dict) or payload.get("ok") is not True:
+        return None
+    return {
+        key: value for key, value in payload.items() if key != "ok"
+    }
+
+
+def read_status():
+    runtime = os.environ.get(
+        "XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"
+    )
+    path = Path(runtime) / "pi-voice" / "control.sock"
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.4)
+            sock.connect(str(path))
+            sock.sendall(b'{"action":"status"}\n')
+            with sock.makefile("rb") as incoming:
+                raw = incoming.readline(1024 * 1024)
+        return status_from_response(json.loads(raw))
+    except (OSError, json.JSONDecodeError, TimeoutError):
+        return None
+
+
 def read_json(command):
     try:
         result = subprocess.run(
@@ -203,7 +229,7 @@ def run():
                 return
 
     def tick():
-        view = osd_view(read_json(["pi-voice", "status"]) or {})
+        view = osd_view(read_status() or {})
         if not view["visible"]:
             window.set_visible(False)
             return True

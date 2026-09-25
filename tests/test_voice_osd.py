@@ -77,6 +77,16 @@ class OsdTests(unittest.TestCase):
             {"name": "HDMI-A-1", "focused": True},
         ]))
 
+    def test_status_socket_drops_the_ok_flag_and_keeps_public_fields(self):
+        status = self.osd.status_from_response({
+            "ok": True,
+            "phase": "recording",
+            "reply": "secret reply",
+        })
+        self.assertEqual(status["phase"], "recording")
+        self.assertNotIn("ok", status)
+        self.assertIsNone(self.osd.status_from_response({"ok": False}))
+
     def test_popup_colours_follow_the_active_theme(self):
         colours = self.osd.popup_colours(
             "[popups]\nbackground = \"#111111\"\ntext = \"#eeeeee\"\n"
