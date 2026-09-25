@@ -109,6 +109,7 @@ let
       pkgs.libnotify
     ];
     text = ''
+      export PI_PERSONAPLEX_ENABLED=${if hostName == "andromeda" then "1" else "0"}
       exec python3 ${voiceScripts}/voice_menu.py --config ${menuConfig} "$@"
     '';
   };
@@ -181,6 +182,7 @@ let
   };
 in
 {
+  imports = [ ./personaplex.nix ];
   config = lib.mkIf voiceStt {
     home.packages = [
       voice

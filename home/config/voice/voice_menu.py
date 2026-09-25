@@ -1,11 +1,13 @@
 """Short-lived keyboard front end for the shared voice controller."""
 
 import argparse
+import os
 from functools import partial
 import subprocess
 import sys
 
 from voice_controller import call, desktop_notice
+from voice_conversation import Conversation, can_switch
 from voice_tray import presentation, public_label, selected_session
 
 
@@ -50,6 +52,10 @@ def rows_for(status, section):
         ("menu:voices", "Choose voice"),
         ("menu:dictation", "Choose dictation"),
     ]
+    if status.get("conversation_available") and can_switch(status):
+        rows.insert(0, (
+            "conversation:start", "Try PersonaPlex conversation (experimental)"
+        ))
     for action, (label, enabled) in actions.items():
         if enabled and not action.startswith(
             ("voice:", "select:", "stt:")
@@ -99,7 +105,21 @@ def pick(prompt, rows, config):
     return rows[index][0]
 
 
-def run_menu(section="menu", *, request=call, picker):
+def run_menu(section="menu", *, request=call, picker, conversation=None):
+    # Never call the Pi controller while PersonaPlex owns audio: call() starts
+    # Pi's service, which intentionally conflicts with PersonaPlex.
+    if conversation is not None:
+        if conversation.active():
+            conversation.menu(picker)
+            return
+        original_request = request
+
+        def request(message):
+            result = original_request(message)
+            if message.get("action") == "status":
+                result = {**result, "conversation_available": True}
+            return result
+
     status = request({"action": "status"})
     while True:
         rows = rows_for(status, section)
@@ -149,6 +169,13 @@ def run_menu(section="menu", *, request=call, picker):
             return
         fresh = request({"action": "status"})
         fresh_view = presentation(fresh)
+        if action == "conversation:start":
+            if conversation is None or not can_switch(fresh):
+                raise RuntimeError(
+                    "Finish or discard dictation before switching voice modes"
+                )
+            conversation.start()
+            return
         enabled = fresh_view["actions"].get(action, ("", False))[1]
         if (
             action.startswith("select:")
@@ -212,7 +239,13 @@ def main(args=None):
     )
     options = parser.parse_args(args)
     try:
-        run_menu(options.section, picker=partial(pick, config=options.config))
+        run_menu(
+            options.section, picker=partial(pick, config=options.config),
+            conversation=(
+                Conversation()
+                if os.environ.get("PI_PERSONAPLEX_ENABLED") == "1" else None
+            ),
+        )
     except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
         detail = public_label(exc)
         print(f"voice-menu: {detail}", file=sys.stderr)

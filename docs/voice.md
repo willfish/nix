@@ -96,6 +96,42 @@ After activation, try the shortcut, filter a voice name and press Escape first.
 Then choose a voice and check its `*` marker on reopening. For sessions, launch
 two voice-enabled agents, select the other session and confirm the tray's target.
 
+## Experimental PersonaPlex conversation (Andromeda)
+
+Use **Super+Shift+V → Try PersonaPlex conversation (experimental)** to start
+local full-duplex conversation in a browser. The first startup loads a separate
+7B model and opens `http://127.0.0.1:8998` once ready. Choose a voice and connect
+in that page; browser microphone permission is required. Start with headphones.
+This is a standalone conversation, not a Pi coding session: it cannot use Pi's
+tools, receive its results, or submit tasks. The existing character voice picker
+still controls Qwen TTS, not PersonaPlex.
+
+Reopen **Super+Shift+V** and choose **Switch back to Pi dictation and playback**
+to stop PersonaPlex and release its GPU memory and browser microphone streams.
+Escape changes nothing. Pi's
+record/read hotkeys also return to Pi mode because the services are mutually
+exclusive. Close the conversation tab when finished. Conversation mode does not
+persist across login and does not launch automatically. Switching is unavailable
+while dictation is recording, pending, retained or awaiting retry; finish or
+discard it first. Pi coding work itself is not stopped by switching voice modes.
+
+PersonaPlex stops the Pi voice controller, dictation card and speech engines
+while active. Returning to Pi restores its configured automatic-playback default;
+in-memory replay state is not carried across modes. If startup fails, reopen the
+voice menu to recover Pi controls. Inspect `journalctl --user -u personaplex`
+for the model failure. At least 24 GiB free GPU memory is required before loading;
+the service refuses to evict a running coding model automatically.
+
+Initial setup requires accepting the NVIDIA model terms at
+<https://huggingface.co/nvidia/personaplex-7b-v1> and configuring Hugging Face
+access through `HF_TOKEN` or the standard cached token. Run `personaplex-models`
+to download about 17.1 GB of pinned, SHA-256-verified assets into the private voice
+data directory. Credentials and gated weights never enter the Nix store or Git.
+`personaplex-models --check-only` verifies installation without network access.
+Normal service startup is offline. The server binds only to loopback and accepts
+conversation WebSockets only from its local browser UI origins. PersonaPlex
+requires NVIDIA CUDA and is not offered on Foundation or other hosts.
+
 ## Tray and recovery
 
 The idle menu contains **Voice session**, **Character voice**, **Dictation**,
