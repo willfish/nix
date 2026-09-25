@@ -218,7 +218,6 @@ in
       set -euo pipefail
 
       export HIMALAYA_BINARY=${pkgs.himalaya}/bin/himalaya
-      export HIMALAYA_TIMEZONE="''${HIMALAYA_TIMEZONE:-Europe/London}"
       exec ${pkgs.himalaya-mcp}/bin/himalaya-mcp
     '';
   };
