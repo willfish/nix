@@ -135,9 +135,10 @@ in
     source = ../config/pi/extensions/pi-voice.ts;
   };
   home.file.".pi/agent/extensions/mcp".source = "${mcpAdapter}/lib/node_modules/pi-mcp-adapter";
-  # Keep agent state reporting in sync with the pinned Herdr package.
+  # Keep agent state reporting in sync with the pinned Herdr source tag.
+  # The installed package is a release binary and has no repository source.
   home.file.".pi/agent/extensions/herdr-agent-state.ts".source =
-    "${pkgs.herdr.src}/src/integration/assets/pi/herdr-agent-state.ts";
+    "${pkgs.herdr-source}/src/integration/assets/pi/herdr-agent-state.ts";
   home.file.".pi/agent/extensions/herdr-ui.ts".source = ../config/pi/extensions/herdr-ui.ts;
   home.file.".pi/agent/extensions/herdr-model.ts".source = ../config/pi/extensions/herdr-model.ts;
   home.file.".pi/agent/extensions/context-window.ts".source =

@@ -59,9 +59,12 @@
       url = "github:willfish/mux";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    herdr = {
-      url = "github:ogulcancelik/herdr";
-      inputs.nixpkgs.follows = "nixpkgs";
+    # Official release binary. Do not follow nixpkgs: store paths must match herdr.cachix.org.
+    herdr.url = "github:herdrdev/herdr-nix";
+    # Source for the Pi integration asset. Keep this on the same stable tag as herdr-nix.
+    herdr-source = {
+      url = "github:herdrdev/herdr/v0.9.1";
+      flake = false;
     };
     forte = {
       url = "github:willfish/forte";
@@ -317,6 +320,7 @@
       smailer,
       mux,
       herdr,
+      herdr-source,
       forte,
       walls,
       llm-agents,
@@ -338,6 +342,7 @@
         inherit (smailer.packages.${system}) smailer;
         mux = mux.packages.${system}.default;
         herdr = herdr.packages.${system}.default;
+        herdr-source = herdr-source.outPath;
         forte = forte.packages.${system}.default;
         inherit (walls.packages.${system}) walls;
         pi-coding-agent = llm-agents.packages.${system}.pi;

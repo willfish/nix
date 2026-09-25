@@ -67,10 +67,12 @@
       substituters = [
         "https://cache.nixos.org"
         "https://cache.numtide.com"
+        "https://herdr.cachix.org"
       ];
       trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+        "herdr.cachix.org-1:3nH7IStRsS0ASfdonA0DCRR2ZrSCeWitZ7Kwew0cR4I="
       ];
       accept-flake-config = false;
       require-sigs = true;
