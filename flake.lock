@@ -655,11 +655,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790334551,
-        "narHash": "sha256-neLzrFv0kErEindTrkacGCNfskZg0bR2mC8rV2G6AeU=",
+        "lastModified": 1790336208,
+        "narHash": "sha256-IS303/La2M0kPlG1VITeshtaK4dqMuETJwxrqZ8omLI=",
         "owner": "willfish",
         "repo": "himalaya-mcp",
-        "rev": "08a7729fb67feb0697e50fb3355f32244cf5d22d",
+        "rev": "1c8606b9755c64d3e13942ecc897cec385e8a6a0",
         "type": "github"
       },
       "original": {
