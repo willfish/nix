@@ -14,6 +14,7 @@ the shared MCP server configuration:
 | Filesystem | `mcp-filesystem` |
 | DAP debugger | `mcp-dap` |
 | Slack | `mcp-slack` |
+| AWS access portal | `mcp-aws-access-portal` |
 
 Run `hmswitch` after pulling the dotfiles on another machine. Restart Pi, or
 use `/reload` in an existing plain Pi session. The browser servers require
@@ -26,6 +27,14 @@ package from nixpkgs. It is registered on every host. The wrapper allows the
 home directory and `/tmp`, both read-write, including secrets under home. Its
 search matches file names, not file contents. Use ripgrep for content search.
 Paths outside those roots, including `/nix/store` and `/srv`, are refused.
+
+`mcp-aws-access-portal` signs into the TransformUK IAM Identity Center portal
+through the visible Brave debugger on port 9222, then writes short-lived role
+credentials to a mode 0600 env file. It does not return secret values. It opens
+a background tab only when login is required, never focuses that tab, and closes
+the tab it opened. Exporting a production administrator role blocks on a local
+fuzzel approval prompt. Callers must not dismiss that prompt. Restart Pi after
+`hmswitch` so the new server is registered.
 
 `mcp-dap` is a compiled Go server from the Delve project. It is registered only
 on development homes. It can spawn debuggees and evaluate expressions in them,
@@ -88,8 +97,11 @@ Build the appropriate Home Manager activation package, then run the adapter
 test against the built extension and installed Pi:
 
 ```sh
-direnv exec . nix build '.#homeConfigurations."william@andromeda".activationPackage' --out-link /tmp/pi-mcp-home
-PI_MCP_TEST_EXTENSION="$(readlink -f /tmp/pi-mcp-home/home-files/.pi/agent/extensions/mcp)/index.ts" \
+direnv exec . nix build \
+  '.#homeConfigurations."william@andromeda".activationPackage' \
+  --out-link /tmp/pi-mcp-home
+PI_MCP_TEST_EXTENSION="$(readlink -f \
+  /tmp/pi-mcp-home/home-files/.pi/agent/extensions/mcp)/index.ts" \
   direnv exec . python3 tests/pi-mcp-runtime.py
 direnv exec . node --test tests/local-pi.test.ts tests/pi-openai.test.ts
 ```

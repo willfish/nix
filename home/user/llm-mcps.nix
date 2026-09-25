@@ -69,6 +69,12 @@ rec {
         enabled = config.dotfiles.capabilities.email;
         wrapper = "mcp-himalaya";
       }
+      {
+        name = "aws-access-portal";
+        enabled = config.dotfiles.capabilities.work;
+        wrapper = "mcp-aws-access-portal";
+        toolTimeout = 180;
+      }
     ]
     ++ map (server: server // { private = true; }) config.privateConfig.mcpServers
   );
@@ -83,7 +89,7 @@ rec {
         lifecycle = "lazy";
         directTools = false;
         protocolVersion = "legacy";
-        requestTimeoutMs = serverDefaults.toolTimeout * 1000;
+        requestTimeoutMs = (server.toolTimeout or serverDefaults.toolTimeout) * 1000;
       };
     }) servers
   );

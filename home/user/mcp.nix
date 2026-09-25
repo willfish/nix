@@ -119,6 +119,7 @@ in
           && !(builtins.elem server.name [
             "jira"
             "browser"
+            "aws-access-portal"
           ])
         ) servers
       );
@@ -208,6 +209,21 @@ in
       set -euo pipefail
 
       exec ${pkgs.terraform-mcp-server}/bin/terraform-mcp-server stdio
+    '';
+  };
+
+  home.file.".local/bin/mcp-aws-access-portal" = lib.mkIf (enabled "aws-access-portal") {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      # Tool arguments and the parent environment cannot approve production admin.
+      unset AWS_PORTAL_APPROVAL_COMMAND AWS_PORTAL_ALLOW_APPROVAL_HOOK
+
+      export PATH=${lib.escapeShellArg "${pkgs.fuzzel}/bin"}:"$PATH"
+      exec ${pkgs.python3.withPackages (ps: [ ps.websockets ])}/bin/python3 \
+        ${../config/llm/scripts/aws-access-portal}/server.py
     '';
   };
 
