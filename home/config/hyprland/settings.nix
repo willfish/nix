@@ -284,7 +284,8 @@
 
   # Included only when the matching voice capability is enabled.
   voice = {
-    interact = "SUPER, space, exec, pi-voice interact";
+    # Opens the top-of-monitor card and records into the selected Pi session.
+    interact = "SUPER, space, exec, pi-voice-interact";
     send = "SUPER SHIFT, space, exec, pi-voice send";
     menu = "SUPER SHIFT, V, exec, voice-menu";
     read = "SUPER, R, exec, pi-voice read";

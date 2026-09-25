@@ -171,6 +171,21 @@ class VoiceTests(unittest.TestCase):
         }
         self.app.register("token-1", self.target)
 
+    def test_missing_session_raises_the_card_without_a_transcript(self):
+        app = self.voice.Controller(
+            Path(self.tmp.name) / "fresh",
+            self.terminal,
+            self.audio,
+            lambda *a: None,
+        )
+        with self.assertRaisesRegex(RuntimeError, "Select a Pi voice session"):
+            app.interact()
+        status = app.status()
+        self.assertTrue(status["osd"])
+        self.assertEqual(
+            status["osd_message"], "Select a Pi voice session first"
+        )
+
     def start_recording(self):
         self.app.record()
         deadline = time.monotonic() + 1

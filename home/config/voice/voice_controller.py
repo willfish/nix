@@ -331,6 +331,8 @@ class Controller:
         self.retry_lease = None
         self.show_team = False
         self.recording_label = None
+        self.osd_until = 0.0
+        self.osd_message = None
 
     def _population(self):
         if self.engines:
@@ -1323,6 +1325,11 @@ class Controller:
                     else 0
                 ),
                 "input_level": getattr(self.capture, "level", 0.0),
+                "osd": (
+                    self.recording_active()
+                    or time.monotonic() < self.osd_until
+                ),
+                "osd_message": self.osd_message,
             }
 
         snapshots = self.catalogue.snapshots() if self.catalogue else {}
@@ -1580,7 +1587,27 @@ class Controller:
             if lease:
                 lease.release()
 
+    def request_osd(self, message=None, seconds=6):
+        """Ask the top-of-monitor card to appear. Never store dictated text."""
+        text = None
+        if message:
+            text = " ".join(str(message).split())
+            text = "".join(
+                char for char in text if char.isprintable()
+            )[:160]
+        with self.lock:
+            self.osd_until = time.monotonic() + seconds
+            self.osd_message = text or None
+
     def interact(self):
+        self.request_osd()
+        try:
+            self._interact()
+        except RuntimeError as exc:
+            self.request_osd(str(exc))
+            raise
+
+    def _interact(self):
         with self.lock:
             recording = self.recording_active() or not (
                 self.draft or self.pending
@@ -1594,6 +1621,14 @@ class Controller:
             self.send(expected=expected, allow_edited=True)
 
     def record(self, mode="append"):
+        self.request_osd()
+        try:
+            self._record_request(mode)
+        except RuntimeError as exc:
+            self.request_osd(str(exc))
+            raise
+
+    def _record_request(self, mode="append"):
         labels = {
             row['token']: row.get('full_label', row['label'])
             for row in self.status()['sessions']
@@ -2595,7 +2630,8 @@ def main(args=None):
                 "|recover-discard\n"
                 "       pi-voice auto on|off\n"
                 "       pi-voice voice CHARACTER\n\n"
-                "Super+Space: record/stop/send draft. "
+                "Super+Space: show the top dictation card and "
+                "record, stop, or send the selected Pi session. "
                 "Super+Shift+Space: send. "
                 "Super+R: read/stop.\n"
                 "Run inside Herdr. Prefix conflicting options with --.\n"

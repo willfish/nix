@@ -7,19 +7,6 @@ import net from 'node:net';
 const MAX_FRAME = 256 * 1024;
 const RETRY_MS = [250, 500, 1000, 2000, 5000];
 const HEARTBEAT_MS = 5000;
-const METER_CELLS = 6;
-const METER_TICK_MS = 60;
-const METER_FLOOR_DB = -50;
-const METER_CEILING_DB = -10;
-const PEAK_BLOCKS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
-const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-
-function levelToBlock(level) {
-  if (!(level > 0)) return PEAK_BLOCKS[0];
-  const db = 20 * Math.log10(level);
-  const t = Math.max(0, Math.min(1, (db - METER_FLOOR_DB) / (METER_CEILING_DB - METER_FLOOR_DB)));
-  return PEAK_BLOCKS[Math.floor(t * (PEAK_BLOCKS.length - 1))];
-}
 const activationCounter = Symbol.for('pi.voice.activation');
 
 function exchange(path, request, timeout = 1000, signal) {
@@ -113,7 +100,6 @@ export function registerVoice(pi, env = process.env, options = {}) {
     let context = ctx, server, owned, timer, binding, closeResult;
     let closed = false, armed = false, staged = '', waiting = false, lastReply;
     let retry = 0, inflight = false, acknowledged = false, heartbeatAt = 0;
-    let uiTimer, meter = new Array(METER_CELLS).fill(0), spinnerFrame = 0;
     const pending = new Map();
     const abort = new AbortController();
     const connections = new Set();
@@ -267,43 +253,6 @@ export function registerVoice(pi, env = process.env, options = {}) {
       } else old.unref();
       owned = undefined;
     }
-    const paint = message => { context?.ui?.setStatus?.('voice', message); };
-    const stopUi = () => { cancelTimer(uiTimer); uiTimer = undefined; paint(undefined); };
-    const armUi = (delay, fn) => {
-      cancelTimer(uiTimer);
-      uiTimer = schedule(fn, delay);
-      uiTimer?.unref?.();
-    };
-    async function tickUi() {
-      uiTimer = undefined;
-      if (!current()) return;
-      let snapshot;
-      try { snapshot = await transport(controller, { action: 'status' }, 1000, abort.signal); }
-      catch { if (current()) armUi(METER_TICK_MS, () => void tickUi()); return; }
-      if (!current()) return;
-      const phase = snapshot.phase;
-      if (phase === 'recording' || phase === 'starting') {
-        meter.shift();
-        meter.push(Number(snapshot.input_level) || 0);
-        const dot = context?.ui?.theme?.fg?.('error', '●') ?? '●';
-        paint(`${dot} ${meter.map(levelToBlock).join('')} listening…`);
-        armUi(METER_TICK_MS, () => void tickUi());
-        return;
-      }
-      if (phase === 'stopping' || phase === 'transcribing') {
-        paint(`${SPINNER_FRAMES[spinnerFrame++ % SPINNER_FRAMES.length]} transcribing…`);
-        armUi(80, () => void tickUi());
-        return;
-      }
-      paint(undefined);
-    }
-    const followDictate = snapshot => {
-      meter = new Array(METER_CELLS).fill(0);
-      spinnerFrame = 0;
-      if (['starting', 'recording', 'stopping', 'transcribing'].includes(snapshot?.phase))
-        void tickUi();
-      else stopUi();
-    };
     async function command(action) {
       if (!token) throw new Error('Voice is not attached');
       return transport(controller, { action, token, ...identity() }, 2000, abort.signal);
@@ -316,7 +265,6 @@ export function registerVoice(pi, env = process.env, options = {}) {
       lastReply = undefined;
       pending.clear();
       cancelTimer(timer);
-      stopUi();
       abort.abort();
       closeServer();
       if (!legacy && token) {
@@ -385,17 +333,15 @@ export function registerVoice(pi, env = process.env, options = {}) {
     const instance = { close,
       async dictate(ctx) {
         context = ctx;
-        try { followDictate(await command('dictate')); }
+        try { await command('dictate'); }
         catch (error) {
-          stopUi();
           ctx.ui.notify?.(`Voice unavailable: ${error.message}`, 'warning');
         }
       },
       async cancelDictate(ctx) {
         context = ctx;
-        try { followDictate(await command('dictate-cancel')); }
+        try { await command('dictate-cancel'); }
         catch (error) {
-          stopUi();
           ctx.ui.notify?.(`Voice unavailable: ${error.message}`, 'warning');
         }
       },

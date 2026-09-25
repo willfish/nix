@@ -19,6 +19,7 @@ let
   sttModel = if hostName == "andromeda" then "ggml-large-v3-turbo-q5_0.bin" else "ggml-small.en.bin";
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
   voicePython = pkgs.python3.withPackages (ps: [ ps.dbus-next ]);
+  osdPython = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
   voiceScripts = pkgs.runCommand "pi-voice-scripts" { } ''
     mkdir -p "$out"
     cp ${../config/voice}/*.py "$out/"
@@ -50,6 +51,44 @@ let
       '';
     };
   voice = makeVoice "pi";
+  voiceInteract = pkgs.writeShellApplication {
+    name = "pi-voice-interact";
+    runtimeInputs = [ pkgs.systemd ];
+    text = ''
+      systemctl --user start --no-block pi-voice-osd.service || true
+      exec ${voice}/bin/pi-voice interact "$@"
+    '';
+  };
+  voiceOsd = pkgs.stdenv.mkDerivation {
+    pname = "pi-voice-osd";
+    version = "1";
+    src = ../config/voice;
+    dontUnpack = true;
+    dontBuild = true;
+    nativeBuildInputs = [
+      pkgs.wrapGAppsHook4
+      pkgs.gobject-introspection
+    ];
+    buildInputs = [
+      pkgs.gtk4
+      pkgs.gtk4-layer-shell
+    ];
+    dontWrapGApps = true;
+    installPhase = "mkdir -p $out/bin";
+    preFixup = ''
+      makeWrapper ${osdPython}/bin/python3 $out/bin/pi-voice-osd \
+        --add-flags ${voiceScripts}/voice_osd.py \
+        --prefix PATH : ${
+          lib.makeBinPath [
+            pkgs.hyprland
+            voice
+          ]
+        } \
+        ''${gappsWrapperArgs[@]} \
+        --set GDK_BACKEND wayland \
+        --set LD_PRELOAD ${pkgs.gtk4-layer-shell}/lib/libgtk4-layer-shell.so
+    '';
+  };
   desktopSettings = import ../config/hyprland/settings.nix;
   # Read the active style each time Fuzzel opens, not at build time.
   menuConfig = pkgs.writeText "voice-menu-fuzzel.ini" ''
@@ -145,6 +184,8 @@ in
   config = lib.mkIf voiceStt {
     home.packages = [
       voice
+      voiceInteract
+      voiceOsd
       modelSetup
       voiceMenu
     ]
@@ -189,6 +230,22 @@ in
         RuntimeDirectoryPreserve = "yes";
         KillMode = "control-group";
       };
+    };
+    systemd.user.services.pi-voice-osd = {
+      Unit = {
+        Description = "Floating dictation card for the selected Pi session";
+        After = [
+          "graphical-session.target"
+          "pi-voice.service"
+        ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${voiceOsd}/bin/pi-voice-osd";
+        Restart = "on-failure";
+        RestartSec = 2;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
     };
     systemd.user.services.pi-voice-stt = {
       Unit.Description = "Local Whisper speech recognition on the GPU";

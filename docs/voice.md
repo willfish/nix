@@ -50,15 +50,17 @@ using. After the last session leaves, engines stop once active work has drained.
 
 | Hotkey | Action |
 | --- | --- |
-| Super+Space | Stop recording, send prepared dictation, or start recording |
+| Super+Space | Show the top dictation card, then stop recording, send prepared dictation, or start recording into the selected Pi session |
 | Super+Shift+Space | Explicitly send the dictated draft |
 | Super+R | Read the latest completed summary; press again to stop speaking |
 | Super+Shift+V | Open the keyboard voice/session/action picker |
 | Alt+M | In Pi, start or stop dictation for this session (does not send) |
 | Alt+N | In Pi, cancel in-flight dictation |
 
-Super is the Windows key. While Pi is recording, the footer shows a live
-microphone meter. Transcription is staged for review; recording never
+Super is the Windows key. While dictation is active, a floating card at the
+top of the focused monitor shows the selected session and a live level. It
+does not take keyboard focus, and it never shows the transcript. Transcription
+is staged in the selected Pi prompt for review; recording never
 automatically presses Enter. Capture starts only after microphone samples
 arrive and stops after three minutes. A pause, or thirty seconds of
 uninterrupted speech, flushes a slice into the Pi prompt while recording

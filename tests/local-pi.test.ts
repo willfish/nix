@@ -118,7 +118,9 @@ test('voice packages Python and clipboard support but starts only the controller
   assert.match(controller, /Install\.WantedBy = \[ "default.target" \];/);
   assert.match(controller, /RuntimeDirectoryMode = "0700";/);
   assert.match(controller, /RuntimeDirectoryPreserve = "yes";/);
-  assert.equal((source.match(/WantedBy/g) ?? []).length, 1);
+  assert.equal((source.match(/WantedBy = \[ "default.target" \]/g) ?? []).length, 1);
+  assert.match(source, /systemd\.user\.services\.pi-voice-osd/);
+  assert.match(source, /WantedBy = \[ "graphical-session.target" \]/);
 });
 
 test('both profiles use the pinned upstream package, not the retired implementation', () => {

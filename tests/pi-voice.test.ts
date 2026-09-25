@@ -71,7 +71,7 @@ if (existsSync(extensionPath)) {
       setSession: (value) => { session = value; } };
   }
 
-  test('Alt+M toggles controller dictation and paints the listening meter', async (t) => {
+  test('Alt+M toggles controller dictation without a terminal meter', async (t) => {
     const f = await fixture(t, (event) => {
       if (event.action === 'dictate' || event.action === 'status')
         return { ok: true, phase: 'recording', input_level: 0.4 };
@@ -81,18 +81,7 @@ if (existsSync(extensionPath)) {
     assert.ok(f.shortcuts['alt+n']);
     await f.shortcuts['alt+m'].handler(f.ctx);
     assert.ok(f.events.some((event) => event.action === 'dictate' && event.token === 'token'));
-    const painted = await Promise.race([
-      new Promise((resolve) => {
-        const timer = setInterval(() => {
-          if (f.statuses.some((entry) => entry[0] === 'voice' && String(entry[1] || '').includes('listening'))) {
-            clearInterval(timer);
-            resolve(true);
-          }
-        }, 10);
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('meter was not painted')), 1000)),
-    ]);
-    assert.equal(painted, true);
+    assert.equal(f.statuses.filter((entry) => entry[0] === 'voice').length, 0);
     await f.shortcuts['alt+n'].handler(f.ctx);
     assert.ok(f.events.some((event) => event.action === 'dictate-cancel'));
   });
