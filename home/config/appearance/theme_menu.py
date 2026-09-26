@@ -366,9 +366,22 @@ class Themes:
                 capture_output=True, timeout=5, check=True
             )
         except (OSError, subprocess.SubprocessError):
-            warnings.append(
-                "Notifications will use the selected theme on next startup."
+            omapager = subprocess.run(
+                [
+                    "systemctl",
+                    "--user",
+                    "is-active",
+                    "--quiet",
+                    "omapager.service",
+                ],
+                capture_output=True,
+                timeout=5,
+                check=False,
             )
+            if omapager.returncode != 0:
+                warnings.append(
+                    "Notifications will use the selected theme on next startup."
+                )
         return warnings
 
     def _publish_gtk(self, mode, variables):

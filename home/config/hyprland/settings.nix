@@ -107,6 +107,7 @@ rec {
       network = "hypr-controls network";
       bluetooth = "hypr-controls bluetooth";
       tailscale = "hypr-controls tailscale";
+      calendar = "hypr-controls calendar";
       notifications = "hypr-notifications";
       monitor = "ghostty -e btop";
       music = cliampCommand;

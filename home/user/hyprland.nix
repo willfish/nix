@@ -12,6 +12,7 @@
     ./hyprland-panels.nix
     ./launcher.nix
     ./omarchy-spotify.nix
+    ./omapager.nix
   ];
 
   config = lib.mkIf isGraphicalLinux (
@@ -401,7 +402,8 @@
           padding: 5px 0;
         }
 
-        #battery.critical:not(.charging), #pulseaudio.muted, #custom-recording {
+        #battery.critical:not(.charging), #pulseaudio.muted, #custom-recording,
+        #custom-notifications.quiet {
           color: @red;
         }
 
@@ -434,7 +436,6 @@
         pkgs.fuzzel
         pkgs.grim
         pkgs.hyprlock
-        pkgs.mako
         pkgs.satty
         pkgs.slurp
         pkgs.wl-clipboard
@@ -616,8 +617,8 @@
             clock = {
               format = "{:%H\n%M}";
               format-alt = "{:%d\n%b}";
-              tooltip-format = "<big>{:%A %d %B %Y}</big>\n<tt>{calendar}</tt>";
-              calendar.mode = "month";
+              tooltip-format = "{:%A %d %B %Y}";
+              on-click = settings.bar.commands.calendar;
             };
             "hyprland/language" = {
               format = "{short}";
@@ -725,6 +726,15 @@
               };
               tooltip-format = "{capacity}% · {timeTo}";
               on-click = settings.bar.commands.power;
+            };
+            "custom/notifications" = {
+              exec = "hypr-notification-status";
+              return-type = "json";
+              format = "{}";
+              interval = 5;
+              tooltip = true;
+              on-click = settings.bar.commands.notifications;
+              on-click-right = "${settings.bar.commands.notifications} dnd";
             };
             "custom/session" = {
               format = settings.bar.sessionLabel;
@@ -877,21 +887,15 @@
         Install.WantedBy = [ "hyprland-session.target" ];
       };
 
+      # Mako no longer owns the notification bus. The unit stays defined so
+      # activation removes the old start, and it cannot launch beside Omapager.
       systemd.user.services.mako = {
         Unit = {
-          Description = "Notifications for the Hyprland session";
-          PartOf = [ "hyprland-session.target" ];
-          After = [ "hyprland-session.target" ];
-          ConditionEnvironment = "WAYLAND_DISPLAY";
+          Description = "Retired notification daemon";
+          ConditionPathExists = "/var/empty/mako-retired";
         };
-        Service = {
-          ExecStartPre = "${themeSeed}/bin/hypr-theme-seed";
-          ExecStart = "${pkgs.mako}/bin/mako";
-          ExecReload = "${pkgs.mako}/bin/makoctl reload";
-          Restart = "on-failure";
-          RestartSec = 2;
-        };
-        Install.WantedBy = [ "hyprland-session.target" ];
+        Service.ExecStart = "${pkgs.coreutils}/bin/false";
+        Install.WantedBy = lib.mkForce [ ];
       };
 
       # Herdr reports working, blocked, idle and done. Hold logind idle and
