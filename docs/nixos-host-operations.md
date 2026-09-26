@@ -337,6 +337,10 @@ Print, JSON, RPC, offline and `PI_AGENT_BUS_ENABLED=0` sessions do not participa
 The wrapper reads `PI_AGENT_BUS_TOKEN` through `read-sops-secret` before normal
 or prompt-capture execution. An explicit token, including an empty value, takes
 precedence; a missing secret leaves Pi usable without bus participation. The
+Graphical homes also install a Switchboard launcher. It opens
+`http://terminus:7420/dashboard/` in its own Brave window, like the other web
+apps. Terminus itself does not install that launcher.
+
 URL defaults to `http://terminus:7420`; override `PI_AGENT_BUS_URL` only with a
 trusted tailnet destination, never a public HTTP endpoint or credential-bearing
 URL. No token belongs in shell startup files, Nix expressions or command arguments.

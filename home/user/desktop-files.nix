@@ -18,6 +18,15 @@ let
   herdrConfigFile = (pkgs.formats.toml { }).generate "herdr-config.toml" (
     lib.recursiveUpdate herdrConfig { theme = herdrTheme; }
   );
+  switchboardIcon =
+    pkgs.runCommand "switchboard-icon"
+      {
+        nativeBuildInputs = [ pkgs.librsvg ];
+      }
+      ''
+        mkdir -p "$out"
+        rsvg-convert -w 512 -h 512 ${configDir}/switchboard/icon.svg -o "$out/switchboard.png"
+      '';
   cliampRadio = pkgs.writeShellApplication {
     name = "cliamp-radio";
     runtimeInputs = [ pkgs.cliamp ];
@@ -143,6 +152,24 @@ in
   xdg.dataFile = lib.optionalAttrs isGraphicalLinux (
     {
       "applications/mimeapps.list".force = true;
+      "icons/hicolor/512x512/apps/switchboard.png" = {
+        source = "${switchboardIcon}/switchboard.png";
+        force = true;
+      };
+      "applications/switchboard.desktop" = {
+        force = true;
+        text = ''
+          [Desktop Entry]
+          Type=Application
+          Name=Switchboard
+          Comment=Open the Pi Switchboard console
+          Exec=brave --app=http://terminus:7420/dashboard/
+          Icon=switchboard
+          Terminal=false
+          Categories=Network;Utility;
+          StartupWMClass=brave-terminus
+        '';
+      };
     }
     // builtins.listToAttrs (
       map (app: {

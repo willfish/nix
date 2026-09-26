@@ -562,7 +562,7 @@
               {
                 name = "brave-web-apps";
                 "match:class" =
-                  "^brave-(mail[.]google[.]com|drive[.]google[.]com|docs[.]google[.]com|www[.]youtube[.]com).*";
+                  "^brave-(mail[.]google[.]com|drive[.]google[.]com|docs[.]google[.]com|www[.]youtube[.]com|terminus).*";
                 float = true;
                 center = true;
                 size = "1100 800";
