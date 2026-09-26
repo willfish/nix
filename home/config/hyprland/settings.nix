@@ -107,6 +107,7 @@ rec {
       network = "hypr-controls network";
       bluetooth = "hypr-controls bluetooth";
       tailscale = "hypr-controls tailscale";
+      notifications = "hypr-notifications";
       monitor = "ghostty -e btop";
       music = cliampCommand;
       power = "hypr-session menu";
@@ -132,6 +133,7 @@ rec {
       "backlight"
       "idle_inhibitor"
       "battery"
+      "custom/notifications"
       "custom/session"
     ];
     # Native Waybar options override individual widget defaults.
@@ -243,7 +245,7 @@ rec {
     }
     {
       name = "spotify";
-      class = "^(spotify|Spotify)$";
+      title = "^Omarchy Spotify$";
       workspace = 3;
     }
     {
@@ -281,6 +283,7 @@ rec {
   # key Return. Super+B, Super+C, Super+T, Super+E and Super+P focus
   # Brave, Slack, Telegram, Nautilus or CLIamp, or launch them when they
   # are not open. Discord, Spotify and LibreOffice stay on the launcher.
+  # Spotify is the Quickshell player, not the official desktop client.
   # bind lines are the keybinds. mainMod is $mainMod. Number keys use
   # workspaceMod and workspaceMoveMod; they are not hardcoded in the module.
   bindings = {

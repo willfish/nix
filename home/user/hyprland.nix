@@ -11,6 +11,7 @@
   imports = [
     ./hyprland-panels.nix
     ./launcher.nix
+    ./omarchy-spotify.nix
   ];
 
   config = lib.mkIf isGraphicalLinux (
@@ -566,10 +567,18 @@
                 size = "1100 800";
               }
             ]
-            ++ map (rule: {
-              inherit (rule) name workspace;
-              "match:class" = rule.class;
-            }) settings.workspace.rules;
+            ++ map (
+              rule:
+              {
+                inherit (rule) name workspace;
+              }
+              // lib.optionalAttrs (rule ? class) {
+                "match:class" = rule.class;
+              }
+              // lib.optionalAttrs (rule ? title) {
+                "match:title" = rule.title;
+              }
+            ) settings.workspace.rules;
         };
       };
 

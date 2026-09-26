@@ -135,7 +135,7 @@ Over 100 packages organised by purpose. Platform-specific GUI apps, clipboard to
 |----------|----------|----------|
 | **AI** | pi | All |
 | **Desktop** | Brave, Ghostty, Slack, Spotify, Telegram | Darwin |
-| **Desktop** | Brave, Chrome, Spotify, Slack, Telegram, LibreOffice, Variety | Linux |
+| **Desktop** | Brave, Chrome, Slack, Telegram, LibreOffice, Variety | Linux |
 | **Dev Tools** | gh, delta, lazydocker, dive, fzf, ripgrep, fd, jq, yq, httpie | All |
 | **Networking** | nmap, mtr, doggo | All |
 | **Networking** | tshark, bandwhich, iftop, nload | Linux |

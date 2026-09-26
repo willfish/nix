@@ -1,0 +1,22 @@
+--- a/shell/Commons/Color.qml
++++ b/shell/Commons/Color.qml
+@@ -17 +17 @@
+-  readonly property string currentThemePath: stateHome + "/omarchy/current/theme"
++  readonly property string currentThemePath: Quickshell.env("HYPR_CONTROLS_THEME")
+@@ -222,2 +222 @@
+-  // Startup load only. Runtime theme switches push the payload explicitly
+-  // through shell IPC.
++  // theme-menu publishes these files atomically; no Omarchy shell IPC.
+@@ -227 +226,2 @@
+-    watchChanges: false
++    watchChanges: true
++    onFileChanged: reload()
+@@ -234 +234,2 @@
+-    watchChanges: false
++    watchChanges: true
++    onFileChanged: reload()
+@@ -244,2 +245,2 @@
+-    path: root.home + "/.config/omarchy/shell.toml"
+-    watchChanges: true
++    path: ""
++    watchChanges: false
