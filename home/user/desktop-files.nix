@@ -88,13 +88,13 @@ in
     installHerdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       herdrBin="${pkgs.herdr}/bin/herdr"
       if [ -x "$herdrBin" ]; then
-        # Plugin installs may download release assets or cargo-build when no
-        # prebuilt binary matches. HM activation can omit tools like awk/curl/tar,
-        # so pin download deps and a cargo toolchain.
+        # Plugin installs download release assets. Do not pin cargo or rustc:
+        # that puts the compiler and LLVM in every Home Manager generation.
+        # install-plugins.sh fetches a toolchain with nix shell only if a
+        # prebuilt install fails.
         herdrPluginPath="${
           lib.makeBinPath [
             pkgs.bash
-            pkgs.cargo
             pkgs.coreutils
             pkgs.curl
             pkgs.gawk
@@ -103,8 +103,6 @@ in
             pkgs.gnutar
             pkgs.gzip
             pkgs.jq
-            pkgs.rustc
-            pkgs.stdenv.cc
           ]
         }:$PATH"
         export SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"

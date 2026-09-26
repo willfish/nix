@@ -81,9 +81,9 @@ let
         ) "Hyprland theme render is missing a seed asset";
         lib.mapAttrs (_: text: toString (pkgs.writeText "${host}-${mode}-hyprland-theme" text)) rendered
         // {
-          "wallpaper.png" = toString (
-            wallpaperSettings.overrides.${theme.herdr.name}.${mode} or omarchy.wallpapers.${theme.herdr.name}
-          );
+          # A store path would root every theme image in the Home Manager
+          # generation. theme-menu builds flake package theme-<id> on apply.
+          "wallpaper.png" = wallpaperSettings.overrides.${theme.herdr.name}.${mode} or "nix-theme:${host}";
         }
       );
       files = {
@@ -136,6 +136,7 @@ let
     ];
     text = ''
       export THEME_MENU_PUBLISH=1
+      export THEME_WALLPAPER_FLAKE=${lib.escapeShellArg "${config.home.homeDirectory}/.dotfiles"}
       # Schemas live under share/gsettings-schemas/<name>, not share/.
       # dconf.lib supplies the GIO backend; dconf is the user database tool.
       export XDG_DATA_DIRS="${schemaData}:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"

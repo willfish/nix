@@ -4,7 +4,6 @@
 { lib, pkgs }:
 let
   catalogue = import ./palettes.nix;
-  themes = import ./omarchy.nix { inherit lib pkgs; };
   render = import ./render.nix { inherit lib; };
 in
 name: palette:
@@ -19,6 +18,7 @@ let
     lib.removePrefix "#" blueValue;
 in
 if custom != null then
-  "${themes.packages.${name}}/btop.theme"
+  # Copy the text only. Referencing the theme package roots its wallpapers.
+  pkgs.writeText "btop-${name}.theme" (builtins.readFile custom)
 else
   pkgs.writeText "btop-${name}.theme" (render.btop (palette // { inherit blue; }))

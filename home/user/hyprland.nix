@@ -84,11 +84,12 @@
               builtins.head (lib.attrValues matches)
           );
       selectedPalette = paletteFor settings.appearance.palette;
-      fallbackWallpaper = omarchy.wallpapers.${selectedPalette.herdr.name};
       wallpaper = pkgs.writeShellScript "hypr-wallpaper" ''
         image=${lib.escapeShellArg (themeFile "wallpaper.png")}
+        # theme-menu materialises this file. Do not fall back to a store image:
+        # that would keep every selected wallpaper in the Home Manager closure.
         if [ ! -s "$image" ]; then
-          image=${lib.escapeShellArg (toString fallbackWallpaper)}
+          exit 0
         fi
         exec ${pkgs.swaybg}/bin/swaybg --image "$image" --mode ${lib.escapeShellArg settings.wallpaper.mode}
       '';

@@ -28,10 +28,15 @@ while IFS=$'\t' read -r id owner repo revision; do
     continue
   fi
   # Let Herdr stage the replacement; never uninstall a working copy first.
+  # A missing prebuilt may need a compiler. Fetch it for this command only so
+  # the Home Manager generation does not retain rustc and LLVM.
   if ! "$herdr_bin" plugin install "$owner/$repo" --ref "$revision" --yes >/dev/null; then
-    echo "warning: could not install pinned Herdr plugin $id" >&2
-    failed=1
-    continue
+    if ! nix shell nixpkgs#cargo nixpkgs#rustc nixpkgs#gcc --command \
+      "$herdr_bin" plugin install "$owner/$repo" --ref "$revision" --yes >/dev/null; then
+      echo "warning: could not install pinned Herdr plugin $id" >&2
+      failed=1
+      continue
+    fi
   fi
   installed="$("$herdr_bin" plugin list --plugin "$id" --json)" || {
     failed=1

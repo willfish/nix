@@ -17,6 +17,32 @@ menu = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(menu)
 
 
+class ThemeWallpaperReferenceTest(unittest.TestCase):
+    def test_unpublished_theme_id_does_not_build_or_write(self):
+        catalogue = {
+            "default": "rose-pine",
+            "palettes": {
+                "rose-pine": {
+                    "nativeMode": "dark",
+                    "files": {},
+                    "session": {
+                        "dark": {"wallpaper.png": "nix-theme:rose-pine"},
+                    },
+                    "herdrTheme": {"name": "rose-pine"},
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            controller = menu.Themes(
+                catalogue, root / "state", root / "config"
+            )
+            with patch.object(menu.subprocess, "run") as run:
+                controller.apply("rose-pine")
+            run.assert_not_called()
+            self.assertFalse((root / "state/active/wallpaper.png").exists())
+
+
 class ThemeBundleRuntimeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

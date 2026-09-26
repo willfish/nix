@@ -42,6 +42,38 @@ def selection_text(background, paper, ink, bright):
 WAYBAR_UNIT = "waybar.service"
 
 
+def read_session_asset(source):
+    """Read a catalogue asset. nix-theme ids are built only when publishing.
+
+    Store paths in the catalogue would root every wallpaper in the Home
+    Manager generation. Tests and imports skip that build.
+    """
+    if isinstance(source, str) and source.startswith("nix-theme:"):
+        if os.environ.get("THEME_MENU_PUBLISH") != "1":
+            return None
+        name = source.removeprefix("nix-theme:")
+        if not name or any(part in name for part in ("/", "..", " ")):
+            raise ValueError(f"Invalid theme wallpaper id: {name}")
+        flake = os.environ.get(
+            "THEME_WALLPAPER_FLAKE", str(Path.home() / ".dotfiles")
+        )
+        result = subprocess.run(
+            [
+                "nix",
+                "build",
+                "--no-link",
+                "--print-out-paths",
+                f"{flake}#theme-{name}",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        output = result.stdout.strip().splitlines()[-1]
+        return (Path(output) / "wallpaper.png").read_bytes()
+    return Path(source).read_bytes()
+
+
 def hyprland_session():
     desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
     parts = {
@@ -164,10 +196,12 @@ class Themes:
         if palette is None:
             palette = self.resolve(self.selection())
         session = (palette.get("session") or {}).get(mode) or {}
-        writes = {
-            self.state / "active" / name: Path(source).read_bytes()
-            for name, source in session.items()
-        }
+        writes = {}
+        for name, source in session.items():
+            data = read_session_asset(source)
+            if data is None:
+                continue
+            writes[self.state / "active" / name] = data
         writes[self.state / "mode"] = f"{mode}\n".encode()
         return writes
 

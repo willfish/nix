@@ -97,7 +97,9 @@ system rebuild; desktop activation does not restart the display manager.
 ## Wallpapers and applications
 
 In Hyprland, each theme uses its first sorted upstream wallpaper, matching
-Omarchy's default selection order. Swaybg displays it on all outputs and follows
+Omarchy's default selection order. The catalogue records a theme id, not a
+store path. Applying a theme builds `.#theme-<id>` and copies that one
+image into the session state. Swaybg displays it on all outputs and follows
 the Hyprland session only. Changing the theme replaces the wallpaper too.
 
 `home/config/hyprland/settings.nix` controls the default palette, fonts,
@@ -155,7 +157,7 @@ precedence. Remote hosts retain their own palettes.
   resolves current and legacy palette data, and `import-theme.nix` validates and
   maps native colour roles into Base16 without evaluating repo code.
 - `home/user/themes/mk-theme.nix` packages supported assets as derivations.
-- `home/user/themes/omarchy.nix` exposes packages, wallpapers and the upstream licence.
+- `home/user/themes/omarchy.nix` exposes packages and the upstream licence. Wallpaper paths are not part of the Home Manager closure.
   The licence is installed at `~/.local/share/theme-menu/omarchy-LICENSE`.
 - `home/user/themes/host-defaults.nix` defines the host default theme IDs.
 - `home/user/appearance.nix` wires application config from that default unless a
