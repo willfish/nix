@@ -1,6 +1,9 @@
+from contextlib import redirect_stdout
 import hashlib
+import io
 import json
 from pathlib import Path
+import resource
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -105,6 +108,43 @@ class AuditTest(unittest.TestCase):
         path.write_text(json.dumps(state))
         with self.assertRaisesRegex(ValueError, "Missing, duplicated"):
             self.full()
+
+
+class AuditResourceTest(unittest.TestCase):
+    def test_more_blocks_than_available_file_descriptors(self):
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(
+            io.StringIO()
+        ):
+            root = Path(tmp)
+            shard = root / "papers.parquet"
+            pq.write_table(
+                pa.Table.from_pylist(
+                    [paper(str(i), "dogs") for i in range(80)]
+                ),
+                shard,
+            )
+            manifest = {
+                "revision": "test",
+                "files": [
+                    {
+                        "path": shard.name,
+                        "size": shard.stat().st_size,
+                        "lfs": {"oid": file_hash(shard)},
+                    }
+                ],
+            }
+            (root / "manifest.json").write_text(json.dumps(manifest))
+            ingest(root)
+            generate(root, ConceptModel(), block_papers=1)
+            build(root)
+            previous = resource.getrlimit(resource.RLIMIT_NOFILE)
+            try:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (32, previous[1]))
+                with patch("audit.load_model", return_value=ConceptModel()):
+                    result = audit(root, full=True, expected_manifest=manifest)
+                self.assertTrue(result["verified_complete"])
+            finally:
+                resource.setrlimit(resource.RLIMIT_NOFILE, previous)
 
 
 if __name__ == "__main__":

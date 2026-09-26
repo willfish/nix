@@ -211,7 +211,10 @@ def audit(root, full=False, expected_manifest=None):
             for row in paper_cursor
             for i in range(passage_count(row["text_chars"]))
         )
-        all_ids = []
+        # Do not retain one mmap/file descriptor per block. The full corpus
+        # exceeds the NAS descriptor limit; one compact ID array is sufficient.
+        expected_array = np.empty(passages, dtype=np.int64)
+        offset = 0
         last = 0
         for block, state in zip(blocks, states):
             if state["after_id"] != last:
@@ -253,7 +256,8 @@ def audit(root, full=False, expected_manifest=None):
                     (norms == 0) | (abs(norms - 1) < 0.002)
                 ):
                     raise ValueError("Invalid passage vectors")
-            all_ids.append(np.asarray(ids))
+            expected_array[offset : offset + len(ids)] = ids
+            offset += len(ids)
         if next(expected_ids, None) is not None:
             raise ValueError("Unencoded paper passages remain")
         if published.get("blocks") != [
@@ -271,9 +275,6 @@ def audit(root, full=False, expected_manifest=None):
         )
         actual_ids = index_ids(index)
         actual_ids.sort()
-        expected_array = (
-            np.concatenate(all_ids) if all_ids else np.empty(0, dtype=np.int64)
-        )
         if (
             index.d != model.dim
             or index.ntotal != passages
