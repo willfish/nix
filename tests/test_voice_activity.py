@@ -264,6 +264,70 @@ class ActivityTests(unittest.TestCase):
         self.app.rebind()
         self.assertEqual(self.app.status()["agent_state"], "unknown")
 
+    def test_edited_draft_hides_but_preserves_explicit_send(self):
+        self.app.draft = True
+        self.app.phase = "draft"
+        self.app.send_when_idle = True
+        self.terminal.activity_snapshot = lambda target: {
+            "state": "idle", "draft_state": "edited",
+        }
+        self.app.status()
+        self.wait_for(lambda: not self.app.activity_inflight)
+        status = self.app.status()
+        self.assertTrue(status["draft"])
+        self.assertTrue(status["draft_edited"])
+        self.assertFalse(status["queued"])
+
+    def test_cleared_editor_dismisses_draft_without_touching_pending_text(self):
+        for pending in (None, "New undelivered dictation"):
+            with self.subTest(pending=bool(pending)):
+                self.app.draft = True
+                self.app.pending = pending
+                self.app.phase = "draft"
+                self.app.send_when_idle = True
+                self.app.sessions["first"]["activity_checked"] = float("-inf")
+                self.terminal.activity_snapshot = lambda target: {
+                    "state": "idle", "draft_state": "empty",
+                }
+                self.app.status()
+                self.wait_for(lambda: not self.app.activity_inflight)
+                status = self.app.status()
+                self.assertFalse(status["draft"])
+                self.assertTrue(status["draft_edited"])
+                self.assertEqual(self.app.pending, pending)
+                self.assertEqual(status["queued"], bool(pending))
+                self.assertEqual(
+                    status["phase"], "draft" if pending else "idle"
+                )
+
+    def test_old_editor_probe_cannot_dismiss_a_newly_staged_draft(self):
+        def snapshot(target):
+            self.entered.set()
+            self.release.wait(2)
+            return {"state": "idle", "draft_state": "empty"}
+
+        self.terminal.activity_snapshot = snapshot
+        self.terminal.insert = lambda target, text: None
+        self.app.draft = True
+        self.app.phase = "draft"
+        self.app.status()
+        self.assertTrue(self.entered.wait(1))
+        self.assertTrue(self.app.stage("New dictation", "first"))
+        self.release.set()
+        self.wait_for(lambda: not self.app.activity_inflight)
+        self.assertTrue(self.app.draft)
+        self.assertEqual(self.app.sessions["first"]["draft_state"], "staged")
+
+    def test_missing_or_failed_editor_snapshot_does_not_discard_a_draft(self):
+        for response in ({"state": "idle"}, None):
+            with self.subTest(response=response):
+                self.app.draft = True
+                self.app.sessions["first"]["activity_checked"] = float("-inf")
+                self.terminal.activity_snapshot = lambda target: response
+                self.app.status()
+                self.wait_for(lambda: not self.app.activity_inflight)
+                self.assertTrue(self.app.draft)
+
     def test_tray_can_toggle_automatic_reading(self):
         del self.terminal.activity
         self.assertTrue(voice.dispatch(

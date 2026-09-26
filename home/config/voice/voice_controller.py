@@ -269,8 +269,11 @@ class AgentTerminal:
     def validate(self, target):
         return self._adapter(target).validate(target)
 
+    def activity_snapshot(self, target):
+        return self._adapter(target).validate_target(target)
+
     def activity(self, target):
-        info = self._adapter(target).validate_target(target)
+        info = self.activity_snapshot(target)
         state = info.get("agent_status", info.get("state", "unknown"))
         if state == "done":
             return "idle"
@@ -1175,14 +1178,26 @@ class Controller:
             return
         token, target = self.token, dict(self.target)
         revision = entry.get("activity_revision", 0)
+        draft_revision = entry.get("draft_revision", 0)
+        operation = self.input_cancelled
         entry["activity_checked"] = now
         self.activity_inflight.add(token)
 
         def probe():
+            snapshot = {}
             try:
-                state = activity(target)
+                read_snapshot = getattr(
+                    self.terminal, "activity_snapshot", None
+                )
+                if read_snapshot:
+                    snapshot = read_snapshot(target)
+                    state = snapshot.get("agent_status", snapshot.get("state"))
+                    if state == "done":
+                        state = "idle"
+                else:
+                    state = activity(target)
             except Exception:
-                state = "unknown"
+                snapshot, state = {}, "unknown"
             if state not in ("working", "blocked", "idle"):
                 state = "unknown"
             with self.lock:
@@ -1190,6 +1205,21 @@ class Controller:
                         and entry["target"] == target
                         and entry.get("activity_revision", 0) == revision):
                     self._set_activity(entry, state)
+                    draft_state = snapshot.get("draft_state")
+                    if (token == self.token and self.draft
+                            and operation is self.input_cancelled
+                            and entry.get("draft_revision", 0) == draft_revision
+                            and not self.recording_active()
+                            and draft_state in (
+                                "staged", "edited", "empty", "none"
+                            )):
+                        entry["draft_state"] = draft_state
+                        if draft_state != "staged" and not self.pending:
+                            self.send_when_idle = False
+                        if draft_state in ("empty", "none"):
+                            self.draft = entry["draft"] = False
+                            if not self.pending:
+                                self.phase = "idle"
                 self.activity_inflight.discard(token)
 
         threading.Thread(target=probe, daemon=True).start()
@@ -1306,6 +1336,9 @@ class Controller:
                     audio_status.get("backend_errors", {}).values()
                 ),
                 "draft": self.draft,
+                "draft_edited": self.sessions.get(self.token, {}).get(
+                    "draft_state"
+                ) in ("edited", "empty", "none"),
                 "reply": self.reply,
                 "auto": self.auto,
                 "can_speak": bool(
@@ -2131,6 +2164,8 @@ class Controller:
                 )
             target = self.target
             operation = self.input_cancelled
+            entry = self.sessions[token]
+            entry["draft_revision"] = entry.get("draft_revision", 0) + 1
         if not self.delivery_lock.acquire(blocking=False):
             raise RuntimeError("Input delivery is already in progress")
         try:
@@ -2168,6 +2203,8 @@ class Controller:
                 return False
             self.draft = True
             self.pending = None
+            entry["draft_revision"] = entry.get("draft_revision", 0) + 1
+            entry["draft_state"] = "staged"
             if finish:
                 self.phase = "draft"
             self.error = None

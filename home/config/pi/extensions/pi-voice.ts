@@ -110,8 +110,19 @@ export function registerVoice(pi, env = process.env, options = {}) {
     const identity = () => ({ harness, pid: process.pid, session, ...(legacy ? {} : { bridge_id, activation }) });
     const metadata = () => ({ model: context.model?.id || '', thinking: context.thinkingLevel ?? pi.getThinkingLevel?.() ?? '',
       team_child: env.PI_TEAM_CHILD === '1' });
-    const status = () => ({ ...identity(), ready: ready(),
-      state: waiting ? 'blocked' : ready() ? 'idle' : 'working', draft: armed });
+    const status = () => {
+      // Only an enum leaves Pi. Never publish editor text in status/heartbeats.
+      let draft_state = 'none';
+      if (armed) {
+        const text = context.ui.getEditorText();
+        draft_state = !text.trim() ? 'empty' : text === staged ? 'staged' : 'edited';
+        // Clearing hands ownership back to the user. Later unrelated typing
+        // must not become an armed voice draft through allow_edited.
+        if (draft_state === 'empty') { armed = false; staged = ''; }
+      }
+      return { ...identity(), ready: ready(),
+        state: waiting ? 'blocked' : ready() ? 'idle' : 'working', draft: armed, draft_state };
+    };
     const eventRequest = (type, fields = {}) => ({ action: 'harness-event', token,
       event: { ...status(), cwd: context.cwd, adapter_socket: path, ...metadata(), ...fields, ...identity(), type } });
     const later = delay => {

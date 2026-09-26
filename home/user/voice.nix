@@ -19,7 +19,10 @@ let
   sttModel = if hostName == "andromeda" then "ggml-large-v3-turbo-q5_0.bin" else "ggml-small.en.bin";
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
   voicePython = pkgs.python3;
-  osdPython = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
+  osdPython = pkgs.python3.withPackages (ps: [
+    ps.pygobject3
+    ps.pycairo
+  ]);
   voiceScripts = pkgs.runCommand "pi-voice-scripts" { } ''
     mkdir -p "$out"
     cp ${../config/voice}/*.py "$out/"

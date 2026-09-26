@@ -175,6 +175,22 @@ class OsdTests(unittest.TestCase):
                          ("Ready to send", "green"))
         self.assertNotIn("secret", str(ready))
 
+    def test_editor_changes_hide_ready_to_send_and_stale_reveal(self):
+        for draft in (True, False):
+            view = self.osd.osd_view({
+                "phase": "draft" if draft else "idle", "draft": draft,
+                "draft_edited": True, "osd": True,
+            })
+            self.assertFalse(view["visible"])
+        pending = self.osd.osd_view({"draft_edited": True, "pending": True})
+        self.assertEqual(pending["title"], "Ready to send")
+        notice = self.osd.osd_view({
+            "draft_edited": True, "osd": True,
+            "osd_message": "Microphone unavailable",
+        })
+        self.assertTrue(notice["visible"])
+        self.assertEqual(notice["title"], "Microphone unavailable")
+
     def test_attention_states_use_distinct_tones_without_reply_text(self):
         blocked = self.osd.osd_view({
             "phase": "idle", "pane": "w1:p1", "agent_state": "blocked",

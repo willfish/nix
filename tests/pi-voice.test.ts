@@ -144,6 +144,32 @@ if (existsSync(extensionPath)) {
     assert.deepEqual(f.sent, ['My corrected dictation']);
   });
 
+  test('status reports draft edits without exposing editor text or disabling explicit Send', async (t) => {
+    const f = await fixture(t);
+    await f.request('stage', { text: 'Private dictated text' });
+    assert.equal((await f.request('status')).result.draft_state, 'staged');
+    f.setEditor('Private corrected text');
+    const status = (await f.request('status')).result;
+    assert.equal(status.draft_state, 'edited');
+    assert.equal(status.draft, true);
+    assert.ok(!JSON.stringify(status).includes('Private'));
+    assert.equal((await f.request('submit', { allow_edited: true })).ok, true);
+    assert.deepEqual(f.sent, ['Private corrected text']);
+  });
+
+  test('cleared editor disarms the draft before unrelated text can be voice-submitted', async (t) => {
+    const f = await fixture(t);
+    await f.request('stage', { text: 'Dictated text' });
+    f.setEditor('   ');
+    const status = (await f.request('status')).result;
+    assert.equal(status.draft_state, 'empty');
+    assert.equal(status.draft, false);
+    f.setEditor('Unrelated user prompt');
+    assert.equal((await f.request('status')).result.draft_state, 'none');
+    assert.equal((await f.request('submit', { allow_edited: true })).ok, false);
+    assert.deepEqual(f.sent, []);
+  });
+
   test('only literal true opts into submitting an edited voice draft', async (t) => {
     const f = await fixture(t);
     await f.request('stage', { text: 'Original dictation' });

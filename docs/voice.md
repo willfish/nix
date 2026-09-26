@@ -1,6 +1,6 @@
 # Local agent voice on Andromeda
 
-One local recorder, status card and pair of speech engines serve Pi and Qwen Pi.
+One local recorder, status pill and pair of speech engines serve Pi and Qwen Pi.
 The control command is `pi-voice`; units are `pi-voice`, `pi-voice-stt` and
 `pi-voice-tts`. Andromeda uses Whisper large-v3-turbo Q5 on NVIDIA Vulkan; Foundation keeps
 Whisper small.en on the Radeon iGPU. Pause detection stays in the local
@@ -47,14 +47,16 @@ using. After the last session leaves, engines stop once active work has drained.
 
 | Hotkey | Action |
 | --- | --- |
-| Super+Space | Show the top dictation card, then stop recording, send prepared dictation, or start recording into the selected Pi session |
+| Super+Space | Show the top dictation pill, then stop recording, send prepared dictation, or start recording into the selected Pi session |
 | Super+Shift+Space | Explicitly send the dictated draft |
 | Super+R | Read the latest completed summary; press again to stop speaking |
 | Super+Shift+V | Open the keyboard voice/session/action picker |
 
-Super is the Windows key. While dictation is active, a floating card at the
-top of the focused monitor shows the selected session and a live level. It
-does not take keyboard focus, and it never shows the transcript. Transcription
+Super is the Windows key. While recording, a native pill at the top of the
+focused monitor shows a capture light, measured microphone levels and elapsed
+time. The destination appears briefly at the start. Warnings and recovery
+states expand in place. The pill is click-through, never takes keyboard focus,
+and never shows the transcript. Transcription
 is staged in the selected Pi prompt for review; recording never
 automatically presses Enter. Capture starts only after microphone samples
 arrive and stops after three minutes. A pause, or thirty seconds of
@@ -108,7 +110,7 @@ replace the application launcher or run another daemon.
 
 After activation, try the shortcut, filter a voice name and press Escape first.
 Then choose a voice and check its `*` marker on reopening. For sessions, launch
-two voice-enabled agents, select the other session and confirm the card names that target.
+two voice-enabled agents, select the other session and confirm the pill names that target.
 
 ## Experimental PersonaPlex conversation (Andromeda)
 
@@ -130,7 +132,7 @@ while dictation is recording, pending, retained or awaiting retry; finish or
 discard it first. Pi coding work itself is not stopped by switching voice modes.
 
 PersonaPlex stops the Pi voice controller and speech engines while active. The
-status card stays up so a startup failure is shown there instead of a desktop
+status pill stays up so a startup failure is shown there instead of a desktop
 notification. Returning to Pi restores its configured automatic-playback default;
 in-memory replay state is not carried across modes. If startup fails, reopen the
 voice menu to recover Pi controls. Inspect `journalctl --user -u personaplex`
@@ -147,7 +149,7 @@ Normal service startup is offline. The server binds only to loopback and accepts
 conversation WebSockets only from its local browser UI origins. PersonaPlex
 requires NVIDIA CUDA and is not offered on Foundation or other hosts.
 
-## Status card and recovery
+## Status pill and recovery
 
 **Super+Shift+V** is the only voice menu. It contains session, voice, dictation,
 show team members and read replies aloud. Team panes are not registered, so that
@@ -161,13 +163,24 @@ appears while that voice work is active. These controls do not cancel a running
 coding-agent turn. Super+Space handles the normal record/transcribe/send flow.
 There is no StatusNotifier icon.
 
-The top card is the only voice message. It does not raise a separate desktop
-notification, and it never shows the transcript or the reply. The border and
-meter use the active theme roles, with a short label so the colour can be learned:
+The top pill is the only voice message. It does not raise a separate desktop
+notification, and it never shows the transcript or the reply. Its charcoal
+surface stays consistent across themes; the status indicator uses the active
+theme's colour roles. Silence produces a flat meter, not a microphone error.
+Clipping must persist beyond the capture peak latch before it raises a warning;
+the first two seconds of capture have a warning grace period. Muting is immediate.
 
-| Card | Colour role | State |
+Editing the staged text in Pi hides **Ready to send** and cancels automatic
+queued submission within the next background status check (about one second).
+Explicit Send still accepts a corrected draft. Clearing or manually submitting
+the prompt disarms that voice draft; later unrelated typing cannot be submitted
+as if it were still the cleared dictation. Only editor-state flags leave Pi,
+never the editor text.
+
+| Pill | Colour role | State |
 | --- | --- | --- |
-| Listening | Red | Recording, including mute or clipping on the second line |
+| Capture light, meter and timer | Red | Recording |
+| Microphone muted / Input too loud | Orange | Capture needs attention |
 | Starting, finishing, transcribing | Yellow | Microphone or recognition in progress |
 | Ready to send / Will send when idle | Green | Dictation is prepared |
 | About to speak | Accent | Reply is queued and speech has not started |
@@ -175,12 +188,19 @@ meter use the active theme roles, with a short label so the colour can be learne
 | Needs attention, retained, model failure | Orange | Something needs a menu action |
 | Reconnecting / conversation changed | Yellow | Destination is not ready |
 
-Dictation outranks speech. A working agent does not raise the card; it appears
+The capsule uses GTK4/Cairo on the existing Wayland layer-shell surface, with
+no browser runtime. Socket and monitor queries run off the GTK event thread.
+GTK's reduced-motion setting disables geometry easing and spinner rotation.
+Hidden and settled non-working states stop requesting animation frames. If the
+controller connection is lost during recording, the pill reports that microphone
+state is unknown instead of showing stale audio activity.
+
+Dictation outranks speech. A working agent does not raise the pill; it appears
 when speech is actually queued. Pi lifecycle events update activity promptly;
 bounded background reads confirm completion about once a second. Slow or
 unavailable harnesses cannot block the menu or voice cancellation. Controller
 reconnection retries quietly. Warm-up is backend work, not a model prompt or
-spoken reply, so model loading alone does not raise the card.
+spoken reply, so model loading alone does not raise the pill.
 
 Andromeda prefers the Razer Kiyo Pro Ultra's stable device
 name, with a visible fallback to PipeWire's default if absent. Speakers follow
@@ -193,7 +213,7 @@ new speech, so silence or a failed start preserves previous words. Discard
 removes retained text and retry audio. Cancel does not remove text already
 pasted into a terminal editor; that prompt remains available for review.
 
-If a Pi destination is lost or replaced while dictation is pending, the card
+If a Pi destination is lost or replaced while dictation is pending, the pill
 names its source. **Super+Shift+V** offers **Copy retained dictation**, **Stage in selected Pi
 session**, or **Discard retained dictation**. Staging requires a ready, idle Pi
 destination and preserves its editor text. If the current destination was

@@ -1,4 +1,4 @@
-"""Floating dictation card at the top of the focused monitor.
+"""Floating dictation pill at the top of the focused monitor.
 
 Shows phase, the selected Pi session and microphone level only. Never renders
 dictated text or assistant replies.
@@ -200,12 +200,9 @@ def card_state(status, phase, message):
         }
         title = titles.get(phase, "Listening")
         if phase == "recording":
-            elapsed = status.get("recording_seconds") or 0
-            try:
-                elapsed = max(0, int(elapsed))
-            except (TypeError, ValueError):
-                elapsed = 0
-            title = f"Listening {elapsed // 60:02d}:{elapsed % 60:02d}"
+            title = "Listening " + recording_timer(
+                status.get("recording_seconds")
+            )
         return title, "red" if phase == "recording" else "yellow"
     if status.get("osd") and message:
         tone = status.get("osd_tone")
@@ -214,7 +211,9 @@ def card_state(status, phase, message):
         return public_label(status.get("error") or "Voice unavailable"), "red"
     if status.get("queued"):
         return "Will send when idle", "green"
-    if status.get("draft") or status.get("pending"):
+    if status.get("pending") or (
+        status.get("draft") and not status.get("draft_edited")
+    ):
         return "Ready to send", "green"
     if status.get("retained"):
         return "Dictation retained", "orange"
@@ -245,6 +244,8 @@ def osd_view(status):
     message = public_label(message) if isinstance(message, str) else ""
     title, tone = card_state(status, phase, message)
     visible = phase in ACTIVE or bool(status.get("osd")) or title != "Voice"
+    if status.get("draft_edited") and title == "Voice" and not message:
+        visible = False
     detail = destination(status, phase)
     if status.get("retained") and phase not in ACTIVE:
         source = public_label(status.get("retained_source") or "")
@@ -282,7 +283,24 @@ def osd_view(status):
         "meter": meter_blocks([level] if phase == "recording" else []),
         "recording": phase == "recording",
         "transcribing": phase == "transcribing",
+        "phase": phase,
+        "seconds": finite_seconds(status.get("recording_seconds")),
+        "timer": recording_timer(status.get("recording_seconds")),
+        "muted": bool(microphone.get("muted")),
+        "clipping": bool(microphone.get("clipping")),
     }
+
+
+def finite_seconds(value):
+    try:
+        return max(0, int(float(value or 0)))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
+def recording_timer(value):
+    seconds = finite_seconds(value)
+    return f"{seconds // 60:02d}:{seconds % 60:02d}"
 
 
 def command_env():
@@ -376,154 +394,17 @@ def run():
     if not os.environ.get("WAYLAND_DISPLAY"):
         print("pi-voice-osd: no Wayland display", file=sys.stderr)
         return 0
-    import gi
-
-    gi.require_version("Gdk", "4.0")
-    gi.require_version("Gtk", "4.0")
-    gi.require_version("Gtk4LayerShell", "1.0")
-    gi.require_version("Pango", "1.0")
-    from gi.repository import Gdk, GLib, Gtk, Gtk4LayerShell, Pango
+    from voice_pill import run_pill
 
     shell = theme_path().read_text() if theme_path().is_file() else ""
     waybar = theme_path().with_name("waybar.css")
     colours = resolved_colours(
         shell, waybar.read_text() if waybar.is_file() else ""
     )
-    app = Gtk.Application(application_id="uk.hues.pi-voice-osd")
-    state = {"connector": None, "levels": [0.0] * METER_CELLS}
-
-    def apply_monitor():
-        connector = focused_connector(read_json(["hyprctl", "monitors", "-j"]))
-        if connector == state["connector"]:
-            return
-        state["connector"] = connector
-        display = Gdk.Display.get_default()
-        if display is None or not connector:
-            return
-        monitors = display.get_monitors()
-        for index in range(monitors.get_n_items()):
-            monitor = monitors.get_item(index)
-            if monitor.get_connector() == connector:
-                Gtk4LayerShell.set_monitor(window, monitor)
-                return
-
-    def apply_tone(tone):
-        card = state.get("card")
-        if card is None:
-            return
-        for name in TONES:
-            card.remove_css_class(f"tone-{name}")
-        card.add_css_class(f"tone-{tone if tone in TONES else 'muted'}")
-
-    def tick():
-        view = osd_view(read_status() or {})
-        if not view["visible"]:
-            view = read_notice() or view
-        if not view["visible"]:
-            window.set_visible(False)
-            return True
-        if not window.get_visible():
-            window.present()
-        window.set_visible(True)
-        apply_monitor()
-        apply_tone(view.get("tone"))
-        title.set_label(view["title"])
-        detail.set_label(view["detail"])
-        if view["recording"]:
-            state["levels"] = state["levels"][1:] + [view["level"]]
-        elif not view["transcribing"]:
-            state["levels"] = [0.0] * METER_CELLS
-        meter.set_label(meter_blocks(state["levels"]))
-        return True
-
-    def activate(_app):
-        global window, title, detail, meter
-        window = Gtk.ApplicationWindow(application=app)
-        window.set_decorated(False)
-        window.set_resizable(False)
-        Gtk4LayerShell.init_for_window(window)
-        Gtk4LayerShell.set_layer(window, Gtk4LayerShell.Layer.OVERLAY)
-        Gtk4LayerShell.set_namespace(window, "pi-voice-osd")
-        Gtk4LayerShell.set_keyboard_mode(
-            window, Gtk4LayerShell.KeyboardMode.NONE
-        )
-        Gtk4LayerShell.set_exclusive_zone(window, 0)
-        Gtk4LayerShell.set_anchor(window, Gtk4LayerShell.Edge.TOP, True)
-        Gtk4LayerShell.set_margin(window, Gtk4LayerShell.Edge.TOP, 18)
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        card.add_css_class("card")
-        state["card"] = card
-        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
-        title = Gtk.Label(label="Voice", xalign=0)
-        title.set_halign(Gtk.Align.START)
-        meter = Gtk.Label(label=meter_blocks([]), xalign=1)
-        meter.add_css_class("meter")
-        meter.set_halign(Gtk.Align.END)
-        meter.set_hexpand(True)
-        header.append(title)
-        header.append(meter)
-        detail = Gtk.Label(label="", xalign=0)
-        detail.add_css_class("detail")
-        detail.set_halign(Gtk.Align.START)
-        detail.set_ellipsize(Pango.EllipsizeMode.END)
-        detail.set_max_width_chars(46)
-        card.append(header)
-        card.append(detail)
-        window.set_child(card)
-        style = Gtk.CssProvider()
-        style.load_from_data(
-            (f"""
-            window {{
-              background: transparent;
-            }}
-            .card {{
-              background: alpha({colours["background"]}, 0.96);
-              color: {colours["text"]};
-              border: 2px solid {colours["border"]};
-              border-radius: 16px;
-              padding: 12px 16px 13px;
-            }}
-            label {{
-              color: {colours["text"]};
-              font-size: 15px;
-            }}
-            label.title {{
-              font-weight: 650;
-            }}
-            label.detail {{
-              font-size: 13px;
-              opacity: 0.78;
-            }}
-            label.meter {{
-              color: {colours["accent"]};
-              font-family: monospace;
-              font-size: 18px;
-              letter-spacing: 1px;
-            }}
-            """ + "".join(
-                f"""
-            .card.tone-{name} {{
-              border-color: {colours[name]};
-            }}
-            .card.tone-{name} label.meter {{
-              color: {colours[name]};
-            }}
-                """
-                for name in TONES
-            )).encode(),
-            -1,
-        )
-        title.add_css_class("title")
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(),
-            style,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-        )
-        window.set_visible(False)
-        GLib.timeout_add(80, tick)
-
-    app.connect("activate", activate)
-    return app.run([sys.argv[0]])
+    return run_pill(
+        osd_view, read_status, read_notice, read_json,
+        focused_connector, colours
+    )
 
 
 if __name__ == "__main__":
