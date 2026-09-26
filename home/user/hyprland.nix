@@ -901,22 +901,8 @@
         Install.WantedBy = [ "hyprland-session.target" ];
       };
 
-      # Tie authentication to the compositor rather than an unrelated graphical
-      # session target, so the agent stops when Hyprland exits.
-      systemd.user.services.hyprpolkitagent = {
-        Unit = {
-          Description = "Hyprland PolicyKit authentication agent";
-          PartOf = [ "hyprland-session.target" ];
-          After = [ "hyprland-session.target" ];
-          ConditionEnvironment = "WAYLAND_DISPLAY";
-        };
-        Service = {
-          ExecStart = "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent";
-          Restart = "on-failure";
-          RestartSec = 2;
-        };
-        Install.WantedBy = [ "hyprland-session.target" ];
-      };
+      # Authentication is the themed prompt inside hyprland-panels. Do not
+      # start hyprpolkitagent as well: polkit accepts only one agent.
 
     }
   );

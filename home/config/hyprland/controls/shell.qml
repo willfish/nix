@@ -7,6 +7,7 @@ import "plugins/panels/audio" as Audio
 import "plugins/panels/bluetooth" as Bluetooth
 import "plugins/panels/network" as Network
 import "plugins/panels/tailscale" as Tailscale
+import "plugins/polkit" as Polkit
 
 // Only a host adapter. The panel implementations and shared UI are upstream.
 ShellRoot {
@@ -65,6 +66,8 @@ ShellRoot {
     Bluetooth.Panel { id: bluetooth; bar: barApi }
     Network.Panel { id: network; bar: barApi }
     Tailscale.Panel { id: tailscale; bar: barApi }
+    // Same palette as the panels. Replaces the unthemed Hyprland agent.
+    Polkit.PolkitAgent { }
   }
 
   IpcHandler {

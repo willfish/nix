@@ -15,6 +15,7 @@ let
     for panel in audio bluetooth network tailscale; do
       cp -r ${source}/shell/plugins/panels/"$panel" "$out/shell/plugins/panels/"
     done
+    cp -r ${source}/shell/plugins/polkit "$out/shell/plugins/"
     chmod -R u+w "$out"
     patch --batch -d "$out" -p1 < ${local}/nixos.patch
     # pkexec realpath()s its program. The packaged tailscale path is a symlink to
@@ -116,6 +117,17 @@ let
     runtimeInputs = [ pkgs.xdg-utils ];
     text = ''exec xdg-open "$@"'';
   };
+  laptopClosed = pkgs.writeShellApplication {
+    name = "omarchy-hw-laptop-closed";
+    runtimeInputs = [ pkgs.gnugrep ];
+    text = ''
+      for state in /proc/acpi/button/lid/*/state; do
+        [ -r "$state" ] || continue
+        grep -q closed "$state" && exit 0
+      done
+      exit 1
+    '';
+  };
   runtime = with pkgs; [
     bash
     coreutils
@@ -141,6 +153,7 @@ let
     helpers
     bluetoothDevice
     browser
+    laptopClosed
     tailscaleSend
     quickshell
   ];
@@ -199,7 +212,7 @@ in
     dconf.settings."org/blueman/general".notification-daemon = false;
     systemd.user.services.hyprland-panels = {
       Unit = {
-        Description = "Omarchy control panels for Waybar";
+        Description = "Themed control panels and authentication prompt";
         PartOf = [ "hyprland-session.target" ];
         After = [ "hyprland-session.target" ];
         ConditionEnvironment = "WAYLAND_DISPLAY";
@@ -207,6 +220,10 @@ in
         StartLimitBurst = 3;
       };
       Service = {
+        # The shell prompt must be the only authentication agent.
+        ExecStartPre = [
+          "-${pkgs.systemd}/bin/systemctl --user stop hyprpolkitagent.service"
+        ];
         ExecStart = "${shell}/bin/hypr-controls-shell";
         Restart = "on-failure";
         RestartSec = 2;
