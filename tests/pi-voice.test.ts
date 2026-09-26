@@ -31,7 +31,7 @@ if (existsSync(extensionPath)) {
     });
     await new Promise((resolve) => control.listen(controlPath, resolve));
     const hooks = {};
-    const sent = [];
+    const sent = [], deliveries = [];
     let editor = '';
     let idle = true;
     let pending = false;
@@ -39,7 +39,7 @@ if (existsSync(extensionPath)) {
     const shortcuts = {};
     const statuses = [];
     const pi = { on: (name, callback) => { hooks[name] = callback; },
-      sendUserMessage: (text) => { sent.push(text); idle = false; },
+      sendUserMessage: (text, options) => { sent.push(text); deliveries.push(options); idle = false; },
       getSessionName: () => 'Voice test',
       registerShortcut: (key, options) => { shortcuts[key] = options; } };
     const ctx = { hasUI: true, cwd: directory, isIdle: () => idle,
@@ -64,7 +64,7 @@ if (existsSync(extensionPath)) {
       socket.on('data', (chunk) => { data += chunk; });
       socket.on('end', () => resolve(JSON.parse(data)));
     });
-    return { request, events, hooks, ctx, sent, path, pi, shortcuts, statuses,
+    return { request, events, hooks, ctx, sent, deliveries, path, pi, shortcuts, statuses,
       editor: () => editor, setEditor: (value) => { editor = value; },
       setIdle: (value) => { idle = value; },
       setPending: (value) => { pending = value; },
@@ -108,17 +108,67 @@ if (existsSync(extensionPath)) {
     assert.equal((await stat(f.path)).mode & 0o777, 0o600);
   });
 
-  test('rejects wrong session, token, busy and pending input', async (t) => {
+  test('rejects wrong session and token', async (t) => {
     const f = await fixture(t);
     for (const fields of [{ session: 'other' }, { token: 'wrong' }]) {
       assert.equal((await f.request('stage', { text: 'hello', ...fields })).ok, false);
     }
-    f.setIdle(false);
-    assert.equal((await f.request('stage', { text: 'hello' })).ok, false);
-    f.setIdle(true);
-    f.setPending(true);
-    assert.equal((await f.request('stage', { text: 'hello' })).ok, false);
     assert.equal(f.editor(), '');
+  });
+
+  test('busy and queued sessions stage drafts without submitting until explicit Send', async t => {
+    for (const busy of [true, false]) {
+      const f = await fixture(t);
+      f.setIdle(!busy);
+      f.setPending(!busy);
+      f.setEditor('Please');
+      assert.equal((await f.request('stage', { text: 'continue later' })).ok, true);
+      assert.equal(f.editor(), 'Please continue later');
+      assert.equal((await f.request('status')).result.ready, false);
+      assert.equal((await f.request('status')).result.accepts_input, true);
+      assert.deepEqual(f.sent, []);
+      assert.equal((await f.request('submit')).ok, true);
+      assert.deepEqual(f.sent, ['Please continue later']);
+      assert.deepEqual(f.deliveries, [{ deliverAs: 'followUp' }]);
+      assert.equal(f.editor(), '');
+      assert.equal((await f.request('submit')).ok, false);
+      assert.equal(f.sent.length, 1);
+    }
+  });
+
+  test('a staged busy draft survives another queued run and settling without auto-send', async t => {
+    const f = await fixture(t);
+    f.setIdle(false);
+    await f.request('stage', { text: 'Draft for later' });
+    f.hooks.input({ source: 'extension' }, f.ctx);
+    await f.hooks.agent_start({}, f.ctx);
+    assert.equal((await f.request('status')).result.draft_state, 'staged');
+    f.setIdle(true);
+    await f.hooks.agent_settled({}, f.ctx);
+    assert.deepEqual(f.sent, []);
+    assert.equal(f.editor(), 'Draft for later');
+    f.setIdle(false);
+    f.setEditor('Corrected draft');
+    assert.equal((await f.request('submit', { allow_edited: true })).ok, true);
+    assert.deepEqual(f.sent, ['Corrected draft']);
+    assert.deepEqual(f.deliveries, [{ deliverAs: 'followUp' }]);
+  });
+
+  test('busy editor clearing disarms unrelated text and a dialog blocks both mutations', async t => {
+    const f = await fixture(t);
+    f.setIdle(false);
+    await f.request('stage', { text: 'Draft' });
+    await f.hooks.ui_prompt_start({}, f.ctx);
+    assert.equal((await f.request('status')).result.accepts_input, false);
+    assert.equal((await f.request('stage', { text: 'No' })).ok, false);
+    assert.equal((await f.request('submit')).ok, false);
+    assert.equal(f.editor(), 'Draft');
+    await f.hooks.ui_prompt_end({}, f.ctx);
+    f.setEditor('');
+    assert.equal((await f.request('status')).result.draft_state, 'empty');
+    f.setEditor('Unrelated');
+    assert.equal((await f.request('submit', { allow_edited: true })).ok, false);
+    assert.deepEqual(f.sent, []);
   });
 
   test('manual submission or editing disarms voice Send', async (t) => {
@@ -657,7 +707,7 @@ if (existsSync(extensionPath)) {
     assert.equal(f.requests.some(request => request.event?.type === 'reply'), false);
   });
 
-  test('managed generation checks preserve busy, pending and main-pane question guards', async t => {
+  test('managed staging permits queued work but preserves identity and dialog guards', async t => {
     const f = await managed(t);
     await until(() => f.scheduler.timers.size);
     for (const fields of [{ bridge_id: 'old' }, { activation: f.target().activation - 1 }, { pid: process.pid + 1 },
@@ -666,13 +716,14 @@ if (existsSync(extensionPath)) {
       assert.equal((await f.request('submit', fields)).ok, false);
     }
     f.setPending(true);
-    assert.equal((await f.request('stage', { text: 'no' })).ok, false);
+    assert.equal((await f.request('stage', { text: 'yes' })).ok, true);
     f.setPending(false);
     await f.hooks.ui_prompt_start({ kind: 'select', title: 'Main-pane question' }, f.ctx);
     assert.equal((await f.request('status')).result.state, 'blocked');
     assert.equal((await f.request('stage', { text: 'no' })).ok, false);
+    assert.equal((await f.request('submit')).ok, false);
     await f.hooks.ui_prompt_end({}, f.ctx);
-    assert.equal((await f.request('stage', { text: 'yes' })).ok, true);
+    f.setIdle(false);
     assert.equal((await f.request('submit')).ok, true);
     assert.deepEqual(f.sent, ['yes']);
   });

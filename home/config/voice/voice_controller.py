@@ -2004,9 +2004,9 @@ class Controller:
                 with self.lock:
                     if token == self.token and not cancelled.is_set():
                         self.phase = "draft"
-            if staged_any or self.pending:
-                self._queue_if_busy()
-            elif not spoken:
+            # Finishing dictation only stages a draft. Busy work must not
+            # turn recording completion into implicit permission to submit.
+            if not staged_any and not self.pending and not spoken:
                 self.notice("No speech detected", "Nothing was inserted")
         except Exception as exc:
             with self.lock:
@@ -2209,17 +2209,6 @@ class Controller:
                 self.phase = "draft"
             self.error = None
             return True
-
-    def _queue_if_busy(self):
-        if not (self.draft or self.pending) or not self.target:
-            return False
-        try:
-            self.terminal.validate(self.target)
-        except RuntimeError:
-            self.send_when_idle = True
-            self.phase = "draft"
-            return True
-        return False
 
     def _flush_queued_send(self):
         with self.lock:

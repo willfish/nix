@@ -66,6 +66,41 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'busy'):
             terminal.validate(self.target)
 
+    def test_busy_capable_bridge_stages_and_submits_explicitly(self):
+        busy = self.status(False, accepts_input=True)
+        self.server([busy, busy, busy, busy])
+        terminal = PiTerminal()
+        terminal.insert(self.target, 'Draft while working')
+        terminal.submit(self.target)
+        self.assertEqual(
+            [request['command'] for request in self.requests],
+            ['status', 'stage', 'status', 'submit'],
+        )
+
+    def test_blocked_bridge_rejects_stage_and_submit(self):
+        blocked = self.status(
+            False, accepts_input=False, state='blocked'
+        )
+        self.server([blocked, blocked])
+        terminal = PiTerminal()
+        with self.assertRaisesRegex(RuntimeError, 'interaction'):
+            terminal.insert(self.target, 'No')
+        with self.assertRaisesRegex(RuntimeError, 'interaction'):
+            terminal.submit(self.target)
+        self.assertEqual(
+            [request['command'] for request in self.requests],
+            ['status', 'status'],
+        )
+
+    def test_busy_submit_lost_ack_remains_uncertain_without_replay(self):
+        self.server([self.status(False, accepts_input=True), None])
+        with self.assertRaises(DeliveryUncertain):
+            PiTerminal().submit(self.target)
+        self.assertEqual(
+            [request['command'] for request in self.requests],
+            ['status', 'submit'],
+        )
+
     def test_rejects_wrong_session_or_process(self):
         self.server([
             self.status(session='session-b'), self.status(pid=456)

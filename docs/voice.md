@@ -68,8 +68,11 @@ Qwen, NixOS and the configured hosts.
 
 The usual flow uses Super+Space to start, stop, then send. Text may already be
 in the prompt before you stop. Wait for the green ready state before sending.
-If the selected agent is busy, the take is kept and sent when that agent goes
-idle. Super+Space while it is busy queues that send instead of dropping the draft. The hotkey applies across all four launchers and never
+If the selected agent is busy, transcription still appears in its editor for
+review. It stays there when the agent finishes; stopping recording never queues
+submission. Pressing Super+Space explicitly sends the draft as a Pi follow-up,
+which waits for the current run rather than steering it. Blocking dialogs still
+prevent delivery. The hotkey applies across all four launchers and never
 broadcasts to other registered sessions, including multiple sessions of the
 same harness.
 
@@ -206,8 +209,9 @@ Andromeda prefers the Razer Kiyo Pro Ultra's stable device
 name, with a visible fallback to PipeWire's default if absent. Speakers follow
 the PipeWire default.
 
-Recording works while the selected agent is busy. Valid text waits in memory
-until it can be safely delivered. A new recording appends to retained text by
+Recording and editor staging work while the selected agent is busy. If a
+blocking dialog or unavailable bridge prevents delivery, valid text waits in
+memory until you explicitly send it. A new recording appends to retained text by
 default. `pi-voice replace` replaces retained text only after valid
 new speech, so silence or a failed start preserves previous words. Discard
 removes retained text and retry audio. Cancel does not remove text already
@@ -215,9 +219,10 @@ pasted into a terminal editor; that prompt remains available for review.
 
 If a Pi destination is lost or replaced while dictation is pending, the pill
 names its source. **Super+Shift+V** offers **Copy retained dictation**, **Stage in selected Pi
-session**, or **Discard retained dictation**. Staging requires a ready, idle Pi
-destination and preserves its editor text. If the current destination was
-selected automatically, first choose **Confirm <label> for retained dictation**
+session**, or **Discard retained dictation**. Staging requires a connected Pi
+destination without a blocking dialog and preserves its editor text. If the
+current destination was selected automatically, first choose
+**Confirm <label> for retained dictation**
 in the session selector, even when it is the only session. Confirmation only
 selects the destination; then choose **Stage in selected Pi session**.
 Recovery never submits automatically:

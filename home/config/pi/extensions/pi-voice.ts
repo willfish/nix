@@ -106,7 +106,8 @@ export function registerVoice(pi, env = process.env, options = {}) {
     const abort = new AbortController();
     const connections = new Set();
     const current = () => !closed && active === instance;
-    const ready = () => Boolean(context?.hasUI && !waiting && context.isIdle() && !context.hasPendingMessages());
+    const acceptsInput = () => Boolean(context?.hasUI && !waiting);
+    const ready = () => Boolean(acceptsInput() && context.isIdle() && !context.hasPendingMessages());
     const identity = () => ({ harness, pid: process.pid, session, ...(legacy ? {} : { bridge_id, activation }) });
     const metadata = () => ({ model: context.model?.id || '', thinking: context.thinkingLevel ?? pi.getThinkingLevel?.() ?? '',
       team_child: env.PI_TEAM_CHILD === '1' });
@@ -120,7 +121,7 @@ export function registerVoice(pi, env = process.env, options = {}) {
         // must not become an armed voice draft through allow_edited.
         if (draft_state === 'empty') { armed = false; staged = ''; }
       }
-      return { ...identity(), ready: ready(),
+      return { ...identity(), ready: ready(), accepts_input: acceptsInput(),
         state: waiting ? 'blocked' : ready() ? 'idle' : 'working', draft: armed, draft_state };
     };
     const eventRequest = (type, fields = {}) => ({ action: 'harness-event', token,
@@ -220,7 +221,7 @@ export function registerVoice(pi, env = process.env, options = {}) {
         throw new Error('Voice selection does not match this Pi session; rebind it');
       }
       if (request.command === 'status') return status();
-      if (!ready()) throw new Error('Pi is busy or waiting for an interaction');
+      if (!acceptsInput()) throw new Error('Pi is waiting for an interaction');
       if (request.command === 'stage') {
         const text = checkedText(request.text);
         const editor = context.ui.getEditorText();
@@ -241,7 +242,7 @@ export function registerVoice(pi, env = process.env, options = {}) {
         armed = false;
         staged = '';
         context.ui.setEditorText('');
-        try { pi.sendUserMessage(text); } catch {
+        try { pi.sendUserMessage(text, { deliverAs: 'followUp' }); } catch {
           const error = new Error('Could not confirm submission; check Pi');
           error.uncertain = true;
           throw error;
@@ -363,8 +364,8 @@ export function registerVoice(pi, env = process.env, options = {}) {
         try { await bind(); if (current()) await emit('session', { ready: ready(), name: pi.getSessionName?.() || '' }); }
         catch (error) { close(); ctx.ui.notify(`Voice unavailable: ${error.message}`, 'warning'); }
       },
-      input() { armed = false; staged = ''; },
-      agent_start(_event, ctx) { context = ctx; armed = false; staged = ''; lastReply = undefined; pending.delete('reply'); return emit('busy'); },
+      input(event) { if (event.source === 'interactive') { armed = false; staged = ''; } },
+      agent_start(_event, ctx) { context = ctx; lastReply = undefined; pending.delete('reply'); return emit('busy'); },
       agent_end(event, ctx) {
         context = ctx;
         lastReply = undefined;

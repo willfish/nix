@@ -105,7 +105,9 @@ class PiTerminal:
 
     def validate(self, target):
         status = self.validate_target(target)
-        if not status.get('ready'):
+        # Old extensions remain idle-only until reloaded. New bridges allow
+        # drafts and explicit follow-ups while working, never through a dialog.
+        if status.get('accepts_input', status.get('ready')) is not True:
             raise RuntimeError('Pi is busy or waiting for an interaction')
         return status
 

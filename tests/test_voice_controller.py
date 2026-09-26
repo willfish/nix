@@ -735,6 +735,40 @@ class VoiceTests(unittest.TestCase):
         self.app.worker.join(2)
         self.assertEqual(len(self.terminal.text), 1)
 
+    def test_busy_capable_terminal_stages_without_automatic_submission(self):
+        self.terminal.state = "working"
+        with patch.object(
+            self.terminal, "validate",
+            side_effect=self.terminal.validate_target,
+        ):
+            self.start_recording()
+            self.app.record()
+            self.app.worker.join(2)
+            self.assertFalse(self.app.worker.is_alive())
+            self.assertTrue(self.app.status()["draft"])
+            self.assertFalse(self.app.status()["pending"])
+            self.assertFalse(self.app.send_when_idle)
+            self.assertEqual(len(self.terminal.text), 1)
+            self.assertEqual(self.terminal.keys, [])
+            self.app._flush_queued_send()
+            self.assertEqual(self.terminal.keys, [])
+            self.app.interact()
+            self.assertEqual(self.terminal.keys, ["Enter"])
+
+    def test_busy_legacy_terminal_never_auto_sends_after_recording(self):
+        self.terminal.state = "working"
+        self.start_recording()
+        self.app.record()
+        self.app.worker.join(2)
+        self.assertTrue(self.app.status()["pending"])
+        self.assertFalse(self.app.send_when_idle)
+        self.terminal.state = "idle"
+        self.app._flush_queued_send()
+        self.assertEqual(self.terminal.text, [])
+        self.assertEqual(self.terminal.keys, [])
+        self.app.send()
+        self.assertEqual(self.terminal.keys, ["Enter"])
+
     def test_busy_terminal_does_not_block_capture_or_lose_transcript(self):
         self.terminal.state = "unknown"
         self.start_recording()
