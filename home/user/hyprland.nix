@@ -16,7 +16,52 @@
   config = lib.mkIf isGraphicalLinux (
     let
       settings = import ../config/hyprland/settings.nix;
+      omarchySource = import ./themes/omarchy-source.nix;
       omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
+      ttfx = pkgs.callPackage ./ttfx.nix { };
+      screensaver = pkgs.writeShellApplication {
+        name = "hypr-screensaver";
+        runtimeInputs = [
+          ttfx
+          pkgs.hyprland
+          pkgs.jq
+          pkgs.procps
+        ];
+        text = lib.removePrefix "#!/usr/bin/env bash\n" (
+          builtins.readFile ../config/hyprland/screensaver.sh
+        );
+      };
+      ghosttyScreensaverConfig = pkgs.writeText "ghostty-screensaver" ''
+        window-padding-x = 0
+        window-padding-y = 0
+        window-padding-color = extend-always
+        gtk-single-instance = false
+        class = org.omarchy.screensaver
+        font-size = 18
+      '';
+      launchScreensaver = pkgs.writeShellApplication {
+        name = "hypr-launch-screensaver";
+        runtimeInputs = [
+          pkgs.ghostty
+          pkgs.hyprland
+          pkgs.jq
+          pkgs.socat
+          screensaver
+        ];
+        text = ''
+          export GHOSTTY_SCREENSAVER_CONFIG=${lib.escapeShellArg ghosttyScreensaverConfig}
+          ${lib.removePrefix "#!/usr/bin/env bash\n" (
+            builtins.readFile ../config/hyprland/launch-screensaver.sh
+          )}
+        '';
+      };
+      stopScreensaver = pkgs.writeShellScript "hypr-stop-screensaver" ''
+        ${pkgs.hyprland}/bin/hyprctl eval 'hl.config({ cursor = { invisible = false } })' >/dev/null 2>&1 \
+          || ${pkgs.hyprland}/bin/hyprctl keyword cursor:invisible false >/dev/null 2>&1 \
+          || true
+        ${pkgs.procps}/bin/pkill -x ttfx >/dev/null 2>&1 || true
+        ${pkgs.procps}/bin/pkill -f '[o]rg.omarchy.screensaver' >/dev/null 2>&1 || true
+      '';
       catalogue = import ./themes/palettes.nix;
       themeRender = import ./themes/hyprland.nix { inherit lib; };
       voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
@@ -332,6 +377,10 @@
         }
       '';
     in
+    assert lib.assertMsg (
+      settings.idle.screensaverSeconds < settings.idle.lockSeconds
+      && settings.idle.lockSeconds < settings.idle.displayOffSeconds
+    ) "idle timeouts must run screensaver, then lock, then display off";
     {
       home.packages = [
         launcher
@@ -339,6 +388,8 @@
         pkgs.grimblast
         record
         session
+        screensaver
+        launchScreensaver
         themeSeed
         pkgs.brightnessctl
         pkgs.playerctl
@@ -451,6 +502,12 @@
                 float = true;
                 center = true;
                 size = "1000 700";
+              }
+              {
+                name = "screensaver";
+                "match:class" = "^org\\.omarchy\\.screensaver$";
+                float = true;
+                fullscreen = true;
               }
               {
                 name = "webcam-overlay";
@@ -683,14 +740,19 @@
             # A foreground hyprlock in before_sleep either blocks suspend or
             # returns before the lock is up.
             inhibit_sleep = 2;
-            lock_cmd = "${pkgs.procps}/bin/pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
+            lock_cmd = "${stopScreensaver}; ${pkgs.procps}/bin/pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
             before_sleep_cmd = "${pkgs.systemd}/bin/loginctl lock-session";
             after_sleep_cmd = "${pkgs.hyprland}/bin/hyprctl dispatch dpms on";
           };
           listener = [
             {
+              timeout = settings.idle.screensaverSeconds;
+              on-timeout = "${launchScreensaver}/bin/hypr-launch-screensaver";
+              on-resume = "${stopScreensaver}";
+            }
+            {
               timeout = settings.idle.lockSeconds;
-              on-timeout = "${pkgs.systemd}/bin/loginctl lock-session";
+              on-timeout = "${stopScreensaver}; ${pkgs.systemd}/bin/loginctl lock-session";
             }
             {
               timeout = settings.idle.displayOffSeconds;
@@ -700,6 +762,8 @@
           ];
         };
       };
+
+      xdg.configFile."omarchy/branding/screensaver.txt".source = "${omarchySource}/logo.txt";
 
       xdg.configFile."mako/config".text = ''
         include=${themeFile "mako.conf"}

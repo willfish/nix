@@ -50,7 +50,7 @@ sharing, speed tests and the optional media/OSD service are not hosted.
 The defaults use Nautilus for folders, Evince for PDFs, Neovim in Ghostty for text,
 and mpv with MPRIS for audio/video.
 
-Idle lock and display-off still follow `idle` in `settings.nix`. A session
+Idle follows `idle` in `settings.nix`: the Omarchy wordmark screensaver, then lock, then display-off. A session
 service watches Herdr and holds a logind block inhibitor for idle and sleep
 only while an agent is working. Blocked, idle, done and unknown agents do not
 hold the machine awake. If Herdr is not running, sleep stays allowed. The

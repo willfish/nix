@@ -212,6 +212,8 @@
   ];
 
   idle = {
+    # Omarchy's idle order: animated wordmark, then lock, then display off.
+    screensaverSeconds = 150;
     lockSeconds = 600;
     displayOffSeconds = 900;
   };
