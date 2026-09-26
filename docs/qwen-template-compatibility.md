@@ -9,11 +9,10 @@ The only changed branch renders late system/developer messages as user-role
 rendering and thinking behavior are unchanged. This is a compatibility
 workaround, not equivalent model-level system-role priority.
 
-Claude Code 2.1.223's captured agent request included a `system` role after a
-user message. The original template raised `System message must be at the
-beginning`, returning HTTP 500 and provoking retries. Anthropic's standard
-Messages schema uses the top-level `system` field instead; do not assume
-mid-conversation system roles are portable across Anthropic-compatible servers.
+A captured agent request included a `system` role after a user message. The
+original template raised `System message must be at the beginning`, returning
+HTTP 500 and provoking retries. Some chat APIs put system text in a top-level
+field instead; do not assume mid-conversation system roles are portable.
 The proxy leaves requests unchanged so wire-size measurements remain meaningful.
 
 Andromeda loads the override via `--chat-template-file` and was runtime-tested.
@@ -34,10 +33,7 @@ nix-shell -p 'python3.withPackages (ps: [ ps.jinja2 ])' \\
 From an empty temporary directory, with normal tools and a 180-second outer
 timeout:
 
-```bash
-qwen-claude -p 'What is 2+2? Reply with just the number.' \\
-  --max-turns 1 --no-session-persistence
-```
+The capture was a one-turn local agent request from that empty directory.
 
 Run `20260909T103848-3054610` returned `4`, exit 0:
 
@@ -59,8 +55,8 @@ An earlier bounded attempt timed out at 120 seconds under contention and is
 excluded. A separate empty-body probe returned 401, not a model request.
 There was no preflight generation in this successful run, unlike the earlier
 experiment, and the tool count changed from 22 to 24. Do not treat the runs as
-identical workloads or compare local Qwen usage as Claude-provider billing.
+identical workloads or compare local Qwen usage as provider billing.
 
-For Anthropic-style usage, total input context is the sum of `input_tokens`,
+For this usage report, total input context is the sum of `input_tokens`,
 `cache_read_input_tokens` and `cache_creation_input_tokens` (missing fields
 count as zero). Character counts are not tokenizer counts or billing costs.

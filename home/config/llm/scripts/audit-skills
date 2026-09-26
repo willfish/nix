@@ -352,7 +352,7 @@ def main() -> int:
     print_section("Quarterly Review Prompts")
     for prompt in (
         "OpenAI/Codex docs and skills behavior",
-        "Anthropic Agent Skills best practices",
+        "Agent skill authoring conventions",
         "Jira API/auth behavior",
         "GitHub review API behavior",
         "Private domain workflow conventions",

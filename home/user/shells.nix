@@ -9,13 +9,13 @@ let
   aliases = {
     a = "herdr";
     ag = "rg";
+    cat = "bat";
     la = "lsd -la";
     ll = "lsd -l";
     v = "nvim";
     vi = "nvim";
     vim = "nvim";
     vimdiff = "nvim -d";
-    yolo = "agy --dangerously-skip-permissions";
   }
   // lib.optionalAttrs config.dotfiles.capabilities.work { psql = "pgcli"; };
   abbreviations = {

@@ -6,7 +6,7 @@ Superpowers is a complete software development methodology for your coding agent
 
 ## Quickstart
 
-Give your agent Superpowers: [Claude Code](#claude-code), [Codex CLI](#codex-cli), [Codex App](#codex-app), [Factory Droid](#factory-droid), [Gemini CLI](#gemini-cli), [OpenCode](#opencode), [Cursor](#cursor), [GitHub Copilot CLI](#github-copilot-cli).
+Give your agent Superpowers: [Codex CLI](#codex-cli), [Codex App](#codex-app), [Factory Droid](#factory-droid), [OpenCode](#opencode), [Cursor](#cursor), [GitHub Copilot CLI](#github-copilot-cli).
 
 ## How it works
 
@@ -16,7 +16,7 @@ Once it's teased a spec out of the conversation, it shows it to you in chunks sh
 
 After you've signed off on the design, your agent puts together an implementation plan that's clear enough for an enthusiastic junior engineer with poor taste, no judgement, no project context, and an aversion to testing to follow. It emphasizes true red/green TDD, YAGNI (You Aren't Gonna Need It), and DRY.
 
-Next up, once you say "go", it launches a *subagent-driven-development* process, having agents work through each engineering task, inspecting and reviewing their work, and continuing forward. It's not uncommon for Claude to be able to work autonomously for a couple hours at a time without deviating from the plan you put together.
+Next up, once you say "go", it launches a *subagent-driven-development* process, having agents work through each engineering task, inspecting and reviewing their work, and continuing forward. It's not uncommon for an agent to work autonomously for a couple hours at a time without deviating from the plan you put together.
 
 There's a bunch more to it, but that's the core of the system. And because the skills trigger automatically, you don't need to do anything special. Your coding agent just has Superpowers.
 
@@ -33,34 +33,6 @@ Thanks!
 ## Installation
 
 Installation differs by harness. If you use more than one, install Superpowers separately for each one.
-
-### Claude Code
-
-Superpowers is available via the [official Claude plugin marketplace](https://claude.com/plugins/superpowers)
-
-#### Official Marketplace
-
-- Install the plugin from Anthropic's official marketplace:
-
-  ```bash
-  /plugin install superpowers@claude-plugins-official
-  ```
-
-#### Superpowers Marketplace
-
-The Superpowers marketplace provides Superpowers and some other related plugins for Claude Code.
-
-- Register the marketplace:
-
-  ```bash
-  /plugin marketplace add obra/superpowers-marketplace
-  ```
-
-- Install the plugin from this marketplace:
-
-  ```bash
-  /plugin install superpowers@superpowers-marketplace
-  ```
 
 ### Codex CLI
 
@@ -100,20 +72,6 @@ Superpowers is available via the [official Codex plugin marketplace](https://git
 
   ```bash
   droid plugin install superpowers@superpowers
-  ```
-
-### Gemini CLI
-
-- Install the extension:
-
-  ```bash
-  gemini extensions install https://github.com/obra/superpowers
-  ```
-
-- Update later:
-
-  ```bash
-  gemini extensions update superpowers
   ```
 
 ### OpenCode

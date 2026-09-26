@@ -3,7 +3,7 @@ name: youtube-extract
 description: >
   YouTube metadata and captions. Use when a YouTube or youtu.be URL, video
   timestamp, transcript, captions, or "what did they say in this video" needs
-  extraction. Prefer yt-dlp over Gemini, browser scraping, or downloading media.
+  extraction. Prefer yt-dlp over browser scraping or downloading media.
 ---
 
 # YouTube extract
@@ -12,7 +12,7 @@ Before drafting or updating prose, read
 `~/.agents/guides/documentation-relevance.md`.
 
 Get title, description, chapters and captions with `yt-dlp`. Do not download
-audio or video. Do not ask Gemini or another chat model to "watch" the link.
+audio or video. Do not ask a chat model to "watch" the link.
 Do not scrape `youtube.com` in the browser unless `yt-dlp` fails.
 
 ## Workflow

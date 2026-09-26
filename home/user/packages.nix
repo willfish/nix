@@ -282,7 +282,7 @@ in
     ++ lib.optionals capabilities.personal [
       # Audio tools
       ffmpeg # Audio/video conversion and inspection tools
-      sox # Sound processing tool - used for Claude Code notification chimes
+      sox # Sound processing tool
 
     ]
     ++ lib.optionals (capabilities.personal && !(stdenv.isLinux && capabilities.desktop)) [ mpv ]

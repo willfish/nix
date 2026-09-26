@@ -27,7 +27,7 @@ This skill is adapted from `shadcn/improve` for the shared Codex/dotfiles skill 
 
 Map the repo before judging it:
 
-- Read `README`, `AGENTS.md`/`CLAUDE.md`/`GEMINI.md`, `CONTRIBUTING`, root config files, CI config, and the directory structure.
+- Read `README`, `AGENTS.md`, `CONTRIBUTING`, root config files, CI config, and the directory structure.
 - Identify languages, frameworks, package manager, build/test/lint/typecheck commands, deployment target, and test coverage shape.
 - Note conventions for naming, folder layout, error handling, state management, and tests. Plans must tell the executor to match these with examples.
 - Read intent and design docs when present: ADRs under `docs/adr/`, PRDs/specs, `CONTEXT.md`, `DESIGN.md`, `PRODUCT.md`, or equivalent.

@@ -1,6 +1,5 @@
 .direnv
 .nix
-.claude/
 
 __pycache__/
 *.pyc
