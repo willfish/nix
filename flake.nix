@@ -47,14 +47,6 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    sniffy = {
-      url = "github:willfish/sniffy";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    smailer = {
-      url = "github:willfish/smailer";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     mux = {
       url = "github:willfish/mux";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -72,10 +64,6 @@
     };
     forte = {
       url = "github:willfish/forte";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    walls = {
-      url = "github:willfish/walls";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
@@ -320,14 +308,11 @@
       nix-config,
       agent-bus,
       nix-darwin,
-      sniffy,
-      smailer,
       mux,
       himalaya-mcp,
       herdr,
       herdr-source,
       forte,
-      walls,
       llm-agents,
       nixos-hardware,
       # nixpkgs-local,
@@ -343,14 +328,11 @@
         darwinSystem
       ];
       mkOverlay = system: _final: _prev: {
-        inherit (sniffy.packages.${system}) sniffy;
-        inherit (smailer.packages.${system}) smailer;
         mux = mux.packages.${system}.default;
         himalaya-mcp = himalaya-mcp.packages.${system}.default;
         herdr = herdr.packages.${system}.default;
         herdr-source = herdr-source.outPath;
         forte = forte.packages.${system}.default;
-        inherit (walls.packages.${system}) walls;
         pi-coding-agent = llm-agents.packages.${system}.pi;
         hermes-agent = import ./home/user/hermes-package.nix {
           hermesInput = inputs.hermes-agent;

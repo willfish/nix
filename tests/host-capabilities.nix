@@ -112,8 +112,6 @@ let
         "slack"
         "valkey"
         "postgresql"
-        "sniffy"
-        "smailer"
         "ecs"
       ]
     ) "work packages on non-work host";

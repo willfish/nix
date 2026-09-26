@@ -10,7 +10,7 @@ let
   inherit (pkgs) stdenv;
   capabilities = config.dotfiles.capabilities;
   isTerminus = capabilities.nas;
-  skipsForteAndWalls = builtins.elem hostName [
+  skipsForte = builtins.elem hostName [
     "foundation"
     "relay"
     "terminus"
@@ -235,8 +235,6 @@ in
       terraform-docs
       terragrunt
       tflint
-      sniffy
-      smailer
     ]
     ++ lib.optionals capabilities.desktop [ xdg-terminal-exec ]
     ++ lib.optionals capabilities.email [ himalaya ]
@@ -344,9 +342,8 @@ in
     ]
     # Source-built personal flakes. Keep them off Relay, Foundation, and
     # Terminus, where they are not needed.
-    ++ lib.optionals (stdenv.isLinux && !skipsForteAndWalls) [
+    ++ lib.optionals (stdenv.isLinux && !skipsForte) [
       forte
-      walls # Personal wallpaper manager (Rust); provides walls + walls-tray binaries
     ];
 
   home.activation.fixDarwinBraveSignature = lib.mkIf (stdenv.isDarwin && capabilities.desktop) (

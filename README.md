@@ -51,8 +51,6 @@ flowchart TD
 | `stylix` | Shared colour and font theming |
 | `nix-index-database` | Prebuilt nix-index database and `comma` integration |
 | `pre-commit-hooks` | Git hook management |
-| `sniffy` | AWS secrets scanner |
-| `smailer` | S3 email viewer |
 | `mux` | Herdr session manager |
 | `forte` | Desktop music player |
 | `llm-agents` | Pi package |
@@ -88,7 +86,7 @@ flowchart TD
     end
 
     subgraph INPUTS [Package Inputs]
-        TOOLS[sniffy, smailer, mux, forte, llm-agents...]
+        TOOLS[mux, forte, llm-agents...]
     end
 
     ROOT --> SYSTEM & HOME & INPUTS
@@ -145,7 +143,7 @@ Over 100 packages organised by purpose. Platform-specific GUI apps, clipboard to
 | **LSP Servers** | nil, lua-language-server, gopls, ccls, bash-language-server, marksman, typescript-language-server | All |
 | **Monitoring** | btop, htop | All |
 | **Databases** | PostgreSQL, Valkey, pgcli | All |
-| **Custom** | sniffy, smailer, mux, ecs | All |
+| **Custom** | mux, ecs | All |
 
 ### AI / LLM Agent Harness
 
@@ -204,7 +202,7 @@ Personal tools and agent CLIs are exposed through flake inputs and package overl
 | Package | Source | Reason | Platform |
 |---------|--------|--------|----------|
 | `pi` | `llm-agents` flake input | Agent tooling | Mixed |
-| `sniffy`, `smailer`, `mux`, `forte` | GitHub flake inputs | Personal tools | Mixed |
+| `mux`, `forte` | GitHub flake inputs | Personal tools | Mixed |
 
 ## Custom Scripts
 
