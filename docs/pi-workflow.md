@@ -99,12 +99,12 @@ On Andromeda and Foundation, interactive `pi` and `qwen-pi` sessions in Herdr
 automatically attach to the shared voice controller. `pi-voice` and
 `qwen-pi-voice` remain compatibility commands.
 The first ready Pi session is selected once; later attachments and keyboard
-focus do not change that destination. Choose another session from the tray or
+focus do not change that destination. Choose another session with
 **Super+Shift+V**, including after the selected session exits. Team panes do
 not register and cannot receive dictation.
 
 The controller starts at login. Speech backends load and warm on attachment,
-with loading/unavailable status in the tray; controller reconnection retries
+with unavailable status on the voice card; controller reconnection retries
 quietly. Lost-destination dictation stays retained for explicit copy, staging
 in a selected Pi editor, or discard. Recovery never auto-submits. See
 [voice controls](voice.md) for the recording/send hotkeys and recovery details.

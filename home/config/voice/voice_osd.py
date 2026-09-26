@@ -11,6 +11,7 @@ from pathlib import Path
 import socket
 import subprocess
 import sys
+import time
 
 
 ACTIVE = {"starting", "recording", "stopping", "transcribing"}
@@ -25,7 +26,14 @@ DEFAULT_COLOURS = {
     "text": "#c2c2b0",
     "border": "#78824b",
     "accent": "#c9a554",
+    "muted": "#8a8a78",
+    "red": "#e0303e",
+    "yellow": "#c9a554",
+    "green": "#2aa45f",
+    "orange": "#e2681e",
+    "teal": "#2f9e9a",
 }
+TONES = ("red", "yellow", "green", "orange", "teal", "accent", "muted")
 
 
 def public_label(value, limit=120):
@@ -63,12 +71,52 @@ def popup_colours(text):
         if section != "popups" or "=" not in line:
             continue
         key, value = (part.strip().strip("\"'") for part in line.split("=", 1))
-        if key in ("background", "text", "border") and value.startswith("#"):
+        if key in colours and value.startswith("#") and len(value) in (4, 7, 9):
             colours[key] = value
-        elif key == "border" and value.startswith("#"):
-            colours["accent"] = value
-    if colours["border"].startswith("#"):
+    accent_is_default = colours["accent"] == DEFAULT_COLOURS["accent"]
+    if colours["border"].startswith("#") and accent_is_default:
         colours["accent"] = colours["border"]
+    return colours
+
+
+def waybar_colours(text):
+    """Theme roles already published for the bar."""
+    colours = {}
+    if not isinstance(text, str):
+        return colours
+    for raw in text.splitlines():
+        line = raw.strip().rstrip(";")
+        if not line.startswith("@define-color "):
+            continue
+        parts = line.split()
+        if len(parts) < 3 or parts[1] not in DEFAULT_COLOURS:
+            continue
+        value = parts[2]
+        if value.startswith("#") and len(value) in (4, 7, 9):
+            colours[parts[1]] = value
+    return colours
+
+
+def resolved_colours(shell_text, waybar_text=""):
+    """Waybar fills theme roles. Explicit popup keys still win."""
+    colours = dict(DEFAULT_COLOURS)
+    colours.update(waybar_colours(waybar_text))
+    explicit = set()
+    section = None
+    if isinstance(shell_text, str):
+        for raw in shell_text.splitlines():
+            line = raw.strip()
+            if line.startswith("[") and line.endswith("]"):
+                section = line[1:-1].strip()
+                continue
+            if section == "popups" and "=" in line and not line.startswith("#"):
+                explicit.add(line.split("=", 1)[0].strip())
+    parsed = popup_colours(shell_text)
+    for key in explicit:
+        if key in parsed:
+            colours[key] = parsed[key]
+    if "border" in explicit and "accent" not in explicit:
+        colours["accent"] = parsed["border"]
     return colours
 
 
@@ -141,6 +189,52 @@ def destination(status, phase):
     ) or "Selected Pi session"
 
 
+def card_state(status, phase, message):
+    """Choose one public title. Dictation outranks speech and attention."""
+    connection = status.get("connection_state")
+    if phase in ACTIVE:
+        titles = {
+            "starting": "Starting microphone",
+            "stopping": "Finishing",
+            "transcribing": "Transcribing",
+        }
+        title = titles.get(phase, "Listening")
+        if phase == "recording":
+            elapsed = status.get("recording_seconds") or 0
+            try:
+                elapsed = max(0, int(elapsed))
+            except (TypeError, ValueError):
+                elapsed = 0
+            title = f"Listening {elapsed // 60:02d}:{elapsed % 60:02d}"
+        return title, "red" if phase == "recording" else "yellow"
+    if status.get("osd") and message:
+        tone = status.get("osd_tone")
+        return message, tone if tone in TONES else "orange"
+    if phase == "error":
+        return public_label(status.get("error") or "Voice unavailable"), "red"
+    if status.get("queued"):
+        return "Will send when idle", "green"
+    if status.get("draft") or status.get("pending"):
+        return "Ready to send", "green"
+    if status.get("retained"):
+        return "Dictation retained", "orange"
+    if status.get("speaking"):
+        if status.get("audible"):
+            return "Speaking", "teal"
+        return "About to speak", "accent"
+    if status.get("agent_state") == "blocked":
+        return "Needs attention", "orange"
+    if connection in ("connecting", "reconnecting"):
+        return connection.capitalize(), "yellow"
+    if status.get("rebind_needed"):
+        return "Conversation changed", "yellow"
+    if status.get("models") == "unavailable":
+        return "Speech models unavailable", "orange"
+    if status.get("osd"):
+        return "Voice", "accent"
+    return "Voice", "muted"
+
+
 def osd_view(status):
     """Public card state. Transcript and reply fields are ignored."""
     if not isinstance(status, dict):
@@ -149,28 +243,30 @@ def osd_view(status):
     phase = phase if isinstance(phase, str) else "idle"
     message = status.get("osd_message")
     message = public_label(message) if isinstance(message, str) else ""
-    visible = phase in ACTIVE or bool(status.get("osd"))
-    titles = {
-        "starting": "Starting microphone",
-        "recording": "Listening",
-        "stopping": "Finishing",
-        "transcribing": "Transcribing",
-        "error": "Voice unavailable",
-        "draft": "Dictation ready",
-        "idle": "Voice",
-    }
-    title = titles.get(phase, "Voice")
-    if phase == "recording":
-        elapsed = status.get("recording_seconds") or 0
-        try:
-            elapsed = max(0, int(elapsed))
-        except (TypeError, ValueError):
-            elapsed = 0
-        title = f"Listening {elapsed // 60:02d}:{elapsed % 60:02d}"
+    title, tone = card_state(status, phase, message)
+    visible = phase in ACTIVE or bool(status.get("osd")) or title != "Voice"
     detail = destination(status, phase)
-    if message and phase not in ACTIVE:
-        title = "Voice unavailable"
-        detail = message
+    if status.get("retained") and phase not in ACTIVE:
+        source = public_label(status.get("retained_source") or "")
+        if source:
+            detail = fit_label(f"From {source}")
+    microphone = status.get("microphone") if isinstance(
+        status.get("microphone"), dict
+    ) else {}
+    if phase == "recording" and microphone:
+        warnings = []
+        if microphone.get("muted"):
+            warnings.append("muted")
+        if microphone.get("clipping"):
+            warnings.append("clipping")
+        if warnings:
+            detail = fit_label(f"{detail} · {', '.join(warnings)}")
+    if (
+        status.get("models") == "unavailable"
+        and title == "Speech models unavailable"
+        and status.get("model_error")
+    ):
+        detail = public_label(status.get("model_error"), 80) or detail
     level = status.get("input_level") if phase == "recording" else 0
     try:
         level = float(level or 0)
@@ -181,6 +277,7 @@ def osd_view(status):
         "visible": visible,
         "title": title,
         "detail": detail,
+        "tone": tone if tone in TONES else "muted",
         "level": level,
         "meter": meter_blocks([level] if phase == "recording" else []),
         "recording": phase == "recording",
@@ -201,6 +298,35 @@ def status_from_response(payload):
     return {
         key: value for key, value in payload.items() if key != "ok"
     }
+
+
+def notice_path():
+    runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    return Path(runtime) / "pi-voice" / "osd-notice.json"
+
+
+def read_notice():
+    """External voice message used only when the controller card is hidden."""
+    try:
+        payload = json.loads(notice_path().read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    try:
+        if float(payload.get("until") or 0) <= time.time():
+            return None
+    except (TypeError, ValueError):
+        return None
+    message = payload.get("message")
+    if not isinstance(message, str) or not message.strip():
+        return None
+    tone = payload.get("tone")
+    return osd_view({
+        "osd": True,
+        "osd_message": message,
+        "osd_tone": tone if tone in TONES else "red",
+    })
 
 
 def read_status():
@@ -258,8 +384,10 @@ def run():
     gi.require_version("Pango", "1.0")
     from gi.repository import Gdk, GLib, Gtk, Gtk4LayerShell, Pango
 
-    colours = popup_colours(
-        theme_path().read_text() if theme_path().is_file() else ""
+    shell = theme_path().read_text() if theme_path().is_file() else ""
+    waybar = theme_path().with_name("waybar.css")
+    colours = resolved_colours(
+        shell, waybar.read_text() if waybar.is_file() else ""
     )
     app = Gtk.Application(application_id="uk.hues.pi-voice-osd")
     state = {"connector": None, "levels": [0.0] * METER_CELLS}
@@ -279,8 +407,18 @@ def run():
                 Gtk4LayerShell.set_monitor(window, monitor)
                 return
 
+    def apply_tone(tone):
+        card = state.get("card")
+        if card is None:
+            return
+        for name in TONES:
+            card.remove_css_class(f"tone-{name}")
+        card.add_css_class(f"tone-{tone if tone in TONES else 'muted'}")
+
     def tick():
         view = osd_view(read_status() or {})
+        if not view["visible"]:
+            view = read_notice() or view
         if not view["visible"]:
             window.set_visible(False)
             return True
@@ -288,6 +426,7 @@ def run():
             window.present()
         window.set_visible(True)
         apply_monitor()
+        apply_tone(view.get("tone"))
         title.set_label(view["title"])
         detail.set_label(view["detail"])
         if view["recording"]:
@@ -313,6 +452,7 @@ def run():
         Gtk4LayerShell.set_margin(window, Gtk4LayerShell.Edge.TOP, 18)
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         card.add_css_class("card")
+        state["card"] = card
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
         title = Gtk.Label(label="Voice", xalign=0)
         title.set_halign(Gtk.Align.START)
@@ -332,7 +472,7 @@ def run():
         window.set_child(card)
         style = Gtk.CssProvider()
         style.load_from_data(
-            f"""
+            (f"""
             window {{
               background: transparent;
             }}
@@ -360,7 +500,17 @@ def run():
               font-size: 18px;
               letter-spacing: 1px;
             }}
-            """.encode(),
+            """ + "".join(
+                f"""
+            .card.tone-{name} {{
+              border-color: {colours[name]};
+            }}
+            .card.tone-{name} label.meter {{
+              color: {colours[name]};
+            }}
+                """
+                for name in TONES
+            )).encode(),
             -1,
         )
         title.add_css_class("title")

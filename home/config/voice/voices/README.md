@@ -41,7 +41,7 @@ personal reference.
 
 ## Character selection and Samantha's length rule
 
-The tray's **Character voice** submenu has one entry per character. Samantha
+**Super+Shift+V** lists one entry per character. Samantha
 uses the current reference for up to 50 words and the newer reference for more
 than 50 words. This rule is internal to Samantha, not a separate menu choice.
 The count uses the complete spoken reply after Markdown cleanup. Every chunk

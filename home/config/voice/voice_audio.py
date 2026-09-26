@@ -56,6 +56,7 @@ class LocalAudio:
         self.engines = engines
         self.runtime, self.config = runtime, config
         self.player = None
+        self.on_audible = None
         self.lock = threading.Lock()
         self.voices = {
             "samantha": {"label": "Samantha", "options": {}},
@@ -548,6 +549,7 @@ class LocalAudio:
                     stdout=subprocess.DEVNULL,
                 )
                 self.player = player
+            self._playback_started()
             try:
                 for index in range(len(chunks)):
                     if cancelled.is_set():
@@ -595,6 +597,15 @@ class LocalAudio:
                     except BrokenPipeError:
                         pass
 
+    def _playback_started(self):
+        callback = self.on_audible
+        if not callback:
+            return
+        try:
+            callback()
+        except Exception:
+            return
+
     def speak(self, text, cancelled):
         # Select once for the complete spoken reply, before chunking or waits.
         character = self.selected_voice
@@ -639,6 +650,7 @@ class LocalAudio:
                     stdout=subprocess.DEVNULL,
                 )
                 self.player = player
+            self._playback_started()
             try:
                 # Full replies can exceed two minutes; stop() interrupts this.
                 player.wait()

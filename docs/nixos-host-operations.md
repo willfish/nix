@@ -197,7 +197,7 @@ See [voice controls](voice.md) for setup and recovery. On supported hosts the
 controller starts at login, while speech backends warm on session attachment.
 Interactive Pi sessions in Herdr attach automatically; after installing, use
 `/reload` once in existing standard Pi sessions or restart Qwen sessions.
-Selection stays sticky: use the tray or Super+Shift+V to choose a destination.
+Selection stays sticky: use Super+Shift+V to choose a destination.
 
 ## Home Manager
 

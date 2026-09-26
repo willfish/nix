@@ -186,6 +186,22 @@ class VoiceTests(unittest.TestCase):
             status["osd_message"], "Select a Pi voice session first"
         )
 
+    def test_notice_stays_on_the_card_instead_of_a_desktop_popup(self):
+        called = []
+        app = self.voice.Controller(
+            Path(self.tmp.name) / "notice",
+            self.terminal,
+            self.audio,
+            lambda *args: called.append(args),
+        )
+        app.notice("Could not read the reply", "engine busy", tone="red")
+        status = app.status()
+        self.assertFalse(called)
+        self.assertTrue(status["osd"])
+        self.assertIn("engine busy", status["osd_message"])
+        self.assertEqual(status["osd_tone"], "red")
+        self.assertNotIn("notify", status["osd_message"])
+
     def start_recording(self):
         self.app.record()
         deadline = time.monotonic() + 1

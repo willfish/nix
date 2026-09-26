@@ -304,6 +304,7 @@ class Controller:
         self.turns = set()
         self.auto = False
         self.playback = None
+        self.audible = False
         self.capture = None
         self.record_cancelled = threading.Event()
         self.phase = "idle"
@@ -333,6 +334,11 @@ class Controller:
         self.recording_label = None
         self.osd_until = 0.0
         self.osd_message = None
+        self.osd_tone = None
+        try:
+            self.audio.on_audible = self._mark_audible
+        except Exception:
+            pass
 
     def _population(self):
         if self.engines:
@@ -382,14 +388,15 @@ class Controller:
     def transcribing(self):
         return self.phase == "transcribing"
 
-    def notice(self, title, detail=""):
-        def deliver():
-            try:
-                self._notice(title, detail)
-            except Exception:
-                pass
-
-        threading.Thread(target=deliver, daemon=True).start()
+    def notice(self, title, detail="", tone="orange"):
+        text = " ".join(str(title or "").split())
+        extra = " ".join(str(detail or "").split())
+        if extra:
+            text = f"{text}: {extra}" if text else extra
+        text = "".join(char for char in text if char.isprintable())[:160]
+        if text:
+            print(f"Pi voice: {text}", file=sys.stderr, flush=True)
+        self.request_osd(text or None, tone=tone)
 
     def recording_active(self):
         return self.phase in (
@@ -1315,6 +1322,8 @@ class Controller:
                 "recording": self.phase == "recording",
                 "transcribing": self.transcribing,
                 "speaking": bool(self.playback and self.playback.is_alive()),
+                "audible": self.audible,
+                "queued": self.send_when_idle,
                 "phase": self.phase,
                 "error": self.error,
                 "pending": bool(self.pending),
@@ -1330,6 +1339,7 @@ class Controller:
                     or time.monotonic() < self.osd_until
                 ),
                 "osd_message": self.osd_message,
+                "osd_tone": self.osd_tone,
             }
 
         snapshots = self.catalogue.snapshots() if self.catalogue else {}
@@ -1556,6 +1566,7 @@ class Controller:
                     "No summary in the latest completed reply"
                 )
             self.cancelled = threading.Event()
+            self.audible = False
             self.playback = threading.Thread(
                 target=self._speak,
                 args=(self.reply, self.cancelled),
@@ -1576,18 +1587,26 @@ class Controller:
 
     def _speak(self, text, cancelled):
         lease = None
+        with self.lock:
+            self.audible = False
         try:
             lease = self.engines.acquire('tts') if self.engines else None
             if self._await_engine(lease, cancelled):
                 self.audio.speak(text, cancelled)
         except Exception as exc:
             if not cancelled.is_set():
-                self.notice("Could not read the reply", str(exc))
+                self.notice("Could not read the reply", str(exc), tone="red")
         finally:
+            with self.lock:
+                self.audible = False
             if lease:
                 lease.release()
 
-    def request_osd(self, message=None, seconds=6):
+    def _mark_audible(self):
+        with self.lock:
+            self.audible = True
+
+    def request_osd(self, message=None, seconds=6, tone=None):
         """Ask the top-of-monitor card to appear. Never store dictated text."""
         text = None
         if message:
@@ -1595,9 +1614,14 @@ class Controller:
             text = "".join(
                 char for char in text if char.isprintable()
             )[:160]
+        if tone not in (
+            "red", "yellow", "green", "orange", "teal", "accent", "muted"
+        ):
+            tone = None
         with self.lock:
             self.osd_until = time.monotonic() + seconds
             self.osd_message = text or None
+            self.osd_tone = tone
 
     def interact(self):
         self.request_osd()
@@ -1810,11 +1834,7 @@ class Controller:
                     self.record_started = time.monotonic()
                     self.phase = "recording"
                 self._cue(880)
-                self.notice(
-                    "Recording",
-                    "Speech is added to the prompt as you pause; "
-                    "Super+Space stops; maximum 3 minutes",
-                )
+
             slices = [path] if retry else self._recording_slices(
                 capture, path, cancelled, temps
             )
@@ -1952,15 +1972,7 @@ class Controller:
                     if token == self.token and not cancelled.is_set():
                         self.phase = "draft"
             if staged_any or self.pending:
-                if self._queue_if_busy():
-                    self.notice(
-                        "Dictation queued",
-                        "Will send when Pi is idle",
-                    )
-                elif staged_any:
-                    self.notice(
-                        "Dictation ready", "Press Super+Space again to send"
-                    )
+                self._queue_if_busy()
             elif not spoken:
                 self.notice("No speech detected", "Nothing was inserted")
         except Exception as exc:
@@ -2195,7 +2207,6 @@ class Controller:
             return False
         self.send_when_idle = True
         self.phase = "draft"
-        self.notice("Dictation queued", "Will send when Pi is idle")
         return True
 
     def send(self, expected=None, allow_edited=False):
@@ -2279,6 +2290,7 @@ class Controller:
             self._expire_retry(force=True)
             self.phase = "draft" if self.draft or self.pending else "idle"
             self.error = None
+            self.audible = False
             self.audio.stop()
 
 
@@ -2291,23 +2303,52 @@ def runtime_dir():
     return runtime
 
 
-def desktop_notice(title, detail=""):
-    print(f"{title}: {detail}", file=sys.stderr, flush=True)
+def osd_notice_path():
+    return runtime_dir() / "osd-notice.json"
+
+
+def write_osd_notice(message, tone="red", seconds=8):
+    """Fallback card message when the controller socket is down."""
+    text = " ".join(str(message or "").split())
+    text = "".join(char for char in text if char.isprintable())[:160]
+    if not text:
+        return
+    if tone not in (
+        "red", "yellow", "green", "orange", "teal", "accent", "muted"
+    ):
+        tone = "red"
+    path = osd_notice_path()
+    payload = json.dumps({
+        "message": text,
+        "tone": tone,
+        "until": time.time() + seconds,
+    })
+    temporary = path.with_suffix(".json.tmp")
+    temporary.write_text(payload)
+    os.chmod(temporary, 0o600)
+    temporary.replace(path)
+
+
+def clear_osd_notice():
+    osd_notice_path().unlink(missing_ok=True)
+
+
+def desktop_notice(title, detail="", tone="red"):
+    """Show a voice message on the card. Never raise a separate notification."""
+    text = " ".join(f"{title}: {detail}".split()) if detail else str(title)
+    text = "".join(char for char in text if char.isprintable())[:160]
+    print(f"Pi voice: {text}", file=sys.stderr, flush=True)
     try:
-        subprocess.run(
-            [
-                "notify-send",
-                "--app-name=Agent Voice",
-                "--expire-time=4000",
-                "--hint=string:x-canonical-private-synchronous:pi-voice",
-                title,
-                detail,
-            ],
-            check=False,
-            timeout=5,
+        call(
+            {"action": "notice", "message": text, "tone": tone},
+            start=False,
         )
-    except (OSError, subprocess.TimeoutExpired):
-        pass
+        clear_osd_notice()
+    except Exception:
+        try:
+            write_osd_notice(text, tone=tone)
+        except OSError:
+            pass
 
 
 def dispatch(app, request):
@@ -2353,6 +2394,12 @@ def dispatch(app, request):
         app.unregister(request["token"])
     elif action == "notify":
         return {"accepted": app.notify(request["token"], request["event"])}
+    elif action == "notice":
+        message = request.get("message")
+        if not isinstance(message, str) or not message.strip():
+            raise RuntimeError("Voice notice needs a message")
+        app.notice(message, tone=request.get("tone") or "orange")
+        return app.status()
     elif action == "auto":
         with app.lock:
             app.auto = bool(request["enabled"])
@@ -2387,8 +2434,6 @@ def dispatch(app, request):
 
 
 def serve(runtime, config):
-    from voice_tray import VoiceTray
-
     audio = LocalAudio(runtime, config)
     engines = EngineManager(
         readiness=audio.readiness,
@@ -2406,14 +2451,6 @@ def serve(runtime, config):
     app.auto = config.get("auto_speak", True)
     app.restore()
     engines.reconcile_startup()
-    def tray_action(action):
-        try:
-            dispatch(app, {"action": action})
-        except Exception as exc:
-            app.report_error(exc)
-            desktop_notice("Pi voice", str(exc))
-
-    tray = VoiceTray(app.status, tray_action)
     path = runtime / "control.sock"
     path.unlink(missing_ok=True)
 
@@ -2427,7 +2464,7 @@ def serve(runtime, config):
             except Exception as exc:
                 response = {"ok": False, "error": str(exc)}
                 app.report_error(exc)
-                desktop_notice("Pi voice", str(exc))
+                app.notice("Voice unavailable", str(exc), tone="red")
             self.wfile.write(json.dumps(response).encode() + b"\n")
 
     class Server(socketserver.ThreadingUnixStreamServer):
@@ -2435,7 +2472,6 @@ def serve(runtime, config):
 
     with Server(str(path), Handler) as server:
         os.chmod(path, 0o600)
-        tray.start()
 
         def shutdown(_sig, _frame):
             with app.lock:
@@ -2462,7 +2498,6 @@ def serve(runtime, config):
             monitor_stop.set()
             with app.lock:
                 app.attachments_closed = True
-            tray.stop()
             app.stop()
             try:
                 app.engines.close()

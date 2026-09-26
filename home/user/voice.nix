@@ -18,7 +18,7 @@ let
   whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
   sttModel = if hostName == "andromeda" then "ggml-large-v3-turbo-q5_0.bin" else "ggml-small.en.bin";
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
-  voicePython = pkgs.python3.withPackages (ps: [ ps.dbus-next ]);
+  voicePython = pkgs.python3;
   osdPython = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
   voiceScripts = pkgs.runCommand "pi-voice-scripts" { } ''
     mkdir -p "$out"
@@ -34,7 +34,6 @@ let
         pkgs.wireplumber
         pkgs.wl-clipboard
         pkgs.curl
-        pkgs.libnotify
         pkgs.systemd
         pkgs.herdr
       ];
@@ -106,7 +105,6 @@ let
       voicePython
       pkgs.fuzzel
       pkgs.systemd
-      pkgs.libnotify
     ];
     text = ''
       export PI_PERSONAPLEX_ENABLED=${if hostName == "andromeda" then "1" else "0"}
@@ -222,7 +220,7 @@ in
     xdg.configFile."voice-menu/fuzzel.ini".source = menuConfig;
 
     systemd.user.services.pi-voice = {
-      Unit.Description = "Agent voice hotkeys, tray and selected session";
+      Unit.Description = "Agent voice hotkeys and selected session";
       Install.WantedBy = [ "default.target" ];
       Service = common // {
         ExecStart = "${voice}/bin/pi-voice serve";
@@ -235,7 +233,7 @@ in
     };
     systemd.user.services.pi-voice-osd = {
       Unit = {
-        Description = "Floating dictation card for the selected Pi session";
+        Description = "Voice status card for the selected Pi session";
         After = [
           "graphical-session.target"
           "pi-voice.service"

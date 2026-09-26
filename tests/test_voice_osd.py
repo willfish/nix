@@ -58,8 +58,9 @@ class OsdTests(unittest.TestCase):
             "osd_message": "Select a Pi voice session first",
             "pending": "do not show this",
         })
-        self.assertEqual(view["title"], "Voice unavailable")
-        self.assertEqual(view["detail"], "Select a Pi voice session first")
+        self.assertEqual(view["title"], "Select a Pi voice session first")
+        self.assertEqual(view["tone"], "orange")
+        self.assertNotEqual(view["detail"], "do not show this")
         self.assertNotIn(
             "do not show", " ".join(str(value) for value in view.values())
         )
@@ -110,6 +111,85 @@ class OsdTests(unittest.TestCase):
         self.assertEqual(colours["background"], "#111111")
         self.assertEqual(colours["text"], "#eeeeee")
         self.assertEqual(colours["accent"], "#abcdef")
+
+    def test_popup_colours_keep_explicit_state_roles(self):
+        colours = self.osd.popup_colours(
+            "[popups]\nred = \"#aa0000\"\nteal = \"#00aaaa\"\n"
+            "accent = \"#0000aa\"\n"
+        )
+        self.assertEqual(colours["red"], "#aa0000")
+        self.assertEqual(colours["teal"], "#00aaaa")
+        self.assertEqual(colours["accent"], "#0000aa")
+
+    def test_waybar_roles_fill_colours_the_popup_file_omits(self):
+        colours = self.osd.resolved_colours(
+            "[popups]\nborder = \"#111111\"\n",
+            "@define-color red #aa0000;\n@define-color teal #00aaaa;\n"
+            "@define-color accent #0000ff;\n",
+        )
+        self.assertEqual(colours["red"], "#aa0000")
+        self.assertEqual(colours["teal"], "#00aaaa")
+        self.assertEqual(colours["accent"], "#111111")
+
+    def test_working_agent_stays_hidden_until_speech_is_queued(self):
+        hidden = self.osd.osd_view({
+            "phase": "idle",
+            "pane": "w1:p1",
+            "responding": True,
+            "agent_state": "working",
+        })
+        self.assertFalse(hidden["visible"])
+        imminent = self.osd.osd_view({
+            "phase": "idle",
+            "pane": "w1:p1",
+            "speaking": True,
+            "sessions": [{
+                "selected": True,
+                "full_label": "pi · notes · selected",
+            }],
+        })
+        self.assertTrue(imminent["visible"])
+        self.assertEqual(imminent["title"], "About to speak")
+        self.assertEqual(imminent["tone"], "accent")
+        self.assertEqual(imminent["detail"], "notes")
+        speaking = self.osd.osd_view({**{
+            "phase": "idle", "pane": "w1:p1", "speaking": True,
+            "audible": True,
+        }})
+        self.assertEqual((speaking["title"], speaking["tone"]),
+                         ("Speaking", "teal"))
+
+    def test_dictation_outranks_speech_and_ready_uses_green(self):
+        view = self.osd.osd_view({
+            "phase": "recording",
+            "speaking": True,
+            "audible": True,
+            "recording_seconds": 3,
+        })
+        self.assertTrue(view["title"].startswith("Listening"))
+        self.assertEqual(view["tone"], "red")
+        ready = self.osd.osd_view({
+            "phase": "draft", "draft": True, "pane": "w1:p1",
+        })
+        self.assertEqual((ready["title"], ready["tone"]),
+                         ("Ready to send", "green"))
+        self.assertNotIn("secret", str(ready))
+
+    def test_attention_states_use_distinct_tones_without_reply_text(self):
+        blocked = self.osd.osd_view({
+            "phase": "idle", "pane": "w1:p1", "agent_state": "blocked",
+            "reply": "secret reply",
+        })
+        self.assertEqual(blocked["title"], "Needs attention")
+        self.assertEqual(blocked["tone"], "orange")
+        self.assertNotIn("secret", str(blocked))
+        retained = self.osd.osd_view({
+            "retained": True,
+            "retained_source": "notes",
+            "reply": "secret reply",
+        })
+        self.assertEqual(retained["title"], "Dictation retained")
+        self.assertEqual(retained["detail"], "From notes")
 
 
 if __name__ == "__main__":

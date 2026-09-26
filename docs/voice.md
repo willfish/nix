@@ -1,6 +1,6 @@
 # Local agent voice on Andromeda
 
-One local recorder, tray and pair of speech engines serve Pi and Qwen Pi.
+One local recorder, status card and pair of speech engines serve Pi and Qwen Pi.
 The control command is `pi-voice`; units are `pi-voice`, `pi-voice-stt` and
 `pi-voice-tts`. Andromeda uses Whisper large-v3-turbo Q5 on NVIDIA Vulkan; Foundation keeps
 Whisper small.en on the Radeon iGPU. Pause detection stays in the local
@@ -13,7 +13,7 @@ for TTS. Foundation has no TTS. macOS needs separate platform adapters.
 
 On Andromeda, and for dictation on Foundation, interactive `pi` and `qwen-pi`
 sessions inside Herdr attach automatically. Team panes do not register and cannot
-be selected. The lightweight controller and tray start at login. Speech models
+be selected. The lightweight controller starts at login. Speech models
 load on use: Whisper for dictation and TTS for playback. Print, RPC and
 noninteractive sessions do not attach. After installing this configuration, use
 `/reload` once in an existing standard Pi session. Restart an existing Qwen
@@ -34,8 +34,7 @@ Each attached session registers its process, pane and conversation. The first
 ready non-team Pi session is selected automatically only when selection has
 not yet been initialized. Selection stays sticky: new Pi sessions and keyboard
 focus never steal it. After the selected session disappears, another session
-is not silently chosen. Select a destination manually in the Agent Voice tray's
-**Voice session** dropdown or with **Super+Shift+V**.
+is not silently chosen. Select a destination manually with **Super+Shift+V**.
 
 Labels identify the harness, workspace/session and pane; hover for full details.
 Only the selected session receives dictation. Team panes are not registered,
@@ -73,7 +72,7 @@ broadcasts to other registered sessions, including multiple sessions of the
 same harness.
 
 This decision tracks prompts prepared by voice, including subsequent edits.
-Use the tray's Record more or `pi-voice record` to add more speech
+Use **Super+Shift+V** Record more or `pi-voice record` to add more speech
 instead of sending a prepared prompt.
 
 ## Keyboard picker
@@ -83,7 +82,7 @@ Fuzzel popup. Type to fuzzy-filter, use Up/Down, press Enter to choose, or Escap
 to close without changing anything. Mouse input is disabled. Choose **session**, **voice** (Qwen characters, Samantha by default) or
 **dictation** (Whisper locally, or Deepgram in the cloud). The default
 dictation backend is Whisper. Deepgram is recognition only; playback stays on
-Qwen. Or select one of the same contextual actions exposed by the tray.
+Qwen. Or select one of the same contextual actions: record more, retry, discard, replay, or rebind.
 The existing recording and send hotkeys are unchanged; the picker does not
 introduce another Send action.
 
@@ -109,7 +108,7 @@ replace the application launcher or run another daemon.
 
 After activation, try the shortcut, filter a voice name and press Escape first.
 Then choose a voice and check its `*` marker on reopening. For sessions, launch
-two voice-enabled agents, select the other session and confirm the tray's target.
+two voice-enabled agents, select the other session and confirm the card names that target.
 
 ## Experimental PersonaPlex conversation (Andromeda)
 
@@ -130,8 +129,9 @@ persist across login and does not launch automatically. Switching is unavailable
 while dictation is recording, pending, retained or awaiting retry; finish or
 discard it first. Pi coding work itself is not stopped by switching voice modes.
 
-PersonaPlex stops the Pi voice controller, dictation card and speech engines
-while active. Returning to Pi restores its configured automatic-playback default;
+PersonaPlex stops the Pi voice controller and speech engines while active. The
+status card stays up so a startup failure is shown there instead of a desktop
+notification. Returning to Pi restores its configured automatic-playback default;
 in-memory replay state is not carried across modes. If startup fails, reopen the
 voice menu to recover Pi controls. Inspect `journalctl --user -u personaplex`
 for the model failure. At least 24 GiB free GPU memory is required before loading;
@@ -147,43 +147,40 @@ Normal service startup is offline. The server binds only to loopback and accepts
 conversation WebSockets only from its local browser UI origins. PersonaPlex
 requires NVIDIA CUDA and is not offered on Foundation or other hosts.
 
-## Tray and recovery
+## Status card and recovery
 
-The idle menu contains **Voice session**, **Character voice**, **Dictation**,
-**Show team members** and **Read replies aloud**. Team panes are not registered,
-so that toggle does not reveal them. Dictation is a radio choice
-between local Whisper and cloud Deepgram. It is locked while recording or
-transcribing so the current take keeps one backend. **Read replies aloud**
-toggles automatic playback of completed replies. Other actions appear only
-when useful: Replay last reply, Record more, Retry transcription, Discard
-retained dictation/recording, and Bind to current conversation. Cancel recording,
-Cancel transcription or Stop speaking appears while that voice work is active.
-These controls do not cancel a running coding-agent turn. Super+Space handles
-the normal record/transcribe/send flow.
+**Super+Shift+V** is the only voice menu. It contains session, voice, dictation,
+show team members and read replies aloud. Team panes are not registered, so that
+toggle does not reveal them. Dictation is a radio choice between local Whisper
+and cloud Deepgram. It is locked while recording or transcribing so the current
+take keeps one backend. **Read replies aloud** toggles automatic playback of
+completed replies. Other actions appear only when useful: Replay last reply,
+Record more, Retry transcription, Discard retained dictation/recording, and Bind
+to current conversation. Cancel recording, Cancel transcription or Stop speaking
+appears while that voice work is active. These controls do not cancel a running
+coding-agent turn. Super+Space handles the normal record/transcribe/send flow.
+There is no StatusNotifier icon.
 
-The icon communicates the current state without repeating it in the menu:
+The top card is the only voice message. It does not raise a separate desktop
+notification, and it never shows the transcript or the reply. The border and
+meter use the active theme roles, with a short label so the colour can be learned:
 
-| Icon | State |
-| --- | --- |
-| Grey microphone | Ready to record |
-| Red microphone | Recording |
-| Amber microphone | Starting, finishing capture or transcribing |
-| Green checkmark | Dictation prepared for Super+Space to send |
-| Blue dots | Selected coding agent is responding or using tools |
-| Blue speaker | Reading a reply aloud |
-| Orange warning | Voice/model error or agent waiting for attention |
+| Card | Colour role | State |
+| --- | --- | --- |
+| Listening | Red | Recording, including mute or clipping on the second line |
+| Starting, finishing, transcribing | Yellow | Microphone or recognition in progress |
+| Ready to send / Will send when idle | Green | Dictation is prepared |
+| About to speak | Accent | Reply is queued and speech has not started |
+| Speaking | Teal | Reply audio is playing |
+| Needs attention, retained, model failure | Orange | Something needs a menu action |
+| Reconnecting / conversation changed | Yellow | Destination is not ready |
 
-Recording, transcription and prepared dictation take priority over the agent
-activity indicator. Hover for the full status, selected session, microphone,
-mute/clipping warnings and model readiness. Pi lifecycle events update
-activity promptly; bounded background reads confirm completion and refresh the
-selected process's status about once a second, including manually
-submitted prompts.
-Slow or unavailable harnesses cannot block the menu or voice cancellation.
-Pi controller discovery and reconnection retry quietly in the background;
-a temporary controller outage does not produce repeated desktop notices.
-The tray distinguishes connecting/reconnecting from speech-model loading or
-unavailability. Warm-up is backend work, not a model prompt or spoken reply.
+Dictation outranks speech. A working agent does not raise the card; it appears
+when speech is actually queued. Pi lifecycle events update activity promptly;
+bounded background reads confirm completion about once a second. Slow or
+unavailable harnesses cannot block the menu or voice cancellation. Controller
+reconnection retries quietly. Warm-up is backend work, not a model prompt or
+spoken reply, so model loading alone does not raise the card.
 
 Andromeda prefers the Razer Kiyo Pro Ultra's stable device
 name, with a visible fallback to PipeWire's default if absent. Speakers follow
@@ -196,8 +193,8 @@ new speech, so silence or a failed start preserves previous words. Discard
 removes retained text and retry audio. Cancel does not remove text already
 pasted into a terminal editor; that prompt remains available for review.
 
-If a Pi destination is lost or replaced while dictation is pending, the tray
-shows its source and offers **Copy retained dictation**, **Stage in selected Pi
+If a Pi destination is lost or replaced while dictation is pending, the card
+names its source. **Super+Shift+V** offers **Copy retained dictation**, **Stage in selected Pi
 session**, or **Discard retained dictation**. Staging requires a ready, idle Pi
 destination and preserves its editor text. If the current destination was
 selected automatically, first choose **Confirm <label> for retained dictation**
@@ -241,7 +238,7 @@ The registry never persists prompt or reply contents.
 
 ## Speech and services
 
-The tray's **Character voice** submenu selects Samantha or another character.
+**Super+Shift+V** selects Samantha or another character.
 Samantha automatically uses the current reference for up to 50 words and the
 newer reference for longer replies. This is intrinsic to Samantha; other
 characters use their own reference at every reply length. The complete spoken
@@ -308,7 +305,7 @@ manual playback.
 
 The existing service names remain for compatibility:
 
-- `pi-voice.service`: shared controller, hotkeys and tray.
+- `pi-voice.service`: shared controller and hotkeys.
 - `pi-voice-stt.service`: Whisper at `127.0.0.1:8178`.
 - `pi-voice-tts.service`: Qwen3 TTS at `127.0.0.1:8179`.
 
@@ -447,15 +444,10 @@ direnv exec . nix build \
 direnv exec . nix flake check
 ```
 
-Run all controller, recording, adapter and tray regressions with dbus-next:
+Run the voice regressions with:
 
 ```sh
-# The interpreter used by the installed pi-voice launcher includes dbus-next.
-direnv exec . nix shell --impure --expr \
-  'let f = builtins.getFlake (toString ./.);
-   in f.nixosConfigurations.andromeda.pkgs.python3.withPackages
-     (p: [ p.dbus-next ])' \
-  -c python3 -m unittest discover -s tests -p 'test_*.py' -v
+direnv exec . python3 -m unittest discover -s tests -p 'test_voice*.py' -v
 ```
 
 Behavioral tests cover literal input, guarded submission, stale processes,

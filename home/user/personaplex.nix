@@ -32,7 +32,6 @@ let
       pkgs.python3
       pkgs.systemd
       pkgs.xdg-utils
-      pkgs.libnotify
     ];
     text = ''
       exec python3 ${../config/voice}/voice_conversation.py
@@ -47,13 +46,11 @@ in
         Description = "Experimental local PersonaPlex conversation";
         Conflicts = [
           "pi-voice.service"
-          "pi-voice-osd.service"
           "pi-voice-stt.service"
           "pi-voice-tts.service"
         ];
         After = [
           "pi-voice.service"
-          "pi-voice-osd.service"
           "pi-voice-stt.service"
           "pi-voice-tts.service"
         ];
