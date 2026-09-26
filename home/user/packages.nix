@@ -325,11 +325,9 @@ in
       gimp # GNU Image Manipulation Program (the pinned package is Linux-only)
       ghostty # GPU-accelerated terminal emulator (system package on NixOS; set as default via TERMINAL + xdg-terminal-exec)
       discord # Team collaboration and messaging app
-      dropbox # Cloud storage and file synchronization service
       element-desktop # Matrix messaging client
       libation # Audio player with a focus on music libraries
       libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
-      loupe # Image viewer with previous/next navigation for images in the same directory
       pavucontrol # Graphical PulseAudio volume control
       python3Packages.huggingface-hub # Hugging Face CLI for model downloads
       qbittorrent # BitTorrent client with a user-friendly interface
