@@ -25,7 +25,11 @@ config="${GHOSTTY_SCREENSAVER_CONFIG:?}"
 socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
 focused=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .name')
 
-exec {events}< <(socat -U - "UNIX-CONNECT:$socket")
+# socat's stderr is the broken-pipe line printed when this launcher exits
+# and closes the event pipe. The screensaver has already started by then.
+exec {events}< <(socat -U - "UNIX-CONNECT:$socket" 2>/dev/null)
+socat_pid=$!
+trap 'kill "$socat_pid" 2>/dev/null || true' EXIT
 
 wait_for_window() {
   local line deadline=$((SECONDS + 5))
