@@ -6,19 +6,20 @@ import qs.Ui
 import "plugins/panels/audio" as Audio
 import "plugins/panels/bluetooth" as Bluetooth
 import "plugins/panels/network" as Network
+import "plugins/panels/tailscale" as Tailscale
 
 // Only a host adapter. The panel implementations and shared UI are upstream.
 ShellRoot {
   id: host
   property var options: JSON.parse(Quickshell.env("HYPR_CONTROLS_SETTINGS"))
-  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network })
+  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale })
 
   function firstPartyServiceFor(id) { return null }
   function summon(id, payload) {
     // The optional volume OSD is not a second desktop service here.
   }
   function switchPanel(owner, direction) {
-    var list = [audio, bluetooth, network]
+    var list = [audio, bluetooth, network, tailscale]
     var index = list.indexOf(owner)
     if (index < 0) return false
     list[(index + direction + list.length) % list.length].open()
@@ -63,6 +64,7 @@ ShellRoot {
     Audio.Panel { id: audio; bar: barApi }
     Bluetooth.Panel { id: bluetooth; bar: barApi }
     Network.Panel { id: network; bar: barApi }
+    Tailscale.Panel { id: tailscale; bar: barApi }
   }
 
   IpcHandler {

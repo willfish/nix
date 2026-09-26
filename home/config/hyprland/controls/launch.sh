@@ -1,11 +1,17 @@
 # shellcheck shell=bash
-case "${1:-}" in
-audio | bluetooth | network) panel=$1 ;;
+panel=${1:-}
+action=${2:-open}
+case "$panel" in
+audio | bluetooth | network | tailscale) ;;
 *)
-  echo 'Usage: hypr-controls audio|bluetooth|network' >&2
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale [toggle]' >&2
   exit 2
   ;;
 esac
+if [[ $action != open && ! ($panel == tailscale && $action == toggle) ]]; then
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale [toggle]' >&2
+  exit 2
+fi
 systemctl --user is-active --quiet hyprland-session.target || {
   echo 'Desktop controls require an active Hyprland session.' >&2
   exit 1
@@ -25,6 +31,9 @@ mapfile -t anchor < <(hyprctl -j monitors | jq -r --argjson p "$cursor" '
 for _ in {1..30}; do
   if quickshell ipc --path "$HYPR_CONTROLS_CONFIG" show 2>/dev/null |
     grep -q 'controls'; then
+    if [[ $action == toggle ]]; then
+      exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call omarchy.tailscale toggleTailscale
+    fi
     exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call controls toggle \
       "$panel" "${anchor[@]}"
   fi

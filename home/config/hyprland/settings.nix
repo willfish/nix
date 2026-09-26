@@ -106,6 +106,7 @@ rec {
       audio = "hypr-controls audio";
       network = "hypr-controls network";
       bluetooth = "hypr-controls bluetooth";
+      tailscale = "hypr-controls tailscale";
       monitor = "ghostty -e btop";
       music = cliampCommand;
       power = "hypr-session menu";
@@ -125,6 +126,7 @@ rec {
       "pulseaudio"
       "pulseaudio#microphone"
       "network"
+      "custom/tailscale"
       "bluetooth"
       "cpu"
       "backlight"

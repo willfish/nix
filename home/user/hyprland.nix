@@ -18,6 +18,34 @@
       settings = import ../config/hyprland/settings.nix;
       omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
       ttfx = pkgs.callPackage ./ttfx.nix { };
+      tailscaleStatus = pkgs.writeShellApplication {
+        name = "hypr-tailscale-status";
+        runtimeInputs = [
+          pkgs.tailscale
+          pkgs.jq
+          pkgs.coreutils
+        ];
+        text = ''
+          raw=$(timeout 5 tailscale status --json 2>/dev/null || true)
+          state=$(printf '%s' "$raw" | jq -r '.BackendState // "Unavailable"' 2>/dev/null || printf '%s' Unavailable)
+          case "$state" in
+            Running)
+              class=connected
+              label=Connected
+              ;;
+            NeedsLogin)
+              class=warning
+              label="Needs login"
+              ;;
+            *)
+              class=disconnected
+              label=$state
+              ;;
+          esac
+          jq -nc --arg text "󰖂" --arg class "$class" --arg tooltip "Tailscale: $label" \
+            '{text:$text, class:$class, tooltip:$tooltip}'
+        '';
+      };
       screensaver = pkgs.writeShellApplication {
         name = "hypr-screensaver";
         runtimeInputs = [
@@ -641,6 +669,15 @@
               tooltip-format-connected = "{device_enumerate}";
               tooltip-format-enumerate-connected = "{device_alias}";
               on-click = settings.bar.commands.bluetooth;
+            };
+            "custom/tailscale" = {
+              exec = "${tailscaleStatus}/bin/hypr-tailscale-status";
+              return-type = "json";
+              format = "{}";
+              interval = 15;
+              tooltip = true;
+              on-click = settings.bar.commands.tailscale;
+              on-click-right = "${settings.bar.commands.tailscale} toggle";
             };
             cpu = {
               format = "";

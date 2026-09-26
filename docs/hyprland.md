@@ -38,9 +38,11 @@ explicitly in `settings.nix`.
 
 ## Desktop controls
 
-Waybar stays the only bar. Its audio, Bluetooth and network buttons open the
+Waybar stays the only bar. Its audio, Bluetooth, network and Tailscale buttons open the
 actual pinned Omarchy Quickshell panels, hosted beside the rail rather than in
-Omarchy's full shell. Configure rail modules, commands and native widget overrides
+Omarchy's full shell. The Tailscale button is the built-in `omarchy.tailscale` panel:
+click opens it, and right-click toggles the connection. Sending a file uses the desktop
+file chooser. Incoming Taildrop is not started as a background service. Configure rail modules, commands and native widget overrides
 under `bar` in `settings.nix`. Scroll audio or brightness to adjust them;
 right-click audio to mute. Right-click playback to open CLIamp.
 

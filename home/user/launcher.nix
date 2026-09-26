@@ -228,6 +228,7 @@ in
           (action "󰕾" "Audio controls" [ "volume" "microphone" "sound" ] "${profileBin}/hypr-controls audio")
           (action "" "Bluetooth controls" [ "headphones" "pair" ] "${profileBin}/hypr-controls bluetooth")
           (action "󰖩" "Network controls" [ "wifi" "internet" "vpn" ] "${profileBin}/hypr-controls network")
+          (action "󰖂" "Tailscale" [ "vpn" "tailnet" "taildrop" ] "${profileBin}/hypr-controls tailscale")
           (action "" "Session menu" [
             "lock"
             "logout"

@@ -12,7 +12,7 @@ let
   bundle = pkgs.runCommand "omarchy-panels" { nativeBuildInputs = [ pkgs.patch ]; } ''
     mkdir -p "$out/shell/plugins/panels"
     cp -r ${source}/shell/Ui ${source}/shell/Commons "$out/shell/"
-    for panel in audio bluetooth network; do
+    for panel in audio bluetooth network tailscale; do
       cp -r ${source}/shell/plugins/panels/"$panel" "$out/shell/plugins/panels/"
     done
     chmod -R u+w "$out"
@@ -33,6 +33,56 @@ let
       --replace-fail 'fronted="$(omarchy-audio-tuning fronted-sink 2>/dev/null || true)"' 'fronted=""'
     patchShebangs "$out/bin"
   '';
+  pythonWithGio = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
+  fileSelect = pkgs.writeShellApplication {
+    name = "omarchy-file-select";
+    runtimeInputs = [
+      pythonWithGio
+      pkgs.glib
+    ];
+    text = ''
+      export GI_TYPELIB_PATH="${pkgs.glib}/lib/girepository-1.0''${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
+      exec ${pythonWithGio}/bin/python3 ${source}/bin/omarchy-file-select "$@"
+    '';
+  };
+  notify = pkgs.writeShellApplication {
+    name = "omarchy-notification-send";
+    runtimeInputs = [ pkgs.libnotify ];
+    text = ''
+      urgency=low
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          -u | --urgency)
+            urgency=$2
+            shift 2
+            ;;
+          -g | --glyph)
+            shift 2
+            ;;
+          *) break ;;
+        esac
+      done
+      headline=
+      description=
+      [[ $# -ge 1 ]] || exit 2
+      headline=$1
+      shift
+      if [[ $# -gt 0 && $1 != -* ]]; then
+        description=$1
+      fi
+      exec notify-send -a Tailscale -u "$urgency" -- "$headline" "$description"
+    '';
+  };
+  tailscaleSend = pkgs.writeShellApplication {
+    name = "omarchy-tailscale-send";
+    runtimeInputs = [
+      pkgs.tailscale
+      pkgs.coreutils
+      fileSelect
+      notify
+    ];
+    text = lib.removePrefix "#!/bin/bash\n" (builtins.readFile "${source}/bin/omarchy-tailscale-send");
+  };
   bluetoothDevice = pkgs.writeShellApplication {
     name = "omarchy-bluetooth-device";
     runtimeInputs = [
@@ -77,9 +127,13 @@ let
     wl-clipboard
     blueman
     libnotify
+    which
+    tailscale
+    polkit
     helpers
     bluetoothDevice
     browser
+    tailscaleSend
     quickshell
   ];
   shell = pkgs.writeShellApplication {
