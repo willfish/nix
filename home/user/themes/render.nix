@@ -36,8 +36,43 @@ let
       2
       4
     ];
+  # Rec. 709 luma, 0-255. A gap of 120 is enough for highlighted text without
+  # inventing a colour outside the palette.
+  luma =
+    colour:
+    (
+      2126 * fromHex (lib.substring 0 2 colour)
+      + 7152 * fromHex (lib.substring 2 2 colour)
+      + 722 * fromHex (lib.substring 4 2 colour)
+    )
+    / 10000;
+  gap =
+    a: b:
+    let
+      delta = luma a - luma b;
+    in
+    if delta < 0 then -delta else delta;
+  minHighlightGap = 120;
+  selectionPair =
+    p:
+    let
+      bg = p.base02;
+      ranked = lib.sort (a: b: gap a bg > gap b bg) [
+        p.base00
+        p.base05
+        p.base07
+      ];
+      fg = if gap p.base05 bg >= minHighlightGap then p.base05 else lib.head ranked;
+      nudged = mix bg (if luma fg > 128 then "000000" else "ffffff");
+    in
+    {
+      inherit fg;
+      bg = if gap fg bg >= minHighlightGap then bg else nudged;
+    };
 in
 {
+  inherit selectionPair;
+
   herdr =
     p:
     let
@@ -141,8 +176,8 @@ in
       foreground = ${c.base05}
       cursor-color = ${c.base0D}
       cursor-text = ${c.base00}
-      selection-background = ${c.base02}
-      selection-foreground = ${c.base05}
+      selection-background = #${(selectionPair p).bg}
+      selection-foreground = #${(selectionPair p).fg}
       ${lib.concatStringsSep "\n" (
         lib.imap0 (i: colour: "palette = ${toString i}=${colour}") [
           c.base00

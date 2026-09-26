@@ -19,6 +19,25 @@ GTK_CSS = ("gtk-3.0/gtk.css", "gtk-4.0/gtk.css")
 # NixOS creates a root-owned 0755 directory and william-owned 0644 file.
 GREETER_THEME_FILE = Path("/var/lib/desktop-theme/william")
 THEME_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def _luma(colour):
+    # Keep in step with selectionPair in home/user/themes/render.nix.
+    raw = colour.lstrip("#")
+    red = int(raw[0:2], 16)
+    green = int(raw[2:4], 16)
+    blue = int(raw[4:6], 16)
+    return (2126 * red + 7152 * green + 722 * blue) // 10000
+
+
+def selection_text(background, paper, ink, bright):
+    # Keep normal text when it already clears the highlight.
+    if abs(_luma(ink) - _luma(background)) >= 120:
+        return ink
+    return max(
+        (paper, ink, bright),
+        key=lambda colour: abs(_luma(colour) - _luma(background)),
+    )
 # User unit owned by the Hyprland module. systemctl --user stays in this UID.
 WAYBAR_UNIT = "waybar.service"
 
@@ -533,6 +552,14 @@ class Themes:
         def colour(key, fallback):
             return colours.get(key, fallback).lstrip("#") + "ff"
 
+        highlight_bg = colours.get("base02", "494d64").lstrip("#")
+        highlight_fg = selection_text(
+            highlight_bg,
+            colours.get("base00", "24273a"),
+            colours.get("base05", "cad3f5"),
+            colours.get("base07", "f4dbd6"),
+        ).lstrip("#")
+
         # Keep styling in an INI file, like voice-menu. The pinned Fuzzel's
         # --font argument also triggers an invalid free with --check-config.
         font_spec, border_width, radius = self.launcher_style()
@@ -554,8 +581,8 @@ background={colour("base00", "24273a")}
 text={colour("base05", "cad3f5")}
 input={colour("base05", "cad3f5")}
 prompt={colour("base0D", "b7bdf8")}
-selection={colour("base02", "494d64")}
-selection-text={colour("base05", "cad3f5")}
+selection={highlight_bg}ff
+selection-text={highlight_fg}ff
 selection-match={colour("base0D", "b7bdf8")}
 match={colour("base0D", "b7bdf8")}
 border={colour("base0D", "b7bdf8")}

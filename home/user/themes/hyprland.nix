@@ -1,10 +1,11 @@
 # Immutable mode bundles copied to theme-menu/active at runtime. Keep the lock
 # include variables-only: repeated Hyprlock blocks create additional widgets.
-_:
+{ lib }:
 let
   rgb = colour: "rgb(${colour})";
   hash = colour: "#${colour}";
   plain = colour: "${colour}ff";
+  selection = (import ./render.nix { inherit lib; }).selectionPair;
 in
 {
   assets = [
@@ -58,11 +59,12 @@ in
       subtextSize = toString (
         if appearance.fontSize > 2 then appearance.fontSize - 2 else appearance.fontSize
       );
+      highlight = selection palette;
       variables = ''
         $theme_mode = ${mode}
         $theme_background = ${rgb palette.base00}
         $theme_surface = ${rgb palette.base01}
-        $theme_selection = ${rgb palette.base02}
+        $theme_selection = ${rgb highlight.bg}
         $theme_border = ${rgb palette.base03}
         $theme_muted = ${rgb palette.base04}
         $theme_text = ${rgb palette.base05}
@@ -131,8 +133,8 @@ in
         placeholder=${plain palette.base04}
         input=${plain palette.base05}
         match=${plain palette.base0D}
-        selection=${plain palette.base02}
-        selection-text=${plain palette.base05}
+        selection=${plain highlight.bg}
+        selection-text=${plain highlight.fg}
         selection-match=${plain palette.base0D}
         border=${plain palette.base0D}
 
@@ -150,7 +152,8 @@ in
         @define-color error_bg_color ${hash palette.base08};
         @define-color error_fg_color ${hash palette.base00};
         @define-color surface ${hash palette.base01};
-        @define-color selection ${hash palette.base02};
+        @define-color selection ${hash highlight.bg};
+        @define-color selection_text ${hash highlight.fg};
         @define-color border ${hash palette.base03};
         @define-color muted ${hash palette.base04};
         @define-color text ${hash palette.base05};
@@ -217,7 +220,7 @@ in
 
         .input selection {
             background: @selection;
-            color: @text;
+            color: @selection_text;
         }
 
         .input {
@@ -249,7 +252,7 @@ in
         child:selected .item-box,
         row:selected .item-box {
             background: @selection;
-            color: @text;
+            color: @selection_text;
             border-color: @accent_bg_color;
         }
 
@@ -394,8 +397,8 @@ in
         @define-color theme_fg_color ${hash palette.base05};
         @define-color theme_base_color ${hash palette.base01};
         @define-color theme_text_color ${hash palette.base05};
-        @define-color theme_selected_bg_color ${hash palette.base02};
-        @define-color theme_selected_fg_color ${hash palette.base05};
+        @define-color theme_selected_bg_color ${hash highlight.bg};
+        @define-color theme_selected_fg_color ${hash highlight.fg};
         @define-color accent_color ${hash palette.base0D};
         @define-color accent_bg_color ${hash palette.base0D};
         @define-color accent_fg_color ${hash palette.base00};
