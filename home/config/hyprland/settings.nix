@@ -266,7 +266,8 @@ rec {
 
   # Own window class so Super+P can focus CLIamp without focusing Ghostty.
   # The title match covers a player opened before that class existed.
-  cliampCommand = "hypr-open com.william.cliamp ghostty --class=com.william.cliamp -e cliamp";
+  # Opens the forte station list. Bare cliamp still starts on its three built-in streams.
+  cliampCommand = "hypr-open com.william.cliamp ghostty --class=com.william.cliamp -e cliamp-radio";
 
   # Shortcuts: WASD focus, Super+X launcher, Super+Shift+T
   # theme menu. Super+V records a region; press it again to stop.

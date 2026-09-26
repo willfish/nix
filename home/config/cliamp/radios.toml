@@ -1,69 +1,69 @@
-# Forte radio favourites. Cliamp lists these beside the built-in catalogue.
+# Forte favourites. Cliamp only strips double quotes, so single quotes break playback.
 
 [[station]]
-name = '24/7 SciFi Radio'
-url = 'https://ec6.yesstreaming.net:1465/stream'
+name = "24/7 SciFi Radio"
+url = "https://ec6.yesstreaming.net:1465/stream"
 
 [[station]]
-name = 'Adroit Jazz Underground'
-url = 'https://icecast.walmradio.com:8443/jazz'
+name = "Adroit Jazz Underground"
+url = "https://icecast.walmradio.com:8443/jazz"
 
 [[station]]
-name = 'BBC Radio 3'
-url = 'http://as-hls-ww-live.akamaized.net/pool_23461179/live/ww/bbc_radio_three/bbc_radio_three.isml/bbc_radio_three-audio=320000.norewind.m3u8'
+name = "BBC Radio 3"
+url = "http://as-hls-ww-live.akamaized.net/pool_23461179/live/ww/bbc_radio_three/bbc_radio_three.isml/bbc_radio_three-audio=320000.norewind.m3u8"
 
 [[station]]
-name = 'BBC Radio 4 (128k)'
-url = 'http://as-hls-ww-live.akamaized.net/pool_55057080/live/ww/bbc_radio_fourfm/bbc_radio_fourfm.isml/bbc_radio_fourfm-audio%3d128000.norewind.m3u8'
+name = "BBC Radio 4 (128k)"
+url = "http://as-hls-ww-live.akamaized.net/pool_55057080/live/ww/bbc_radio_fourfm/bbc_radio_fourfm.isml/bbc_radio_fourfm-audio%3d128000.norewind.m3u8"
 
 [[station]]
-name = 'BBC Radio 4 Extra (128k)'
-url = 'http://as-hls-ww-live.akamaized.net/pool_26173715/live/ww/bbc_radio_four_extra/bbc_radio_four_extra.isml/bbc_radio_four_extra-audio%3d128000.norewind.m3u8'
+name = "BBC Radio 4 Extra (128k)"
+url = "http://as-hls-ww-live.akamaized.net/pool_26173715/live/ww/bbc_radio_four_extra/bbc_radio_four_extra.isml/bbc_radio_four_extra-audio%3d128000.norewind.m3u8"
 
 [[station]]
-name = 'BBC World Service'
-url = 'http://stream.live.vc.bbcmedia.co.uk/bbc_world_service'
+name = "BBC World Service"
+url = "http://stream.live.vc.bbcmedia.co.uk/bbc_world_service"
 
 [[station]]
-name = 'Café del Mar'
-url = 'https://streams.radio.co/se1a320b47/listen'
+name = "Café del Mar"
+url = "https://streams.radio.co/se1a320b47/listen"
 
 [[station]]
-name = 'Classic FM UK'
-url = 'http://ice-the.musicradio.com/ClassicFMMP3'
+name = "Classic FM UK"
+url = "http://ice-the.musicradio.com/ClassicFMMP3"
 
 [[station]]
-name = 'Deep Space One'
-url = 'https://api.somafm.com/deepspaceone.pls'
+name = "Deep Space One"
+url = "https://ice6.somafm.com/deepspaceone-128-mp3"
 
 [[station]]
-name = 'Jazz Radio Lounge'
-url = 'http://jazzlounge.ice.infomaniak.ch/jazzlounge-high.mp3'
+name = "Jazz Radio Lounge"
+url = "http://jazzlounge.ice.infomaniak.ch/jazzlounge-high.mp3"
 
 [[station]]
-name = 'Mystery Radio'
-url = 'https://streaming06.liveboxstream.uk/proxy/rokstar9/stream'
+name = "Mystery Radio"
+url = "https://streaming06.liveboxstream.uk/proxy/rokstar9/stream"
 
 [[station]]
-name = 'RetroStrange Radio1'
-url = 'https://icecast.retrostrange.com:8443/retrostrange-radio1-mp3'
+name = "RetroStrange Radio1"
+url = "https://icecast.retrostrange.com:8443/retrostrange-radio1-mp3"
 
 [[station]]
-name = 'ROKiT Radio : Science Fiction'
-url = 'http://streaming05.liveboxstream.uk:8110/stream'
+name = "ROKiT Radio : Science Fiction"
+url = "http://streaming05.liveboxstream.uk:8110/stream"
 
 [[station]]
-name = 'SomaFM Mission Control (128k MP3)'
-url = 'https://ice4.somafm.com/missioncontrol-128-mp3'
+name = "SomaFM Mission Control (128k MP3)"
+url = "https://ice4.somafm.com/missioncontrol-128-mp3"
 
 [[station]]
-name = 'SomaFM Space Station Soma (128k AAC)'
-url = 'https://ice5.somafm.com/spacestation-128-aac'
+name = "SomaFM Space Station Soma (128k AAC)"
+url = "https://ice5.somafm.com/spacestation-128-aac"
 
 [[station]]
-name = 'Strange Radio - Pumpkin FM'
-url = 'https://cast2.asurahosting.com/proxy/strangeradio/stream'
+name = "Strange Radio - Pumpkin FM"
+url = "https://cast2.asurahosting.com/proxy/strangeradio/stream"
 
 [[station]]
-name = 'WBBR 1130 "Bloomberg Radio" New York, NY'
-url = 'http://26433.live.streamtheworld.com/WBBRAMAAC_SC'
+name = "WBBR 1130 \"Bloomberg Radio\" New York, NY"
+url = "http://26433.live.streamtheworld.com/WBBRAMAAC_SC"

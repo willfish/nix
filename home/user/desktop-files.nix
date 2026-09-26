@@ -18,6 +18,13 @@ let
   herdrConfigFile = (pkgs.formats.toml { }).generate "herdr-config.toml" (
     lib.recursiveUpdate herdrConfig { theme = herdrTheme; }
   );
+  cliampRadio = pkgs.writeShellApplication {
+    name = "cliamp-radio";
+    runtimeInputs = [ pkgs.cliamp ];
+    text = ''
+      exec cliamp "''${XDG_CONFIG_HOME:-$HOME/.config}/cliamp/playlists/forte-radio.m3u"
+    '';
+  };
   defaultImageViewer = "org.gnome.Loupe.desktop";
   pdfDesktop = "org.gnome.Evince.desktop";
   browserDesktop = "brave-browser.desktop";
@@ -127,7 +134,13 @@ in
       text = builtins.readFile ../config/cliamp/radios.toml;
       force = true;
     };
+    "cliamp/playlists/forte-radio.m3u" = {
+      text = builtins.readFile ../config/cliamp/playlists/forte-radio.m3u;
+      force = true;
+    };
   };
+
+  home.packages = lib.optional isGraphicalLinux cliampRadio;
 
   xdg.dataFile = lib.optionalAttrs isGraphicalLinux (
     {

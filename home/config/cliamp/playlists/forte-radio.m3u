@@ -1,0 +1,52 @@
+#EXTM3U
+
+#EXTINF:-1,24/7 SciFi Radio
+https://ec6.yesstreaming.net:1465/stream
+
+#EXTINF:-1,Adroit Jazz Underground
+https://icecast.walmradio.com:8443/jazz
+
+#EXTINF:-1,BBC Radio 3
+http://as-hls-ww-live.akamaized.net/pool_23461179/live/ww/bbc_radio_three/bbc_radio_three.isml/bbc_radio_three-audio=320000.norewind.m3u8
+
+#EXTINF:-1,BBC Radio 4 (128k)
+http://as-hls-ww-live.akamaized.net/pool_55057080/live/ww/bbc_radio_fourfm/bbc_radio_fourfm.isml/bbc_radio_fourfm-audio%3d128000.norewind.m3u8
+
+#EXTINF:-1,BBC Radio 4 Extra (128k)
+http://as-hls-ww-live.akamaized.net/pool_26173715/live/ww/bbc_radio_four_extra/bbc_radio_four_extra.isml/bbc_radio_four_extra-audio%3d128000.norewind.m3u8
+
+#EXTINF:-1,BBC World Service
+http://stream.live.vc.bbcmedia.co.uk/bbc_world_service
+
+#EXTINF:-1,Café del Mar
+https://streams.radio.co/se1a320b47/listen
+
+#EXTINF:-1,Classic FM UK
+http://ice-the.musicradio.com/ClassicFMMP3
+
+#EXTINF:-1,Deep Space One
+https://ice6.somafm.com/deepspaceone-128-mp3
+
+#EXTINF:-1,Jazz Radio Lounge
+http://jazzlounge.ice.infomaniak.ch/jazzlounge-high.mp3
+
+#EXTINF:-1,Mystery Radio
+https://streaming06.liveboxstream.uk/proxy/rokstar9/stream
+
+#EXTINF:-1,RetroStrange Radio1
+https://icecast.retrostrange.com:8443/retrostrange-radio1-mp3
+
+#EXTINF:-1,ROKiT Radio : Science Fiction
+http://streaming05.liveboxstream.uk:8110/stream
+
+#EXTINF:-1,SomaFM Mission Control (128k MP3)
+https://ice4.somafm.com/missioncontrol-128-mp3
+
+#EXTINF:-1,SomaFM Space Station Soma (128k AAC)
+https://ice5.somafm.com/spacestation-128-aac
+
+#EXTINF:-1,Strange Radio - Pumpkin FM
+https://cast2.asurahosting.com/proxy/strangeradio/stream
+
+#EXTINF:-1,WBBR 1130 "Bloomberg Radio" New York, NY
+http://26433.live.streamtheworld.com/WBBRAMAAC_SC
