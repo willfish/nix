@@ -34,6 +34,11 @@ let
   };
   bash = "${pkgs.bash}/bin/bash";
   mkdir = "${pkgs.coreutils}/bin/mkdir";
+  # The recognisable mark, without installing the official client.
+  icons = pkgs.runCommand "spotify-client-icons" { } ''
+    mkdir -p "$out/share/icons"
+    cp -a ${pkgs.spotify}/share/icons/hicolor "$out/share/icons/"
+  '';
   bundle =
     pkgs.runCommand "omarchy-spotify-shell"
       {
@@ -149,6 +154,7 @@ in
     home.packages = [
       launcher
       shell
+      icons
     ];
     # User desktop files override the profile. xdg.desktopEntries is not
     # installed by this Home Manager, so write the launcher entry directly.
@@ -161,7 +167,7 @@ in
         GenericName=Music Player
         Comment=Spotify in Quickshell
         Exec=hypr-spotify
-        Icon=audio-x-generic
+        Icon=spotify-client
         Terminal=false
         Categories=AudioVideo;Audio;Player;
       '';
