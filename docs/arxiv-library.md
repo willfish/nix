@@ -46,7 +46,7 @@ Once Home Manager owns the units, package-path changes leave in-flight jobs runn
 
 First-time adoption of unmanaged units is different: inspect `sd-switch --dry-run` before activation. Temporary runtime `RefuseManualStop=yes` drop-ins protect existing jobs during adoption; remove them afterward. Keep the explicit infinite startup timeout: changing an already-activating oneshot to a simple service otherwise applies systemd's default timeout retroactively and terminates it. New workers use `Type=simple`, so activation does not wait for the full corpus.
 
-Embedding generation is limited to one CPU core's quota and 2 GB RAM. Index publication has a 6 GB ceiling and a one-core quota. It runs hourly after the previous publication finishes. A manual refresh is:
+Embedding generation is limited to 1.5 CPU cores' quota and 2 GB RAM. Index publication has a 6 GB ceiling and a one-core quota. It runs hourly after the previous publication finishes. A manual refresh is:
 
 ```sh
 systemctl --user start --no-block arxiv-index

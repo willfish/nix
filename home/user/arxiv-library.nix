@@ -88,7 +88,7 @@ in
     arxiv-embeddings = lib.recursiveUpdate (worker "embeddings") {
       Service = {
         ExecStart = "${package}/bin/arxiv-library-embeddings ${root} --watch";
-        CPUQuota = "100%";
+        CPUQuota = "150%";
       };
     };
     arxiv-index = {
