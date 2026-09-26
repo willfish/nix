@@ -2,6 +2,7 @@
   lib,
   pkgs,
   isGraphicalLinux,
+  hostName ? null,
   hostTheme,
   herdrThemeFile,
   ...
@@ -60,6 +61,7 @@ let
       defaultImageViewer
       ;
     telegramDesktop = "org.telegram.desktop.desktop";
+    includeGimp = hostName == "andromeda";
   };
   sourceFile = source: {
     inherit source;

@@ -182,7 +182,6 @@ in
       openssl # Cryptographic library for SSL/TLS
       bat # Cat clone with syntax highlighting and git integration
       curl # Data transfer tool with support for many protocols
-      bats # Bash automated testing system
       delta # Git diff viewer with syntax highlighting
       duf # Disk usage utility with a user-friendly interface
       dust # Disk usage analyzer (alternative to du)
@@ -322,14 +321,10 @@ in
       sushi # Nautilus file previews
       (mpv.override { scripts = [ mpvScripts.mpris ]; })
       file-roller # Graphical archive manager for opening and extracting archives
-      gimp # GNU Image Manipulation Program (the pinned package is Linux-only)
       ghostty # GPU-accelerated terminal emulator (system package on NixOS; set as default via TERMINAL + xdg-terminal-exec)
       discord # Team collaboration and messaging app
-      element-desktop # Matrix messaging client
-      libation # Audio player with a focus on music libraries
       libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
       pavucontrol # Graphical PulseAudio volume control
-      python3Packages.huggingface-hub # Hugging Face CLI for model downloads
       qbittorrent # BitTorrent client with a user-friendly interface
       sherlock # Hunt down social media accounts by username across
       spotify # Music streaming application
@@ -339,6 +334,10 @@ in
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
     ]
     ++ lib.optionals (capabilities.work && capabilities.desktop) [ slack ]
+    ++ lib.optionals (stdenv.isLinux && capabilities.desktop && hostName == "andromeda") [
+      gimp # Image editor; Andromeda only
+      libation # Audible ripper; Andromeda only
+    ]
     ++ lib.optionals (stdenv.isDarwin && capabilities.personal) [
       discord
       spotify

@@ -662,7 +662,7 @@
               assert !(lib.any (p: lib.getName p == "gimp") server.home.packages);
               assert lib.any (p: lib.getName p == "gimp") desktop.home.packages;
               assert server.home.file ? ".config/herdr/config.toml";
-              assert desktop.programs.brave.enable && desktop.programs.google-chrome.enable;
+              assert desktop.programs.brave.enable && !desktop.programs.google-chrome.enable;
               assert desktop.systemd.user.services ? nm-auto-secret-agent;
               assert desktop.systemd.user.services ? herdr-agent-awake;
               assert !(server.systemd.user.services ? herdr-agent-awake);

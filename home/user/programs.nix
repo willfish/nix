@@ -18,10 +18,6 @@
       ];
     };
 
-    google-chrome = lib.mkIf isGraphicalLinux {
-      enable = true;
-    };
-
     direnv = {
       enable = true;
       nix-direnv.enable = true;

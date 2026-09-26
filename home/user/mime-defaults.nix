@@ -1,7 +1,7 @@
 # MIME defaults for the graphical desktop.
 # Handlers are the apps installed for this setup. Overlaps are resolved
 # deliberately: Loupe owns images it can show, Evince owns documents, File Roller owns
-# archives, GIMP owns formats Loupe does not, Neovim owns text, Nautilus owns directories only.
+# archives, GIMP on Andromeda owns formats Loupe does not, Neovim owns text, Nautilus owns directories only.
 # A saved .eml opens in Brave, not Himalaya. Gmail itself cannot import that local file.
 # Lists follow the installed desktop files, plus a few attachment aliases
 # those files omit.
@@ -11,6 +11,7 @@
   pdfDesktop,
   defaultImageViewer,
   telegramDesktop,
+  includeGimp ? false,
 }:
 let
   bind = desktop: types: lib.genAttrs types (_: desktop);
@@ -399,32 +400,34 @@ bind "writer.desktop" [
   "application/x-bittorrent"
   "x-scheme-handler/magnet"
 ]
-// bind "gimp.desktop" [
-  "application/x-navi-animation"
-  "image/dds"
-  "image/g3-fax"
-  "image/hej2k"
-  "image/openraster"
-  "image/vnd.adobe.photoshop"
-  "image/vnd.wap.wbmp"
-  "image/x-dcm"
-  "image/x-dcx"
-  "image/x-fits"
-  "image/x-flic"
-  "image/x-icns"
-  "image/x-ico"
-  "image/x-ilbm"
-  "image/x-jp2-codestream"
-  "image/x-pcx"
-  "image/x-pixmap"
-  "image/x-psd"
-  "image/x-psp"
-  "image/x-sgi"
-  "image/x-sun-raster"
-  "image/x-wmf"
-  "image/x-xcf"
-  "image/x-xwindowdump"
-]
+// lib.optionalAttrs includeGimp (
+  bind "gimp.desktop" [
+    "application/x-navi-animation"
+    "image/dds"
+    "image/g3-fax"
+    "image/hej2k"
+    "image/openraster"
+    "image/vnd.adobe.photoshop"
+    "image/vnd.wap.wbmp"
+    "image/x-dcm"
+    "image/x-dcx"
+    "image/x-fits"
+    "image/x-flic"
+    "image/x-icns"
+    "image/x-ico"
+    "image/x-ilbm"
+    "image/x-jp2-codestream"
+    "image/x-pcx"
+    "image/x-pixmap"
+    "image/x-psd"
+    "image/x-psp"
+    "image/x-sgi"
+    "image/x-sun-raster"
+    "image/x-wmf"
+    "image/x-xcf"
+    "image/x-xwindowdump"
+  ]
+)
 // bind "neovim-ghostty.desktop" [
   "application/json"
   "application/x-yaml"
