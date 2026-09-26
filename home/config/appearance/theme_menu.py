@@ -610,7 +610,10 @@ radius={radius}
                 capture_output=True,
                 text=True,
             )
-        if result.returncode == 1:  # Escape, or no selection.
+        # Fuzzel dmenu exits 1 with no match and 2 on Escape. Neither is
+        # a failed theme change.
+        cancelled = result.returncode in (1, 2) and not result.stdout.strip()
+        if cancelled and not result.stderr.strip():
             return None
         if result.returncode != 0:
             raise RuntimeError(f"Fuzzel failed: {result.stderr.strip()}")

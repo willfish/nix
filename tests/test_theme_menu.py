@@ -122,14 +122,15 @@ class ThemeMenuTest(unittest.TestCase):
         self.assertEqual(store.read_text(), "store")
 
     def test_popup_cancel_and_invalid_output_do_not_apply(self):
-        for code, output in ((1, ""), (0, "999\n"), (0, "bad\n")):
+        for code, output in ((1, ""), (2, ""), (0, "999\n"), (0, "bad\n")):
             with (
                 self.subTest(code=code, output=output),
                 patch.object(menu.subprocess, "run") as run,
             ):
                 run.return_value.returncode = code
                 run.return_value.stdout = output
-                if code == 1:
+                run.return_value.stderr = ""
+                if code in (1, 2):
                     self.assertIsNone(self.controller.choose())
                 else:
                     with self.assertRaises(ValueError):
