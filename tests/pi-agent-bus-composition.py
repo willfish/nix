@@ -356,6 +356,7 @@ def exclusion_composition(
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pi-package", required=True, type=store_path)
+    parser.add_argument("--pi-version", required=True)
     parser.add_argument("--extension-package", required=True, type=store_path)
     parser.add_argument("--prompt-history", required=True, type=store_path)
     parser.add_argument("--mitmdump", required=True, type=store_path)
@@ -390,7 +391,8 @@ def main():
             "cafebabe",
         ), "reject credential/script wrappers"
     assert (
-        json.loads((pi_dir / "package.json").read_text())["version"] == "0.85.1"
+        json.loads((pi_dir / "package.json").read_text())["version"]
+        == args.pi_version
     )
     manifest = json.loads((args.extension_package / "package.json").read_text())
     assert manifest["name"] == "pi-switchboard"

@@ -40,6 +40,7 @@ pkgs.runCommand "pi-agent-bus-consumer-composition"
     cd source
     python3 tests/pi-agent-bus-composition.py \
       --pi-package ${pkgs.pi-coding-agent} \
+      --pi-version ${lib.escapeShellArg pkgs.pi-coding-agent.version} \
       --extension-package ${home.programs.pi-agent-bus.package} \
       --prompt-history ${home.home.file.".pi/agent/extensions/prompt-history".source} \
       --mitmdump ${pkgs.mitmproxy}/bin/mitmdump \
