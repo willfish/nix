@@ -81,8 +81,8 @@ exit "${SECRET_STATUS:-0}"
 import json, os, sys
 keys = ('PI_AGENT_BUS_URL', 'PI_AGENT_BUS_TOKEN', \
 'PI_AGENT_BUS_ENABLED', 'NO_PROXY', 'no_proxy', 'CAPTURE_BRANCH', \
-'PI_AGENT_BUS_OPERATOR_NOTICES', 'PI_AGENT_BUS_OPERATOR_READ', \
-'PI_AGENT_BUS_OPERATOR_HISTORY')
+'PI_AGENT_BUS_CONTROL', 'PI_AGENT_BUS_OPERATOR_NOTICES', \
+'PI_AGENT_BUS_OPERATOR_READ', 'PI_AGENT_BUS_OPERATOR_HISTORY')
 print(json.dumps({{'args': sys.argv[1:], \
 'env': {{key: os.environ.get(key) for key in keys}}}}))
 """,
@@ -137,6 +137,7 @@ exec "$@"
 
     def test_operator_defaults_and_explicit_overrides(self):
         keys = (
+            'PI_AGENT_BUS_CONTROL',
             'PI_AGENT_BUS_OPERATOR_NOTICES',
             'PI_AGENT_BUS_OPERATOR_READ',
             'PI_AGENT_BUS_OPERATOR_HISTORY',

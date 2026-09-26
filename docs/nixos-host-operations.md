@@ -427,9 +427,11 @@ From a managed tailnet client, use a Bash subshell with tracing disabled:
 Health returns only `{"ok":true}`. A successful first agents page proves
 credential acceptance, not complete paginated discovery or active SSE receipt.
 Use `/agents` and `/bus` in two standard Pi TUIs to verify registration and
-receiving. Check labels, model updates without runtime-ID changes, notice inbox
-viewing without a model turn, and control off by default. Control requires local
-receiver consent; hub acceptance is not delivery or execution acknowledgement.
+receiving. Check labels and model updates without runtime-ID changes. The
+standard wrapper sets `PI_AGENT_BUS_CONTROL=1`, so registering sessions
+advertise work requests. A launch without that exact value still starts off.
+Peer messages and model tools cannot grant it. Hub acceptance is not delivery
+or execution acknowledgement.
 
 Resolve `terminus` to its Tailscale address before diagnosing the HTTP service.
 Check `tailscale status`, MagicDNS and the selected route; use an explicit
