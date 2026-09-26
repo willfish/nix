@@ -7,15 +7,28 @@ import "plugins/panels/audio" as Audio
 import "plugins/panels/bluetooth" as Bluetooth
 import "plugins/panels/network" as Network
 import "plugins/panels/tailscale" as Tailscale
+import "plugins/panels/calendar" as Calendar
 import "plugins/polkit" as Polkit
 
 // Only a host adapter. The panel implementations and shared UI are upstream.
 ShellRoot {
   id: host
   property var options: JSON.parse(Quickshell.env("HYPR_CONTROLS_SETTINGS"))
-  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale })
+  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale, calendar: calendar })
 
   function firstPartyServiceFor(id) { return null }
+  function updateEntryInline(moduleName, entry) {
+    if (moduleName !== "tmn73.calendar" || !entry) return
+    calendar.settings = entry
+    Quickshell.execDetached(["hypr-calendar-settings", JSON.stringify(entry)])
+  }
+  function applyCalendarSettings(raw) {
+    try {
+      var parsed = JSON.parse(raw || "")
+      if (parsed && typeof parsed === "object") calendar.settings = parsed
+    } catch (error) {
+    }
+  }
   function summon(id, payload) {
     // The optional volume OSD is not a second desktop service here.
   }
@@ -66,8 +79,28 @@ ShellRoot {
     Bluetooth.Panel { id: bluetooth; bar: barApi }
     Network.Panel { id: network; bar: barApi }
     Tailscale.Panel { id: tailscale; bar: barApi }
+    Item {
+      id: calendarAnchor
+      width: 1
+      height: 1
+      visible: false
+    }
+    // The clock lives in Waybar. This is only the popup, centred on the rail.
+    Calendar.Panel {
+      id: calendar
+      bar: barApi
+      anchorItem: calendarAnchor
+    }
     // Same palette as the panels. Replaces the unthemed Hyprland agent.
     Polkit.PolkitAgent { }
+  }
+
+  FileView {
+    path: Quickshell.env("HYPR_CALENDAR_SETTINGS") || ""
+    watchChanges: true
+    printErrors: false
+    onLoaded: host.applyCalendarSettings(text())
+    onFileChanged: reload()
   }
 
   IpcHandler {

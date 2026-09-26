@@ -9,12 +9,57 @@ let
   settings = import ../config/hyprland/settings.nix;
   source = import ./themes/omarchy-source.nix;
   local = ../config/hyprland/controls;
+  # Pinned bar-widget plugin. The sync scripts stay out: they expect Google
+  # OAuth, and the rail reads the existing private iCal export instead.
+  calendarPlugin = pkgs.fetchFromGitHub {
+    owner = "tmn73";
+    repo = "omarchy-calendar";
+    rev = "15509fca18f14b9e7da5d7bf85cdf3d9da665bae";
+    hash = "sha256-XfCeAmSyWltREKuDn9/6OdwyvjdtlQWH+9QLRnEOmlY=";
+  };
+  calendarSettings = pkgs.writeShellApplication {
+    name = "hypr-calendar-settings";
+    runtimeInputs = [
+      pkgs.python3
+      pkgs.coreutils
+    ];
+    text = ''
+      dest=${lib.escapeShellArg "${config.xdg.configHome}/hyprland/calendar-settings.json"}
+      python3 - "$dest" "$@" <<'PY'
+      import json, os, sys, tempfile
+      dest = sys.argv[1]
+      if len(sys.argv) != 3 or len(sys.argv[2]) > 8000:
+          raise SystemExit(2)
+      value = json.loads(sys.argv[2])
+      if not isinstance(value, dict):
+          raise SystemExit(2)
+      parent = os.path.dirname(dest)
+      os.makedirs(parent, mode=0o700, exist_ok=True)
+      fd, temporary = tempfile.mkstemp(prefix=".calendar-settings-", dir=parent)
+      try:
+          with os.fdopen(fd, "w") as stream:
+              json.dump(value, stream)
+              stream.write("\n")
+              stream.flush()
+              os.fchmod(stream.fileno(), 0o600)
+          os.replace(temporary, dest)
+      except Exception:
+          try:
+              os.unlink(temporary)
+          except OSError:
+              pass
+          raise
+      PY
+    '';
+  };
   bundle = pkgs.runCommand "omarchy-panels" { nativeBuildInputs = [ pkgs.patch ]; } ''
-    mkdir -p "$out/shell/plugins/panels"
+    mkdir -p "$out/shell/plugins/panels/calendar"
     cp -r ${source}/shell/Ui ${source}/shell/Commons "$out/shell/"
     for panel in audio bluetooth network tailscale; do
       cp -r ${source}/shell/plugins/panels/"$panel" "$out/shell/plugins/panels/"
     done
+    cp ${calendarPlugin}/LICENSE ${calendarPlugin}/Model.js ${calendarPlugin}/manifest.json \
+      ${calendarPlugin}/*.qml "$out/shell/plugins/panels/calendar/"
     cp -r ${source}/shell/plugins/polkit "$out/shell/plugins/"
     chmod -R u+w "$out"
     patch --batch -d "$out" -p1 < ${local}/nixos.patch
@@ -155,6 +200,7 @@ let
     browser
     laptopClosed
     tailscaleSend
+    calendarSettings
     quickshell
   ];
   shell = pkgs.writeShellApplication {
@@ -164,6 +210,7 @@ let
       # Keep the setuid pkexec ahead of any store copy a runtime input might add.
       export PATH="/run/wrappers/bin:$PATH"
       export HYPR_CONTROLS_THEME=${lib.escapeShellArg "${config.xdg.stateHome}/theme-menu/active"}
+      export HYPR_CALENDAR_SETTINGS=${lib.escapeShellArg "${config.xdg.configHome}/hyprland/calendar-settings.json"}
       export HYPR_CONTROLS_SETTINGS=${
         lib.escapeShellArg (
           builtins.toJSON {

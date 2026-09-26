@@ -41,7 +41,7 @@ explicitly in `settings.nix`.
 
 Waybar stays the only bar. Its audio, Bluetooth, network and Tailscale buttons open the
 actual pinned Omarchy Quickshell panels, hosted beside the rail rather than in
-Omarchy's full shell. The clock keeps its time label and opens the pinned calendar panel instead of Waybar's month tooltip. That panel reads the daily agenda's private iCal export and cannot create or edit events. The Tailscale button is the built-in `omarchy.tailscale` panel:
+Omarchy's full shell. Notifications use the pinned Omapager daemon. The bell opens its panel and right-click silences it. New GitHub notification threads are announced through that daemon. The clock keeps its time label and opens the pinned calendar panel instead of Waybar's month tooltip. That panel reads the daily agenda's private iCal export and cannot create or edit events. The Tailscale button is the built-in `omarchy.tailscale` panel:
 click opens it, and right-click toggles the connection. Sending a file uses the desktop
 file chooser. Incoming Taildrop is not started as a background service. Configure rail modules, commands and native widget overrides
 under `bar` in `settings.nix`. Scroll audio or brightness to adjust them;

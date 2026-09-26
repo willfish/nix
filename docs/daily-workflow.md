@@ -16,7 +16,7 @@ opening the launcher or the confirmation terminal does not collect garbage.
 Calendar iCal feeds, merged by time and labelled by calendar. The launcher reads
 cached events immediately, without waiting for the network, and shows the last
 refresh time. The background timer refreshes every fifteen minutes.
-`daily-agenda --refresh` fetches all feeds on demand. `daily-agenda --status`
+`daily-agenda --refresh` fetches all feeds on demand. A successful refresh also writes the rail calendar's read-only events file at `~/.local/state/omarchy/calendar-events.json`. That write does not change Google Calendar. If the export fails, the previous events file stays in place. `daily-agenda --status`
 reports configuration and cache age without printing secret URLs.
 
 The notes source is `~/Notes/YYYY-MM-DD/today.md`. Unfinished checkboxes and bullets

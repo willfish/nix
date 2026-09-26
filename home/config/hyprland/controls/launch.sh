@@ -2,14 +2,14 @@
 panel=${1:-}
 action=${2:-open}
 case "$panel" in
-audio | bluetooth | network | tailscale) ;;
+audio | bluetooth | network | tailscale | calendar) ;;
 *)
-  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale [toggle]' >&2
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar [toggle]' >&2
   exit 2
   ;;
 esac
 if [[ $action != open && ! ($panel == tailscale && $action == toggle) ]]; then
-  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale [toggle]' >&2
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar [toggle]' >&2
   exit 2
 fi
 systemctl --user is-active --quiet hyprland-session.target || {
@@ -17,6 +17,9 @@ systemctl --user is-active --quiet hyprland-session.target || {
   exit 1
 }
 systemctl --user start hyprland-panels.service
+if [[ $panel == calendar ]]; then
+  systemctl --user start --no-block daily-agenda-refresh.service || true
+fi
 cursor=$(hyprctl -j cursorpos)
 mapfile -t anchor < <(hyprctl -j monitors | jq -r --argjson p "$cursor" '
   . as $monitors |

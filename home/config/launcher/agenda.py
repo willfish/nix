@@ -2,6 +2,7 @@
 
 import argparse
 from datetime import date, datetime, time, timedelta, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -23,6 +24,24 @@ import recurring_ical_events
 MAX_BYTES = 2_000_000
 MAX_COMPONENTS = 10_000
 MAX_OCCURRENCES = 500
+BAR_PAST_DAYS = 7
+BAR_FUTURE_DAYS = 60
+BAR_MAX_EVENTS = 1500
+BAR_PALETTE = (
+    "#4285f4",
+    "#0b8043",
+    "#f6bf26",
+    "#f83a22",
+    "#8e24aa",
+    "#039be5",
+    "#e67c73",
+    "#616161",
+)
+MEETING_HOST = re.compile(
+    r"(?:meet\.google\.com|teams\.microsoft\.com|(?:[a-z0-9-]+\.)?zoom\.us)$",
+    re.IGNORECASE,
+)
+URL_IN_TEXT = re.compile(r"https://[^\s<>'\"]+")
 FETCH_TIMEOUT = 20
 PARSE_TIMEOUT = 60
 CPU_SECONDS = 30
@@ -529,12 +548,238 @@ def expand_feed(raw, day, zone):
 
 def fetch_events(url, day, zone):
     events = expand_feed(open_feed(url), day, zone)
-    secrets = (
-        url,
-        private_token(url),
-        urllib.parse.quote(private_token(url), safe=""),
-    )
+    secrets = feed_secrets(url)
     return [normalize_event(event, zone, secrets) for event in events]
+
+
+def feed_secrets(url):
+    token = private_token(url)
+    return (url, token, urllib.parse.quote(token, safe=""))
+
+
+def bar_events_path():
+    return (
+        Path(
+            os.environ.get(
+                "XDG_STATE_HOME", str(Path.home() / ".local/state")
+            )
+        )
+        / "omarchy"
+        / "calendar-events.json"
+    )
+
+
+def calendar_color(name):
+    digest = hashlib.sha256(name.encode()).digest()[0]
+    return BAR_PALETTE[digest % len(BAR_PALETTE)]
+
+
+def public_https(value, secrets):
+    link = redact(value, secrets)
+    if not link.startswith("https://") or len(link) > 500:
+        return ""
+    if any(char.isspace() for char in link) or any(
+        char in link for char in "\"'<>"
+    ):
+        return ""
+    parts = urllib.parse.urlsplit(link)
+    if (
+        parts.scheme != "https"
+        or parts.username
+        or parts.password
+        or not parts.hostname
+        or parts.port not in (None, 443)
+    ):
+        return ""
+    return link
+
+
+def meeting_link(blobs, secrets):
+    for blob in blobs:
+        for match in URL_IN_TEXT.findall(blob or ""):
+            link = public_https(match.rstrip(").,;"), secrets)
+            host = urllib.parse.urlsplit(link).hostname if link else ""
+            if link and host and MEETING_HOST.fullmatch(host):
+                return link
+    return ""
+
+
+def dates_inclusive(first, last):
+    if last < first or (last - first).days > 90:
+        raise ValueError("invalid event time")
+    days = []
+    cursor = first
+    while cursor <= last:
+        days.append(cursor)
+        cursor += timedelta(days=1)
+    return days
+
+
+def occurrence_span(event, zone):
+    start = event["start"]
+    end = event.get("end")
+    if "date" in start:
+        start_day = date.fromisoformat(start["date"])
+        if isinstance(end, dict) and "date" in end:
+            end_day = date.fromisoformat(end["date"])
+        else:
+            end_day = start_day + timedelta(days=1)
+        if end_day <= start_day:
+            raise ValueError("invalid event time")
+        return dates_inclusive(start_day, end_day - timedelta(days=1)), True
+    start_at = parse_stamp(start["dateTime"]).astimezone(zone)
+    if isinstance(end, dict) and "dateTime" in end:
+        end_at = parse_stamp(end["dateTime"]).astimezone(zone)
+    else:
+        end_at = start_at
+    if end_at < start_at:
+        raise ValueError("invalid event time")
+    last = end_at.date()
+    if end_at.time() == time.min and last > start_at.date():
+        last -= timedelta(days=1)
+    if last < start_at.date():
+        last = start_at.date()
+    return dates_inclusive(start_at.date(), last), False
+
+
+def bar_rows(records, calendar_name, zone, secrets):
+    color = calendar_color(calendar_name)
+    rows, seen = [], set()
+    for record in records:
+        if not isinstance(record, dict):
+            raise ValueError("invalid event")
+        normalized = normalize_event(
+            {
+                "summary": record.get("summary", ""),
+                "start": record.get("start"),
+                "end": record.get("end"),
+                "calendar": calendar_name,
+            },
+            zone,
+            secrets,
+        )
+        days, all_day = occurrence_span(normalized, zone)
+        start = normalized["start"]
+        identity = hashlib.sha256(
+            (
+                str(record.get("uid") or "")
+                + "\0"
+                + json.dumps(start, sort_keys=True)
+            ).encode()
+        ).hexdigest()[:20]
+        title = normalized["summary"]
+        location = redact(record.get("location") or "", secrets)[:500]
+        link = meeting_link(
+            (
+                record.get("location"),
+                record.get("description"),
+                record.get("url"),
+            ),
+            secrets,
+        )
+        page = public_https(record.get("url") or "", secrets)
+        timed_start = start.get("dateTime") or start.get("date")
+        timed_end = normalized.get("end") or {}
+        end_value = (
+            timed_end.get("dateTime")
+            or timed_end.get("date")
+            or timed_start
+        )
+        for day in days:
+            key = (identity, day.isoformat())
+            if key in seen:
+                continue
+            seen.add(key)
+            row = {
+                "id": identity,
+                "calendarId": calendar_name,
+                "calendarName": calendar_name,
+                "color": color,
+                "dateKey": day.isoformat(),
+                "start": timed_start,
+                "end": end_value,
+                "allDay": all_day,
+                "title": title,
+                "location": location,
+            }
+            if link:
+                row["meetingUrl"] = link
+            if page and page != link:
+                row["eventUrl"] = page
+            rows.append(row)
+            if len(rows) > BAR_MAX_EVENTS:
+                raise ValueError("too many events")
+    return rows
+
+
+def expand_range(raw, start_day, end_day, zone):
+    command = [
+        sys.executable,
+        "-c",
+        (
+            "import runpy,sys; sys.argv=sys.argv[1:];"
+            " runpy.run_path(sys.argv[0], run_name='__main__')"
+        ),
+        str(Path(__file__).resolve()),
+        "--parse-range",
+        start_day.isoformat(),
+        end_day.isoformat(),
+        zone_name(zone),
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            input=raw,
+            capture_output=True,
+            timeout=PARSE_TIMEOUT,
+            preexec_fn=restrict_child,
+            env=interpreter_env(zone),
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        raise ValueError("calendar parse timed out") from None
+    except (OSError, subprocess.SubprocessError):
+        raise ValueError("invalid calendar") from None
+    if completed.returncode != 0 or len(completed.stdout) > MAX_BYTES:
+        raise ValueError("invalid calendar")
+    try:
+        records = json.loads(completed.stdout)
+    except (json.JSONDecodeError, UnicodeError):
+        raise ValueError("invalid calendar") from None
+    if not isinstance(records, list) or len(records) > BAR_MAX_EVENTS:
+        raise ValueError("invalid calendar")
+    return records
+
+
+def export_bar_calendar(feeds, now):
+    # The panel reads one local file and never sees the feed address.
+    zone = now.tzinfo
+    start_day = now.date() - timedelta(days=BAR_PAST_DAYS)
+    end_day = now.date() + timedelta(days=BAR_FUTURE_DAYS + 1)
+    rows = []
+    for name, url in feeds.items():
+        secrets = feed_secrets(url)
+        records = expand_range(open_feed(url), start_day, end_day, zone)
+        rows.extend(bar_rows(records, name, zone, secrets))
+        if len(rows) > BAR_MAX_EVENTS:
+            raise ValueError("too many events")
+    rows.sort(
+        key=lambda row: (
+            row["dateKey"],
+            row["allDay"],
+            row["start"],
+            row["title"],
+        )
+    )
+    save_cache(
+        bar_events_path(),
+        {
+            "version": 1,
+            "syncedAt": now.isoformat(),
+            "source": "google-ical",
+            "events": rows,
+        },
+    )
 
 
 def reminders(path):
@@ -609,6 +854,62 @@ def cached_events(path, day, now):
     )
 
 
+def component_record(component, zone):
+    event = component_event(component, zone)
+    if event is None:
+        return None
+    record = {
+        "uid": clean(component.get("UID") or "")[:200],
+        "summary": event["summary"],
+        "start": event["start"],
+        "location": clean(component.get("LOCATION") or "")[:500],
+        "description": clean(component.get("DESCRIPTION") or "")[:2000],
+        "url": clean(component.get("URL") or "")[:500],
+    }
+    if "end" in event:
+        record["end"] = event["end"]
+    return record
+
+
+def parse_range(raw, start, end, zone):
+    host = zone or start.tzinfo
+    if getattr(host, "key", None) is None:
+        raise ValueError("invalid timezone")
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) > MAX_BYTES:
+        raise ValueError("response too large")
+    if raw.upper().count(b"BEGIN:VEVENT") > MAX_COMPONENTS:
+        raise ValueError("too many events")
+    if b"BEGIN:VCALENDAR" not in raw.upper():
+        raise ValueError("invalid calendar")
+    try:
+        calendar = icalendar.Calendar.from_ical(bytes(raw))
+        if getattr(calendar, "name", None) != "VCALENDAR":
+            raise ValueError("invalid calendar")
+        validate_components(raw, calendar)
+        attach = attachment_zone(calendar, host)
+        occurrences = recurring_ical_events.of(calendar).between(start, end)
+    except ValueError:
+        raise
+    except Exception:
+        raise ValueError("invalid calendar") from None
+    records, seen = [], set()
+    for component in occurrences:
+        record = component_record(component, attach)
+        if record is None:
+            continue
+        identity = (
+            record["uid"],
+            record["start"].get("date") or record["start"].get("dateTime"),
+        )
+        if identity in seen:
+            continue
+        seen.add(identity)
+        records.append(record)
+        if len(records) > BAR_MAX_EVENTS:
+            raise ValueError("too many events")
+    return records
+
+
 def parse_feed_cli(argv):
     try:
         if len(argv) != 2:
@@ -625,11 +926,32 @@ def parse_feed_cli(argv):
         return 1
 
 
+def parse_range_cli(argv):
+    try:
+        if len(argv) != 3:
+            return 1
+        start_day = date.fromisoformat(argv[0])
+        end_day = date.fromisoformat(argv[1])
+        zone = local_zone() if argv[2] == "local" else ZoneInfo(argv[2])
+        span = end_day - start_day
+        if zone.key != argv[2] or not timedelta(0) < span <= timedelta(days=90):
+            return 1
+        start = datetime.combine(start_day, time.min, zone)
+        end = datetime.combine(end_day, time.min, zone)
+        raw = sys.stdin.buffer.read(MAX_BYTES + 1)
+        json.dump(parse_range(raw, start, end, zone), sys.stdout)
+        return 0
+    except Exception:
+        return 1
+
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
     if argv[:1] == ["--parse-feed"]:
         return parse_feed_cli(argv[1:])
+    if argv[:1] == ["--parse-range"]:
+        return parse_range_cli(argv[1:])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--refresh", action="store_true")
     parser.add_argument("--status", action="store_true")
@@ -656,9 +978,8 @@ def main(argv=None):
         return 0
     if args.refresh:
         try:
-            events = fetch_calendars(
-                calendar_feeds(secret_path), day, now.tzinfo
-            )
+            feeds = calendar_feeds(secret_path)
+            events = fetch_calendars(feeds, day, now.tzinfo)
             save_cache(
                 cache,
                 {
@@ -667,6 +988,21 @@ def main(argv=None):
                     "events": events,
                 },
             )
+            try:
+                export_bar_calendar(feeds, now)
+            except (
+                OSError,
+                ValueError,
+                KeyError,
+                TypeError,
+                urllib.error.URLError,
+                subprocess.SubprocessError,
+            ):
+                print(
+                    "Warning: Calendar bar export failed; "
+                    "the previous rail calendar was kept.",
+                    file=sys.stderr,
+                )
         except (
             OSError,
             ValueError,
