@@ -49,6 +49,8 @@ in
   systemd.user.sessionVariables = lib.mkIf isGraphicalLinux {
     PATH = graphicalSessionPath;
     SHELL = "/run/current-system/sw/bin/fish";
+    # Launcher-started Qt apps inherit the user manager, not Hyprland's env.
+    QT_QPA_PLATFORMTHEME = "gtk3";
   };
 
   home.activation.importGraphicalSessionEnvironment = lib.mkIf isGraphicalLinux (
@@ -58,12 +60,21 @@ in
       if [[ $systemdStatus == 'running' || $systemdStatus == 'degraded' ]]; then
         ${pkgs.systemd}/bin/systemctl --user set-environment \
           PATH=${lib.escapeShellArg graphicalSessionPath} \
-          SHELL=/run/current-system/sw/bin/fish
+          SHELL=/run/current-system/sw/bin/fish \
+          QT_QPA_PLATFORMTHEME=gtk3
 
         env \
           PATH=${lib.escapeShellArg graphicalSessionPath} \
           SHELL=/run/current-system/sw/bin/fish \
-          ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd PATH SHELL
+          QT_QPA_PLATFORMTHEME=gtk3 \
+          ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd PATH SHELL QT_QPA_PLATFORMTHEME
+
+        if command -v hyprctl >/dev/null 2>&1 && [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+          hyprctl keyword env QT_QPA_PLATFORMTHEME,gtk3 || true
+        fi
+        # Walker keeps the environment it was started with. Restart it so
+        # launcher-started Qt apps pick up the platform theme without a relogin.
+        ${pkgs.systemd}/bin/systemctl --user try-restart walker.service || true
       else
         echo "Skipping graphical session env import: user systemd not running ($systemdStatus)."
       fi

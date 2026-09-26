@@ -448,6 +448,10 @@
             "XCURSOR_THEME,${settings.cursor.theme}"
             "XCURSOR_SIZE,${toString settings.cursor.size}"
             "HYPRCURSOR_SIZE,${toString settings.cursor.size}"
+            # Qt's built-in file dialog is the light Fusion navigator. gtk3
+            # uses the themed GTK chooser. Packaged Qt apps already ship the
+            # FileChooser schema; do not set this without that schema.
+            "QT_QPA_PLATFORMTHEME,gtk3"
           ];
           cursor = {
             hide_on_key_press = settings.cursor.hideOnKeyPress;
