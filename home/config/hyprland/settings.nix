@@ -278,9 +278,10 @@ rec {
   # Super+Escape locks without a confirmation. The session menu confirms
   # logout, reboot and power off.
   # Daily apps: Super+Enter opens a new Ghostty. Hyprland names that
-  # key Return. Super+B, Super+C, Super+T, Super+E and Super+P focus
-  # Brave, Slack, Telegram, Nautilus or CLIamp, or launch them when they
-  # are not open. Discord, Spotify and LibreOffice stay on the launcher.
+  # key Return. Super+B, Super+C, Super+T, Super+E, Super+P and Super+O
+  # focus Brave, Slack, Telegram, Nautilus, CLIamp or Spotify, or launch
+  # them when they are not open. A second press focuses the open window
+  # from any workspace. Discord and LibreOffice stay on the launcher.
   # Spotify is the Quickshell player, not the official desktop client.
   # bind lines are the keybinds. mainMod is $mainMod. Number keys use
   # workspaceMod and workspaceMoveMod; they are not hardcoded in the module.
@@ -307,6 +308,7 @@ rec {
       "SUPER, T, exec, hypr-open org.telegram.desktop:TelegramDesktop Telegram"
       "SUPER, E, exec, hypr-open org.gnome.Nautilus nautilus --new-window"
       "SUPER, P, exec, ${cliampCommand}"
+      "SUPER, O, exec, hypr-spotify-focus"
       "SUPER SHIFT, T, exec, theme-menu"
       "SUPER SHIFT, B, exec, hypr-session display-toggle"
       "SUPER, Escape, exec, hypr-session lock"

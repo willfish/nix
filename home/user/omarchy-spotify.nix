@@ -148,11 +148,64 @@ let
       exit 1
     '';
   };
+  # Super+O focuses the player from any workspace. A second press must not
+  # close it, so this opens with show rather than the launcher toggle.
+  focus = pkgs.writeShellApplication {
+    name = "hypr-spotify-focus";
+    runtimeInputs = [
+      pkgs.hyprland
+      pkgs.jq
+      pkgs.quickshell
+      pkgs.systemd
+      pkgs.gnugrep
+      pkgs.coreutils
+      pkgs.libnotify
+    ];
+    text = ''
+      focus_existing() {
+        address="$(hyprctl clients -j | jq -r 'first(.[] | select(.title == "Omarchy Spotify") | .address) // empty')"
+        if [ -z "$address" ]; then
+          return 1
+        fi
+        hyprctl dispatch focuswindow "address:$address"
+      }
+
+      if focus_existing; then
+        exit 0
+      fi
+
+      systemctl --user is-active --quiet hyprland-session.target || {
+        echo 'Spotify requires an active Hyprland session.' >&2
+        exit 1
+      }
+      systemctl --user start hyprland-spotify.service
+      opened=0
+      for _ in {1..40}; do
+        if quickshell ipc --path ${bundle}/shell show 2>/dev/null | grep -q spotify; then
+          quickshell ipc --path ${bundle}/shell call spotify show >/dev/null || true
+          opened=1
+          break
+        fi
+        sleep 0.1
+      done
+      if [ "$opened" -eq 1 ]; then
+        for _ in {1..40}; do
+          if focus_existing; then
+            exit 0
+          fi
+          sleep 0.1
+        done
+      fi
+      notify-send 'Spotify' 'The player could not start.'
+      exit 1
+    '';
+  };
 in
 {
   config = lib.mkIf isGraphicalLinux {
     home.packages = [
       launcher
+      focus
       shell
       icons
     ];
