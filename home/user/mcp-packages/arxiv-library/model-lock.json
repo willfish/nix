@@ -1,0 +1,36 @@
+{
+  "model": "minishlab/potion-science-32M",
+  "revision": "7366079845507de14a4330007cdfa01bb92bca52",
+  "files": [
+    {
+      "type": "file",
+      "oid": "46d19ef89c2d6e7c91553ef20e885efd58f95d7e",
+      "size": 3571,
+      "path": "README.md"
+    },
+    {
+      "type": "file",
+      "oid": "b11d35e83f010b1320ebc3706a9b7554427c8994",
+      "size": 203,
+      "path": "config.json"
+    },
+    {
+      "type": "file",
+      "oid": "1f8e38638822965ae3a11d495cfa8f52b055bebd",
+      "size": 127414360,
+      "lfs": {
+        "oid": "5973432fc766d8f0fff07d4138bbb79d67854fe6af120aff2922f26b9b7e2055",
+        "size": 127414360,
+        "pointerSize": 134
+      },
+      "xetHash": "465e9b200dd18c81c5631ee6440f1c83a46a4bad3fa25d451bcc96fc01e4b516",
+      "path": "model.safetensors"
+    },
+    {
+      "type": "file",
+      "oid": "a2eb3ac12031d22bef959a7545f95b5e87fa8142",
+      "size": 3049851,
+      "path": "tokenizer.json"
+    }
+  ]
+}

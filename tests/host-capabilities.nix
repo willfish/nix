@@ -60,6 +60,31 @@ let
     assert require (builtins.all (
       s: has ".local/bin/${s.wrapper}"
     ) catalogue) "registered MCP wrapper missing";
+    assert require (servers ? arxiv && has ".local/bin/mcp-arxiv") "arXiv MCP must be everywhere";
+    assert require (
+      builtins.elem "arxiv-library" packageNames == (name == "william@terminus")
+    ) "only Terminus installs the corpus runtime";
+    assert require (
+      (c.systemd.user.services ? arxiv-ingest) == (name == "william@terminus")
+    ) "only Terminus runs arXiv import jobs";
+    assert require (
+      name != "william@terminus"
+      ||
+        builtins.all
+          (
+            unit:
+            c.systemd.user.services.${unit}.Service.Type == "simple"
+            && c.systemd.user.services.${unit}.Service.TimeoutStartSec == "infinity"
+          )
+          [
+            "arxiv-download"
+            "arxiv-ingest"
+            "arxiv-embeddings"
+          ]
+    ) "long-running arXiv workers must not block activation";
+    assert require (
+      name != "william@terminus" || c.systemd.user.services.arxiv-download.Service.RemainAfterExit
+    ) "completed downloads must not be rehashed on every switch";
     assert require (
       builtins.elem "pi" packageNames && builtins.elem "agent-browser" packageNames
     ) "Pi and agent-browser must be everywhere";

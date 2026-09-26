@@ -45,6 +45,7 @@
     ./local-llm.nix
     ./hermes.nix
     ./mcp.nix
+    ./arxiv-library.nix
     ./neovim.nix
     ./network.nix
     ./packages.nix

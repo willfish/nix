@@ -99,6 +99,7 @@ in
         {
           jira = pkgs.uv;
           github = pkgs.github-mcp-server;
+          arxiv = pkgs.openssh;
           "web-search" = braveSearchMcpServer;
           browser = agentBrowser;
           terraform = pkgs.terraform-mcp-server;

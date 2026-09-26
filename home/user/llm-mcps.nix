@@ -20,6 +20,11 @@ rec {
         wrapper = "mcp-github";
       }
       {
+        name = "arxiv";
+        enabled = true;
+        wrapper = "mcp-arxiv";
+      }
+      {
         name = "web-search";
         enabled = true;
         wrapper = "mcp-web-search";
