@@ -211,8 +211,29 @@ rec {
     }
   ];
 
-  # New windows, not already-open ones. Super+P still focuses CLIamp wherever it is.
+  # New windows, not already-open ones. Super shortcuts still focus an app wherever it is.
+  # Web apps stay floating; only the main Brave window is the browser.
   workspace.rules = [
+    {
+      name = "browser";
+      class = "^brave-browser$";
+      workspace = 1;
+    }
+    {
+      name = "slack";
+      class = "^(slack|Slack)$";
+      workspace = 2;
+    }
+    {
+      name = "telegram";
+      class = "^(org\\.telegram\\.desktop|TelegramDesktop)$";
+      workspace = 2;
+    }
+    {
+      name = "discord";
+      class = "^(discord|Discord)$";
+      workspace = 2;
+    }
     {
       name = "cliamp";
       class = "^com\\.william\\.cliamp$";
@@ -221,6 +242,11 @@ rec {
     {
       name = "spotify";
       class = "^(spotify|Spotify)$";
+      workspace = 3;
+    }
+    {
+      name = "forte";
+      class = "^io\\.github\\.willfish\\.forte$";
       workspace = 3;
     }
   ];

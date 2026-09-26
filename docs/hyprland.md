@@ -29,7 +29,8 @@ Super+F toggles fullscreen, Super+G toggles floating, and Super or Super+X
 opens the launcher. Super+Enter opens a new Ghostty. Super+B, Super+C,
 Super+T, Super+E and Super+P focus Brave, Slack, Telegram, Nautilus or CLIamp
 if one is open, otherwise they launch it. Discord, Spotify and LibreOffice stay
-on the launcher. A newly opened CLIamp or Spotify window goes to workspace 3.
+on the launcher. A new Brave window opens on workspace 1, Slack, Telegram and
+Discord on workspace 2, and CLIamp, Spotify or Forte on workspace 3.
 Super+Shift+T opens appearance and Ctrl+Shift+S takes a
 screenshot. Voice chords retain their host capability checks. Super+Shift+B
 uses Hyprland DPMS to power the display. Dwindle tiling behaviour is configured
