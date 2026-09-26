@@ -324,7 +324,6 @@ in
       libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
       pavucontrol # Graphical PulseAudio volume control
       qbittorrent # BitTorrent client with a user-friendly interface
-      sherlock # Hunt down social media accounts by username across
       spotify # Music streaming application
       telegram-desktop # Desktop client for Telegram messaging
       wl-clipboard # Wayland clipboard tools for Hyprland, voice and Neovim
