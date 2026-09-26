@@ -8,7 +8,6 @@ the shared MCP server configuration:
 | Jira | `mcp-jira` |
 | GitHub | `mcp-github` |
 | Browser | `mcp-agent-browser` |
-| Browser Playwright | `mcp-brave` |
 | Terraform | `mcp-terraform` |
 | NixOS | `mcp-nixos` |
 | Filesystem | `mcp-filesystem` |
@@ -17,8 +16,9 @@ the shared MCP server configuration:
 | AWS access portal | `mcp-aws-access-portal` |
 
 Run `hmswitch` after pulling the dotfiles on another machine. Restart Pi, or
-use `/reload` in an existing plain Pi session. The browser servers require
-the configured Brave browser to be running with CDP on port 9222. Authenticated
+use `/reload` in an existing plain Pi session. The browser server requires
+the configured Brave browser to be running with CDP on port 9222. Playwright
+MCP is not installed. Authenticated
 servers use local sops secrets or session credentials through their wrappers.
 No credentials are copied into Pi's configuration.
 

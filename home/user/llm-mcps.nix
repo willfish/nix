@@ -30,11 +30,6 @@ rec {
         wrapper = "mcp-agent-browser";
       }
       {
-        name = "browser-playwright";
-        enabled = config.dotfiles.capabilities.playwright;
-        wrapper = "mcp-brave";
-      }
-      {
         name = "terraform";
         enabled = config.dotfiles.capabilities.work;
         wrapper = "mcp-terraform";

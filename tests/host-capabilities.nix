@@ -125,8 +125,12 @@ let
     assert require (
       caps.work || (!(has ".local/bin/mcp-slack") && !(has ".local/bin/slack-refresh-session"))
     ) "disabled work wrappers remain";
+    assert require (!(has ".local/bin/mcp-brave")) "Playwright MCP wrapper is not installed";
     assert require (
-      caps.playwright || (!(has ".local/bin/mcp-brave") && !(has ".local/bin/mcp-agent-browser"))
+      !(builtins.elem "playwright-mcp" packageNames)
+    ) "Playwright MCP package is not installed";
+    assert require (
+      caps.playwright || !(has ".local/bin/mcp-agent-browser")
     ) "visible browser wrappers on headless host";
     assert require (has ".local/bin/mcp-dap" == caps.development) "debugger wrapper boundary";
     assert require (

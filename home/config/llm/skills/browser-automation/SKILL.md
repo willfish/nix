@@ -1,9 +1,8 @@
 ---
 name: browser-automation
 description: >
-  Use when controlling Will's visible Brave browser, using browser or
-  browser-playwright MCP tools, attaching through CDP port 9222, or falling
-  back to agent-browser CLI or raw CDP.
+  Use when controlling Will's visible Brave browser, using the browser MCP,
+  attaching through CDP port 9222, or falling back to agent-browser CLI or raw CDP.
 ---
 
 # Browser Automation
@@ -14,27 +13,23 @@ switch to an isolated profile.
 
 ## Choose the layer
 
-Always start with the `browser` MCP unless a Playwright condition listed below
-already applies.
+Use the `browser` MCP for navigation, reading, semantic interaction,
+screenshots, and tab work. It attaches to visible Brave on port 9222.
 
-- Use the primary `browser` MCP for ordinary navigation, reading, semantic
-  interaction, screenshots, and tab work. It is the small Rust-native core
-  profile.
-- Use the specialist `browser-playwright` fallback immediately for nested or
-  cross-origin iframe interactions, complex reactive pages, repeated
-  stale-reference failures, or consequential mutations where Playwright's
-  waiting and frame model reduce risk.
-- Use `agent-browser --json` only when the Rust MCP lacks a required operation.
-  Always pass `--cdp http://127.0.0.1:9222 --pin-tab`; never use auto-connect.
-- Use raw CDP only for diagnosis or as a final read-only fallback.
+Playwright MCP is not installed. Do not launch Playwright or another browser.
 
-If neither MCP is available, check
-`curl -fsS http://127.0.0.1:9222/json/version`. If it fails, ask Will to start
-visible Brave. Do not start another browser.
+The core MCP profile cannot enter an iframe. For that, use
+`agent-browser --json --cdp http://127.0.0.1:9222 --pin-tab frame <selector>`,
+then run the needed command in that frame. A small iframe MCP on this debugger
+port may replace that later. Never use auto-connect.
 
-Use only the configured `browser` and `browser-playwright` wrappers. If their
-CDP endpoint cannot be verified as port 9222, stop rather than risk an invisible
-or isolated browser.
+Use raw CDP only for diagnosis or as a final read-only fallback.
+
+If the MCP is unavailable, check `curl -fsS http://127.0.0.1:9222/json/version`.
+If it fails, ask Will to start visible Brave. Do not start another browser.
+
+Use only the configured `browser` wrapper. If its CDP endpoint cannot be
+verified as port 9222, stop rather than risk an invisible or isolated browser.
 
 ## Interact safely
 
@@ -65,8 +60,7 @@ JavaScript dialogs explicitly.
 
 ## Known failure routing
 
-Do not use agent-browser for nested iframe mutations until its frame execution
-model is proven reliable in the installed version. On a stale ref, unexpected
-target change, wedged evaluation, or click that reports success without the
-expected effect, stop and inspect. Re-snapshot once; then switch to Playwright
-rather than retrying blindly.
+On a stale ref, unexpected target change, wedged evaluation, or click that
+reports success without the expected effect, stop and inspect. Re-snapshot
+once. For an iframe, switch frame with the agent-browser CLI above rather than
+retrying blindly. Do not fall back to Playwright.

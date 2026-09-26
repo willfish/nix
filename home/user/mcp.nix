@@ -101,7 +101,6 @@ in
           github = pkgs.github-mcp-server;
           "web-search" = braveSearchMcpServer;
           browser = agentBrowser;
-          browser-playwright = pkgs.playwright-mcp;
           terraform = pkgs.terraform-mcp-server;
           nixos = pkgs.mcp-nixos;
           filesystem = pkgs.mcp-server-filesystem;
@@ -157,25 +156,6 @@ in
       exec ${pkgs.github-mcp-server}/bin/github-mcp-server \
         --toolsets=default,actions,notifications,code_security,secret_protection,dependabot \
         stdio
-    '';
-  };
-
-  home.file.".local/bin/mcp-brave" = lib.mkIf (enabled "browser-playwright") {
-    executable = true;
-    text = ''
-      #!${pkgs.bash}/bin/bash
-      set -euo pipefail
-
-      if ! ${pkgs.curl}/bin/curl --fail --silent --show-error --max-time 2 \
-        ${lib.escapeShellArg "${braveCdpEndpoint}/json/version"} >/dev/null; then
-        echo "Visible Brave CDP endpoint is unavailable at ${braveCdpEndpoint}; refusing to launch another browser" >&2
-        exit 1
-      fi
-
-      exec ${pkgs.playwright-mcp}/bin/playwright-mcp \
-        --cdp-endpoint ${lib.escapeShellArg braveCdpEndpoint} \
-        --browser chrome \
-        --caps vision,pdf,devtools
     '';
   };
 
