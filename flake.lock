@@ -9,11 +9,11 @@
         "pi-fixture": "pi-fixture"
       },
       "locked": {
-        "lastModified": 1790448908,
-        "narHash": "sha256-bT19BWaZabxs+ApnMWLbLspxr4WF049T8WDSyqd8xRU=",
+        "lastModified": 1790449035,
+        "narHash": "sha256-JDfNRxQ39q/HNEo7A6CSgeHmB6oFwhdaElzd1crML6w=",
         "ref": "refs/heads/main",
-        "rev": "ab33f4e3fef595ac3f6e3e7dadd54b2cc5adb66d",
-        "revCount": 24,
+        "rev": "df0a51adb1bbfd3c8001400c6312ff48a793d8dc",
+        "revCount": 25,
         "type": "git",
         "url": "ssh://git@github.com/willfish/pi-switchboard.git"
       },
