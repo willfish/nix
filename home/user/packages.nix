@@ -336,7 +336,6 @@ in
       sherlock # Hunt down social media accounts by username across
       spotify # Music streaming application
       telegram-desktop # Desktop client for Telegram messaging
-      vokoscreen-ng # Screen recording tool with audio support
       wl-clipboard # Wayland clipboard tools for Hyprland, voice and Neovim
       wlopm # Wayland output power control used by toggle-display
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
