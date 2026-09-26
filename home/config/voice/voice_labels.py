@@ -85,6 +85,7 @@ def parse_snapshot(data):
                 workspaces.get(pane.get('workspace_id'), {}).get('label')
             ),
             'tab': clean(tabs.get(pane.get('tab_id'), {}).get('label')),
+            'pane': clean(pane.get('label') or pane.get('title') or ''),
             'display_agent': clean(pane.get('display_agent')),
         }
         for identity, pane in panes.items()
@@ -299,19 +300,24 @@ def build_labels(entries, snapshots):
         row = rows[index]
         model, thinking = model_thinking(row, metadata)
         workspace, tab = metadata.get('workspace', ''), metadata.get('tab', '')
+        pane_name = metadata.get('pane', '')
         pieces = ['pi']
         if workspace:
             pieces.append(workspace)
         if tab and tab != workspace:
             pieces.append(tab)
+        if pane_name and pane_name not in (workspace, tab):
+            pieces.append(pane_name)
         pieces.extend(part for part in (thinking, model) if part)
         flags = []
         if row.get('selected'):
             flags.append('selected')
         if row.get('team_child'):
             flags.append('team')
-        prepared[index] = (' · '.join(pieces), flags,
-                           bool(workspace or tab), key, pane)
+        prepared[index] = (
+            ' · '.join(pieces), flags,
+            bool(workspace or tab or pane_name), key, pane,
+        )
 
     def render(index, with_identity):
         body, flags, named, key, pane = prepared[index]

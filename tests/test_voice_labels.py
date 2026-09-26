@@ -282,6 +282,42 @@ class LabelTests(unittest.TestCase):
         self.assertIn('p2', result[1]['label'])
         self.assertEqual(display_width('界e\u0301'), 3)
 
+    def test_renamed_pane_is_shown_without_replacing_the_tab(self):
+        data = payload(workspace='dot', tab='1 voice')
+        data['panes'][0]['label'] = 'review'
+        data['panes'][0]['title'] = 'ignored when label is set'
+        data['panes'][0]['terminal_title'] = 'π - .dotfiles'
+        entry = row(model='grok-4.7', thinking='medium')
+        label = build_labels([entry], {
+            entry['socket_key']: SnapshotState(
+                panes=parse_snapshot(data), outcome='ok'
+            ),
+        })[0]['label']
+        self.assertEqual(
+            label, 'pi · dot · 1 voice · review · medium · grok-4.7'
+        )
+        self.assertNotIn('.dotfiles', label)
+        data['panes'][0]['label'] = None
+        data['panes'][0]['title'] = 'notes'
+        renamed = build_labels([entry], {
+            entry['socket_key']: SnapshotState(
+                panes=parse_snapshot(data), outcome='ok'
+            ),
+        })[0]['label']
+        self.assertIn('notes', renamed)
+        self.assertNotIn('review', renamed)
+
+    def test_pane_name_matching_the_tab_is_not_repeated(self):
+        data = payload()
+        data['panes'][0]['label'] = 'shell'
+        entry = row()
+        label = build_labels([entry], {
+            entry['socket_key']: SnapshotState(
+                panes=parse_snapshot(data), outcome='ok'
+            ),
+        })[0]['label']
+        self.assertEqual(label.count('shell'), 1)
+
     def test_display_agent_fallback_is_pure(self):
         data = payload()
         data['panes'][0]['display_agent'] = 'pi · high · provider/model'

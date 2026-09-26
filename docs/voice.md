@@ -36,7 +36,7 @@ not yet been initialized. Selection stays sticky: new Pi sessions and keyboard
 focus never steal it. After the selected session disappears, another session
 is not silently chosen. Select a destination manually with **Super+Shift+V**.
 
-Labels identify the harness, workspace/session and pane; hover for full details.
+Labels identify the harness, workspace, tab and a renamed pane. The terminal title is not used as the pane name.
 Only the selected session receives dictation. Team panes are not registered,
 so the selector lists ordinary Pi and Qwen Pi sessions only. Pi and Qwen Pi
 share the same selector.
