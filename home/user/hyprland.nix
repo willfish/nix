@@ -16,7 +16,6 @@
   config = lib.mkIf isGraphicalLinux (
     let
       settings = import ../config/hyprland/settings.nix;
-      omarchySource = import ./themes/omarchy-source.nix;
       omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
       ttfx = pkgs.callPackage ./ttfx.nix { };
       screensaver = pkgs.writeShellApplication {
@@ -763,7 +762,7 @@
         };
       };
 
-      xdg.configFile."omarchy/branding/screensaver.txt".source = "${omarchySource}/logo.txt";
+      xdg.configFile."omarchy/branding/screensaver.txt".source = ../config/hyprland/screensaver.txt;
 
       xdg.configFile."mako/config".text = ''
         include=${themeFile "mako.conf"}
