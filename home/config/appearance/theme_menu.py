@@ -289,9 +289,18 @@ class Themes:
             except (OSError, subprocess.SubprocessError):
                 warnings.append("Launcher will use the theme on next startup.")
         try:
+            # try-restart does nothing once the unit has failed, so a
+            # start-limit from browsing themes leaves the old image up.
             subprocess.run(
                 [
-                    "systemctl", "--user", "try-restart",
+                    "systemctl", "--user", "reset-failed",
+                    "hypr-wallpaper.service",
+                ],
+                capture_output=True, timeout=10, check=False,
+            )
+            subprocess.run(
+                [
+                    "systemctl", "--user", "restart",
                     "hypr-wallpaper.service",
                 ],
                 capture_output=True, timeout=10, check=True,

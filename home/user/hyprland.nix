@@ -788,6 +788,9 @@
           PartOf = [ "hyprland-session.target" ];
           After = [ "hyprland-session.target" ];
           ConditionEnvironment = "WAYLAND_DISPLAY";
+          # Theme changes restart this on purpose. The default start limit
+          # treats that as a crash loop and then leaves the desktop blank.
+          StartLimitIntervalSec = 0;
         };
         Service = {
           ExecStart = toString wallpaper;
