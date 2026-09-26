@@ -217,8 +217,17 @@
             exit 2
           fi
           address="$(hyprctl clients -j | jq -r --arg alts "$class_alts" '
-            ($alts | split(":") ) as $want
-            | first(.[] | select(.class as $c | $want | index($c)) | .address) // empty
+            ($alts | split(":")) as $want
+            | first(.[] | select(
+                (.class as $c | $want | index($c))
+                or (
+                  ($want | index("com.william.cliamp"))
+                  and (
+                    .title == "cliamp"
+                    or (.title | endswith(" | cliamp"))
+                  )
+                )
+              ) | .address) // empty
           ')"
           if [ -n "$address" ]; then
             hyprctl dispatch focuswindow "address:$address"
@@ -527,7 +536,11 @@
                 center = true;
                 size = "1100 800";
               }
-            ];
+            ]
+            ++ map (rule: {
+              inherit (rule) name workspace;
+              "match:class" = rule.class;
+            }) settings.workspace.rules;
         };
       };
 

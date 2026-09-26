@@ -122,6 +122,11 @@ in
   xdg.configFile = lib.optionalAttrs isGraphicalLinux {
     "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
     "mimeapps.list".force = true;
+    # Direct file, not the config directory: a directory copy drops untracked files.
+    "cliamp/radios.toml" = {
+      text = builtins.readFile ../config/cliamp/radios.toml;
+      force = true;
+    };
   };
 
   xdg.dataFile = lib.optionalAttrs isGraphicalLinux (
@@ -162,7 +167,7 @@ in
     cliamp = {
       name = "CLIamp";
       genericName = "Music Player";
-      exec = "ghostty -e cliamp";
+      exec = (import ../config/hyprland/settings.nix).cliampCommand;
       icon = "audio-x-generic";
       terminal = false;
       categories = [

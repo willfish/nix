@@ -11,7 +11,7 @@
 #   ~/.local/state/theme-menu/active/hyprlock.conf
 # hyprlock.conf must be variables only ($theme_*). Repeat categories add
 # widgets; the main config owns every lock-screen widget.
-{
+rec {
   appearance = {
     # null uses the host default; otherwise use a theme ID such as "nord".
     # A saved theme-menu selection takes precedence. Each theme owns its mode.
@@ -107,7 +107,7 @@
       network = "hypr-controls network";
       bluetooth = "hypr-controls bluetooth";
       monitor = "ghostty -e btop";
-      music = "ghostty -e cliamp";
+      music = cliampCommand;
       power = "hypr-session menu";
     };
     modulesLeft = [
@@ -211,6 +211,20 @@
     }
   ];
 
+  # New windows, not already-open ones. Super+P still focuses CLIamp wherever it is.
+  workspace.rules = [
+    {
+      name = "cliamp";
+      class = "^com\\.william\\.cliamp$";
+      workspace = 3;
+    }
+    {
+      name = "spotify";
+      class = "^(spotify|Spotify)$";
+      workspace = 3;
+    }
+  ];
+
   idle = {
     # Omarchy's idle order: animated wordmark, then lock, then display off.
     screensaverSeconds = 150;
@@ -224,6 +238,10 @@
     anchor = "top-right";
   };
 
+  # Own window class so Super+P can focus CLIamp without focusing Ghostty.
+  # The title match covers a player opened before that class existed.
+  cliampCommand = "hypr-open com.william.cliamp ghostty --class=com.william.cliamp -e cliamp";
+
   # Shortcuts: WASD focus, Super+X launcher, Super+Shift+T
   # theme menu. Super+V records a region; press it again to stop.
   # Super+Alt+V does the same with a camera square and the microphone.
@@ -231,9 +249,9 @@
   # Super+Escape locks without a confirmation. The session menu confirms
   # logout, reboot and power off.
   # Daily apps: Super+Enter opens a new Ghostty. Hyprland names that
-  # key Return. Super+B, Super+C, Super+T and Super+E focus Brave,
-  # Slack, Telegram or Nautilus, or launch them when they are not open.
-  # Discord, Spotify and LibreOffice stay on the launcher.
+  # key Return. Super+B, Super+C, Super+T, Super+E and Super+P focus
+  # Brave, Slack, Telegram, Nautilus or CLIamp, or launch them when they
+  # are not open. Discord, Spotify and LibreOffice stay on the launcher.
   # bind lines are the keybinds. mainMod is $mainMod. Number keys use
   # workspaceMod and workspaceMoveMod; they are not hardcoded in the module.
   bindings = {
@@ -258,6 +276,7 @@
       "SUPER, C, exec, hypr-open slack:Slack slack"
       "SUPER, T, exec, hypr-open org.telegram.desktop:TelegramDesktop Telegram"
       "SUPER, E, exec, hypr-open org.gnome.Nautilus nautilus --new-window"
+      "SUPER, P, exec, ${cliampCommand}"
       "SUPER SHIFT, T, exec, theme-menu"
       "SUPER SHIFT, B, exec, hypr-session display-toggle"
       "SUPER, Escape, exec, hypr-session lock"
