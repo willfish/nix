@@ -17,10 +17,11 @@ let
     done
     chmod -R u+w "$out"
     patch --batch -d "$out" -p1 < ${local}/nixos.patch
-    # Store pkexec is not setuid, and pkexec drops PATH before running tailscale.
+    # pkexec realpath()s its program. The packaged tailscale path is a symlink to
+    # tailscaled, so the command starts the daemon and exits before setting an operator.
     substituteInPlace "$out/shell/plugins/panels/tailscale/Service.qml" \
       --replace-fail '["pkexec", "tailscale", "set", "--operator=" + userName]' \
-      '["/run/wrappers/bin/pkexec", "${pkgs.tailscale}/bin/tailscale", "set", "--operator=" + userName]'
+      '["/run/wrappers/bin/pkexec", "${tailscaleCli}", "set", "--operator=" + userName]'
     cp ${local}/shell.qml "$out/shell/shell.qml"
     cp ${source}/LICENSE "$out/LICENSE"
   '';
@@ -77,6 +78,10 @@ let
       exec notify-send -a Tailscale -u "$urgency" -- "$headline" "$description"
     '';
   };
+  # A real file, not the packaged symlink. Forces CLI argv0 after pkexec's shebang reset.
+  tailscaleCli = pkgs.writeShellScript "tailscale-cli" ''
+    exec -a tailscale ${pkgs.tailscale}/bin/.tailscaled-wrapped "$@"
+  '';
   tailscaleSend = pkgs.writeShellApplication {
     name = "omarchy-tailscale-send";
     runtimeInputs = [
