@@ -50,7 +50,7 @@ sharing, speed tests and the optional media/OSD service are not hosted.
 The defaults use Nautilus for folders, Evince for PDFs, Neovim in Ghostty for text,
 and mpv with MPRIS for audio/video.
 
-Idle follows `idle` in `settings.nix`: the Nix snowflake screensaver, then lock, then display-off. A session
+Idle follows `idle` in `settings.nix`: the Nix snowflake screensaver, then lock, then display-off. Opening the screensaver resets the idle timer, so the screensaver dismisses itself on a key, click or pointer motion rather than on hypridle's first resume. A session
 service watches Herdr and holds a logind block inhibitor for idle and sleep
 only while an agent is working. Blocked, idle, done and unknown agents do not
 hold the machine awake. If Herdr is not running, sleep stays allowed. The

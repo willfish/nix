@@ -749,9 +749,11 @@
           };
           listener = [
             {
+              # No on-resume. Mapping the screensaver resets ext-idle-notify
+              # with no seat input, and that resume is the only one hypridle
+              # emits until the next idle. The screensaver exits on input.
               timeout = settings.idle.screensaverSeconds;
               on-timeout = "${launchScreensaver}/bin/hypr-launch-screensaver";
-              on-resume = "${stopScreensaver}";
             }
             {
               timeout = settings.idle.lockSeconds;

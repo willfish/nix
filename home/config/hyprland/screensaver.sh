@@ -6,6 +6,7 @@ set -euo pipefail
 branding="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/branding/screensaver.txt"
 
 exit_screensaver() {
+  printf '\033[?1003l\033[?1006l' || true
   hyprctl eval 'hl.config({ cursor = { invisible = false } })' >/dev/null 2>&1 ||
     hyprctl keyword cursor:invisible false >/dev/null 2>&1 ||
     true
@@ -32,6 +33,13 @@ while ((SECONDS < deadline)) && [[ $(stty size 2>/dev/null || true) == "24 80" ]
   sleep 0.02
 done
 
+# Opening this window resets ext-idle-notify before the user has touched
+# anything, so hypridle must not dismiss us on that resume. Watch the seat
+# here instead: keys, clicks and pointer motion.
+printf '\033[?1003h\033[?1006h'
+read -r -t 0.3 -n 10000 _ || true
+cursor=$(hyprctl cursorpos 2>/dev/null || true)
+
 while true; do
   ttfx -i "$branding" \
     --frame-rate 120 --canvas-width 0 --canvas-height 0 --reuse-canvas \
@@ -39,7 +47,9 @@ while true; do
     --random-effect --no-eol --no-restore-cursor &
 
   while [[ -n $tty_name ]] && pgrep -t "${tty_name#/dev/}" -x ttfx >/dev/null; do
-    if read -r -n1 -t 1 || ! hyprctl activewindow -j | jq -e '.class == "org.omarchy.screensaver"' >/dev/null 2>&1; then
+    now=$(hyprctl cursorpos 2>/dev/null || true)
+    if read -r -n1 -t 1 || [[ -n $cursor && -n $now && $now != "$cursor" ]] ||
+      ! hyprctl activewindow -j | jq -e '.class == "org.omarchy.screensaver"' >/dev/null 2>&1; then
       exit_screensaver
     fi
   done
