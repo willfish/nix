@@ -684,11 +684,6 @@
               on-click = settings.bar.commands.tailscale;
               on-click-right = "${settings.bar.commands.tailscale} toggle";
             };
-            cpu = {
-              format = "";
-              tooltip-format = "CPU: {usage}% · click for system monitor";
-              on-click = settings.bar.commands.monitor;
-            };
             backlight = {
               format = "󰃠";
               tooltip-format = "Brightness: {percent}% · scroll to adjust";

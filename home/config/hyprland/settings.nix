@@ -109,7 +109,6 @@ rec {
       tailscale = "hypr-controls tailscale";
       calendar = "hypr-controls calendar";
       notifications = "hypr-notifications";
-      monitor = "ghostty -e btop";
       music = cliampCommand;
       power = "hypr-session menu";
     };
@@ -127,7 +126,6 @@ rec {
       "network"
       "custom/tailscale"
       "bluetooth"
-      "cpu"
       "backlight"
       "idle_inhibitor"
       "battery"
