@@ -275,6 +275,7 @@ let
             "http://relay:*"
             "http://relay.local:*"
             "http://relay.fritz.box:*"
+            "http://relay.taile09696.ts.net:*"
             "http://192.168.178.55:*"
           ]
         )
@@ -334,10 +335,13 @@ let
       # Bind every address. NixOS trusts tailscale0 and does not open 8081 on the
       # LAN, so Andromeda is tailnet-only. Relay already served LAN plus Tailscale.
       # Authenticate with the API key. Do not enable Tailscale Funnel.
-      exec ${llamaCpp}/bin/llama-server \
-        --model ${lib.escapeShellArg modelPath} \
-        --alias ${modelAlias} \
-        --host 0.0.0.0 --port 8081 \
+      # llama.cpp cannot exempt one interface. Relay's public port is a proxy
+      # that injects the key for Tailscale clients only.
+      run_llama() {
+        exec ${llamaCpp}/bin/llama-server \
+          --model ${lib.escapeShellArg modelPath} \
+          --alias ${modelAlias} \
+          --host "$1" --port "$2" \
         --api-key-file ${lib.escapeShellArg apiKeyPath} \
         ${lib.optionalString isAutomationDarwin "--ui-mcp-proxy --ui-config-file ${uiConfig} --path ${chatUi}"} \
         --ctx-size ${toString contextSize} --parallel 1 \
@@ -363,8 +367,33 @@ let
         }' \
         --temp 0.7 --top-p 0.8 --top-k 20 --min-p 0 \
         --presence-penalty 1.5 --repeat-penalty 1.0 \
-        --sleep-idle-seconds 600 \
-        "$@"
+          --sleep-idle-seconds 600 \
+          "''${@:3}"
+      }
+      ${
+        if isRelay then
+          ''
+            run_llama 127.0.0.1 18081 "$@" &
+            llama_pid=$!
+            ${pkgs.python3}/bin/python3 ${../config/local-llm/tailscale_open_proxy.py} \
+              --listen-host 0.0.0.0 --listen-port 8081 \
+              --upstream-host 127.0.0.1 --upstream-port 18081 \
+              --key-file ${lib.escapeShellArg apiKeyPath} &
+            proxy_pid=$!
+            cleanup() {
+              kill "$llama_pid" "$proxy_pid" 2>/dev/null || true
+            }
+            trap cleanup EXIT INT TERM
+            while kill -0 "$llama_pid" 2>/dev/null && kill -0 "$proxy_pid" 2>/dev/null; do
+              sleep 1
+            done
+            exit 1
+          ''
+        else
+          ''
+            run_llama 0.0.0.0 8081 "$@"
+          ''
+      }
     '';
   };
 

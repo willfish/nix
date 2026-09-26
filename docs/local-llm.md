@@ -5,7 +5,8 @@ Home Manager manages a Metal-accelerated llama.cpp server on the M4 Pro Mac mini
 launcher with separate pinned models: Huihui Qwen3.6-35B-A3B abliterated
 Q5_K_M on Relay and Huihui Qwen3.8-27B abliterated UD-Q5_K_XL on Andromeda. Configuration is in
 `home/user/local-llm.nix`. The browser UI and Hermes Telegram routing below apply
-to Relay. Authenticated API access is available on each host's Tailscale name.
+to Relay. Andromeda's Tailscale API requires the login key. Relay's Tailscale
+clients do not: the tailnet is the login, and the key stays on the LAN.
 
 ## Chat
 
@@ -15,8 +16,10 @@ Alternatively, use <http://192.168.178.55:8081> (relay's
 current address). If DHCP changes the address, also update the allowed browser
 origins in `home/user/local-llm.nix` and run `hmswitch`, or use `relay.fritz.box`.
 
-Run `local-chat-key` on relay to copy the login key, then paste it into the chat
-page's API-key prompt. The key is stored locally with mode 0600 at
+From a Tailscale client, open <http://relay.taile09696.ts.net:8081>. That path
+does not ask for an API key: the tailnet is the login. LAN and localhost still
+use the key. Run `local-chat-key` on relay to copy it, then paste it into the
+chat page's API-key prompt. The key is stored locally with mode 0600 at
 `~/.config/local-llm/api-key`, never in Git or the Nix store.
 
 In the message box, click **+** ("Add files, prompts, tools or MCP Servers"),
@@ -86,10 +89,12 @@ are not enabled.
 
 The server releases the model and KV cache after ten idle minutes. Sending a new
 message reloads it, so the first response after sleeping takes longer. Browser
-history is local to the browser profile. Both servers listen on all IPv4 interfaces. API requests require the login key
-(health and model-list metadata remain public). HTTP is unencrypted; Tailscale
-provides the transport encryption. Do not enable Funnel or otherwise forward
-this port to the internet. Andromeda's NixOS firewall trusts `tailscale0` and
+history is local to the browser profile. Both servers listen on all IPv4 interfaces. On Andromeda, API requests require
+the login key. On Relay, Tailscale clients reach port 8081 without one; the
+proxy injects the key before localhost llama.cpp sees the request. LAN and
+localhost clients on Relay still send it. Health and model-list metadata remain
+public. HTTP is unencrypted; Tailscale provides the transport encryption. Do not
+enable Funnel or otherwise forward this port to the internet. Andromeda's NixOS firewall trusts `tailscale0` and
 does not open 8081 on the LAN, so that GPU is tailnet-only. Relay also remains
 reachable on the LAN. The tool service itself listens only on `127.0.0.1:8082`;
 the authenticated chat server proxies browser tool calls to it.
@@ -393,7 +398,8 @@ Local API base URL: `http://127.0.0.1:8081/v1`. Relay's model ID is
 Tailscale URLs are `http://relay.taile09696.ts.net:8081/v1` and
 `http://andromeda.taile09696.ts.net:8081/v1`. Relay also remains on the LAN at
 `http://192.168.178.55:8081/v1`.
-Use the key copied by `local-chat-key` as the client's Bearer API key.
+Use the key copied by `local-chat-key` as the client's Bearer API key, except
+for Relay over Tailscale, where the proxy adds it.
 The browser runs the tool-calling loop. Plain API clients must implement their
 own tool loop; enabling this service does not make bare completions use tools.
 
