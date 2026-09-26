@@ -3,6 +3,9 @@
 #EXTINF:-1,SomaFM Mission Control (128k MP3)
 https://ice4.somafm.com/missioncontrol-128-mp3
 
+#EXTINF:-1,Adroit Jazz Underground
+https://icecast.walmradio.com:8443/jazz
+
 #EXTINF:-1,Lofi Stream
 http://radio.cliamp.stream/lofi/stream
 
