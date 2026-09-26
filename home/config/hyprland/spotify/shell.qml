@@ -93,7 +93,8 @@ ShellRoot {
       panel.open("{}")
       return "opened"
     }
-    function show(): string {
+    // Named reveal, not show: quickshell ipc treats show as its own subcommand.
+    function reveal(): string {
       panel.open("{}")
       return "opened"
     }

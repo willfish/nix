@@ -149,7 +149,8 @@ let
     '';
   };
   # Super+O focuses the player from any workspace. A second press must not
-  # close it, so this opens with show rather than the launcher toggle.
+  # close it, so this opens with reveal rather than the launcher toggle.
+  # quickshell ipc treats the word show as its own subcommand.
   focus = pkgs.writeShellApplication {
     name = "hypr-spotify-focus";
     runtimeInputs = [
@@ -182,7 +183,7 @@ let
       opened=0
       for _ in {1..40}; do
         if quickshell ipc --path ${bundle}/shell show 2>/dev/null | grep -q spotify; then
-          quickshell ipc --path ${bundle}/shell call spotify show >/dev/null || true
+          quickshell ipc --path ${bundle}/shell call spotify reveal >/dev/null || true
           opened=1
           break
         fi
