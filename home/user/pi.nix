@@ -8,6 +8,7 @@
   ...
 }:
 let
+  voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   llmMcps = import ./llm-mcps.nix { inherit config; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
   promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
@@ -130,6 +131,9 @@ in
   home.file.".pi/agent/extensions/hidden-models.ts".source = ../config/pi/extensions/hidden-models.ts;
   home.file.".pi/agent/extensions/pi-qwen.ts".source = ../config/local-llm/pi-qwen.ts;
 
+  home.file.".pi/agent/extensions/pi-voice.ts" = lib.mkIf voiceFeatures.stt {
+    source = ../config/pi/extensions/pi-voice.ts;
+  };
   home.file.".pi/agent/extensions/mcp".source = "${mcpAdapter}/lib/node_modules/pi-mcp-adapter";
   # Keep agent state reporting in sync with the pinned Herdr source tag.
   # The installed package is a release binary and has no repository source.

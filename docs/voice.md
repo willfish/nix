@@ -11,9 +11,13 @@ for TTS. Foundation has no TTS. macOS needs separate platform adapters.
 
 ## Launch and select a session
 
-The lightweight controller and tray start at login. Speech models load on use:
-Whisper for dictation and TTS for playback. Pi does not load a voice extension,
-so a session does not attach itself or receive dictated text.
+On Andromeda, and for dictation on Foundation, interactive `pi` and `qwen-pi`
+sessions inside Herdr attach automatically. Team panes do not register and cannot
+be selected. The lightweight controller and tray start at login. Speech models
+load on use: Whisper for dictation and TTS for playback. Print, RPC and
+noninteractive sessions do not attach. After installing this configuration, use
+`/reload` once in an existing standard Pi session. Restart an existing Qwen
+session so its explicit extension arguments take effect.
 
 The compatibility launchers remain available:
 
@@ -34,12 +38,9 @@ is not silently chosen. Select a destination manually in the Agent Voice tray's
 **Voice session** dropdown or with **Super+Shift+V**.
 
 Labels identify the harness, workspace/session and pane; hover for full details.
-Only the selected session receives dictation. **Show team members** reveals
-Pi team children, which are hidden by default and never selected automatically.
-A manually selected child remains visible even with the toggle off and can
-receive dictation, but it is always silent: automatic speech and manual replay
-are disabled. Only ordinary Pi/orchestrator sessions speak for Pi teams.
-Pi and Qwen Pi share the same selector.
+Only the selected session receives dictation. Team panes are not registered,
+so the selector lists ordinary Pi and Qwen Pi sessions only. Pi and Qwen Pi
+share the same selector.
 
 Switching sessions cancels recording/playback and preserves retained text in
 memory. Exiting one session cannot stop engines another registered session is
@@ -47,19 +48,33 @@ using. After the last session leaves, engines stop once active work has drained.
 
 | Hotkey | Action |
 | --- | --- |
-| Super+Space | Show the top dictation card and start or stop recording |
+| Super+Space | Show the top dictation card, then stop recording, send prepared dictation, or start recording into the selected Pi session |
 | Super+Shift+Space | Explicitly send the dictated draft |
 | Super+R | Read the latest completed summary; press again to stop speaking |
 | Super+Shift+V | Open the keyboard voice/session/action picker |
 
 Super is the Windows key. While dictation is active, a floating card at the
-top of the focused monitor shows a live level. It does not take keyboard
-focus, and it never shows the transcript or types it into Pi. Capture starts only after microphone samples
-arrive and stops after three minutes. Silence, punctuation-only output and
-non-speech markers are skipped. A small vocabulary prompt helps with names such
-as Herdr, Qwen, NixOS and the configured hosts.
+top of the focused monitor shows the selected session and a live level. It
+does not take keyboard focus, and it never shows the transcript. Transcription
+is staged in the selected Pi prompt for review; recording never
+automatically presses Enter. Capture starts only after microphone samples
+arrive and stops after three minutes. A pause, or thirty seconds of
+uninterrupted speech, flushes a slice into the Pi prompt while recording
+continues, so earlier words are kept if the take hits the limit. Silence,
+punctuation-only output and non-speech markers are skipped. The recorder already
+splits on pauses; a small vocabulary prompt helps with names such as Herdr,
+Qwen, NixOS and the configured hosts.
 
-Super+Space starts recording and stops it. It does not submit a Pi prompt.
+The usual flow uses Super+Space to start, stop, then send. Text may already be
+in the prompt before you stop. Wait for the green ready state before sending.
+If the selected agent is busy, the take is kept and sent when that agent goes
+idle. Super+Space while it is busy queues that send instead of dropping the draft. The hotkey applies across all four launchers and never
+broadcasts to other registered sessions, including multiple sessions of the
+same harness.
+
+This decision tracks prompts prepared by voice, including subsequent edits.
+Use the tray's Record more or `pi-voice record` to add more speech
+instead of sending a prepared prompt.
 
 ## Keyboard picker
 
@@ -135,7 +150,8 @@ requires NVIDIA CUDA and is not offered on Foundation or other hosts.
 ## Tray and recovery
 
 The idle menu contains **Voice session**, **Character voice**, **Dictation**,
-**Show team members** and **Read replies aloud**. Dictation is a radio choice
+**Show team members** and **Read replies aloud**. Team panes are not registered,
+so that toggle does not reveal them. Dictation is a radio choice
 between local Whisper and cloud Deepgram. It is locked while recording or
 transcribing so the current take keeps one backend. **Read replies aloud**
 toggles automatic playback of completed replies. Other actions appear only
@@ -207,9 +223,17 @@ serialized until that happens to avoid overlapping GPU allocations.
 
 ## Conversation binding and adapters
 
-Pi and Qwen Pi do not load a voice extension. The dictation card does not
-type into the editor or submit a prompt. Super+Space only shows the card and
-records.
+Standard Pi discovers `pi-voice.ts` from its managed extensions directory;
+`qwen-pi` explicitly loads the same extension because automatic discovery is
+disabled. Auto-attachment is limited to supported hosts and interactive Herdr
+sessions that are not team panes. It uses native editor APIs for staging and
+single-use submission, preserving existing typed text. Super+Space explicitly
+submits the current edited voice draft. The separate Send action keeps its
+unchanged-editor guard; after that guard rejects edits, submit in Pi or record
+again. Spoken replies use `agent_settled`, excluding
+reasoning, aborted output and intermediate tool turns. Adapter sockets are
+private and check process and conversation identity. Team children never open
+a bridge.
 
 Registration metadata survives a controller restart while the processes live.
 Retained dictation, prior replies, WAV retries and playback preferences do not.
@@ -445,6 +469,8 @@ Recovery tests cover a blocked terminal during Cancel, retained dictation across
 sessions and retries, absolute WAV expiry, late acknowledgements and rebinding.
 Primary-hotkey tests cover the record/transcribe/send flow, busy agents,
 in-progress transcription, cancellation and submission to one selected session.
+Pi tests exercise native staging, changed-editor rejection, final reply filtering
+and socket framing. Isolated installed-harness checks verify Pi extension loading.
 Physical microphone and listening trials
 are still needed to assess recognition and speech quality.
 Capture tests use real subprocess fixtures for startup timeout, cancellation,

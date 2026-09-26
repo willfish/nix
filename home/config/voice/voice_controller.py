@@ -2498,12 +2498,26 @@ def call(request, start=True):
     return response
 
 
+def installed_pi_extension():
+    path = Path.home() / '.pi/agent/extensions/pi-voice.ts'
+    if not path.is_file():
+        raise RuntimeError(
+            'The Pi voice extension is not installed; run hmswitch first')
+    return path
+
+
 def launcher_command(harness, args, directory, notify):
     if harness not in ("pi", "qwen-pi"):
         raise RuntimeError("Unsupported voice harness")
     if any(arg in ("--print", "-p", "--mode")
            or arg.startswith(("--mode=", "--print=")) for arg in args):
         raise RuntimeError("Voice launchers require an interactive session")
+    if harness == 'pi' and any(
+        arg in ('--no-extensions', '-ne') for arg in args
+    ):
+        raise RuntimeError(
+            'The Pi voice launcher requires the installed voice extension')
+    installed_pi_extension()
     return [harness, *args]
 
 
@@ -2514,6 +2528,8 @@ def launch(args, harness="pi"):
         raise RuntimeError(
             "Run the voice launcher inside the Herdr pane you want to use"
         )
+    if os.environ.get("PI_TEAM_CHILD") == "1":
+        raise RuntimeError("Team panes are not voice sessions")
     token = uuid.uuid4().hex
     executable = os.environ.get("PI_VOICE_COMMAND", "pi-voice")
     notify = json.dumps([executable, "notify", token])

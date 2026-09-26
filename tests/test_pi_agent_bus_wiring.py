@@ -386,6 +386,7 @@ class WiringTests(unittest.TestCase):
                         "herdr-ui.ts",
                         "herdr-model.ts",
                         "prompt-history/index.ts",
+                        "pi-voice.ts",
                     )
                 ],
             ],
