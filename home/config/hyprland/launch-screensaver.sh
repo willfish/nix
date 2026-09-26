@@ -41,9 +41,8 @@ focus_monitor() {
 
 for monitor in $(hyprctl monitors -j | jq -r '.[].name'); do
   focus_monitor "$monitor"
-  command=$(printf '%q ' "$ghostty" --class="$class" --gtk-single-instance=false --config-file="$config" -e "$runner")
-  hyprctl dispatch "hl.dsp.exec_cmd([[$command]])" >/dev/null 2>&1 ||
-    hyprctl dispatch exec -- bash -c "$command"
+  # This Hyprland rejects hl.dsp.exec_cmd but still exits 0, so use exec.
+  hyprctl dispatch exec -- "$ghostty" --class="$class" --gtk-single-instance=false --config-file="$config" -e "$runner"
   wait_for_window
 done
 
