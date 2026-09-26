@@ -22,7 +22,7 @@ let
     name = "cliamp-radio";
     runtimeInputs = [ pkgs.cliamp ];
     text = ''
-      exec cliamp "''${XDG_CONFIG_HOME:-$HOME/.config}/cliamp/playlists/forte-radio.m3u"
+      exec cliamp --auto-play "''${XDG_CONFIG_HOME:-$HOME/.config}/cliamp/playlists/forte-radio.m3u"
     '';
   };
   defaultImageViewer = "org.gnome.Loupe.desktop";
