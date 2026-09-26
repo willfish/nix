@@ -684,12 +684,6 @@
               on-click = settings.bar.commands.tailscale;
               on-click-right = "${settings.bar.commands.tailscale} toggle";
             };
-            backlight = {
-              format = "󰃠";
-              tooltip-format = "Brightness: {percent}% · scroll to adjust";
-              on-scroll-up = "brightnessctl -e4 -n2 set 5%+";
-              on-scroll-down = "brightnessctl -e4 -n2 set 5%-";
-            };
             idle_inhibitor = {
               format = "{icon}";
               format-icons = {

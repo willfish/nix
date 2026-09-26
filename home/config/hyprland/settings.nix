@@ -126,7 +126,6 @@ rec {
       "network"
       "custom/tailscale"
       "bluetooth"
-      "backlight"
       "idle_inhibitor"
       "battery"
       "custom/notifications"
