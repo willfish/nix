@@ -16,6 +16,10 @@ let
     hash = "sha256-xCa9XRVafgCkwPYnhCH8ZPG97uz9eCdoj4cmC1VM1Cc=";
   };
   python = pkgs.python3.withPackages (ps: [ ps.pillow ]);
+  githubIcon = pkgs.fetchurl {
+    url = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";
+    hash = "sha256-bW73vt4EFrbr7iAUvlhSV2286JI1/hbqXETtAb1SITI=";
+  };
   prepare = ../config/hyprland/omapager/prepare-shell.py;
   bundle =
     pkgs.runCommand "omapager-shell"
@@ -26,42 +30,51 @@ let
         ];
       }
       ''
-        mkdir -p "$out/shell/omapager" "$out/shell/Commons" "$out/shell/Ui"
-        cp -r ${omarchySource}/shell/Commons/. "$out/shell/Commons/"
-        cp -r ${omarchySource}/shell/Ui/. "$out/shell/Ui/"
-        chmod -R u+w "$out"
-        python3 ${prepare} "$out"
-        cp ${../config/hyprland/omapager/shell.qml} "$out/shell/shell.qml"
-        cp -a ${pluginSrc}/. "$out/shell/omapager/"
-        chmod -R u+w "$out/shell/omapager"
-        rm -rf \
-          "$out/shell/omapager/.git" \
-          "$out/shell/omapager/.github" \
-          "$out/shell/omapager/docs" \
-          "$out/shell/omapager/tests" \
-          "$out/shell/omapager/security" \
-          "$out/shell/omapager/assets" \
-          "$out/shell/omapager/preview.png"
-        substituteInPlace "$out/shell/omapager/bin/omapager-run-helper" \
-          --replace-fail 'PYTHON = Path("/usr/bin/python3")' \
-          'PYTHON = Path("${python}/bin/python3")'
-        substituteInPlace "$out/shell/omapager/bin/omapager-icon" \
-          --replace-fail 'os.path.expanduser("~/.local/share/icons"),' \
-          'os.path.expanduser("~/.local/share/icons"),
-        os.path.expanduser("~/.nix-profile/share/icons"),
-        "/run/current-system/sw/share/icons",' \
-          --replace-fail 'os.path.expanduser("~/.local/share/applications"),' \
-          'os.path.expanduser("~/.local/share/applications"),
-        os.path.expanduser("~/.nix-profile/share/applications"),
-        "/run/current-system/sw/share/applications",'
-        {
-          echo 'module Omapager'
-          for qml in "$out/shell/omapager"/*.qml; do
-            base=$(basename "$qml" .qml)
-            echo "$base 1.0 $base.qml"
-          done
-        } > "$out/shell/omapager/qmldir"
-        patchShebangs "$out/shell/omapager/bin"
+                mkdir -p "$out/shell/omapager" "$out/shell/Commons" "$out/shell/Ui"
+                cp -r ${omarchySource}/shell/Commons/. "$out/shell/Commons/"
+                cp -r ${omarchySource}/shell/Ui/. "$out/shell/Ui/"
+                chmod -R u+w "$out"
+                python3 ${prepare} "$out"
+                cp ${../config/hyprland/omapager/shell.qml} "$out/shell/shell.qml"
+                cp -a ${pluginSrc}/. "$out/shell/omapager/"
+                chmod -R u+w "$out/shell/omapager"
+                rm -rf \
+                  "$out/shell/omapager/.git" \
+                  "$out/shell/omapager/.github" \
+                  "$out/shell/omapager/docs" \
+                  "$out/shell/omapager/tests" \
+                  "$out/shell/omapager/security" \
+                  "$out/shell/omapager/assets" \
+                  "$out/shell/omapager/preview.png"
+                substituteInPlace "$out/shell/omapager/bin/omapager-run-helper" \
+                  --replace-fail 'PYTHON = Path("/usr/bin/python3")' \
+                  'PYTHON = Path("${python}/bin/python3")'
+                cp ${../config/hyprland/omapager/icon_paths.py} \
+                  "$out/shell/omapager/bin/icon_paths.py"
+                substituteInPlace "$out/shell/omapager/bin/omapager-icon" \
+                  --replace-fail 'from omapager_files import private_dir, write_bytes, write_json, read_json' \
+                  'from omapager_files import private_dir, write_bytes, write_json, read_json
+        import icon_paths' \
+                  --replace-fail 'os.path.expanduser("~/.local/share/icons"),' \
+                  'os.path.expanduser("~/.local/share/icons"),
+            os.path.expanduser("~/.nix-profile/share/icons"),
+            "/run/current-system/sw/share/icons",' \
+                  --replace-fail 'os.path.expanduser("~/.local/share/applications"),' \
+                  'os.path.expanduser("~/.local/share/applications"),
+            os.path.expanduser("~/.nix-profile/share/applications"),
+            "/run/current-system/sw/share/applications",' \
+                  --replace-fail 'os.path.realpath(hit).startswith(os.path.realpath(base) + os.sep)' \
+                  'icon_paths.allowed_icon(hit, [base])' \
+                  --replace-fail 'os.path.realpath(fields["Icon"]).startswith(os.path.realpath(d) + os.sep)' \
+                  'icon_paths.allowed_icon(fields["Icon"], [d])'
+                {
+                  echo 'module Omapager'
+                  for qml in "$out/shell/omapager"/*.qml; do
+                    base=$(basename "$qml" .qml)
+                    echo "$base 1.0 $base.qml"
+                  done
+                } > "$out/shell/omapager/qmldir"
+                patchShebangs "$out/shell/omapager/bin"
       '';
   shell = pkgs.writeShellApplication {
     name = "hypr-omapager-shell";
@@ -177,6 +190,14 @@ in
       githubWatch
     ];
     # Claim the name before a profile copy of Mako can be bus-activated.
+    xdg.dataFile."icons/hicolor/512x512/apps/github.png".source = githubIcon;
+    xdg.dataFile."applications/github-notifications.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=GitHub
+      Icon=github
+      NoDisplay=true
+    '';
     xdg.dataFile."dbus-1/services/org.freedesktop.Notifications.service".text = ''
       [D-BUS Service]
       Name=org.freedesktop.Notifications

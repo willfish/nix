@@ -137,6 +137,8 @@ def announce(item):
             "notify-send",
             "-a",
             "GitHub",
+            "-i",
+            "github",
             "-u",
             "normal",
             "--",
