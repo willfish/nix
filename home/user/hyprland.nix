@@ -616,13 +616,8 @@
             };
             clock = {
               format = "{:%H\n%M}";
-              format-alt = "{:%d\n%b}";
               tooltip-format = "{:%A %d %B %Y}";
               on-click = settings.bar.commands.calendar;
-            };
-            "hyprland/language" = {
-              format = "{short}";
-              tooltip = true;
             };
             tray.spacing = settings.bar.traySpacing;
             pulseaudio = {

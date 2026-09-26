@@ -118,10 +118,7 @@ rec {
       "custom/recording"
       "hyprland/workspaces"
     ];
-    modulesCenter = [
-      "clock"
-      "hyprland/language"
-    ];
+    modulesCenter = [ "clock" ];
     modulesRight = [
       "tray"
       "mpris"
