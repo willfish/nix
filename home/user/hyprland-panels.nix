@@ -17,6 +17,10 @@ let
     done
     chmod -R u+w "$out"
     patch --batch -d "$out" -p1 < ${local}/nixos.patch
+    # Store pkexec is not setuid, and pkexec drops PATH before running tailscale.
+    substituteInPlace "$out/shell/plugins/panels/tailscale/Service.qml" \
+      --replace-fail '["pkexec", "tailscale", "set", "--operator=" + userName]' \
+      '["/run/wrappers/bin/pkexec", "${pkgs.tailscale}/bin/tailscale", "set", "--operator=" + userName]'
     cp ${local}/shell.qml "$out/shell/shell.qml"
     cp ${source}/LICENSE "$out/LICENSE"
   '';
@@ -129,7 +133,6 @@ let
     libnotify
     which
     tailscale
-    polkit
     helpers
     bluetoothDevice
     browser
@@ -140,6 +143,8 @@ let
     name = "hypr-controls-shell";
     runtimeInputs = runtime;
     text = ''
+      # Keep the setuid pkexec ahead of any store copy a runtime input might add.
+      export PATH="/run/wrappers/bin:$PATH"
       export HYPR_CONTROLS_THEME=${lib.escapeShellArg "${config.xdg.stateHome}/theme-menu/active"}
       export HYPR_CONTROLS_SETTINGS=${
         lib.escapeShellArg (
