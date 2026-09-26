@@ -380,6 +380,7 @@ let
               --upstream-host 127.0.0.1 --upstream-port 18081 \
               --key-file ${lib.escapeShellArg apiKeyPath} &
             proxy_pid=$!
+            # shellcheck disable=SC2329
             cleanup() {
               kill "$llama_pid" "$proxy_pid" 2>/dev/null || true
             }
