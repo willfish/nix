@@ -107,7 +107,7 @@ in
           dap = mcpDapServer;
           slack = slackMcpServer;
           telegram = telegramMcpServer;
-          himalaya = pkgs.himalaya-mcp;
+          gmail = pkgs.himalaya-mcp;
         }
         .${server.name}
       )
@@ -207,7 +207,7 @@ in
     '';
   };
 
-  home.file.".local/bin/mcp-himalaya" = lib.mkIf (enabled "himalaya") {
+  home.file.".local/bin/mcp-himalaya" = lib.mkIf (enabled "gmail") {
     executable = true;
     text = ''
       #!${pkgs.bash}/bin/bash

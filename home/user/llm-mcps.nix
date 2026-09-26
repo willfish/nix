@@ -60,7 +60,7 @@ rec {
         wrapper = "mcp-telegram";
       }
       {
-        name = "himalaya";
+        name = "gmail";
         enabled = config.dotfiles.capabilities.email;
         wrapper = "mcp-himalaya";
       }
