@@ -8,7 +8,7 @@ Implementation lives in [willfish/arxiv-mcp](https://github.com/willfish/arxiv-m
 
 The MCP catalogue entry is `arxiv`, launched through `~/.local/bin/mcp-arxiv`. Existing client processes may need restarting to load the newly activated catalogue.
 
-- `search(query, mode="bm25", limit=10)` searches complete paper bodies using literal-word AND matching. An optional `category` string filters the primary category. Native serving supports BM25 only.
+- `search(query, mode="bm25", limit=10)` searches complete paper bodies using literal-word AND matching, returning only paper IDs and titles. Retrieve relevant results with `paper`. An optional `category` string filters the primary category. Native serving supports BM25 only.
 - `paper(paper_id, offset=0, length=12000)` returns metadata and original LaTeX. Offsets count Unicode characters. Follow `next_offset` until null to read the entire paper. The maximum page is 50,000 characters.
 - `library_status()` reports imported papers, shard checkpoints and source settings. Native serving does not expose the retained embedding index.
 
