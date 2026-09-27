@@ -47,7 +47,18 @@ def index_ids(index):
     return np.concatenate(pieces) if pieces else np.empty(0, dtype=np.int64)
 
 
-def audit(root, full=False, expected_manifest=None):
+def verify_sqlite(root):
+    # FTS integrity checking requires a writable connection, but changes no
+    # indexed content. Call only after full import coverage has been verified.
+    with closing(sqlite3.connect(root / "library.sqlite3", timeout=30)) as db:
+        checks = [r[0] for r in db.execute("PRAGMA integrity_check")]
+        if checks != ["ok"]:
+            raise ValueError(f"SQLite integrity check failed: {checks}")
+        with db:
+            db.execute("INSERT INTO search(search) VALUES('integrity-check')")
+
+
+def audit(root, full=False, expected_manifest=None, text_only=False):
     root = Path(root)
     manifest = json.loads((root / "manifest.json").read_text())
     reference = (
@@ -104,19 +115,21 @@ def audit(root, full=False, expected_manifest=None):
         if papers != expected:
             reasons.append("Paper count differs from available source rows")
         folder = root / "embeddings"
-        blocks = sorted(folder.glob("block-*"))
+        blocks = [] if text_only else sorted(folder.glob("block-*"))
         states = [
             json.loads((b / "metadata.json").read_text()) for b in blocks
         ]
         encoded = sum(s["papers"] for s in states)
         passages = sum(s["passages"] for s in states)
-        if encoded != papers:
+        if not text_only and encoded != papers:
             reasons.append("Encoded paper count differs from database")
         pointer = folder / "index.json"
         published = (
-            json.loads(pointer.read_text()) if pointer.exists() else None
+            json.loads(pointer.read_text())
+            if not text_only and pointer.exists()
+            else None
         )
-        if (
+        if not text_only and (
             not published
             or published["papers"] != papers
             or published["passages"] != passages
@@ -124,14 +137,21 @@ def audit(root, full=False, expected_manifest=None):
             reasons.append("Published embedding index is incomplete")
         report = {
             "verified_complete": False,
+            "scope": "text" if text_only else "text-and-embeddings",
             "ready_for_full_audit": not reasons,
             "available_shards": available,
             "expected_shards": len(manifest["files"]),
             "source_rows_available": expected,
             "papers": papers,
-            "encoded_papers": encoded,
-            "encoded_passages": passages,
-            "published_papers": published["papers"] if published else 0,
+            **(
+                {}
+                if text_only
+                else {
+                    "encoded_papers": encoded,
+                    "encoded_passages": passages,
+                    "published_papers": published["papers"] if published else 0,
+                }
+            ),
             "reasons": reasons,
         }
         if not full or reasons:
@@ -187,6 +207,16 @@ def audit(root, full=False, expected_manifest=None):
         ]:
             if db.execute(query + " LIMIT 1").fetchone():
                 raise ValueError("FTS paper IDs differ from library")
+        if text_only:
+            verify_sqlite(root)
+            return report | {
+                "verified_complete": True,
+                "checks": [
+                    "source hashes and metadata",
+                    "every stored body",
+                    "FTS IDs and integrity",
+                ],
+            }
         config = json.loads((folder / "config.json").read_text())
         model = load_model(root)
         required = {
@@ -283,14 +313,7 @@ def audit(root, full=False, expected_manifest=None):
             raise ValueError(
                 "Published ANN passage IDs differ from verified source coverage"
             )
-    # SQLite's FTS integrity command needs a writable connection even though it
-    # only validates the index. No import remains active at this point.
-    with closing(sqlite3.connect(root / "library.sqlite3", timeout=30)) as db:
-        checks = [r[0] for r in db.execute("PRAGMA integrity_check")]
-        if checks != ["ok"]:
-            raise ValueError(f"SQLite integrity check failed: {checks}")
-        with db:
-            db.execute("INSERT INTO search(search) VALUES('integrity-check')")
+    verify_sqlite(root)
     return report | {
         "verified_complete": True,
         "checks": [
@@ -308,7 +331,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("root", type=Path)
     parser.add_argument("--full", action="store_true")
+    parser.add_argument(
+        "--text-only",
+        action="store_true",
+        help="Verify source, stored text and FTS without requiring embeddings",
+    )
     args = parser.parse_args()
-    result = audit(args.root, args.full)
+    result = audit(args.root, args.full, text_only=args.text_only)
     print(json.dumps(result, indent=2))
     raise SystemExit(2 if args.full and not result["verified_complete"] else 0)

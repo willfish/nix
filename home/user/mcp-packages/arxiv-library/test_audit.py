@@ -46,9 +46,52 @@ class AuditTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def full(self):
+    def full(self, text_only=False):
         with patch("audit.load_model", return_value=ConceptModel()):
-            return audit(self.root, full=True, expected_manifest=self.manifest)
+            return audit(
+                self.root,
+                full=True,
+                expected_manifest=self.manifest,
+                text_only=text_only,
+            )
+
+    def test_text_only_does_not_require_or_parse_embeddings(self):
+        folder = self.root / "embeddings"
+        retained = self.root / "retained-embeddings"
+        folder.rename(retained)
+        for missing in [True, False]:
+            if not missing:
+                retained.rename(folder)
+                (folder / "index.json").write_text("unreadable old index")
+                next(folder.glob("block-*/metadata.json")).write_text("bad")
+            with self.subTest(missing=missing), patch(
+                "audit.load_model", side_effect=AssertionError("not needed")
+            ):
+                quick = audit(
+                    self.root, expected_manifest=self.manifest, text_only=True
+                )
+                self.assertTrue(quick["ready_for_full_audit"])
+                self.assertFalse(quick["verified_complete"])
+                result = audit(
+                    self.root,
+                    full=True,
+                    expected_manifest=self.manifest,
+                    text_only=True,
+                )
+                self.assertTrue(result["verified_complete"])
+                self.assertEqual(result["scope"], "text")
+                self.assertNotIn("encoded_papers", result)
+                self.assertEqual(len(result["checks"]), 3)
+
+    def test_missing_fts_rows_are_detected_in_both_modes(self):
+        db = connect(self.root / "library.sqlite3", write=True)
+        with db:
+            db.execute("INSERT INTO search(search) VALUES('delete-all')")
+        db.close()
+        for text_only in [False, True]:
+            with self.subTest(text_only=text_only):
+                with self.assertRaisesRegex(ValueError, "FTS paper IDs"):
+                    self.full(text_only=text_only)
 
     def test_full_proof_and_quick_progress_are_distinct(self):
         quick = audit(self.root, expected_manifest=self.manifest)
@@ -59,35 +102,39 @@ class AuditTest(unittest.TestCase):
             self.assertEqual(passage_count(size), len(list(spans("x" * size))))
 
     def test_unpinned_manifest_is_not_proof(self):
-        result = audit(self.root, full=True)
-        self.assertFalse(result["verified_complete"])
-        self.assertIn(
-            "Corpus manifest differs from the shipped source lock",
-            result["reasons"],
-        )
+        for text_only in [False, True]:
+            result = audit(self.root, full=True, text_only=text_only)
+            self.assertFalse(result["verified_complete"])
+            self.assertIn(
+                "Corpus manifest differs from the shipped source lock",
+                result["reasons"],
+            )
 
     def test_incomplete_import_is_not_proof(self):
         db = connect(self.root / "library.sqlite3", write=True)
         with db:
             db.execute("UPDATE imports SET complete=0")
         db.close()
-        result = self.full()
-        self.assertFalse(result["verified_complete"])
-        self.assertFalse(result["ready_for_full_audit"])
+        for text_only in [False, True]:
+            result = self.full(text_only=text_only)
+            self.assertFalse(result["verified_complete"])
+            self.assertFalse(result["ready_for_full_audit"])
 
     def test_corrupted_body_and_source_are_detected(self):
         db = connect(self.root / "library.sqlite3", write=True)
         with db:
             db.execute("UPDATE papers SET text_chars=text_chars+1 WHERE id=1")
         db.close()
-        with self.assertRaisesRegex(ValueError, "Stored body"):
-            self.full()
+        for text_only in [False, True]:
+            with self.assertRaisesRegex(ValueError, "Stored body"):
+                self.full(text_only=text_only)
         path = self.root / "papers.parquet"
         data = bytearray(path.read_bytes())
         data[100] ^= 1
         path.write_bytes(data)
-        with self.assertRaisesRegex(ValueError, "Source checksum"):
-            self.full()
+        for text_only in [False, True]:
+            with self.assertRaisesRegex(ValueError, "Source checksum"):
+                self.full(text_only=text_only)
 
     def test_published_block_routing_is_verified(self):
         path = self.root / "embeddings/index.json"

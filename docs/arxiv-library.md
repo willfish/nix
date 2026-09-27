@@ -59,15 +59,15 @@ systemctl --user start --no-block arxiv-index
 After activation, get a cheap coverage report with:
 
 ```sh
-arxiv-library-audit /srv/media/arxiv
+arxiv-library-audit /srv/media/arxiv --text-only
 ```
 
-A quick report never claims verified completion. Once import, encoding and publication have caught up, run:
+A quick report never claims verified completion. Once all papers are imported, verify the BM25 corpus with:
 
 ```sh
-arxiv-library-audit /srv/media/arxiv --full
+arxiv-library-audit /srv/media/arxiv --full --text-only
 ```
 
-The full audit refuses incomplete coverage with exit code 2. When ready, it reads all source shards and stored bodies, compares metadata to the shipped source lock, validates SQLite/FTS integrity, checks every expected passage ID and verifies the published ANN IDs and model provenance. This is substantial disk I/O, not a health probe. Its completion result concerns corpus integrity and coverage; fleet connectivity and retrieval quality still need separate checks.
+The full text audit refuses incomplete import coverage with exit code 2. When ready, it reads all source shards and stored bodies, compares metadata to the shipped source lock, and validates SQLite/FTS integrity and paper IDs. It does not require or validate embedding artifacts. For optional embedding coverage, omit `--text-only`: the audit additionally requires complete encoding/publication and checks every expected passage ID, published ANN IDs and model provenance. This is substantial disk I/O, not a health probe. Its completion result concerns corpus integrity and coverage; fleet connectivity and retrieval quality still need separate checks.
 
 Hash failures stop work rather than overwriting potentially corrupt data. Inspect the failing artifact and preserve it before replacing it. Do not delete `embeddings/block-*`: the published index uses them for reranking. A changed dataset or model requires an explicit migration, not editing the pinned manifest in place.
