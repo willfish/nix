@@ -9,10 +9,12 @@ from mcp.server.fastmcp import FastMCP
 from library import connect, get_paper, search_papers, status
 
 
-def create_server(database):
+def create_server(database, corpus_root=None):
     from semantic import SemanticSearch, hybrid_search
 
-    semantic = SemanticSearch(Path(database).parent)
+    semantic = SemanticSearch(
+        Path(corpus_root) if corpus_root is not None else Path(database).parent
+    )
     server = FastMCP(
         "arxiv-library",
         instructions=(
@@ -97,5 +99,10 @@ if __name__ == "__main__":
         type=Path,
         default=Path("/srv/media/arxiv/library.sqlite3"),
     )
+    parser.add_argument(
+        "--corpus-root",
+        type=Path,
+        help="Canonical source/model root when using a separate database",
+    )
     args = parser.parse_args()
-    create_server(args.database).run(transport="stdio")
+    create_server(args.database, args.corpus_root).run(transport="stdio")

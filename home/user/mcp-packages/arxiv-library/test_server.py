@@ -12,6 +12,12 @@ from test_library import paper
 
 class ServerTest(unittest.IsolatedAsyncioTestCase):
     async def test_real_mcp_lifecycle_tools_and_errors(self):
+        await self.lifecycle(separate_root=False)
+
+    async def test_real_mcp_with_separate_canonical_root(self):
+        await self.lifecycle(separate_root=True)
+
+    async def lifecycle(self, separate_root):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "library.sqlite3"
             db = connect(path, write=True)
@@ -26,6 +32,24 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
                     str(path),
                 ],
             )
+            expected_index = None
+            if separate_root:
+                corpus = Path(tmp) / "canonical"
+                folder = corpus / "embeddings"
+                folder.mkdir(parents=True)
+                # Only status metadata is needed: BM25 must not load a model
+                # or ANN files, even when a retained generation is advertised.
+                expected_index = {
+                    "papers": 1,
+                    "passages": 1,
+                    "model": "retained-fixture",
+                    "kind": "flat",
+                }
+                state = expected_index | {
+                    "config": {"model": expected_index["model"]}
+                }
+                (folder / "index.json").write_text(json.dumps(state))
+                params.args.extend(["--corpus-root", str(corpus)])
             async with stdio_client(params) as (read, write):
                 async with ClientSession(read, write) as client:
                     await client.initialize()
@@ -49,9 +73,9 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
                         json.loads(result.content[0].text)["next_offset"], 20
                     )
                     result = await client.call_tool("library_status", {})
-                    self.assertEqual(
-                        json.loads(result.content[0].text)["papers"], 1
-                    )
+                    status = json.loads(result.content[0].text)
+                    self.assertEqual(status["papers"], 1)
+                    self.assertEqual(status["embedding_index"], expected_index)
                     result = await client.call_tool(
                         "paper", {"paper_id": "missing"}
                     )

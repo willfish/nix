@@ -1,9 +1,10 @@
-from contextlib import redirect_stdout
+from contextlib import closing, redirect_stdout
 import hashlib
 import io
 import json
 from pathlib import Path
 import resource
+import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -12,7 +13,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from audit import audit, passage_count
+from audit import audit, passage_count, verify_sqlite
 from build_index import build
 from embeddings import file_hash, generate, spans
 from ingest import ingest
@@ -92,6 +93,47 @@ class AuditTest(unittest.TestCase):
             with self.subTest(text_only=text_only):
                 with self.assertRaisesRegex(ValueError, "FTS paper IDs"):
                     self.full(text_only=text_only)
+
+    def test_external_database_is_audited_without_touching_authority(self):
+        original = self.root / "library.sqlite3"
+        target = self.root / "serving.sqlite3"
+        with closing(connect(original)) as src, closing(
+            sqlite3.connect(target)
+        ) as dst:
+            src.backup(dst)
+        original_hash = file_hash(original)
+        with patch("audit.verify_sqlite", wraps=verify_sqlite) as check:
+            result = audit(
+                self.root,
+                full=True,
+                expected_manifest=self.manifest,
+                text_only=True,
+                database=target,
+            )
+        self.assertTrue(result["verified_complete"])
+        check.assert_called_once_with(target)
+        self.assertEqual(file_hash(original), original_hash)
+        with closing(sqlite3.connect(target)) as db, db:
+            db.execute("UPDATE papers SET text_chars=text_chars+1")
+        with self.assertRaisesRegex(ValueError, "Stored body"):
+            audit(
+                self.root,
+                full=True,
+                expected_manifest=self.manifest,
+                text_only=True,
+                database=target,
+            )
+        self.assertTrue(self.full(text_only=True)["verified_complete"])
+        self.assertEqual(file_hash(original), original_hash)
+        missing = audit(
+            self.root,
+            full=True,
+            expected_manifest=self.manifest,
+            text_only=True,
+            database=self.root / "missing.sqlite3",
+        )
+        self.assertFalse(missing["verified_complete"])
+        self.assertFalse((self.root / "missing.sqlite3").exists())
 
     def test_full_proof_and_quick_progress_are_distinct(self):
         quick = audit(self.root, expected_manifest=self.manifest)

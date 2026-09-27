@@ -47,10 +47,10 @@ def index_ids(index):
     return np.concatenate(pieces) if pieces else np.empty(0, dtype=np.int64)
 
 
-def verify_sqlite(root):
+def verify_sqlite(database):
     # FTS integrity checking requires a writable connection, but changes no
     # indexed content. Call only after full import coverage has been verified.
-    with closing(sqlite3.connect(root / "library.sqlite3", timeout=30)) as db:
+    with closing(sqlite3.connect(database, timeout=30)) as db:
         checks = [r[0] for r in db.execute("PRAGMA integrity_check")]
         if checks != ["ok"]:
             raise ValueError(f"SQLite integrity check failed: {checks}")
@@ -58,8 +58,13 @@ def verify_sqlite(root):
             db.execute("INSERT INTO search(search) VALUES('integrity-check')")
 
 
-def audit(root, full=False, expected_manifest=None, text_only=False):
+def audit(
+    root, full=False, expected_manifest=None, text_only=False, database=None
+):
     root = Path(root)
+    database = (
+        Path(database) if database is not None else root / "library.sqlite3"
+    )
     manifest = json.loads((root / "manifest.json").read_text())
     reference = (
         json.loads(Path(__file__).with_name("manifest.json").read_text())
@@ -85,14 +90,14 @@ def audit(root, full=False, expected_manifest=None, text_only=False):
         count = pq.ParquetFile(path).metadata.num_rows
         shard_rows[item["path"]] = count
         expected += count
-    if not (root / "library.sqlite3").exists():
+    if not database.exists():
         return {
             "verified_complete": False,
             "ready_for_full_audit": False,
             "reasons": reasons + ["Database not created"],
             "available_shards": available,
         }
-    with closing(connect(root / "library.sqlite3")) as db:
+    with closing(connect(database)) as db:
         revision = db.execute(
             "SELECT value FROM settings WHERE key='revision'"
         ).fetchone()
@@ -208,7 +213,7 @@ def audit(root, full=False, expected_manifest=None, text_only=False):
             if db.execute(query + " LIMIT 1").fetchone():
                 raise ValueError("FTS paper IDs differ from library")
         if text_only:
-            verify_sqlite(root)
+            verify_sqlite(database)
             return report | {
                 "verified_complete": True,
                 "checks": [
@@ -313,7 +318,7 @@ def audit(root, full=False, expected_manifest=None, text_only=False):
             raise ValueError(
                 "Published ANN passage IDs differ from verified source coverage"
             )
-    verify_sqlite(root)
+    verify_sqlite(database)
     return report | {
         "verified_complete": True,
         "checks": [
@@ -336,7 +341,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Verify source, stored text and FTS without requiring embeddings",
     )
+    parser.add_argument(
+        "--database", type=Path, help="Audit a separate serving database"
+    )
     args = parser.parse_args()
-    result = audit(args.root, args.full, text_only=args.text_only)
+    result = audit(
+        args.root, args.full, text_only=args.text_only, database=args.database
+    )
     print(json.dumps(result, indent=2))
     raise SystemExit(2 if args.full and not result["verified_complete"] else 0)
