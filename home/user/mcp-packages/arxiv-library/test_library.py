@@ -4,6 +4,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from library import add_paper, connect, get_paper, search_papers, status
 from ingest import ingest
@@ -114,8 +115,10 @@ class IngestTest(unittest.TestCase):
             root = Path(tmp)
             shard = root / "paper_text/test.parquet"
             shard.parent.mkdir()
-            rows = [paper(str(i)) for i in range(17)]
-            pq.write_table(pa.Table.from_pylist(rows), shard, row_group_size=5)
+            rows = [paper(str(i)) for i in range(1257)]
+            pq.write_table(
+                pa.Table.from_pylist(rows), shard, row_group_size=700
+            )
             item = {
                 "path": "paper_text/test.parquet",
                 "size": shard.stat().st_size,
@@ -124,17 +127,43 @@ class IngestTest(unittest.TestCase):
             (root / "manifest.json").write_text(
                 json.dumps({"revision": "test", "files": [item]})
             )
-            ingest(root, max_papers=7)
+            def interrupted_add(db, row):
+                if row["paper_id"] == "511":
+                    raise RuntimeError("interrupted batch")
+                return add_paper(db, row)
+
+            with patch("ingest.add_paper", side_effect=interrupted_add):
+                with self.assertRaisesRegex(RuntimeError, "interrupted batch"):
+                    ingest(root)
             db = connect(root / "library.sqlite3")
-            self.assertEqual(status(db)["papers"], 7)
-            self.assertEqual(status(db)["imports"][0]["rows_done"], 7)
+            self.assertEqual(status(db)["papers"], 500)
+            self.assertEqual(status(db)["imports"][0]["rows_done"], 500)
+            self.assertEqual(
+                db.execute(
+                    "SELECT count(*) FROM search "
+                    "WHERE search MATCH 'rarephysicalterm'"
+                ).fetchone()[0],
+                500,
+            )
+            db.close()
+            ingest(root, max_papers=13)
+            db = connect(root / "library.sqlite3")
+            self.assertEqual(status(db)["papers"], 513)
+            self.assertEqual(status(db)["imports"][0]["rows_done"], 513)
             db.close()
             ingest(root)
             ingest(root)
             db = connect(root / "library.sqlite3")
-            self.assertEqual(status(db)["papers"], 17)
+            self.assertEqual(status(db)["papers"], 1257)
             self.assertEqual(status(db)["imports"][0]["complete"], 1)
-            self.assertEqual(len(search_papers(db, "quantum", limit=50)), 17)
+            self.assertEqual(len(search_papers(db, "quantum", limit=50)), 50)
+            for row in rows:
+                self.assertEqual(
+                    get_paper(db, row["paper_id"])["text"], row["text"]
+                )
+            self.assertEqual(
+                db.execute("PRAGMA integrity_check").fetchone()[0], "ok"
+            )
             db.close()
 
     def test_invalid_shard_rejected(self):

@@ -66,7 +66,7 @@ def ingest(root, max_papers=None, watch=False):
                         continue
                     row_offset = group_start
                     for batch in parquet.iter_batches(
-                        batch_size=32, row_groups=[group]
+                        batch_size=500, row_groups=[group]
                     ):
                         rows = batch.to_pylist()
                         with db:
