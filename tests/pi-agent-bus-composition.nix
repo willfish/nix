@@ -17,6 +17,7 @@ let
       ./pi-agent-bus-composition.py
       ./test_pi_agent_bus_wiring.py
       ./fixtures/pi-agent-bus-composition
+      ../home/private.nix
       ../home/user/pi.nix
       ../home/user/local-llm.nix
       ../home/user/prompt-capture.sh

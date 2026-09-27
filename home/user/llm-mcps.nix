@@ -16,17 +16,17 @@ rec {
       }
       {
         name = "github";
-        enabled = true;
+        enabled = config.dotfiles.privateEnabled;
         wrapper = "mcp-github";
       }
       {
         name = "arxiv";
-        enabled = true;
+        enabled = config.dotfiles.privateEnabled;
         wrapper = "mcp-arxiv";
       }
       {
         name = "web-search";
-        enabled = true;
+        enabled = config.dotfiles.privateEnabled;
         wrapper = "mcp-web-search";
       }
       {
@@ -76,7 +76,12 @@ rec {
         toolTimeout = 180;
       }
     ]
-    ++ map (server: server // { private = true; }) config.privateConfig.mcpServers
+    ++ (
+      if config.dotfiles.privateEnabled then
+        map (server: server // { private = true; }) config.privateConfig.mcpServers
+      else
+        [ ]
+    )
   );
 
   isHttp = server: server ? url;

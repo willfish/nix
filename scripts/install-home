@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Install the shared home for the current identity, with fail-closed private access.
+set -euo pipefail
+set +x
+
+usage() {
+  printf '%s\n' 'usage: install-home [--dry] [--public]' \
+    'Build and activate this checkout for the current user.' \
+    '--dry builds without activation; --public never attempts private access.'
+}
+dry=false
+public=false
+check_private=false
+for arg in "$@"; do
+  case "$arg" in
+    --dry|-n) dry=true ;;
+    --public) public=true ;;
+    --check-private) check_private=true ;;
+    --help|-h) usage; exit 0 ;;
+    *) usage >&2; exit 64 ;;
+  esac
+done
+if [ "$(id -u)" -eq 0 ]; then
+  echo 'Run this as the target user, not root.' >&2
+  exit 1
+fi
+command -v nix >/dev/null || {
+  echo 'Install Nix first: https://nixos.org/download/' >&2
+  exit 1
+}
+export DOTFILES_SOURCE
+DOTFILES_SOURCE=$(cd "${HMSWITCH_FLAKE:-$(dirname "${BASH_SOURCE[0]}")/..}" && pwd -P)
+export DOTFILES_USER DOTFILES_HOME DOTFILES_HOST DOTFILES_PRIVATE
+DOTFILES_USER=$(id -un)
+DOTFILES_HOME="$HOME"
+DOTFILES_HOST=$(hostname -s 2>/dev/null || hostname)
+DOTFILES_PRIVATE=false
+nix_cmd=(nix --extra-experimental-features 'nix-command flakes')
+
+# A key's existence is not authorization. Fetch only after finding a candidate,
+# then require decryption of the exact private input pinned by this checkout.
+if [ "$public" = false ] && [ -r "$HOME/.ssh/id_ed25519" ]; then
+  private_source=$(
+    GIT_SSH_COMMAND='ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5' \
+      "${nix_cmd[@]}" eval --impure --raw --expr \
+      '(builtins.getFlake (builtins.getEnv "DOTFILES_SOURCE")).inputs.nix-config.outPath' \
+      2>/dev/null
+  ) || private_source=
+  if [ -n "$private_source" ]; then
+    if probe=$("${nix_cmd[@]}" build --no-link --print-out-paths \
+      "$DOTFILES_SOURCE#private-access-probe") &&
+      "$probe/bin/probe-private-access" "$HOME/.ssh/id_ed25519" "$private_source/secrets/env.yaml"; then
+      # The authenticated composition needs both private sources. Do not select
+      # it if one is inaccessible, even when the secret itself can be decrypted.
+      if GIT_SSH_COMMAND='ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5' \
+        "${nix_cmd[@]}" eval --impure --raw --expr \
+        '(builtins.getFlake (builtins.getEnv "DOTFILES_SOURCE")).inputs.agent-bus.outPath' \
+        >/dev/null 2>&1; then
+        DOTFILES_PRIVATE=true
+      fi
+    fi
+  fi
+fi
+if [ "$check_private" = true ]; then
+  printf '%s\n' "$DOTFILES_PRIVATE"
+  exit 0
+fi
+printf 'Installing for %s at %s (private integrations: %s)\n' \
+  "$DOTFILES_USER" "$DOTFILES_HOME" "$DOTFILES_PRIVATE" >&2
+
+build_dir=$(mktemp -d)
+trap 'rm -rf -- "$build_dir"' EXIT
+"${nix_cmd[@]}" build --impure --out-link "$build_dir/home" --expr '
+  let
+    flake = builtins.getFlake (builtins.getEnv "DOTFILES_SOURCE");
+  in (flake.lib.mkHome {
+    username = builtins.getEnv "DOTFILES_USER";
+    homeDirectory = builtins.getEnv "DOTFILES_HOME";
+    sourceDirectory = builtins.getEnv "DOTFILES_SOURCE";
+    system = builtins.currentSystem;
+    hostName = builtins.getEnv "DOTFILES_HOST";
+    privateEnabled = builtins.getEnv "DOTFILES_PRIVATE" == "true";
+  }).activationPackage
+'
+if [ "$dry" = false ]; then
+  # Stock distro/Nix shell files are unmanaged. Preserve them instead of
+  # aborting a first installation or forcefully replacing their contents.
+  export HOME_MANAGER_BACKUP_EXT="${HOME_MANAGER_BACKUP_EXT:-before-dotfiles-$(date +%Y%m%d%H%M%S)-$$}"
+  unset HOME_MANAGER_BACKUP_OVERWRITE
+  printf 'Unmanaged file backups use suffix: .%s\n' "$HOME_MANAGER_BACKUP_EXT" >&2
+  if [ "$(uname -s)" = Linux ] && [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    # dconf activation needs a session bus, even on a minimal fresh distro.
+    # Use Nix's own configuration rather than assuming /etc/dbus-1 exists.
+    dbus=$("${nix_cmd[@]}" build --no-link --print-out-paths "$DOTFILES_SOURCE#activation-dbus^out")
+    XDG_DATA_DIRS="$dbus/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" \
+      "$dbus/bin/dbus-run-session" --dbus-daemon="$dbus/bin/dbus-daemon" \
+      --config-file "$dbus/share/dbus-1/session.conf" -- "$build_dir/home/activate"
+  else
+    "$build_dir/home/activate"
+  fi
+  # Remember this checkout for the installed hmswitch, including non-default paths.
+  state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
+  mkdir -p "$state_dir"
+  printf '%s\n' "$DOTFILES_SOURCE" > "$state_dir/source"
+fi

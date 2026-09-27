@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Build only tracked source. Never send .git, untracked secrets or a host store.
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+cd "$root"
+context=$(mktemp)
+name="dotfiles-fresh-install-$(date +%s)-$$"
+trap 'rm -f -- "$context"' EXIT
+# Stage new source files before running this check so they are included.
+git ls-files -z | tar --null --files-from=- -cf "$context"
+docker build --no-cache -f tests/fresh-install/Dockerfile -t "$name" - < "$context"
+echo "Evidence container: $name" >&2
+# Retain the stopped container for log/file inspection, without host mounts.
+docker run --name "$name" "$name" '
+  set -euo pipefail
+  . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+  test ! -e "$HOME/.ssh/id_ed25519"
+  test -z "${SSH_AUTH_SOCK:-}"
+  cp "$HOME/.bashrc" /tmp/original-bashrc
+  cp "$HOME/.profile" /tmp/original-profile
+  bash scripts/install-home
+  cmp /tmp/original-bashrc "$HOME"/.bashrc.before-dotfiles-*
+  cmp /tmp/original-profile "$HOME"/.profile.before-dotfiles-*
+  test ! -e "$HOME/.config/sops-nix/secrets"
+  test ! -e "$HOME/.local/bin/mcp-github"
+  test ! -e "$HOME/.local/bin/mcp-arxiv"
+  test ! -e "$HOME/.local/share/applications/switchboard.desktop"
+  test ! -e "$HOME/.pi/agent/models.json"
+  test -x "$HOME/.local/bin/pi"
+  test -x "$HOME/.bin/hmswitch"
+  "$HOME/.bin/hmswitch"
+  # Home Manager emits a normal login-shell fragment, not a nounset script.
+  set +u
+  . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+  set -u
+  mkdir -p "$HOME/.ssh"
+  nix shell --impure --expr \
+    "let f = builtins.getFlake \"$PWD\"; in f.inputs.nixpkgs.legacyPackages.\${builtins.currentSystem}.openssh" \
+    --command ssh-keygen -q -t ed25519 -N "" -f "$HOME/.ssh/id_ed25519"
+  "$HOME/.bin/hmswitch"
+  test ! -e "$HOME/.config/sops-nix/secrets"
+  test ! -e "$HOME/.local/bin/mcp-github"
+  fish --no-config -c "true"
+  git config --get user.email && exit 1
+  git config --get commit.gpgsign && exit 1
+  "$HOME/.local/bin/pi" --version
+  python3 tests/fresh-install/pi-startup.py
+  printf "Fresh credential-free build, activation and repeat switch passed.\n"
+'

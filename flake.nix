@@ -446,14 +446,43 @@
         };
       pre-commit-check = mkPreCommitCheck linuxSystem pkgs;
       darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
-      homeModules = [
+      publicHomeModules = [
         stylix.homeModules.stylix
         nix-index-database.homeModules.default
         sops-nix.homeManagerModules.sops
-        nix-config.homeModules.default
-        agent-bus.homeManagerModules.default
         ./home
       ];
+      privateHomeModules = [
+        nix-config.homeModules.default
+        agent-bus.homeManagerModules.default
+        ./home/private.nix
+      ];
+      homeModules = publicHomeModules ++ privateHomeModules;
+      mkHome =
+        {
+          username,
+          homeDirectory,
+          sourceDirectory ? "${homeDirectory}/.dotfiles",
+          system ? linuxSystem,
+          privateEnabled ? false,
+          hostName ? null,
+          modules ? [ ],
+        }:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = mkPkgs system;
+          modules =
+            publicHomeModules
+            ++ lib.optionals privateEnabled privateHomeModules
+            ++ [
+              {
+                home = { inherit username homeDirectory; };
+                dotfiles = { inherit privateEnabled sourceDirectory; };
+              }
+            ]
+            ++ modules;
+          # A coincidental hostname must not select owner hardware or services.
+          extraSpecialArgs.hostName = if privateEnabled then hostName else null;
+        };
       nixosBaseModules = [
         sops-nix.nixosModules.sops
         nix-config.nixosModules.default
@@ -474,12 +503,10 @@
 
       flake = {
         overlays.default = final: prev: mkOverlay prev.stdenv.hostPlatform.system final prev;
+        lib = { inherit mkHome; };
         homeModules.default = {
-          imports = [
-            nix-config.homeModules.default
-            agent-bus.homeManagerModules.default
-            ./home
-          ];
+          imports = publicHomeModules;
+          dotfiles.privateEnabled = lib.mkDefault false;
         };
 
         darwinConfigurations = lib.mapAttrs (
@@ -549,6 +576,11 @@
             ) darwinHosts;
           in
           {
+            # Pure reference configuration; the installer supplies the actual identity.
+            laptop = mkHome {
+              username = "laptop";
+              homeDirectory = "/home/laptop";
+            };
             william = williamLinux;
             william-linux = williamLinux;
             william-darwin = darwinHomes.relay;
@@ -574,6 +606,21 @@
           _module.args.pkgs = mkPkgs system;
 
           packages = {
+            activation-dbus = pkgs.symlinkJoin {
+              name = "home-activation-dbus";
+              paths = [
+                pkgs.dbus
+                pkgs.dconf
+              ];
+            };
+            private-access-probe = pkgs.writeShellApplication {
+              name = "probe-private-access";
+              runtimeInputs = [
+                pkgs.sops
+                pkgs.ssh-to-age
+              ];
+              text = builtins.readFile ./scripts/probe-private-access;
+            };
             mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix { };
           }
           //
@@ -603,6 +650,10 @@
           };
 
           checks = {
+            public-home = import ./tests/public-home.nix {
+              inherit lib pkgs;
+              mkHome = args: mkHome (args // { inherit system; });
+            };
             pi-agent-bus-composition = import ./tests/pi-agent-bus-composition.nix {
               inherit lib pkgs;
               home =

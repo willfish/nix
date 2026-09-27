@@ -1,12 +1,24 @@
-{ pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 {
   imports = [ ./user ];
 
-  home.username = "william";
-  home.homeDirectory = if pkgs.stdenv.isDarwin then "/Users/william" else "/home/william";
+  home.username = lib.mkDefault "william";
+  home.homeDirectory = lib.mkDefault (
+    if pkgs.stdenv.isDarwin then "/Users/william" else "/home/william"
+  );
   home.stateVersion = "26.05";
   home.enableNixpkgsReleaseCheck = false;
   programs.home-manager.enable = true;
+  nix.package = lib.mkIf (!config.dotfiles.privateEnabled) pkgs.nix;
+  nix.settings.experimental-features = lib.mkIf (!config.dotfiles.privateEnabled) [
+    "nix-command"
+    "flakes"
+  ];
 
   targets = lib.mkIf pkgs.stdenv.isDarwin {
     darwin = {

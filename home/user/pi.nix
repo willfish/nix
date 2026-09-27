@@ -40,8 +40,6 @@ let
   '';
 in
 {
-  programs.pi-agent-bus.enable = lib.mkDefault true;
-
   # Follow terminal appearance with the host's theme pair. Explicit CLI theme
   # flags take precedence. With CAPTURE_PROMPTS set, run behind mitmproxy that
   # logs every request/response to $XDG_STATE_HOME/prompt-capture/pi.jsonl.
@@ -51,37 +49,39 @@ in
       #!${pkgs.bash}/bin/bash
       set -euo pipefail
 
-      export PI_AGENT_BUS_URL="''${PI_AGENT_BUS_URL-http://terminus:7420}"
-      export PI_AGENT_BUS_CONTROL="''${PI_AGENT_BUS_CONTROL-1}"
-      export PI_AGENT_BUS_OPERATOR_NOTICES="''${PI_AGENT_BUS_OPERATOR_NOTICES-1}"
-      export PI_AGENT_BUS_OPERATOR_READ="''${PI_AGENT_BUS_OPERATOR_READ-1}"
-      export PI_AGENT_BUS_OPERATOR_HISTORY="''${PI_AGENT_BUS_OPERATOR_HISTORY-1}"
-      bus_enabled=${if config.programs.pi-agent-bus.enable then "1" else "0"}
-      bus_offline="''${PI_OFFLINE:-}"
-      if [[ "''${bus_offline,,}" =~ ^[[:space:]]*(1|true|yes)[[:space:]]*$ ]]; then
-        bus_enabled=0
-      fi
-      for arg in "$@"; do
-        case "$arg" in --offline) bus_enabled=0 ;; esac
-      done
-      if [ "$bus_enabled" = "1" ] && [ "''${PI_AGENT_BUS_ENABLED:-}" != "0" ] \
-        && [ -z "''${PI_AGENT_BUS_TOKEN+x}" ]; then
-        # A missing/unavailable secret must not abort Pi under strict shell mode.
-        if PI_AGENT_BUS_TOKEN="$(${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.PI_AGENT_BUS_TOKEN.path} 2>/dev/null)"; then
-          export PI_AGENT_BUS_TOKEN
-        else
-          unset PI_AGENT_BUS_TOKEN
+      ${lib.optionalString config.dotfiles.privateEnabled ''
+        export PI_AGENT_BUS_URL="''${PI_AGENT_BUS_URL-http://terminus:7420}"
+        export PI_AGENT_BUS_CONTROL="''${PI_AGENT_BUS_CONTROL-1}"
+        export PI_AGENT_BUS_OPERATOR_NOTICES="''${PI_AGENT_BUS_OPERATOR_NOTICES-1}"
+        export PI_AGENT_BUS_OPERATOR_READ="''${PI_AGENT_BUS_OPERATOR_READ-1}"
+        export PI_AGENT_BUS_OPERATOR_HISTORY="''${PI_AGENT_BUS_OPERATOR_HISTORY-1}"
+        bus_enabled=${if config.programs.pi-agent-bus.enable then "1" else "0"}
+        bus_offline="''${PI_OFFLINE:-}"
+        if [[ "''${bus_offline,,}" =~ ^[[:space:]]*(1|true|yes)[[:space:]]*$ ]]; then
+          bus_enabled=0
         fi
-      fi
-      unset bus_enabled bus_offline
+        for arg in "$@"; do
+          case "$arg" in --offline) bus_enabled=0 ;; esac
+        done
+        if [ "$bus_enabled" = "1" ] && [ "''${PI_AGENT_BUS_ENABLED:-}" != "0" ] \
+          && [ -z "''${PI_AGENT_BUS_TOKEN+x}" ]; then
+          # A missing/unavailable secret must not abort Pi under strict shell mode.
+          if PI_AGENT_BUS_TOKEN="$(${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.PI_AGENT_BUS_TOKEN.path} 2>/dev/null)"; then
+            export PI_AGENT_BUS_TOKEN
+          else
+            unset PI_AGENT_BUS_TOKEN
+          fi
+        fi
+        unset bus_enabled bus_offline
 
-      if [ -z "''${TYPESAFE_API_KEY+x}" ]; then
-        if TYPESAFE_API_KEY="$(${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.TYPESAFE_API_KEY.path} 2>/dev/null)"; then
-          export TYPESAFE_API_KEY
-        else
-          unset TYPESAFE_API_KEY
+        if [ -z "''${TYPESAFE_API_KEY+x}" ]; then
+          if TYPESAFE_API_KEY="$(${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.TYPESAFE_API_KEY.path} 2>/dev/null)"; then
+            export TYPESAFE_API_KEY
+          else
+            unset TYPESAFE_API_KEY
+          fi
         fi
-      fi
+      ''}
 
       if [ -n "''${CAPTURE_PROMPTS:-}" ] && [ "''${CAPTURE_PROMPTS:-}" != "0" ]; then
         # Accept only authority spellings unchanged by WHATWG URL parsing.
@@ -126,7 +126,9 @@ in
   # Built-in catalogs stay intact; these keys only make the models available.
   # OpenCode Zen is omitted on purpose: its Astra entry looks like ChatGPT
   # subscription Astra and 401s with this account.
-  home.file.".pi/agent/models.json".source = piModelsJson;
+  home.file.".pi/agent/models.json" = lib.mkIf config.dotfiles.privateEnabled {
+    source = piModelsJson;
+  };
   # OpenCode console-disabled ids stay out of /model for Go and OpenRouter.
   home.file.".pi/agent/hidden-models.json".source = ../config/pi/hidden-models.json;
   home.file.".pi/agent/extensions/hidden-models.ts".source = ../config/pi/extensions/hidden-models.ts;
@@ -219,12 +221,14 @@ in
     ${pkgs.python3}/bin/python3 ${../config/pi/merge-settings.py} \
       ${../config/pi/keybindings-defaults.json} \
       "$HOME/.pi/agent/keybindings.json"
-    ${pkgs.python3}/bin/python3 ${../config/pi/merge-auth.py} \
-      "$HOME/.pi/agent/auth.json" \
-      --drop openai \
-      --drop opencode \
-      --oauth-provider openai-codex \
-      --refresh-file ${lib.escapeShellArg config.sops.secrets.PI_OPENAI_CODEX_REFRESH.path} \
-      --account-file ${lib.escapeShellArg config.sops.secrets.PI_OPENAI_CODEX_ACCOUNT_ID.path}
+    ${lib.optionalString config.dotfiles.privateEnabled ''
+      ${pkgs.python3}/bin/python3 ${../config/pi/merge-auth.py} \
+        "$HOME/.pi/agent/auth.json" \
+        --drop openai \
+        --drop opencode \
+        --oauth-provider openai-codex \
+        --refresh-file ${lib.escapeShellArg config.sops.secrets.PI_OPENAI_CODEX_REFRESH.path} \
+        --account-file ${lib.escapeShellArg config.sops.secrets.PI_OPENAI_CODEX_ACCOUNT_ID.path}
+    ''}
   '';
 }

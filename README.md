@@ -215,6 +215,18 @@ Located in `home/config/bin/` and added to `$PATH`:
 
 ## Usage
 
+For another user's laptop, use the [credential-free Home Manager installer](docs/public-install.md):
+
+```bash
+git clone https://github.com/willfish/nix.git ~/.dotfiles
+cd ~/.dotfiles
+bash scripts/install-home
+```
+
+It uses the current identity and disables private integrations unless actual
+SSH-derived secret decryption succeeds. The commands below are for William's
+existing hosts, not generic laptop installation.
+
 Rebuild a NixOS system:
 
 ```bash

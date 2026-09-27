@@ -8,12 +8,12 @@ let
   configDir = ../config;
   sourceFile = source: {
     inherit source;
-    force = true;
+    force = config.dotfiles.privateEnabled;
   };
   sourceDir = source: {
     inherit source;
     recursive = true;
-    force = true;
+    force = config.dotfiles.privateEnabled;
   };
 
   agentRuleFiles = [
@@ -29,11 +29,16 @@ let
   hermesSkillRoot = ".hermes/skills/personal";
 
   publicLlmRoot = "${configDir}/llm";
-  privateLlm = config.privateConfig.llm;
-  llmRoots = [
-    privateLlm.root
-    publicLlmRoot
-  ];
+  privateLlm =
+    if config.dotfiles.privateEnabled then
+      config.privateConfig.llm
+    else
+      {
+        root = null;
+        catalog = [ ];
+        capabilities = { };
+      };
+  llmRoots = lib.optional (privateLlm.root != null) privateLlm.root ++ [ publicLlmRoot ];
   resolveLlm =
     rel:
     let
@@ -111,13 +116,13 @@ let
       lib.replaceStrings [ (builtins.head legacyApproval) ] [ sharedApproval ] selectedAgentRules;
   mkAgentRuleFiles = lib.genAttrs agentRuleFiles (_: {
     text = effectiveAgentRules;
-    force = true;
+    force = config.dotfiles.privateEnabled;
   });
   mergedGuides = pkgs.runCommand "agent-guides" { } ''
     mkdir -p "$out"
     cp -a ${publicLlmRoot}/guides/. "$out/"
     chmod -R u+w "$out"
-    cp -a ${privateLlm.root}/guides/. "$out/"
+    ${lib.optionalString (privateLlm.root != null) ''cp -a ${privateLlm.root}/guides/. "$out/"''}
   '';
   mkGuideFiles = lib.genAttrs guideRoots (_: sourceDir mergedGuides);
   mkSkillDirectory =
@@ -258,41 +263,41 @@ in
     // superpowersMetaSkillFile
     // mkReferenceLibraryFiles ".agents";
 
-  config.home.activation.migrateAgentSkillDirectories =
-    lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ]
-      ''
-        for skill in ${
-          lib.concatMapStringsSep " " lib.escapeShellArg (sharedSkillNames ++ processSkillNamesForDeploy)
-        }; do
-          skillPath="$HOME/${agentSkillRoot}/$skill"
-          if [ ! -d "$skillPath" ] || [ -L "$skillPath" ]; then
-            continue
-          fi
+  config.home.activation.migrateAgentSkillDirectories = lib.mkIf config.dotfiles.privateEnabled (
+    lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] ''
+      for skill in ${
+        lib.concatMapStringsSep " " lib.escapeShellArg (sharedSkillNames ++ processSkillNamesForDeploy)
+      }; do
+        skillPath="$HOME/${agentSkillRoot}/$skill"
+        if [ ! -d "$skillPath" ] || [ -L "$skillPath" ]; then
+          continue
+        fi
 
-          unexpectedFile="$(${pkgs.findutils}/bin/find "$skillPath" ! -type d ! -type l -print -quit)"
-          if [ -n "$unexpectedFile" ]; then
-            echo "Refusing to replace skill directory containing an unmanaged file: $unexpectedFile" >&2
-            exit 1
-          fi
+        unexpectedFile="$(${pkgs.findutils}/bin/find "$skillPath" ! -type d ! -type l -print -quit)"
+        if [ -n "$unexpectedFile" ]; then
+          echo "Refusing to replace skill directory containing an unmanaged file: $unexpectedFile" >&2
+          exit 1
+        fi
 
-          unsafeLink=""
-          while IFS= read -r -d "" linkPath; do
-            case "$(${pkgs.coreutils}/bin/readlink "$linkPath")" in
-              /nix/store/*-home-manager-files/${agentSkillRoot}/"$skill"/*) ;;
-              *)
-                unsafeLink="$linkPath"
-                break
-                ;;
-            esac
-          done < <(${pkgs.findutils}/bin/find "$skillPath" -type l -print0)
+        unsafeLink=""
+        while IFS= read -r -d "" linkPath; do
+          case "$(${pkgs.coreutils}/bin/readlink "$linkPath")" in
+            /nix/store/*-home-manager-files/${agentSkillRoot}/"$skill"/*) ;;
+            *)
+              unsafeLink="$linkPath"
+              break
+              ;;
+          esac
+        done < <(${pkgs.findutils}/bin/find "$skillPath" -type l -print0)
 
-          if [ -n "$unsafeLink" ]; then
-            echo "Refusing to replace skill directory containing an unmanaged link: $unsafeLink" >&2
-            exit 1
-          fi
+        if [ -n "$unsafeLink" ]; then
+          echo "Refusing to replace skill directory containing an unmanaged link: $unsafeLink" >&2
+          exit 1
+        fi
 
-          ${pkgs.coreutils}/bin/rm -r -- "$skillPath"
-        done
-      '';
+        ${pkgs.coreutils}/bin/rm -r -- "$skillPath"
+      done
+    ''
+  );
 
 }

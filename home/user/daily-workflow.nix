@@ -41,26 +41,30 @@ in
 
   # The launcher reads cached events; refresh runs separately on this timer.
   # A missing feed file leaves the timer inert.
-  systemd.user.services.daily-agenda-refresh = lib.mkIf isGraphicalLinux {
-    Unit = {
-      Description = "Refresh the private read-only daily calendar cache";
-      ConditionPathExists = credentials;
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "${agenda}/bin/daily-agenda --refresh";
-      UMask = "0077";
-      StandardOutput = "null";
-      StandardError = "null";
-      TimeoutStartSec = 120;
-    };
-  };
-  systemd.user.timers.daily-agenda-refresh = lib.mkIf isGraphicalLinux {
-    Unit.Description = "Refresh calendar events every fifteen minutes";
-    Timer = {
-      OnStartupSec = "2m";
-      OnUnitActiveSec = "15m";
-    };
-    Install.WantedBy = [ "timers.target" ];
-  };
+  systemd.user.services.daily-agenda-refresh =
+    lib.mkIf (isGraphicalLinux && config.dotfiles.privateEnabled)
+      {
+        Unit = {
+          Description = "Refresh the private read-only daily calendar cache";
+          ConditionPathExists = credentials;
+        };
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${agenda}/bin/daily-agenda --refresh";
+          UMask = "0077";
+          StandardOutput = "null";
+          StandardError = "null";
+          TimeoutStartSec = 120;
+        };
+      };
+  systemd.user.timers.daily-agenda-refresh =
+    lib.mkIf (isGraphicalLinux && config.dotfiles.privateEnabled)
+      {
+        Unit.Description = "Refresh calendar events every fifteen minutes";
+        Timer = {
+          OnStartupSec = "2m";
+          OnUnitActiveSec = "15m";
+        };
+        Install.WantedBy = [ "timers.target" ];
+      };
 }

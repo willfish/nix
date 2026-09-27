@@ -25,6 +25,16 @@ let
 in
 {
   options.dotfiles = {
+    sourceDirectory = lib.mkOption {
+      type = lib.types.str;
+      default = "${config.home.homeDirectory}/.dotfiles";
+      description = "Checkout used by runtime theme builds and home switches.";
+    };
+    privateEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable owner integrations after the installer verifies decryption access.";
+    };
     role = lib.mkOption {
       type = lib.types.enum [
         "workstation"
@@ -37,7 +47,7 @@ in
     };
     darwinSystemServices = lib.mkOption {
       type = lib.types.bool;
-      default = headlessDarwin;
+      default = headlessDarwin && cfg.privateEnabled;
       description = "Use nix-darwin system jobs instead of graphical-session LaunchAgents.";
     };
     darwinDaemons = lib.mkOption {
@@ -101,13 +111,13 @@ in
         ''
     );
     dotfiles.capabilities = lib.mapAttrs (_: lib.mkDefault) {
-      work = full;
-      knowledgeBase = full;
-      accounting = interactive;
-      email = interactive;
-      hermes = interactive;
-      telegram = interactive;
-      personal = full;
+      work = full && cfg.privateEnabled;
+      knowledgeBase = full && cfg.privateEnabled;
+      accounting = interactive && cfg.privateEnabled;
+      email = interactive && cfg.privateEnabled;
+      hermes = interactive && cfg.privateEnabled;
+      telegram = interactive && cfg.privateEnabled;
+      personal = full && cfg.privateEnabled;
       desktop = full;
       playwright = full;
       headlessBrowser = interactive;
@@ -117,18 +127,6 @@ in
       nas = cfg.role == "nas";
     };
 
-    # Only declarations change: all hosts retain the shared decryption identity.
-    privateConfig.secretGroups = [
-      "coding"
-      "search"
-    ]
-    ++ lib.optional cfg.capabilities.work "work"
-    ++ lib.optional cfg.capabilities.accounting "accounting"
-    ++ lib.optional cfg.capabilities.email "email"
-    ++ lib.optional cfg.capabilities.telegram "telegram"
-    ++ lib.optional cfg.capabilities.personal "personal"
-    ++ lib.optional (cfg.capabilities.nas || full) "nas"
-    ++ lib.optional full "legacy";
     # Leave in-flight KB batches alone; the timer picks up the new command next run.
     # Restarting this oneshot makes sd-switch wait for sync and embedding to finish.
     systemd.user.services.knowledge-base =
@@ -136,9 +134,6 @@ in
         {
           Unit."X-RestartIfChanged" = false;
         };
-
-    privateConfig.hermesEnvironment = cfg.capabilities.hermes;
-    privateConfig.darwinSystemService = cfg.darwinSystemServices;
 
     assertions = [
       {

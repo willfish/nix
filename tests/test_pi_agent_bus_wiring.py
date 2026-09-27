@@ -25,6 +25,10 @@ def wrapper_text(
     source = SOURCE.read_text().split('home.file.".local/bin/pi" = {', 1)[1]
     shell = source.split("text = ''\n", 1)[1].split("\n    '';", 1)[0]
     replacements = {
+        # These tests exercise the authenticated wrapper. Public composition is
+        # evaluated separately by public-home.nix and the fresh install test.
+        "${lib.optionalString config.dotfiles.privateEnabled ''": "",
+        "      ''}": "",
         "${pkgs.bash}/bin/bash": bash or shutil.which("bash"),
         '${if config.programs.pi-agent-bus.enable then "1" else "0"}': (
             "1" if enabled else "0"
@@ -319,7 +323,8 @@ class WiringTests(unittest.TestCase):
     def test_single_external_module_installation_and_no_global_token(self):
         source = SOURCE.read_text()
         self.assertIn(
-            "programs.pi-agent-bus.enable = lib.mkDefault true;", source
+            "programs.pi-agent-bus.enable = lib.mkDefault true;",
+            (ROOT / "home/private.nix").read_text(),
         )
         self.assertEqual(source.count('home.file.".local/bin/pi"'), 1)
         self.assertNotIn('home.file.".pi/agent/extensions/agent-bus"', source)

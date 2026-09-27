@@ -200,7 +200,7 @@ in
     withPython3 = true;
     withRuby = false;
     initLua = builtins.readFile (
-      if config.privateConfig.editorInit == null then
+      if !config.dotfiles.privateEnabled || config.privateConfig.editorInit == null then
         ../config/nvim/init.lua
       else
         config.privateConfig.editorInit

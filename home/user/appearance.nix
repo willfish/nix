@@ -127,9 +127,9 @@ in
   };
 
   xdg.configFile = {
-    "btop/btop.conf".force = true;
+    "btop/btop.conf".force = config.dotfiles.privateEnabled;
     "btop/themes/host.theme" = {
-      force = true;
+      force = config.dotfiles.privateEnabled;
       source = if isGraphicalLinux then runtime.file "btop.theme" else btopFile;
     };
   }

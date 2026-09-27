@@ -374,13 +374,15 @@ in
     '';
   };
 
-  home.activation.configureGithubCliAuth = lib.hm.dag.entryAfter [ "sops-nix" ] ''
-    github_token_file=${lib.escapeShellArg config.sops.secrets.GITHUB_CLASSIC_PERSONAL_ACCESS_TOKEN.path}
-    if [ -r "$github_token_file" ]; then
-      github_token="$(${readSopsSecret}/bin/read-sops-secret "$github_token_file")"
-      if ! printf '%s' "$github_token" | ${pkgs.gh}/bin/gh auth login --hostname github.com --with-token >/dev/null; then
-        echo "warning: failed to configure GitHub CLI auth from sops secret" >&2
+  home.activation.configureGithubCliAuth = lib.mkIf config.dotfiles.privateEnabled (
+    lib.hm.dag.entryAfter [ "sops-nix" ] ''
+      github_token_file=${lib.escapeShellArg config.sops.secrets.GITHUB_CLASSIC_PERSONAL_ACCESS_TOKEN.path}
+      if [ -r "$github_token_file" ]; then
+        github_token="$(${readSopsSecret}/bin/read-sops-secret "$github_token_file")"
+        if ! printf '%s' "$github_token" | ${pkgs.gh}/bin/gh auth login --hostname github.com --with-token >/dev/null; then
+          echo "warning: failed to configure GitHub CLI auth from sops secret" >&2
+        fi
       fi
-    fi
-  '';
+    ''
+  );
 }

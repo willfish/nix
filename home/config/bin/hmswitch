@@ -5,17 +5,22 @@ usage() {
   cat >&2 <<'USAGE'
 usage: hmswitch [NH_HOME_SWITCH_ARGS...]
 
-Switch this machine to the matching Home Manager configuration.
+Switch this user to the matching Home Manager configuration.
+Without verified private access, use the public installer (--dry or --public).
 System-managed Darwin hosts deploy the matching system first (sudo may prompt).
 On those hosts, supported options are --dry, --ask, --verbose, --quiet,
 --no-nom and --diff, including their short forms where available.
 
 Environment:
-  HMSWITCH_FLAKE  Dotfiles flake path, default: ~/.dotfiles
+  HMSWITCH_FLAKE  Dotfiles path, default: remembered install source or ~/.dotfiles
 USAGE
 }
 
 flake="${HMSWITCH_FLAKE:-$HOME/.dotfiles}"
+source_file="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/source"
+if [ -z "${HMSWITCH_FLAKE:-}" ] && [ -r "$source_file" ]; then
+  flake=$(< "$source_file")
+fi
 darwin_system_services=false
 
 switch_darwin_pair() {
@@ -171,6 +176,22 @@ esac
 short_hostname() {
   hostname -s 2>/dev/null || hostname 2>/dev/null | cut -d. -f1
 }
+
+# Never select William's named configuration for a different identity. The
+# installer also handles failed decryption without forcing private flake inputs.
+installer="$flake/scripts/install-home"
+for arg in "$@"; do
+  if [ "$arg" = --public ]; then
+    exec env HMSWITCH_FLAKE="$flake" bash "$installer" "$@"
+  fi
+done
+if [ "$(id -un)" != william ] || { [ "$HOME" != /home/william ] && [ "$HOME" != /Users/william ]; }; then
+  exec env HMSWITCH_FLAKE="$flake" bash "$installer" "$@"
+fi
+private_access=$(HMSWITCH_FLAKE="$flake" bash "$installer" --check-private)
+if [ "$private_access" != true ]; then
+  exec env HMSWITCH_FLAKE="$flake" bash "$installer" --public "$@"
+fi
 
 case "$(uname -s)" in
   Darwin)

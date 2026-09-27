@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   hostName,
@@ -48,7 +49,7 @@ in
     pkgs.arxiv-mcp
   ];
 
-  home.file.".local/bin/mcp-arxiv" = {
+  home.file.".local/bin/mcp-arxiv" = lib.mkIf config.dotfiles.privateEnabled {
     executable = true;
     text = ''
       #!${pkgs.bash}/bin/bash

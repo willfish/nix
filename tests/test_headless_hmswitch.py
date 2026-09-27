@@ -29,12 +29,25 @@ class HeadlessHomeSwitchTests(unittest.TestCase):
         )
         self.env = dict(
             os.environ, HOME=str(self.home),
+            XDG_STATE_HOME=str(self.home / "state"),
             PATH=f"{self.bin}:{os.environ['PATH']}", CALL_LOG=str(self.log),
             TEST_HOST="relay", SERVICE_MODE="true", NIX_FAIL="0", NH_EXIT="0",
             BUILD_EXIT="0", SUDO_EXIT="0", SYSTEM_TARGET=str(self.system),
             HOME_TARGET=str(self.generation),
             HOME_NAMES=json.dumps(["william-darwin", "william@relay"]),
         )
+        self.switch = self.home / "hmswitch"
+        self.switch.write_text(
+            (ROOT / "home/config/bin/hmswitch").read_text().replace(
+                "/home/william", str(self.home)
+            )
+        )
+        self.stub("id", (
+            'if [ "$1" = -un ]; then echo william; else echo 1000; fi'
+        ))
+        installer = self.home / ".dotfiles/scripts/install-home"
+        installer.parent.mkdir(parents=True)
+        installer.write_text('#!/bin/sh\nprintf "true\\n"\n')
         self.stub("uname", 'echo Darwin')
         self.stub("hostname", 'echo "$TEST_HOST"')
         self.stub("nix", '''
@@ -71,7 +84,7 @@ esac''')
 
     def run_switch(self, *args, input_text=""):
         return subprocess.run(
-            ["bash", str(ROOT / "home/config/bin/hmswitch"), *args],
+            ["bash", str(self.switch), *args],
             env=self.env, text=True, capture_output=True, input=input_text,
         )
 

@@ -136,7 +136,7 @@ let
     ];
     text = ''
       export THEME_MENU_PUBLISH=1
-      export THEME_WALLPAPER_FLAKE=${lib.escapeShellArg "${config.home.homeDirectory}/.dotfiles"}
+      export THEME_WALLPAPER_FLAKE=${lib.escapeShellArg config.dotfiles.sourceDirectory}
       # Schemas live under share/gsettings-schemas/<name>, not share/.
       # dconf.lib supplies the GIO backend; dconf is the user database tool.
       export XDG_DATA_DIRS="${schemaData}:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"

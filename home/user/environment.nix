@@ -23,7 +23,7 @@ in
     LESS = "-R";
     MANPAGER = "nvim +Man!";
     MUX_BACKEND = "herdr";
-    NH_HOME_FLAKE = "${config.home.homeDirectory}/.dotfiles";
+    NH_HOME_FLAKE = config.dotfiles.sourceDirectory;
     NIXPKGS_ALLOW_UNFREE = 1;
     PAGER = "less --raw-control-chars -F -X";
     RUBYOPT = "--enable-yjit";
@@ -48,7 +48,7 @@ in
 
   systemd.user.sessionVariables = lib.mkIf isGraphicalLinux {
     PATH = graphicalSessionPath;
-    SHELL = "/run/current-system/sw/bin/fish";
+    SHELL = "${pkgs.fish}/bin/fish";
     # Launcher-started Qt apps inherit the user manager, not Hyprland's env.
     QT_QPA_PLATFORMTHEME = "gtk3";
   };
@@ -60,12 +60,12 @@ in
       if [[ $systemdStatus == 'running' || $systemdStatus == 'degraded' ]]; then
         ${pkgs.systemd}/bin/systemctl --user set-environment \
           PATH=${lib.escapeShellArg graphicalSessionPath} \
-          SHELL=/run/current-system/sw/bin/fish \
+          SHELL=${pkgs.fish}/bin/fish \
           QT_QPA_PLATFORMTHEME=gtk3
 
         env \
           PATH=${lib.escapeShellArg graphicalSessionPath} \
-          SHELL=/run/current-system/sw/bin/fish \
+          SHELL=${pkgs.fish}/bin/fish \
           QT_QPA_PLATFORMTHEME=gtk3 \
           ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd PATH SHELL QT_QPA_PLATFORMTHEME
 

@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   isGraphicalLinux,
@@ -31,7 +32,7 @@
   explicit passwd-file from the system secret so recovery does not depend
   on the agent race.
 */
-lib.mkIf isGraphicalLinux (
+lib.mkIf (isGraphicalLinux && config.dotfiles.privateEnabled) (
   let
     pythonEnv = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
 

@@ -98,9 +98,10 @@ Remote activation and any cleanup of stored data require explicit authorization.
 
 `nix-config` pins `willfish/nix-config` over SSH. It supplies encrypted SOPS files,
 recipient policy, work integrations, and private Home Manager/NixOS modules.
-Building this personal configuration requires authenticated access to that input;
-the public source is not a standalone configuration for other users. Keep the
-input and its test logs private. CI access to it is not configured here.
+Building the named owner configurations requires authenticated access to that
+input. Other users should use the [public Home Manager installer](public-install.md),
+which excludes private modules unless its decryption probe succeeds. Keep the
+private input and its test logs private. CI access to it is not configured here.
 
 Moving files does not remove historical copies. Before publishing an existing
 repository, sanitize every branch and tag and resolve retained pull-request refs,

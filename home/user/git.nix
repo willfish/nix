@@ -239,12 +239,12 @@ in
   programs.git = {
     enable = true;
     package = gitWithWorktreeDirenv;
-    signing = {
+    signing = lib.mkIf config.dotfiles.privateEnabled {
       key = "BC6DED9479D436F5";
       signByDefault = true;
     };
     settings = {
-      user = {
+      user = lib.mkIf config.dotfiles.privateEnabled {
         name = "William Fish";
         email = "william.michael.fish@gmail.com";
       };
@@ -335,19 +335,21 @@ in
 
   # gcr-ssh-agent starts empty after reboot and does not store keys.
   # ssh-add with no arguments loads only the default identity.
-  systemd.user.services.ssh-add-default = lib.mkIf isGraphicalLinux {
-    Unit = {
-      Description = "Load the default SSH key into the session agent";
-      After = [ "gcr-ssh-agent.socket" ];
-      Wants = [ "gcr-ssh-agent.socket" ];
-      ConditionPathExists = "/etc/systemd/user/gcr-ssh-agent.socket";
-    };
-    Install.WantedBy = [ "default.target" ];
-    Service = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      Environment = [ "SSH_AUTH_SOCK=%t/gcr/ssh" ];
-      ExecStart = "${pkgs.openssh}/bin/ssh-add";
-    };
-  };
+  systemd.user.services.ssh-add-default =
+    lib.mkIf (isGraphicalLinux && config.dotfiles.privateEnabled)
+      {
+        Unit = {
+          Description = "Load the default SSH key into the session agent";
+          After = [ "gcr-ssh-agent.socket" ];
+          Wants = [ "gcr-ssh-agent.socket" ];
+          ConditionPathExists = "/etc/systemd/user/gcr-ssh-agent.socket";
+        };
+        Install.WantedBy = [ "default.target" ];
+        Service = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          Environment = [ "SSH_AUTH_SOCK=%t/gcr/ssh" ];
+          ExecStart = "${pkgs.openssh}/bin/ssh-add";
+        };
+      };
 }

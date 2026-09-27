@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   isGraphicalLinux,
@@ -81,7 +82,7 @@ let
   };
   sourceFile = source: {
     inherit source;
-    force = true;
+    force = config.dotfiles.privateEnabled;
   };
 in
 {
@@ -135,15 +136,15 @@ in
 
   xdg.configFile = lib.optionalAttrs isGraphicalLinux {
     "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
-    "mimeapps.list".force = true;
+    "mimeapps.list".force = config.dotfiles.privateEnabled;
     # Direct file, not the config directory: a directory copy drops untracked files.
     "cliamp/radios.toml" = {
       text = builtins.readFile ../config/cliamp/radios.toml;
-      force = true;
+      force = config.dotfiles.privateEnabled;
     };
     "cliamp/playlists/forte-radio.m3u" = {
       text = builtins.readFile ../config/cliamp/playlists/forte-radio.m3u;
-      force = true;
+      force = config.dotfiles.privateEnabled;
     };
   };
 
@@ -151,13 +152,15 @@ in
 
   xdg.dataFile = lib.optionalAttrs isGraphicalLinux (
     {
-      "applications/mimeapps.list".force = true;
+      "applications/mimeapps.list".force = config.dotfiles.privateEnabled;
+    }
+    // lib.optionalAttrs config.dotfiles.privateEnabled {
       "icons/hicolor/512x512/apps/switchboard.png" = {
         source = "${switchboardIcon}/switchboard.png";
-        force = true;
+        force = config.dotfiles.privateEnabled;
       };
       "applications/switchboard.desktop" = {
-        force = true;
+        force = config.dotfiles.privateEnabled;
         text = ''
           [Desktop Entry]
           Type=Application
@@ -175,7 +178,7 @@ in
       map (app: {
         name = "applications/chrome-${app.id}-Default.desktop";
         value = {
-          force = true;
+          force = config.dotfiles.privateEnabled;
           text = ''
             [Desktop Entry]
             Type=Application

@@ -39,6 +39,7 @@ class ApprovalPolicyTest(unittest.TestCase):
                       root = builtins.toPath {json.dumps(tmp)};
                       catalog = []; capabilities = {{}};
                     }};
+                    dotfiles.privateEnabled = true;
                     dotfiles.capabilities = builtins.mapAttrs (_: _: true)
                       (import (root + "/home/user/skill-capabilities.nix"));
                   }};

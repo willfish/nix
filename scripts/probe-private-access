@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Exit success only when this SSH identity can decrypt the pinned secret file.
+# Run with sops and ssh-to-age on PATH. Never emit key material or plaintext.
+set -euo pipefail
+set +x
+
+if [ "$#" -ne 2 ]; then
+  echo "usage: probe-private-access SSH_PRIVATE_KEY SOPS_FILE" >&2
+  exit 64
+fi
+[ -r "$1" ] && [ -r "$2" ] || exit 1
+umask 077
+key_dir=$(mktemp -d)
+key_file="$key_dir/key"
+trap 'rm -rf -- "$key_dir"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+ssh-to-age -private-key -i "$1" > "$key_file" 2>/dev/null || exit 1
+# Ignore unrelated ambient credentials: the supplied SSH key must be sufficient.
+env -i PATH="$PATH" HOME="$key_dir" GNUPGHOME="$key_dir" \
+  SOPS_AGE_KEY_FILE="$key_file" \
+  sops --decrypt --output /dev/null "$2" >/dev/null 2>&1

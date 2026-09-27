@@ -213,7 +213,7 @@ in
     # User desktop files override the profile. xdg.desktopEntries is not
     # installed by this Home Manager, so write the launcher entry directly.
     xdg.dataFile."applications/spotify.desktop" = {
-      force = true;
+      force = config.dotfiles.privateEnabled;
       text = ''
         [Desktop Entry]
         Type=Application
