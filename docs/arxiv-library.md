@@ -56,6 +56,18 @@ The opt-in embedding worker is limited to 1.5 CPU cores' quota and 2 GB RAM. Ind
 systemctl --user start --no-block arxiv-index
 ```
 
+## Manual dataset refresh
+
+On Terminus, check Hugging Face for a newer archive revision without changing the library:
+
+```sh
+arxiv-library-refresh /srv/media/arxiv
+```
+
+After the initial import finishes, use `arxiv-library-refresh /srv/media/arxiv --apply` to apply an update. The command pins the upstream commit, reuses archives by hash and inserts or updates only changed papers and search entries. Interrupted updates resume with the same command. There is no update timer, and the command refuses an active importer.
+
+Changed or repacked archives still require whole-file downloads. The first refresh builds an ID-only membership catalogue; checksum verification still reads local files. Removed upstream papers are retained and reported, not automatically deleted. Committed batches become visible to NAS-backed search immediately; a separate SSD snapshot must be audited and republished explicitly. See the [upstream refresh documentation](https://github.com/willfish/arxiv-mcp#refreshing-the-library) for revision selection and recovery semantics.
+
 ## Corpus verification
 
 After activation, get a cheap coverage report with:
@@ -70,7 +82,7 @@ A quick report never claims verified completion. Once all papers are imported, v
 arxiv-library-audit /srv/media/arxiv --full --text-only
 ```
 
-The full text audit refuses incomplete import coverage with exit code 2. When ready, it reads all source shards and stored bodies, compares metadata to the shipped source lock, and validates SQLite/FTS integrity and paper IDs. It does not require or validate embedding artifacts. For optional embedding coverage, omit `--text-only`: the audit additionally requires complete encoding/publication and checks every expected passage ID, published ANN IDs and model provenance. This is substantial disk I/O, not a health probe. Its completion result concerns corpus integrity and coverage; fleet connectivity and retrieval quality still need separate checks.
+The full text audit refuses incomplete import coverage with exit code 2. When ready, it reads all source shards and stored bodies, compares metadata to the shipped source lock or completed refresh provenance, and validates SQLite/FTS integrity and paper IDs. Refreshed libraries report retained papers separately from current source coverage. It does not require or validate embedding artifacts. For optional embedding coverage, omit `--text-only`: the audit additionally requires complete encoding/publication and checks every expected passage ID, published ANN IDs and model provenance. This is substantial disk I/O, not a health probe. Its completion result concerns corpus integrity and coverage; fleet connectivity and retrieval quality still need separate checks.
 
 For a separate serving database, pass `--database /path/to/library.sqlite3` to the audit while keeping the positional root pointed at the canonical NAS corpus. The native CLI selects a database through `ARXIV_DATABASE` or `--database`. These options do not publish or certify a serving copy; keep the live route unchanged until full coverage and integrity have been verified.
 
@@ -88,4 +100,4 @@ The native path currently serves the NAS database. Snapshot-readiness integratio
 
 Old generations are retained for existing readers. Remove them only after those clients exit. Failed publication can leave an unreferenced generation; interrupted processes can leave `.staging-*` directories. Inspect these before cleanup, and never remove the generation referenced by `current` or by an active client.
 
-Hash failures stop work rather than overwriting potentially corrupt data. Inspect the failing artifact and preserve it before replacing it. Do not delete `embeddings/block-*`: the published index uses them for reranking. A changed dataset or model requires an explicit migration, not editing the pinned manifest in place.
+Hash failures stop work rather than overwriting potentially corrupt data. Inspect the failing artifact and preserve it before replacing it. Do not delete `embeddings/block-*`: the published index uses them for reranking. Use the manual refresh command for dataset changes; never edit the original pinned manifest in place. A changed embedding model still requires a separate migration.
