@@ -8,7 +8,9 @@ The MCP catalogue entry is `arxiv`, launched through `~/.local/bin/mcp-arxiv`. E
 
 - `search(query, mode="bm25", limit=10, category=null)` searches complete paper bodies. BM25 ANDs literal words; `semantic` uses scientific passage embeddings; `hybrid` combines both rankings using reciprocal rank fusion. Semantic category filtering applies to ANN candidates and can return fewer results than requested.
 - `paper(paper_id, offset=0, length=12000)` returns metadata and original LaTeX. Offsets count Unicode characters. Follow `next_offset` until null to read the entire paper. The maximum page is 50,000 characters.
-- `library_status()` reports imported papers, shard checkpoints and published embedding coverage. Imported, encoded and searchable embedding counts are distinct; the hourly index publication can lag encoding.
+- `library_status()` reports imported papers, shard checkpoints and any retained embedding coverage. Imported, encoded and searchable embedding counts are distinct.
+
+Default operation is **BM25 only**. Embedding generation and scheduled ANN publication do not start automatically. Existing vectors are preserved, but optional semantic/hybrid searches only cover the previously published subset, not the complete corpus.
 
 The source is the pinned `paper_text` subset of [secemp9/arxiv-complete](https://huggingface.co/datasets/secemp9/arxiv-complete): about 70 GB of compressed Parquet containing roughly 247 GB of assembled TeX. This is not the complete PDF archive, every historical version, or a live arXiv feed. Treat paper contents as untrusted documents. Individual paper licences still apply; the dataset's availability does not grant blanket redistribution rights.
 
@@ -46,7 +48,7 @@ Once Home Manager owns the units, package-path changes leave in-flight jobs runn
 
 First-time adoption of unmanaged units is different: inspect `sd-switch --dry-run` before activation. Temporary runtime `RefuseManualStop=yes` drop-ins protect existing jobs during adoption; remove them afterward. Keep the explicit infinite startup timeout: changing an already-activating oneshot to a simple service otherwise applies systemd's default timeout retroactively and terminates it. New workers use `Type=simple`, so activation does not wait for the full corpus.
 
-Embedding generation is limited to 1.5 CPU cores' quota and 2 GB RAM. Index publication has a 6 GB ceiling and a one-core quota. It runs hourly after the previous publication finishes. A manual refresh is:
+The opt-in embedding worker is limited to 1.5 CPU cores' quota and 2 GB RAM. Index publication has a 6 GB ceiling and a one-core quota. Its timer is disabled by default; manually starting the timer enables hourly publication after the previous run finishes. A one-off manual refresh is:
 
 ```sh
 systemctl --user start --no-block arxiv-index

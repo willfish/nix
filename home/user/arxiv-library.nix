@@ -86,6 +86,8 @@ in
       Service.ExecStart = "${package}/bin/arxiv-library-ingest ${root} --watch";
     };
     arxiv-embeddings = lib.recursiveUpdate (worker "embeddings") {
+      # Embeddings are opt-in; routine ingestion only builds the BM25 index.
+      Install.WantedBy = [ ];
       Service = {
         ExecStart = "${package}/bin/arxiv-library-embeddings ${root} --watch";
         CPUQuota = "150%";
@@ -116,6 +118,7 @@ in
       OnUnitInactiveSec = "1h";
       Unit = "arxiv-index.service";
     };
-    Install.WantedBy = [ "timers.target" ];
+    # Retain manual use without scheduling further embedding publication.
+    Install.WantedBy = [ ];
   };
 }
