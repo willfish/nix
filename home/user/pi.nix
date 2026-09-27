@@ -182,6 +182,12 @@ in
   home.file.".pi/agent/agents/test-engineer.md".source = ../config/pi/agents/test-engineer.md;
   home.file.".pi/agent/agents/security-reviewer.md".source = ../config/pi/agents/security-reviewer.md;
   home.file.".pi/agent/agents/domain-specialist.md".source = ../config/pi/agents/domain-specialist.md;
+  home.file.".pi/agent/agents/interface-designer.md".source =
+    ../config/pi/agents/interface-designer.md;
+  home.file.".pi/agent/agents/dashboard-designer.md".source =
+    ../config/pi/agents/dashboard-designer.md;
+  home.file.".pi/agent/agents/communication-designer.md".source =
+    ../config/pi/agents/communication-designer.md;
   home.file.".pi/agent/prompts/implement.md".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts/implement.md";
   home.file.".pi/agent/prompts/scout-and-plan.md".source =
@@ -190,6 +196,7 @@ in
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts/implement-and-review.md";
   home.file.".pi/agent/prompts/plan-work.md".source = ../config/pi/prompts/plan-work.md;
   home.file.".pi/agent/prompts/review.md".source = ../config/pi/prompts/review.md;
+  home.file.".pi/agent/prompts/design.md".source = ../config/pi/prompts/design.md;
 
   # The adapter reads this shared path even with PI_CODING_AGENT_DIR set by
   # qwen-pi. Credentials remain in the shared runtime MCP wrappers.

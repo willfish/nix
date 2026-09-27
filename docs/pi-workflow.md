@@ -161,7 +161,7 @@ The standard profile ships the
 which registers one `subagent` tool. It delegates work to a separate `pi`
 session with its own context window, streams the subagent's tool calls and
 progress back into the main session, and supports single, parallel and chained
-runs. Four user-level agents are deployed from `home/config/pi/agents/`:
+runs. General-purpose roles under `home/config/pi/agents/` include:
 
 | Agent | Purpose |
 | --- | --- |
@@ -178,6 +178,11 @@ and in the local Qwen profile a concurrent request would double the KV cache
 memory the GPU does not have. `qwen-pi` passes `--no-extensions` plus an
 explicit list that omits the extension, so its tool set and memory footprint
 are unchanged.
+
+For user-facing design work, `/design <brief>` selects an interface, dashboard
+or communication specialist. The roles share one workflow while keeping terminal,
+web, native/mobile, data and presentation checks distinct. See the
+[design harness](design-harness.md) for examples, tool choices and limitations.
 
 The three workflow prompts from the same example are deployed as
 `/implement <task>` (scout, planner, worker), `/scout-and-plan <task>` and

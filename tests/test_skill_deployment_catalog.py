@@ -141,7 +141,7 @@ class SkillDeploymentCatalogTests(unittest.TestCase):
                 {e["name"] for e in entries if e["kind"] == kind},
                 {p.parent.name for p in (LLM / directory).glob("*/SKILL.md")},
             )
-        self.assertEqual(len(entries), 27)
+        self.assertEqual(len(entries), 29)
         self.assertEqual(sum(len(e["references"]) for e in entries), 29)
         self.assertEqual({e["name"] for e in entries if e["hermes"]}, set())
 
@@ -196,9 +196,18 @@ class SkillDeploymentCatalogTests(unittest.TestCase):
         normalized = re.sub(
             r"/nix/store/[a-z0-9]{32}-", "/nix/store/<hash>-", result.stdout)
         deployment = json.loads(normalized)
-        self.assertEqual(len(deployment), 52)
+        self.assertEqual(len(deployment), 54)
         self.assertEqual(sum(isinstance(v.get("source"), dict)
-                         for v in deployment.values()), 48)
+                         for v in deployment.values()), 50)
+        design = deployment[".agents/skills/design-workflow"]["source"]
+        self.assertEqual(design["name"], "shared-skill-design-workflow")
+        for relative in ("SKILL.md", "references/communication.md",
+                         "references/interfaces.md",
+                         "references/native-mobile.md",
+                         "references/quality.md", "references/tools.md",
+                         "scripts/contrast.py"):
+            self.assertIn(f'"$out/{relative}"', design["script"])
+        self.assertEqual(design["script"].count("cp -L --preserve=mode"), 7)
         heading = "### Approval scope\n\n"
         shared = (LLM / "AGENTS.md").read_text()
         policy = heading + shared.split(heading)[1].split(
@@ -214,7 +223,7 @@ class SkillDeploymentCatalogTests(unittest.TestCase):
         # Intentional deployment changes require reviewing this fingerprint.
         self.assertEqual(
             digest,
-            "5e31e94fc197fc93615f3bf01485a521ce45995252442a0db71e4ac01cbdc8e2")
+            "61ef0463a5e5f50a47e0df463f74160331125f09d1c0a4757cb0c9cf34f36384")
 
 
 if __name__ == "__main__":

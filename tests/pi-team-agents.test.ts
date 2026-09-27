@@ -22,6 +22,9 @@ const ROLE_LAUNCH = {
   reviewer: { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
   'security-reviewer': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
   'domain-specialist': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
+  'interface-designer': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
+  'dashboard-designer': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
+  'communication-designer': { model: 'openai-codex/gpt-6-astra', thinking: 'high' },
 };
 
 test('thinking levels accept YAML off and reject malformed values', () => {

@@ -87,6 +87,13 @@
     }
   },
   {
+    "name": "design-workflow",
+    "kind": "shared",
+    "invocation": "reference-backed domain skill",
+    "hermes": false,
+    "references": {}
+  },
+  {
     "name": "diagramming",
     "kind": "shared",
     "invocation": "model-invoked discipline",
