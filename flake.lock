@@ -22,6 +22,26 @@
         "url": "ssh://git@github.com/willfish/pi-switchboard.git"
       }
     },
+    "arxiv-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790507481,
+        "narHash": "sha256-h5WGYd/U9GNt0LCyG6F3dkjPzuFGovTJ4Awerzw7cKk=",
+        "owner": "willfish",
+        "repo": "arxiv-mcp",
+        "rev": "f5353f7cd03ad1e2b84ca2a421b19a57310a9ae8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "willfish",
+        "repo": "arxiv-mcp",
+        "type": "github"
+      }
+    },
     "base16": {
       "inputs": {
         "fromYaml": "fromYaml"
@@ -1957,6 +1977,7 @@
     "root": {
       "inputs": {
         "agent-bus": "agent-bus",
+        "arxiv-mcp": "arxiv-mcp",
         "flake-parts": "flake-parts_2",
         "forte": "forte",
         "herdr": "herdr",

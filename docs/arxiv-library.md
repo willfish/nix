@@ -2,15 +2,17 @@
 
 `home/user/arxiv-library.nix` supplies a read-only MCP client on every host and the corpus runtime on Terminus. Activate each host with `hmswitch`. Clients use authenticated SSH to `william@terminus.fritz.box`; no public HTTP endpoint or additional firewall port is required. A client must be able to reach that hostname and authenticate non-interactively. Verify an unfamiliar host key against an already trusted Terminus connection, rather than disabling host-key checking.
 
+Implementation lives in [willfish/arxiv-mcp](https://github.com/willfish/arxiv-mcp), pinned by the flake input. Dotfiles supplies deployment only. The C MCP adapter invokes the native C `arxiv` CLI on Terminus; Python is used for maintenance, not live search or retrieval.
+
 ## Search and retrieval
 
 The MCP catalogue entry is `arxiv`, launched through `~/.local/bin/mcp-arxiv`. Existing client processes may need restarting to load the newly activated catalogue.
 
-- `search(query, mode="bm25", limit=10, category=null)` searches complete paper bodies. BM25 ANDs literal words; `semantic` uses scientific passage embeddings; `hybrid` combines both rankings using reciprocal rank fusion. Semantic category filtering applies to ANN candidates and can return fewer results than requested.
+- `search(query, mode="bm25", limit=10)` searches complete paper bodies using literal-word AND matching. An optional `category` string filters the primary category. Native serving supports BM25 only.
 - `paper(paper_id, offset=0, length=12000)` returns metadata and original LaTeX. Offsets count Unicode characters. Follow `next_offset` until null to read the entire paper. The maximum page is 50,000 characters.
-- `library_status()` reports imported papers, shard checkpoints and any retained embedding coverage. Imported, encoded and searchable embedding counts are distinct.
+- `library_status()` reports imported papers, shard checkpoints and source settings. Native serving does not expose the retained embedding index.
 
-Default operation is **BM25 only**. Embedding generation and scheduled ANN publication do not start automatically. Existing vectors are preserved, but optional semantic/hybrid searches only cover the previously published subset, not the complete corpus.
+Operation is **BM25 only**. Embedding generation and scheduled ANN publication do not start automatically. Existing vectors and legacy Python semantic tools are preserved, but are not part of the native serving path.
 
 The source is the pinned `paper_text` subset of [secemp9/arxiv-complete](https://huggingface.co/datasets/secemp9/arxiv-complete): about 70 GB of compressed Parquet containing roughly 247 GB of assembled TeX. This is not the complete PDF archive, every historical version, or a live arXiv feed. Treat paper contents as untrusted documents. Individual paper licences still apply; the dataset's availability does not grant blanket redistribution rights.
 
@@ -70,6 +72,20 @@ arxiv-library-audit /srv/media/arxiv --full --text-only
 
 The full text audit refuses incomplete import coverage with exit code 2. When ready, it reads all source shards and stored bodies, compares metadata to the shipped source lock, and validates SQLite/FTS integrity and paper IDs. It does not require or validate embedding artifacts. For optional embedding coverage, omit `--text-only`: the audit additionally requires complete encoding/publication and checks every expected passage ID, published ANN IDs and model provenance. This is substantial disk I/O, not a health probe. Its completion result concerns corpus integrity and coverage; fleet connectivity and retrieval quality still need separate checks.
 
-For a separate serving database, pass `--database /path/to/library.sqlite3` to the audit while keeping the positional root pointed at the canonical NAS corpus. The server accepts `--corpus-root /srv/media/arxiv` alongside `--database` so retained semantic artifacts remain on NAS. These options do not publish or certify a serving copy; keep the live route unchanged until full coverage and integrity have been verified.
+For a separate serving database, pass `--database /path/to/library.sqlite3` to the audit while keeping the positional root pointed at the canonical NAS corpus. The native CLI selects a database through `ARXIV_DATABASE` or `--database`. These options do not publish or certify a serving copy; keep the live route unchanged until full coverage and integrity have been verified.
+
+### Optional SSD serving copy
+
+After ingestion finishes, publish a complete SSD generation without moving or altering the canonical NAS database:
+
+```sh
+arxiv-library-snapshot /srv/media/arxiv ~/.local/share/arxiv-serving
+```
+
+This one-shot command refuses an active importer or incomplete corpus. It requires free space for the database plus the larger of 32 GiB or 20% headroom, creates a consistent SQLite backup, performs the full text audit against NAS sources, and atomically replaces a `current` symlink only after verification. It does not enable embeddings, schedule repeated copies, or change the live MCP route.
+
+The native path currently serves the NAS database. Snapshot-readiness integration remains separate work: verify the published receipt, full-corpus search latency and exact retrieval before pointing `ARXIV_DATABASE` at a resolved generation. The receipt is trusted local publisher output, not protection against deliberate same-user tampering.
+
+Old generations are retained for existing readers. Remove them only after those clients exit. Failed publication can leave an unreferenced generation; interrupted processes can leave `.staging-*` directories. Inspect these before cleanup, and never remove the generation referenced by `current` or by an active client.
 
 Hash failures stop work rather than overwriting potentially corrupt data. Inspect the failing artifact and preserve it before replacing it. Do not delete `embeddings/block-*`: the published index uses them for reranking. A changed dataset or model requires an explicit migration, not editing the pinned manifest in place.

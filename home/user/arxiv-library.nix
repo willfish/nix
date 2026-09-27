@@ -6,7 +6,7 @@
 }:
 let
   isServer = pkgs.stdenv.isLinux && hostName == "terminus";
-  package = pkgs.callPackage ./mcp-packages/arxiv-library { };
+  package = pkgs.arxiv-library;
   root = "/srv/media/arxiv";
   environment = [
     "OPENBLAS_NUM_THREADS=2"
@@ -43,7 +43,10 @@ let
   };
 in
 {
-  home.packages = lib.optional isServer package;
+  home.packages = lib.optionals isServer [
+    package
+    pkgs.arxiv-mcp
+  ];
 
   home.file.".local/bin/mcp-arxiv" = {
     executable = true;
@@ -53,7 +56,8 @@ in
       ${
         if isServer then
           ''
-            exec ${package}/bin/arxiv-library-server --database ${root}/library.sqlite3
+            export ARXIV_DATABASE=${root}/library.sqlite3
+            exec ${pkgs.arxiv-mcp}/bin/arxiv-mcp
           ''
         else
           ''

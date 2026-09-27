@@ -51,6 +51,10 @@
       url = "github:willfish/mux";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    arxiv-mcp = {
+      url = "github:willfish/arxiv-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     himalaya-mcp = {
       url = "github:willfish/himalaya-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -310,6 +314,7 @@
       nix-darwin,
       mux,
       himalaya-mcp,
+      arxiv-mcp,
       herdr,
       herdr-source,
       forte,
@@ -330,6 +335,8 @@
       mkOverlay = system: _final: _prev: {
         mux = mux.packages.${system}.default;
         himalaya-mcp = himalaya-mcp.packages.${system}.default;
+        arxiv-mcp = arxiv-mcp.packages.${system}.default;
+        arxiv-library = arxiv-mcp.packages.${system}.maintenance;
         herdr = herdr.packages.${system}.default;
         herdr-source = herdr-source.outPath;
         forte = forte.packages.${system}.default;

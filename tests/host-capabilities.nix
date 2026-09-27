@@ -65,6 +65,12 @@ let
       builtins.elem "arxiv-library" packageNames == (name == "william@terminus")
     ) "only Terminus installs the corpus runtime";
     assert require (
+      builtins.elem "arxiv-mcp" packageNames == (name == "william@terminus")
+    ) "only Terminus installs the native arXiv backend";
+    assert require (
+      name != "william@terminus" || lib.hasInfix "/bin/arxiv-mcp" c.home.file.".local/bin/mcp-arxiv".text
+    ) "Terminus serves the native MCP adapter";
+    assert require (
       (c.systemd.user.services ? arxiv-ingest) == (name == "william@terminus")
     ) "only Terminus runs arXiv import jobs";
     assert require (
