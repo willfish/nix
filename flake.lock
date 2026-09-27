@@ -29,11 +29,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790510788,
-        "narHash": "sha256-dKo02r68/xawd/RdZh4ioUnOjuC/wnTuJHUdNvOYd2g=",
+        "lastModified": 1790516107,
+        "narHash": "sha256-byI/hcVuiUpRKydoMUGTqPdEONblLULZKuy4cSZsmKM=",
         "owner": "willfish",
         "repo": "arxiv-mcp",
-        "rev": "889eefc65a1809305261c5f862a72629aa559114",
+        "rev": "53aed67c548edcc3eab3912b4515f170201a9ac7",
         "type": "github"
       },
       "original": {
