@@ -300,6 +300,7 @@ in
       pango # Text layout/rendering tools used by graphics/document pipelines
     ]
     ++ lib.optionals stdenv.isLinux [
+      (pkgs.callPackage ../programs/memscope { })
       netcat-openbsd # Darwin supplies /usr/bin/nc; its Nix package is broken.
       bandwhich # Terminal bandwidth utilization tool
       iftop # Real-time network bandwidth monitoring tool
