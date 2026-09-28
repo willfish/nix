@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="196" viewBox="0 0 400 196" role="img" aria-labelledby="title desc">
+  <title id="title">dotfiles · NixOS and macOS</title>
+  <desc id="desc">Home Manager configurations for Andromeda, Starfish, Foundation, Terminus and Relay. Each host has a labelled colour swatch.</desc>
+  <!-- Original vector artwork. Text stays editable; no embedded fonts or external assets.
+       Font: DejaVu Sans (local, permissive DejaVu licence), then sans-serif.
+       Palette: locked Omarchy themes/rose-pine/colors.toml, imported by
+       home/user/themes/import-theme.nix; default for Andromeda and unknown hosts.
+       Background #faf4ed; surface #f2e9e1; text #575279; accent #56949f.
+       Secondary text uses light_foreground #6e6a86 for contrast; raw muted
+       #cecacd is reserved for the divider. Host swatches are palette colours,
+       not indicators of status or each host's configured desktop theme. -->
+  <rect width="400" height="196" rx="12" fill="#faf4ed"/>
+  <rect x="20" y="22" width="48" height="48" rx="10" fill="#f2e9e1"/>
+  <g fill="none" stroke="#56949f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 37 L40 45 L32 53"/>
+    <path d="M46 54 H56"/>
+  </g>
+  <g font-family="DejaVu Sans, sans-serif">
+    <text x="84" y="48" font-size="30" font-weight="700" fill="#575279">dotfiles</text>
+    <text x="84" y="73" font-size="18" fill="#6e6a86">NixOS · macOS</text>
+    <text x="20" y="105" font-size="18" fill="#6e6a86">System + Home Manager</text>
+    <path d="M20 120 H380" stroke="#cecacd"/>
+    <g font-size="18" fill="#575279">
+      <circle cx="25" cy="142" r="5" fill="#286983"/>
+      <text x="37" y="148">andromeda</text>
+      <circle cx="167" cy="142" r="5" fill="#b4637a"/>
+      <text x="179" y="148">starfish</text>
+      <circle cx="270" cy="142" r="5" fill="#907aa9"/>
+      <text x="282" y="148">foundation</text>
+      <circle cx="25" cy="172" r="5" fill="#56949f"/>
+      <text x="37" y="178">terminus</text>
+      <circle cx="167" cy="172" r="5" fill="#cf8057"/>
+      <text x="179" y="178">relay</text>
+    </g>
+  </g>
+</svg>

@@ -1,4 +1,6 @@
-# dotfiles
+# ![dotfiles · NixOS and macOS](docs/assets/readme-mark.svg)
+
+[Hosts and homes](#hosts-and-roles) · [Commands](#what-to-run) · [Checks](#checks-and-maintenance) · [Runbooks](#where-to-go-next)
 
 A Nix flake for William's NixOS workstations and NAS, a headless macOS node, and Home Manager environments. System configuration and user configuration are separate outputs; selecting the right home matters as much as selecting the right host.
 
@@ -45,11 +47,11 @@ NixOS system attributes below live under `nixosConfigurations`; Relay lives unde
 
 | Host / system attribute | Machine and system role | Home attribute / role |
 | --- | --- | --- |
-| `andromeda` | Thelio Major Threadripper workstation; System76 support and NVIDIA RTX 5090 configuration | `william@andromeda` / `workstation` |
-| `starfish` | Dell Precision 5750 workstation; host-specific hardware and filesystem configuration | `william@starfish` / `legacy` |
-| `foundation` | Framework 13 AMD AI-300 workstation; nixos-hardware support and patched MT7925 driver | `william@foundation` / `workstation` |
-| `terminus` | Beelink headless NAS; ZFS media storage, Immich, Audiobookshelf and Pi Switchboard hub | `william@terminus` / `nas` |
-| `relay` | Apple Silicon headless macOS automation node | `william@relay` / `automation` |
+| **andromeda** | Thelio Major Threadripper workstation; System76 support and NVIDIA RTX 5090 configuration | `william@andromeda`<br>`workstation` |
+| **starfish** | Dell Precision 5750 workstation; host-specific hardware and filesystem configuration | `william@starfish`<br>`legacy` |
+| **foundation** | Framework 13 AMD AI-300 workstation; nixos-hardware support and patched MT7925 driver | `william@foundation`<br>`workstation` |
+| **terminus** | Beelink headless NAS; ZFS media storage, Immich, Audiobookshelf and Pi Switchboard hub | `william@terminus`<br>`nas` |
+| **relay** | Apple Silicon headless macOS automation node | `william@relay`<br>`automation` |
 
 `legacy` preserves the full workstation capabilities for Starfish and generic Linux homes. Terminus excludes desktop configuration and work integrations while retaining maintenance and NAS tools. Relay uses headless browser automation rather than the workstation desktop profile.
 
@@ -101,7 +103,8 @@ direnv exec . nix build --no-link .#darwinConfigurations.relay.system
 
 ### Activate an existing owner host
 
-**These commands change the running host or home.** Build first and follow the relevant runbook's preflight and recovery steps.
+> [!WARNING]
+> **These commands change the running host or home.** Build first and follow the relevant runbook's preflight and recovery steps.
 
 On the selected NixOS host, from this checkout:
 
