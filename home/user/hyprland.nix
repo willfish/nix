@@ -357,8 +357,8 @@
         } settings.screenshot.satty
       );
       workspaceBinds = lib.concatMap (n: [
-        "${settings.bindings.workspaceMod}, ${toString n}, workspace, ${toString n}"
-        "${settings.bindings.workspaceMoveMod}, ${toString n}, movetoworkspace, ${toString n}"
+        "${settings.bindings.workspaceMod}, ${toString n}, Switch to workspace ${toString n}, workspace, ${toString n}"
+        "${settings.bindings.workspaceMoveMod}, ${toString n}, Move window to workspace ${toString n}, movetoworkspace, ${toString n}"
       ]) (lib.genList (i: i + 1) settings.workspaces);
       voiceBinds =
         lib.optionals voiceFeatures.stt [
@@ -515,12 +515,12 @@
             "col.border_locked_active" = "$theme_check";
             "col.border_locked_inactive" = "$theme_muted";
           };
-          bind =
-            settings.bindings.bind
+          bindd =
+            settings.bindings.bindd
             ++ [
-              "SUPER, V, exec, ${record}/bin/hypr-record"
-              "SUPER ALT, V, exec, ${record}/bin/hypr-record face"
-              "SUPER CTRL, V, exec, ${record}/bin/hypr-record camera"
+              "SUPER, V, Screenrecording, exec, ${record}/bin/hypr-record"
+              "SUPER ALT, V, Screenrecording with camera, exec, ${record}/bin/hypr-record face"
+              "SUPER CTRL, V, Video message, exec, ${record}/bin/hypr-record camera"
             ]
             ++ workspaceBinds
             ++ voiceBinds;

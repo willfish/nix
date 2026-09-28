@@ -61,8 +61,14 @@ let
     cp ${calendarPlugin}/LICENSE ${calendarPlugin}/Model.js ${calendarPlugin}/manifest.json \
       ${calendarPlugin}/*.qml "$out/shell/plugins/panels/calendar/"
     cp -r ${source}/shell/plugins/polkit "$out/shell/plugins/"
+    cp -r ${source}/shell/plugins/menu "$out/shell/plugins/"
     chmod -R u+w "$out"
+    printf '%s\n' 'module OmarchyMenu' 'Menu 1.0 Menu.qml' > "$out/shell/plugins/menu/qmldir"
     patch --batch -d "$out" -p1 < ${local}/nixos.patch
+    # Select mode must show before the unused menu catalogue loads.
+    substituteInPlace "$out/shell/plugins/menu/Menu.qml" \
+      --replace-fail 'cursorActive = mode !== "input"' \
+      'cursorActive = mode !== "input"; root.rowsLoaded = true'
     # pkexec realpath()s its program. The packaged tailscale path is a symlink to
     # tailscaled, so the command starts the daemon and exits before setting an operator.
     substituteInPlace "$out/shell/plugins/panels/tailscale/Service.qml" \
@@ -223,6 +229,97 @@ let
       exec quickshell --no-color --path ${bundle}/shell
     '';
   };
+  absent = pkgs.writeShellScriptBin "omarchy-cmd-present" ''
+    exit 1
+  '';
+  menuSelect = pkgs.runCommand "omarchy-menu-select" { } ''
+    mkdir -p "$out/bin"
+    cp ${source}/bin/omarchy-menu-select "$out/bin/omarchy-menu-select"
+    chmod u+w "$out/bin/omarchy-menu-select"
+    patchShebangs "$out/bin/omarchy-menu-select"
+  '';
+  keybindingsScript = pkgs.runCommand "omarchy-menu-keybindings-script" { } ''
+    install -Dm755 ${source}/bin/omarchy-menu-keybindings "$out/omarchy-menu-keybindings"
+    substituteInPlace "$out/omarchy-menu-keybindings" \
+      --replace-fail 'echo "SHIFT ALT,L,Copy URL from Web App,sendshortcut,SHIFT ALT,L,"' 'return 0' \
+      --replace-fail 'echo "SHIFT ALT,D,Download Video from Web App,sendshortcut,SHIFT ALT,D,"' 'return 0'
+    patchShebangs "$out/omarchy-menu-keybindings"
+  '';
+  omarchyShell = pkgs.writeShellApplication {
+    name = "omarchy-shell";
+    runtimeInputs = [
+      pkgs.quickshell
+      pkgs.systemd
+      pkgs.gnugrep
+      pkgs.coreutils
+    ];
+    text = ''
+      config=${lib.escapeShellArg "${bundle}/shell"}
+      quiet=0
+      if [[ ''${1:-} == -q ]]; then
+        quiet=1
+        shift
+      fi
+      fail() {
+        if (( quiet )); then
+          exit 0
+        fi
+        printf '%s\n' "''$1" >&2
+        exit 1
+      }
+      if (( ''$# < 2 )); then
+        fail "Usage: omarchy-shell <target> <method> [args...]"
+      fi
+      if [[ ''$1 == shell && ( ''$2 == summon || ''$2 == toggle ) && ''$# -eq 3 ]]; then
+        set -- "''$1" "''$2" "''$3" "{}"
+      fi
+      ready() {
+        quickshell ipc --path "''$config" show 2>/dev/null | grep -qx 'target shell'
+      }
+      systemctl --user start hyprland-panels.service
+      for _ in {1..30}; do
+        ready && break
+        sleep 0.1
+      done
+      if ! ready; then
+        systemctl --user restart hyprland-panels.service
+        for _ in {1..30}; do
+          ready && break
+          sleep 0.1
+        done
+      fi
+      ready || fail "omarchy-shell is not running"
+      if ! output=$(quickshell ipc --path "''$config" call "''$@"); then
+        fail "omarchy-shell is not running"
+      fi
+      case ''$output in
+        "Target not found." | "Function not found." | "Too few arguments provided"* | "Too many arguments provided"* | unknown)
+          fail "''$output"
+          ;;
+      esac
+      if (( ! quiet )) && [[ -n ''$output ]]; then
+        printf '%s\n' "''$output"
+      fi
+    '';
+  };
+  keybindings = pkgs.writeShellApplication {
+    name = "omarchy-menu-keybindings";
+    runtimeInputs = [
+      pkgs.hyprland
+      pkgs.gawk
+      pkgs.gnugrep
+      pkgs.jq
+      pkgs.perl
+      pkgs.libxkbcommon
+      pkgs.coreutils
+      absent
+      menuSelect
+      omarchyShell
+    ];
+    text = ''
+      exec ${keybindingsScript}/omarchy-menu-keybindings "''$@"
+    '';
+  };
   launcher = pkgs.writeShellApplication {
     name = "hypr-controls";
     runtimeInputs = [
@@ -245,6 +342,7 @@ in
     # connection editor remains available to the panel through its wrapper.
     home.packages = [
       launcher
+      keybindings
       pkgs.quickshell
       pkgs.blueman
     ];

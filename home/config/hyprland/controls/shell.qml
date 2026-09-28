@@ -9,6 +9,7 @@ import "plugins/panels/network" as Network
 import "plugins/panels/tailscale" as Tailscale
 import "plugins/panels/calendar" as Calendar
 import "plugins/polkit" as Polkit
+import "plugins/menu" as OmarchyMenu
 
 // Only a host adapter. The panel implementations and shared UI are upstream.
 ShellRoot {
@@ -101,6 +102,26 @@ ShellRoot {
     printErrors: false
     onLoaded: host.applyCalendarSettings(text())
     onFileChanged: reload()
+  }
+
+  // Pinned Omarchy menu, select mode only. Super+K fills it from hyprctl.
+  OmarchyMenu.Menu {
+    id: keybindingsMenu
+    shell: host
+  }
+
+  IpcHandler {
+    target: "shell"
+    function summon(id: string, payloadJson: string): string {
+      if (id !== "omarchy.menu") return "unknown"
+      keybindingsMenu.open(payloadJson || "{}")
+      return "ok"
+    }
+    function hide(id: string): string {
+      if (id !== "omarchy.menu") return "unknown"
+      keybindingsMenu.close()
+      return "ok"
+    }
   }
 
   IpcHandler {

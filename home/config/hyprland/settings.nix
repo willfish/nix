@@ -268,8 +268,8 @@ rec {
   # Opens the forte station list. Bare cliamp still starts on its three built-in streams.
   cliampCommand = "hypr-open com.william.cliamp ghostty --class=com.william.cliamp -e cliamp-radio";
 
-  # Shortcuts: WASD focus, Super+X launcher, Super+Shift+T
-  # theme menu. Super+V records a region; press it again to stop.
+  # Shortcuts: WASD focus, Super+X launcher, Super+K keybindings,
+  # Super+Shift+T theme menu. Super+V records a region; press it again to stop.
   # Super+Alt+V does the same with a camera square and the microphone.
   # Ctrl+Super+V records only the camera and microphone, for a video message.
   # Super+Shift+B toggles output power through DPMS.
@@ -281,38 +281,40 @@ rec {
   # them when they are not open. A second press focuses the open window
   # from any workspace. Discord and LibreOffice stay on the launcher.
   # Spotify is the Quickshell player, not the official desktop client.
-  # bind lines are the keybinds. mainMod is $mainMod. Number keys use
-  # workspaceMod and workspaceMoveMod; they are not hardcoded in the module.
+  # bindd lines are described keybinds. Super+K reads those descriptions.
+  # mainMod is $mainMod. Number keys use workspaceMod and workspaceMoveMod;
+  # they are not hardcoded in the module.
   bindings = {
     mainMod = "SUPER";
     workspaceMod = "SUPER";
     workspaceMoveMod = "SUPER SHIFT";
-    bind = [
-      "SUPER, Q, killactive,"
-      "SUPER, F, fullscreen, 0"
-      "SUPER, G, togglefloating,"
-      "SUPER, W, movefocus, u"
-      "SUPER, A, movefocus, l"
-      "SUPER, S, movefocus, d"
-      "SUPER, D, movefocus, r"
-      "SUPER SHIFT, W, movewindow, u"
-      "SUPER SHIFT, A, movewindow, l"
-      "SUPER SHIFT, S, movewindow, d"
-      "SUPER SHIFT, D, movewindow, r"
-      "SUPER, X, exec, hypr-launcher"
-      "SUPER, Return, exec, ghostty"
-      "SUPER, B, exec, hypr-open brave-browser brave"
-      "SUPER, C, exec, hypr-open slack:Slack slack"
-      "SUPER, T, exec, hypr-open org.telegram.desktop:TelegramDesktop Telegram"
-      "SUPER, E, exec, hypr-open org.gnome.Nautilus nautilus --new-window"
-      "SUPER, P, exec, ${cliampCommand}"
-      "SUPER, O, exec, hypr-spotify-focus"
-      "SUPER SHIFT, T, exec, theme-menu"
-      "SUPER SHIFT, B, exec, hypr-session display-toggle"
-      "SUPER, Escape, exec, hypr-session lock"
-      "SUPER SHIFT, Escape, exec, hypr-session menu"
-      "CTRL SHIFT, S, exec, grimblast save area - | satty --filename -"
-      ", Print, exec, grimblast save area - | satty --filename -"
+    bindd = [
+      "SUPER, K, Keybindings, exec, omarchy-menu-keybindings"
+      "SUPER, Q, Close window, killactive,"
+      "SUPER, F, Full screen, fullscreen, 0"
+      "SUPER, G, Toggle window floating, togglefloating,"
+      "SUPER, W, Focus on above window, movefocus, u"
+      "SUPER, A, Focus on left window, movefocus, l"
+      "SUPER, S, Focus on below window, movefocus, d"
+      "SUPER, D, Focus on right window, movefocus, r"
+      "SUPER SHIFT, W, Move window up, movewindow, u"
+      "SUPER SHIFT, A, Move window left, movewindow, l"
+      "SUPER SHIFT, S, Move window down, movewindow, d"
+      "SUPER SHIFT, D, Move window right, movewindow, r"
+      "SUPER, X, Launch apps, exec, hypr-launcher"
+      "SUPER, Return, Terminal, exec, ghostty"
+      "SUPER, B, Browser, exec, hypr-open brave-browser brave"
+      "SUPER, C, Slack, exec, hypr-open slack:Slack slack"
+      "SUPER, T, Telegram, exec, hypr-open org.telegram.desktop:TelegramDesktop Telegram"
+      "SUPER, E, File manager, exec, hypr-open org.gnome.Nautilus nautilus --new-window"
+      "SUPER, P, CLIamp, exec, ${cliampCommand}"
+      "SUPER, O, Spotify, exec, hypr-spotify-focus"
+      "SUPER SHIFT, T, Theme menu, exec, theme-menu"
+      "SUPER SHIFT, B, Toggle display power, exec, hypr-session display-toggle"
+      "SUPER, Escape, Lock system, exec, hypr-session lock"
+      "SUPER SHIFT, Escape, System menu, exec, hypr-session menu"
+      "CTRL SHIFT, S, Screenshot, exec, grimblast save area - | satty --filename -"
+      ", Print, Screenshot, exec, grimblast save area - | satty --filename -"
     ];
     bindle = [
       ", XF86AudioRaiseVolume, exec, wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"
@@ -336,9 +338,9 @@ rec {
   # Included only when the matching voice capability is enabled.
   voice = {
     # Opens the top-of-monitor card and records into the selected Pi session.
-    interact = "SUPER, space, exec, pi-voice-interact";
-    send = "SUPER SHIFT, space, exec, pi-voice send";
-    menu = "SUPER SHIFT, V, exec, voice-menu";
-    read = "SUPER, R, exec, pi-voice read";
+    interact = "SUPER, space, Voice, exec, pi-voice-interact";
+    send = "SUPER SHIFT, space, Send voice, exec, pi-voice send";
+    menu = "SUPER SHIFT, V, Voice picker, exec, voice-menu";
+    read = "SUPER, R, Read aloud, exec, pi-voice read";
   };
 }
