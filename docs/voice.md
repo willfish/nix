@@ -113,8 +113,11 @@ voice-menu sessions   # other currently selectable registered sessions
 ```
 
 Sessions are selected by their registration token, not their displayed label.
-The current session is normally omitted, except when it needs explicit
-confirmation for retained-text recovery. Session and dictation switching are
+The current session stays visible with a `*` marker. Selecting it simply closes
+the menu unless retained-text recovery needs explicit confirmation. The menu
+header names the selected workspace, tab or window, pane and model when available,
+rather than displaying the conversation UUID. The session picker keeps that
+context too; long labels retain the trailing model or identity discriminator. Session and dictation switching are
 unavailable while capture/transcription is busy. Status is refreshed
 before dispatch; stale actions or changed target bindings require reopening the
 menu. It never displays dictated drafts or assistant replies.

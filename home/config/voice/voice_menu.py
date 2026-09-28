@@ -86,23 +86,45 @@ def present_labels(pairs, identities):
     return shown
 
 
+def session_description(row):
+    """Menu-only context, without the pill's harness and state markers."""
+    full = row.get("full_label")
+    if not full:
+        return row.get("label") or ""
+    parts = public_label(full, None).split(" · ")
+    if parts and parts[0] in ("pi", "qwen-pi"):
+        parts = parts[1:]
+    if row.get("selected") and "selected" in parts:
+        parts.remove("selected")
+    thinking = row.get("thinking")
+    if thinking and thinking in parts:
+        parts.remove(thinking)
+    return " · ".join(parts)
+
+
 def session_pairs(status, view):
     actions = view["actions"]
-    selected_child = {
-        "select:" + row["token"]
+    sessions = {
+        "select:" + row["token"]: row
         for row in status.get("sessions", [])
-        if row.get("selected") and row.get("team_child")
-        and isinstance(row.get("token"), str)
+        if isinstance(row.get("token"), str)
+    }
+    selected_rows = {
+        action for action, row in sessions.items()
+        if row.get("selected") and not voice_busy(status)
     }
     selected = view.get("selected_session")
     pairs = []
     for action, (label, enabled) in actions.items():
         if not action.startswith("select:"):
             continue
-        if not enabled and action not in selected_child:
+        if not enabled and action not in selected_rows:
             continue
+        row = sessions.get(action, {})
+        if row.get("full_label") and not needs_destination_confirmation(status):
+            label = fit_prompt(session_description(row), 50)
         pairs.append((
-            action, label, action in selected_child or action == selected
+            action, label, action in selected_rows or action == selected
         ))
     return present_labels(pairs, view.get("session_identities") or {})
 
@@ -303,6 +325,9 @@ def prompt_for(status, section):
             )
         )
     destination = status.get("recording_label") if voice_busy(status) else None
+    selected = next((row for row in status.get("sessions", [])
+                     if row.get("selected")), {})
+    destination = destination or session_description(selected)
     destination = destination or status.get("session_label")
     if not destination:
         return "Voice"

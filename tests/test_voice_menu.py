@@ -129,12 +129,41 @@ class MenuTests(unittest.TestCase):
     def test_team_toggle_and_hidden_rows(self):
         state = status()
         state["sessions"][1]["team_child"] = True
-        self.assertEqual(menu.rows_for(state, "sessions"), [])
+        self.assertEqual(
+            [action for action, _ in menu.rows_for(state, "sessions")],
+            ["select:a"],
+        )
         self.assertIn(("team-toggle", "Show team members: off"),
                       menu.rows_for(state, "menu"))
         request = Mock(return_value=state)
         menu.run_menu(request=request, picker=Mock(return_value="team-toggle"))
         self.assertEqual(request.call_args.args[0], {"action": "team-toggle"})
+
+    def test_selected_session_context_replaces_uuid_in_header(self):
+        state = status()
+        state['session_label'] = '01a0e6d4-6e91-7403-b822-e7357e8775b0'
+        state['sessions'][0].update(
+            full_label='pi · dot · 1 · medium · grok-4.7 · selected',
+            thinking='medium', model='grok-4.7',
+        )
+        self.assertEqual(
+            menu.prompt_for(state, 'menu'), 'Voice | dot · 1 · grok-4.7')
+        self.assertEqual(
+            dict(menu.rows_for(state, 'sessions'))['select:a'],
+            '* dot · 1 · grok-4.7')
+        request = Mock(return_value=state)
+        menu.run_menu('sessions', request=request,
+                      picker=Mock(return_value='select:a'))
+        self.assertTrue(all(call.args[0] == {'action': 'status'}
+                            for call in request.call_args_list))
+
+    def test_named_session_keeps_workspace_pane_and_model(self):
+        row = dict(
+            full_label='pi · work · window · review · high · model · selected',
+            thinking='high', selected=True,
+        )
+        self.assertEqual(menu.session_description(row),
+                         'work · window · review · model')
 
     def test_selected_team_child_remains_visible_without_toggle(self):
         state = status()
