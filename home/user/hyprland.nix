@@ -520,6 +520,7 @@
             ++ [
               "SUPER, V, exec, ${record}/bin/hypr-record"
               "SUPER ALT, V, exec, ${record}/bin/hypr-record face"
+              "SUPER CTRL, V, exec, ${record}/bin/hypr-record camera"
             ]
             ++ workspaceBinds
             ++ voiceBinds;

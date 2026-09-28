@@ -51,6 +51,18 @@ run_record() {
   [ "$output" = "1726 826 270" ]
 }
 
+@test "a video message frame is a centered 16:9 camera, not the monitor" {
+  run bash -o errexit -o nounset -o pipefail "$SCRIPT" message-box 2560 1440
+  [ "$status" -eq 0 ]
+  [ "$output" = "640 360 1280 720" ]
+}
+
+@test "a video message frame shrinks to fit a small monitor" {
+  run bash -o errexit -o nounset -o pipefail "$SCRIPT" message-box 800 600
+  [ "$status" -eq 0 ]
+  [ "$output" = "80 120 640 360" ]
+}
+
 @test "a leftover lock does not block a new recording" {
   mkdir -p "$XDG_RUNTIME_DIR/hypr-record/lock"
   touch "$HYPR_RECORD_KMS_SERVER"
