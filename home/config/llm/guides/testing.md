@@ -19,6 +19,10 @@
 - Updating dependencies (Dependabot PRs)
 - Documentation-only changes
 
+## Necessary and sufficient
+
+Read `necessary-sufficient.md` before adding or reshaping examples. Test only the situations needed to exercise real behaviour, and assert every effect a replacement implementation would have to preserve. Valid, edge, and invalid coverage means distinct paths, not a matrix of inputs the code treats the same.
+
 ## What to test
 
 ### Models
@@ -52,7 +56,7 @@ See `rspec.md` for syntax. Key points:
 - Contexts: "when", "with", "without"
 - Descriptions under 40 chars
 - One behavior per example where practical
-- Cover valid, edge, and invalid cases
+- Cover valid, edge, and invalid cases that are distinct real paths
 - Use `let` and `let!` — avoid `before` blocks for setup that `let` handles
 - Use factories (FactoryBot), not fixtures
 - Test observable behavior; avoid controller internals

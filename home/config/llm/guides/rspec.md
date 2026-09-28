@@ -17,6 +17,8 @@ this as the overview, then load the narrow branch reference for the task.
   HTTP stubs, rake output helpers, and service object examples.
 - `references/rspec-flakiness.md` for focused runs, final verification,
   formatter output, live-service avoidance, and flaky test work.
+- `references/necessary-sufficient.md` for whether each example is necessary
+  and sufficient.
 
 ## Better Specs Checklist
 
@@ -27,7 +29,9 @@ this as the overview, then load the narrow branch reference for the task.
 - Keep example descriptions short, ideally under 40 characters.
 - Specify one behavior per example where practical; use `aggregate_failures`
   only for tightly related attributes from the same behavior.
-- Cover valid, edge, and invalid cases.
+- Cover valid, edge, and invalid cases that are distinct real paths.
+- Keep each example necessary and sufficient. Drop redundant cases, and do not
+  leave behaviour unasserted.
 - Use `expect` and `is_expected.to`, not `should`.
 - Prefer named `subject` and `let` over instance variables and setup-heavy
   `before` blocks.

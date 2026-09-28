@@ -176,6 +176,7 @@
     "invocation": "reference-backed domain skill",
     "hermes": false,
     "references": {
+      "necessary-sufficient.md": "guides/necessary-sufficient.md",
       "rspec.md": "guides/rspec.md",
       "rspec-factories.md": "guides/rspec-factories.md",
       "rspec-flakiness.md": "guides/rspec-flakiness.md",
