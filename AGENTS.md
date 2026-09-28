@@ -22,7 +22,7 @@ Use `hmswitch` for Home Manager activation. After module changes, build the sele
 
 Brave debugging is configured in programs.nix on port 9222; probe `/json/version`. Use browser MCP first, prefer evaluate_script to snapshots for extraction. For GitHub use MCP first, then gh rather than scraping.
 
-Commit, switch and push home-manager changes when done.
+Finish `~/.dotfiles` work before you stop: commit on master, run `hmswitch`, then push. Do this even when the session cwd is another repository. The same finish line is in `home/config/llm/AGENTS.md`, which every agent already has. Leaving the tree dirty, or waiting to be asked, is not done. Skip only when the user explicitly said not to commit, switch, or push.
 
 NEVER USE BRANCHES UNLESS EXPLICITLY INSTRUCTED
 

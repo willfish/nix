@@ -2,6 +2,8 @@
 
 Never use em dashes. Follow user requests within higher-priority rules.
 
+A change under `~/.dotfiles` is not finished until it is committed on master, activated with `hmswitch`, and pushed. Do that before you stop, even when this session's cwd is another repository. Leave that tree dirty only when the user explicitly said not to commit, switch, or push.
+
 KEEP EVERYTHING AS SIMPLE AS POSSIBLE. Don't build sophisticated enterprise level systems for a small web app.
 
 ## Skills and approval

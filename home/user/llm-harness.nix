@@ -103,7 +103,10 @@ let
   legacyApproval = builtins.filter (lib.hasPrefix "For new behaviour") (
     lib.splitString "\n\n" selectedAgentRules
   );
-  effectiveAgentRules =
+  # Sessions outside this repo do not load .dotfiles/AGENTS.md. Private rules
+  # can omit the finish line, so keep it on every deployed copy.
+  dotfilesFinishLine = "A change under `~/.dotfiles` is not finished until it is committed on master, activated with `hmswitch`, and pushed. Do that before you stop, even when this session's cwd is another repository. Leave that tree dirty only when the user explicitly said not to commit, switch, or push.";
+  mergedAgentRules =
     if selectedAgentRules == sharedAgentRules then
       sharedAgentRules
     else if
@@ -114,6 +117,11 @@ let
       throw "Private AGENTS.md approval boundary changed; reconcile it with canonical Approval scope"
     else
       lib.replaceStrings [ (builtins.head legacyApproval) ] [ sharedApproval ] selectedAgentRules;
+  effectiveAgentRules =
+    if lib.hasInfix dotfilesFinishLine mergedAgentRules then
+      mergedAgentRules
+    else
+      "${mergedAgentRules}\n\n${dotfilesFinishLine}\n";
   mkAgentRuleFiles = lib.genAttrs agentRuleFiles (_: {
     text = effectiveAgentRules;
     force = config.dotfiles.privateEnabled;

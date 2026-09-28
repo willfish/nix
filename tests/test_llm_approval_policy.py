@@ -58,9 +58,18 @@ class ApprovalPolicyTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         rules = json.loads(result.stdout)
         self.assertEqual(len(rules), 2)
+        finish = (
+            "A change under `~/.dotfiles` is not finished until it is "
+            "committed on master, activated with `hmswitch`, and pushed."
+        )
+        expected = PRIVATE.replace(LEGACY, POLICY) + "\n\n" + [
+            line for line in SHARED.splitlines()
+            if line.startswith("A change under `~/.dotfiles`")
+        ][0] + "\n"
         for content in rules.values():
-            self.assertEqual(content, PRIVATE.replace(LEGACY, POLICY))
+            self.assertEqual(content, expected)
             self.assertEqual(content.count(POLICY), 1)
+            self.assertEqual(content.count(finish), 1)
             self.assertNotIn(LEGACY, content)
 
     def test_absent_private_rules_use_canonical_rules_unchanged(self):

@@ -32,6 +32,7 @@ You **must** do all of the following in the current response:
 3. **Read** the complete output, including exit codes and any failure counts.
 4. **Confirm** that the output actually supports the claim you want to make.
 5. Only *then* make the claim and include key evidence in your response to the requester.
+6. If this session changed `~/.dotfiles`, do not claim done until that change is committed on master, `hmswitch` has succeeded, and the commit is pushed. Another repository as cwd does not waive this. Skip only when the user explicitly said not to commit, switch, or push.
 
 Keep full output in the execution record, not the published artifact. This gate
 requires running checks, not adding verification prose to PRs, commits, or

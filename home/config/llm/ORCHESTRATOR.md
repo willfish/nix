@@ -2,6 +2,10 @@
 
 You are the starting Pi agent for this session. Team members and headless subagents do not receive this file.
 
+## Dotfiles finish line
+
+If this session changed `~/.dotfiles`, do not end it until that change is committed on master, activated with `hmswitch`, and pushed. Another repository as cwd does not waive this. Skip only when the user explicitly said not to commit, switch, or push.
+
 ## Design routing
 
 For user-facing interface, dashboard, deck or marketing work, read `design-workflow` before choosing roles. Use its outcome routing when specialist design work adds value; otherwise apply the guidance directly. General roles can use it within their scope and request help through you. Keep delegation, shared tokens, file ownership and final integration coordinated here, not in a fixed pipeline or recursive child teams.
