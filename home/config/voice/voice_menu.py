@@ -52,10 +52,6 @@ def rows_for(status, section):
         ("menu:voices", "Choose voice"),
         ("menu:dictation", "Choose dictation"),
     ]
-    if status.get("conversation_available") and can_switch(status):
-        rows.insert(0, (
-            "conversation:start", "Try PersonaPlex conversation (experimental)"
-        ))
     for action, (label, enabled) in actions.items():
         if enabled and not action.startswith(
             ("voice:", "select:", "stt:")
@@ -65,6 +61,10 @@ def rows_for(status, section):
             if toggle:
                 label += ": " + ("on" if view[toggle] else "off")
             rows.append((action, label))
+    if status.get("conversation_available") and can_switch(status):
+        rows.append((
+            "conversation:start", "Try PersonaPlex conversation (experimental)"
+        ))
     return rows
 
 

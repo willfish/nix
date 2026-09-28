@@ -77,6 +77,16 @@ class ConversationTests(unittest.TestCase):
             "conversation:start", dict(menu.rows_for({"phase": "idle"}, "menu"))
         )
 
+    def test_personaplex_is_last_in_the_voice_menu(self):
+        rows = menu.rows_for(
+            {"phase": "idle", "conversation_available": True}, "menu"
+        )
+        self.assertEqual(rows[-1][0], "conversation:start")
+        self.assertLess(
+            next(i for i, row in enumerate(rows) if row[0] == "menu:dictation"),
+            len(rows) - 1,
+        )
+
     def test_cancel_changes_nothing(self):
         run = Mock()
         mode = conversation.Conversation(run)
