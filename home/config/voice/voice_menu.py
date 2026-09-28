@@ -16,6 +16,7 @@ MENU_LAUNCHERS = {
     "menu:sessions": "Choose session",
     "menu:voices": "Choose voice",
     "menu:dictation": "Choose dictation",
+    "menu:speech": "Choose speech",
 }
 
 
@@ -140,6 +141,7 @@ def root_order(status):
         "recover-stage",
         "recover-copy",
         "menu:sessions",
+        "menu:speech",
         "menu:voices",
         "menu:dictation",
         "auto-toggle",
@@ -211,6 +213,11 @@ def rows_for(status, section):
         )
     if section == "sessions":
         return session_pairs(status, view)
+    if section == "speech":
+        return prefixed_rows(
+            actions, "speech:",
+            "speech:" + status.get("speech_backend", "local")
+        )
     if section == "dictation":
         return prefixed_rows(
             actions, "stt:", "stt:" + (status.get("selected_stt") or "whisper")
@@ -220,12 +227,15 @@ def rows_for(status, section):
         "menu:sessions": session_pairs(status, view),
         "menu:voices": prefixed_rows(actions, "voice:"),
         "menu:dictation": prefixed_rows(actions, "stt:"),
+        "menu:speech": prefixed_rows(actions, "speech:"),
     }
     for action, title in MENU_LAUNCHERS.items():
         if submenu_rows[action]:
             rows.append((action, title))
     for action, (label, enabled) in actions.items():
-        if not enabled or action.startswith(("voice:", "select:", "stt:")):
+        if not enabled or action.startswith(
+            ("voice:", "select:", "stt:", "speech:")
+        ):
             continue
         if action == "stop" and not live_stop(status):
             continue
@@ -275,6 +285,7 @@ def prompt_for(status, section):
         return {
             "voices": f"Voice ({current})",
             "dictation": f"Dictation ({current_stt})",
+            "speech": "Speech backend",
             "sessions": "Sessions",
         }[section]
     if not (
@@ -433,7 +444,7 @@ def main(args=None):
     parser.add_argument(
         "section",
         nargs="?",
-        choices=["menu", "voices", "dictation", "sessions"],
+        choices=["menu", "voices", "dictation", "speech", "sessions"],
         default="menu",
     )
     parser.add_argument(

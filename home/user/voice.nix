@@ -207,9 +207,9 @@ in
             "alsa_input.usb-Razer_Inc_Razer_Kiyo_Pro_Ultra-02.analog-stereo"
           else
             null;
-        auto_speak = voiceTts;
+        auto_speak = true;
         voice_preferences_path = "${dataDir}/voice-mode";
-        playback_mode = if voiceTts then "streaming" else "buffered";
+        playback_mode = "streaming";
       }
       // lib.optionalAttrs voiceTts {
         tts_voices = characterVoices;

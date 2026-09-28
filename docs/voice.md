@@ -7,11 +7,13 @@ Whisper small.en on the Radeon iGPU. Pause detection stays in the local
 recorder. The recogniser does not run a second VAD pass, because short slices
 were being dropped. audio.cpp
 runs Qwen3-TTS 0.6B with two pinned Samantha references. Andromeda uses CUDA
-for TTS. Foundation has no TTS. macOS needs separate platform adapters.
+for local TTS. Deepgram Aura-2 provides cloud speech on both Andromeda and
+Foundation using the existing Deepgram API key. Foundation has no local TTS.
+macOS needs separate platform adapters.
 
 ## Launch and select a session
 
-On Andromeda, and for dictation on Foundation, interactive `pi` and `qwen-pi`
+On Andromeda and Foundation, interactive `pi` and `qwen-pi`
 sessions inside Herdr attach automatically. Team panes do not register and cannot
 be selected. The lightweight controller starts at login. Speech models
 load on use: Whisper for dictation and TTS for playback. Print, RPC and
@@ -91,13 +93,21 @@ can be read, or the recovery choice when dictation is held for a lost destinatio
 Session, voice, and dictation follow those, then playback and team toggles.
 Discard stays below the non-destructive choices. PersonaPlex, when offered, is last.
 Empty session, voice, or dictation lists are omitted rather than opened.
-The default dictation backend is Whisper. Deepgram is recognition only; playback stays on
-Qwen. The existing recording and send hotkeys are unchanged; the picker does not
+The default dictation backend is Whisper. Speech is selected independently:
+Deepgram is the default when its API key is available, otherwise local Qwen is used.
+**Choose speech** appears when both are available. **Choose voice** shows only the
+active backend's catalogue: Aura-2 English voices for Deepgram, or characters such
+as Samantha for local Qwen. Each backend remembers its own selected voice; the
+speech backend choice is also saved. Deepgram sends reply summaries to its API,
+incurs usage charges, and needs connectivity. Requests opt out of model improvement.
+Cloud failures are reported without silently switching voices or providers.
+The existing recording and send hotkeys are unchanged; the picker does not
 introduce another Send action.
 
 ```bash
 voice-menu            # controls and submenu choices
-voice-menu voices     # character list; * marks the selected voice
+voice-menu voices     # active backend's voices; * marks the selection
+voice-menu speech     # local characters or Deepgram
 voice-menu dictation  # Whisper or Deepgram; * marks the selected backend
 voice-menu sessions   # other currently selectable registered sessions
 ```
@@ -163,9 +173,11 @@ show team members and read replies aloud. Team panes are not registered, so that
 toggle does not reveal them. Dictation is a radio choice between local Whisper
 and cloud Deepgram. It is locked while recording or transcribing so the current
 take keeps one backend; opening that submenu then says it is locked, which is
-different from having no backend installed. **Read replies aloud** is shown only where speech synthesis is installed.
-Turning it on starts the speech service and keeps it running; turning it off
-stops playback and that service. It toggles automatic playback of
+different from having no backend installed. **Read replies aloud** is shown only
+when local speech or a Deepgram key is available. With local speech selected,
+turning it on starts the speech service and keeps it running. Deepgram does not
+start or retain the GPU speech service. Turning it off stops playback and retires
+any local speech service after outstanding requests finish. It toggles automatic playback of
 completed replies. Other actions appear only when useful: Replay last reply,
 Record more, Retry transcription, Discard waiting dictation or a retained recording, and Bind
 to current conversation. Cancel recording, Cancel transcription or Stop speaking

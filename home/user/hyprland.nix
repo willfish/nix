@@ -366,7 +366,7 @@
           settings.voice.send
           settings.voice.menu
         ]
-        ++ lib.optionals voiceFeatures.tts [ settings.voice.read ];
+        ++ lib.optionals voiceFeatures.stt [ settings.voice.read ];
       colourFields = {
         "col.active_border" = "$theme_active_border";
         "col.inactive_border" = "$theme_inactive_border";

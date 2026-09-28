@@ -170,6 +170,10 @@ def presentation(status):
         context.append('Team members are silent')
     for character, label in status.get("voices", {}).items():
         actions["voice:" + character] = (public_label(label), True)
+    speech_backends = status.get("speech_backends", {})
+    if len(speech_backends) > 1:
+        for name, label in speech_backends.items():
+            actions["speech:" + name] = (public_label(label), not busy)
     selected_stt = status.get("selected_stt") or "whisper"
     for name, label in status.get("stt_backends", {}).items():
         actions["stt:" + name] = (public_label(label), not busy)

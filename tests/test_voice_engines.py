@@ -89,6 +89,13 @@ class EngineTests(unittest.TestCase):
         self.queue.drain()
         self.assertEqual(self.commands, [('stt', 'stop')])
 
+    def test_retirement_before_startup_adoption_stops_old_service(self):
+        self.manager.reconcile_startup(lambda engine, timeout: engine == 'tts')
+        self.manager.retire('tts')
+        self.queue.drain()
+        self.assertEqual(self.commands, [('tts', 'stop')])
+        self.assertFalse(self.manager.state('tts').running)
+
     def test_resident_speech_survives_idle_until_retired(self):
         lease = self.manager.ensure_resident('tts')
         self.queue.drain()

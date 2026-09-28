@@ -151,7 +151,10 @@ class EngineManager:
                 if error:
                     state.error = error
                 if state.running and not state.users:
-                    state.last_release = self.clock()
+                    # Retirement may arrive before this asynchronous adoption.
+                    state.last_release = self.clock() - (
+                        self.idle_timeout if state.retire_when_idle else 0
+                    )
                     old = self._idle_timers.pop(engine, None)
                     if old:
                         old.cancel()

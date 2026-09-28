@@ -51,6 +51,24 @@ def speech_chunks(text, maximum=260, first=120):
     return chunks
 
 
+DEEPGRAM_VOICES = {
+    name: {
+        "label": name.replace("-", " ").title(),
+        "options": {"model": f"aura-2-{name}-en"},
+    }
+    for name in (
+        "amalthea", "andromeda", "apollo", "arcas", "aries",
+        "asteria", "athena", "atlas", "aurora", "callista",
+        "cora", "cordelia", "delia", "draco", "electra",
+        "harmonia", "helena", "hera", "hermes", "hyperion",
+        "iris", "janus", "juno", "jupiter", "luna", "mars",
+        "minerva", "neptune", "odysseus", "ophelia", "orion",
+        "orpheus", "pandora", "phoebe", "pluto", "saturn",
+        "selene", "thalia", "theia", "vesta", "zeus",
+    )
+}
+
+
 class LocalAudio:
     def __init__(self, runtime, config, *, engines=None):
         self.engines = engines
@@ -58,18 +76,52 @@ class LocalAudio:
         self.player = None
         self.on_audible = None
         self.lock = threading.Lock()
-        self.voices = {
-            "samantha": {"label": "Samantha", "options": {}},
-            **config.get("tts_voices", {}),
-        }
+        local_enabled = config.get("tts_enabled", True)
+        self.local_voices = (
+            {
+                "samantha": {"label": "Samantha", "options": {}},
+                **config.get("tts_voices", {}),
+            }
+            if local_enabled else {}
+        )
+        self.voices = self.local_voices
         self.selected_voice = "samantha"
+        self.selected_deepgram_voice = "thalia"
         preferences = config.get("voice_preferences_path")
         self.voice_preferences = Path(preferences) if preferences else None
+        self.deepgram_preferences = (
+            self.voice_preferences.with_name("deepgram-voice")
+            if self.voice_preferences else None
+        )
         if self.voice_preferences and self.voice_preferences.exists():
             saved = self.voice_preferences.read_text().strip()
             # Previous Samantha modes and removed characters return to Samantha.
-            if saved in self.voices:
+            if saved in self.local_voices:
                 self.selected_voice = saved
+        if (
+            self.deepgram_preferences
+            and self.deepgram_preferences.exists()
+        ):
+            saved = self.deepgram_preferences.read_text().strip()
+            if saved in DEEPGRAM_VOICES:
+                self.selected_deepgram_voice = saved
+        self.speech_backends = {}
+        if self.local_voices:
+            self.speech_backends["local"] = "Local characters"
+        if os.environ.get("DEEPGRAM_API_KEY"):
+            self.speech_backends["deepgram"] = "Deepgram"
+        self.speech_backend = (
+            "deepgram" if "deepgram" in self.speech_backends else "local"
+        )
+        speech_path = (
+            self.voice_preferences.with_name("speech-backend")
+            if self.voice_preferences else None
+        )
+        self.speech_preferences = speech_path
+        if speech_path and speech_path.exists():
+            saved = speech_path.read_text().strip()
+            if saved in self.speech_backends:
+                self.speech_backend = saved
         self.stt_backend = "whisper"
         stt_path = config.get("stt_preferences_path")
         if not stt_path and self.voice_preferences:
@@ -173,16 +225,37 @@ class LocalAudio:
             cancelled.wait(min(.1, max(0, deadline - time.monotonic())))
         return False
 
+    def _save_preference(self, path, value):
+        if not path:
+            return
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(value + "\n")
+        temporary.replace(path)
+
+    def set_speech_backend(self, backend):
+        if backend not in self.speech_backends:
+            raise RuntimeError("That speech backend is not available")
+        with self.lock:
+            self._save_preference(self.speech_preferences, backend)
+            self.speech_backend = backend
+
     def set_voice(self, character):
-        if character not in self.voices:
+        catalogue = (
+            DEEPGRAM_VOICES if self.speech_backend == "deepgram"
+            else self.local_voices
+        )
+        if character not in catalogue:
             raise RuntimeError(
-                "Unknown voice; choose " + ", ".join(self.voices)
+                "Unknown voice; choose " + ", ".join(catalogue)
             )
         with self.lock:
-            if self.voice_preferences:
-                temporary = self.voice_preferences.with_suffix(".tmp")
-                temporary.write_text(character + "\n")
-                temporary.replace(self.voice_preferences)
+            if self.speech_backend == "deepgram":
+                self._save_preference(
+                    self.deepgram_preferences, character
+                )
+                self.selected_deepgram_voice = character
+                return
+            self._save_preference(self.voice_preferences, character)
             self.selected_voice = character
 
     def set_stt_backend(self, backend):
@@ -212,11 +285,22 @@ class LocalAudio:
                     self.backend_refreshing.discard(engine)
 
         with self.backend_lock:
+            catalogue = (
+                DEEPGRAM_VOICES if self.speech_backend == "deepgram"
+                else self.local_voices
+            )
+            selected = (
+                self.selected_deepgram_voice
+                if self.speech_backend == "deepgram"
+                else self.selected_voice
+            )
             result = {
-                "selected_voice": self.selected_voice,
+                "selected_voice": selected,
                 "voices": {
-                    key: voice["label"] for key, voice in self.voices.items()
+                    key: voice["label"] for key, voice in catalogue.items()
                 },
+                "speech_backend": self.speech_backend,
+                "speech_backends": dict(self.speech_backends),
                 "selected_stt": self.stt_backend,
                 "stt_backends": {
                     "whisper": "Whisper (local GPU)",
@@ -225,7 +309,10 @@ class LocalAudio:
                 "backends": dict(self.backends),
                 "backend_errors": dict(self.backend_errors),
             }
-            for engine in self.backends:
+            if self.speech_backend == "deepgram" or not self.local_voices:
+                result["backends"].pop("tts", None)
+                result["backend_errors"].pop("tts", None)
+            for engine in result["backends"]:
                 if (
                     self.config.get(f"{engine}_health_url")
                     and engine not in self.backend_refreshing
@@ -376,6 +463,57 @@ class LocalAudio:
         """
         return self.transcribe(path, cancelled, on_drained=on_drained)
 
+    def _deepgram_speak_url(self, model):
+        return "https://api.deepgram.com/v1/speak?" + urllib.parse.urlencode([
+            ("model", model),
+            ("encoding", "linear16"),
+            ("container", "wav"),
+            ("sample_rate", "24000"),
+            ("mip_opt_out", "true"),
+        ])
+
+    def _synthesize_deepgram(self, chunk, cancelled, model):
+        key = os.environ.get("DEEPGRAM_API_KEY")
+        if not key:
+            raise RuntimeError(
+                "Deepgram API key is not installed; use local speech"
+            )
+
+        def synthesize():
+            request = urllib.request.Request(
+                self._deepgram_speak_url(model),
+                data=json.dumps({"text": chunk}).encode(),
+                headers={
+                    "Authorization": "Token " + key,
+                    "Content-Type": "application/json",
+                },
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=60) as response:
+                    data = response.read(8 * 1024 * 1024 + 1)
+            except urllib.error.HTTPError as exc:
+                exc.close()
+                raise RuntimeError(
+                    f"Deepgram speech failed (HTTP {exc.code})"
+                ) from None
+            except urllib.error.URLError as exc:
+                raise RuntimeError("Deepgram speech connection failed") from exc
+            if len(data) > 8 * 1024 * 1024:
+                raise RuntimeError("Deepgram speech response is too large")
+            return data
+
+        data = self._request(
+            synthesize, self.synthesis_lock, cancelled
+        )
+        if data is None:
+            return None
+        with wave.open(io.BytesIO(data), "rb") as wav:
+            params = wav.getparams()
+            frames = wav.readframes(wav.getnframes())
+        if not frames or len(frames) % (params.nchannels * params.sampwidth):
+            raise RuntimeError("Deepgram returned incomplete speech audio")
+        return params, frames
+
     def _deepgram_url(self):
         params = [
             ("model", "nova-3"),
@@ -498,6 +636,10 @@ class LocalAudio:
         ) or ""
 
     def _synthesize(self, chunk, cancelled, voice_options):
+        model = voice_options.get("model")
+        if isinstance(model, str) and model.startswith("aura-"):
+            return self._synthesize_deepgram(chunk, cancelled, model)
+
         def synthesize():
             request = urllib.request.Request(
                 self.config["tts_url"],
@@ -608,14 +750,21 @@ class LocalAudio:
 
     def speak(self, text, cancelled):
         # Select once for the complete spoken reply, before chunking or waits.
-        character = self.selected_voice
-        voice_options = dict(self.voices[character]["options"])
-        if character == "samantha" and len(text.split()) > 50:
-            voice_options = dict(self.config.get("tts_long_voice", {}))
+        backend = self.speech_backend
+        if backend == "deepgram":
+            character = self.selected_deepgram_voice
+            voice_options = dict(DEEPGRAM_VOICES[character]["options"])
+        else:
+            character = self.selected_voice
+            voice_options = dict(self.local_voices[character]["options"])
+            if character == "samantha" and len(text.split()) > 50:
+                voice_options = dict(self.config.get("tts_long_voice", {}))
         chunks = speech_chunks(text)
         if not chunks or cancelled.is_set():
             return
-        if not self.wait_ready("tts", cancelled):
+        if backend != "deepgram" and not self.wait_ready(
+            "tts", cancelled
+        ):
             return
         if self.config.get("playback_mode", "buffered") == "streaming":
             self._stream(chunks, cancelled, voice_options)

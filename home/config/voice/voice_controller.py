@@ -1350,6 +1350,8 @@ class Controller:
                     "selected_voice", "samantha"
                 ),
                 "voices": audio_status.get("voices", {}),
+                "speech_backend": audio_status.get("speech_backend", "local"),
+                "speech_backends": audio_status.get("speech_backends", {}),
                 "selected_stt": audio_status.get(
                     "selected_stt", "whisper"
                 ),
@@ -1589,14 +1591,18 @@ class Controller:
         with self.lock:
             self.auto = enabled
             engines = self.engines
+        if not enabled:
+            self.cancelled.set()
+            self.audio.stop()
         if not engines or "tts" not in getattr(engines, "_states", {}):
             return
-        if enabled:
+        if (
+            enabled
+            and getattr(self.audio, "speech_backend", "local") == "local"
+        ):
             engines.ensure_resident("tts")
-            return
-        self.cancelled.set()
-        self.audio.stop()
-        engines.retire("tts")
+        else:
+            engines.retire("tts")
 
     def read(self, replace=False):
         with self.lock:
@@ -1641,7 +1647,12 @@ class Controller:
         with self.lock:
             self.audible = False
         try:
-            lease = self.engines.acquire('tts') if self.engines else None
+            lease = (
+                self.engines.acquire('tts')
+                if self.engines
+                and getattr(self.audio, "speech_backend", "local") == "local"
+                else None
+            )
             if self._await_engine(lease, cancelled):
                 self.audio.speak(text, cancelled)
         except Exception as exc:
@@ -2403,6 +2414,14 @@ def dispatch(app, request):
     if isinstance(action, str) and action.startswith("voice:"):
         app.audio.set_voice(action.split(":", 1)[1])
         return app.status()
+    if isinstance(action, str) and action.startswith("speech:"):
+        if app.recording_active():
+            raise RuntimeError("Finish dictation before changing speech")
+        app.cancelled.set()
+        app.audio.stop()
+        app.audio.set_speech_backend(action.split(":", 1)[1])
+        app.set_auto(app.auto)
+        return app.status()
     if isinstance(action, str) and action.startswith("stt:"):
         if app.recording_active():
             raise RuntimeError(
@@ -2490,14 +2509,13 @@ def serve(runtime, config):
     )
     for stale in runtime.glob("*.wav"):
         stale.unlink(missing_ok=True)
-    app.speech_available = bool(config.get("tts_enabled", True))
+    app.speech_available = bool(audio.speech_backends)
     app.auto = (
         bool(config.get("auto_speak", True)) and app.speech_available
     )
     app.restore()
     engines.reconcile_startup()
-    if app.auto:
-        engines.ensure_resident("tts")
+    app.set_auto(app.auto)
     path = runtime / "control.sock"
     path.unlink(missing_ok=True)
 
