@@ -1,290 +1,153 @@
 # dotfiles
 
-NixOS configurations and Home Manager setup for multiple machines across Linux and macOS, managed as a single Nix flake. Everything from system-level services to shell aliases lives here, declaratively defined and reproducible.
+A Nix flake for William's NixOS workstations and NAS, a headless macOS node, and Home Manager environments. System configuration and user configuration are separate outputs; selecting the right home matters as much as selecting the right host.
+
+- **Another user's machine:** start with the [public Home Manager installer](docs/public-install.md), not a named owner configuration.
+- **William's existing machines:** choose the host below, then follow [NixOS host operations](docs/nixos-host-operations.md) or [headless macOS operations](docs/headless-darwin.md).
 
 ## Architecture
 
-The flake produces four NixOS system configurations and Home Manager user configurations for Linux, macOS, and explicit Linux hosts. All NixOS systems share a common base with host-specific overrides layered on top. The Home Manager configuration uses platform conditionals to work on both `x86_64-linux` and `aarch64-darwin`.
+[flake.nix](flake.nix) composes two platforms: `x86_64-linux` and `aarch64-darwin`.
 
-```mermaid
-flowchart TD
-    FLAKE["flake.nix"]
-    BASE["base.nix"]
-    WORKSTATION["workstation.nix"]
-    SERVER["server.nix"]
-
-    subgraph HOSTS["NixOS Hosts"]
-        ANDROMEDA["andromeda"]
-        STARFISH["starfish"]
-        FOUNDATION["foundation"]
-        TERMINUS["terminus"]
-    end
-
-    subgraph HM["Home Manager"]
-        HM_DEFAULT["william"]
-        HM_LINUX["william-linux"]
-        HM_DARWIN["william-darwin"]
-        HM_HOSTS["william@andromeda, william@foundation, william@starfish, william@terminus"]
-    end
-
-    FLAKE --> HOSTS
-    FLAKE --> HM
-    BASE --> WORKSTATION & SERVER
-    WORKSTATION --> ANDROMEDA & STARFISH & FOUNDATION
-    SERVER --> TERMINUS
-    HM_LINUX -.-> HM_HOSTS
-    HM_HOSTS -.-> HOSTS
-
-    classDef box stroke:#6366f1,stroke-width:2px
-    class FLAKE,BASE,WORKSTATION,SERVER,HOSTS,HM,ANDROMEDA,STARFISH,FOUNDATION,TERMINUS,HM_DEFAULT,HM_LINUX,HM_DARWIN,HM_HOSTS box
+```text
+flake.nix
+├── system/
+│   ├── modules/base.nix          Shared NixOS foundation
+│   ├── modules/workstation.nix   Base + graphical services
+│   ├── modules/server.nix        Base + headless assertions
+│   ├── <host>/                   NixOS hardware, storage and services
+│   └── darwin/                   Relay's nix-darwin system services
+└── home/
+    ├── default.nix               Home Manager entry point and identity defaults
+    ├── private.nix               Owner secret groups and agent-bus integration
+    ├── user/                     Packages, programs, shell and service modules
+    └── config/                   Managed configuration, scripts and LLM harness
 ```
 
-### Flake Inputs
+### System and home boundaries
 
-| Input | Purpose |
-|-------|---------|
-| `nixpkgs` | Primary package source |
-| `home-manager` | Declarative user environment |
-| `nixos-hardware` | Hardware-specific modules (Framework laptop) |
-| `flake-parts` | Composable flake structure and per-system outputs |
-| `treefmt-nix` | Shared formatter/check wiring for `nix fmt` |
-| `stylix` | Shared colour and font theming |
-| `nix-index-database` | Prebuilt nix-index database and `comma` integration |
-| `pre-commit-hooks` | Git hook management |
-| `mux` | Herdr session manager |
-| `forte` | Desktop music player |
-| `llm-agents` | Pi package |
+- **NixOS:** all four hosts inherit [base.nix](system/modules/base.nix), including boot, locale, Nix, the William account, Fish, NetworkManager, OpenSSH and Tailscale. The [workstation role](system/modules/workstation.nix) adds Hyprland, audio, printing, Bluetooth and Docker. The [server role](system/modules/server.nix) omits that layer and asserts that the display manager, X server and graphical boot remain disabled.
+- **macOS:** [system/darwin/](system/darwin/) manages headless system jobs through nix-darwin. Home Manager supplies their user configuration. Relay's system pins its matching home generation, so changes must deploy as a pair. This is not a macOS installer.
+- **Home Manager:** [home/user/default.nix](home/user/default.nix) composes the user modules. [capabilities.nix](home/user/capabilities.nix) assigns `workstation`, `automation`, `nas` or `legacy` roles, controlling packages, integrations and services separately from hardware configuration.
+- **Public/private:** public homes include the shared modules without owner integrations. Owner homes additionally import the private `nix-config` and `agent-bus` inputs and `home/private.nix`. Named owner systems and homes require authenticated input access; they are not portable installation defaults. Keep credentials out of Nix expressions and the store.
 
-## Repository Structure
+### Other flake outputs
 
-```mermaid
-flowchart TD
-    ROOT["~/.dotfiles"]
+- `lib.mkHome` constructs a home for a supplied identity and is public by default. `homeModules.default` exposes the public module composition for reuse. See [public installation and reuse](docs/public-install.md).
+- `overlays.default` supplies the repository's tool packages and selected overrides to NixOS and Home Manager. It is distinct from the exported `packages` set.
+- `packages.<system>` exposes `activation-dbus`, `private-access-probe`, `mcp-dap-server` and generated `theme-*` packages. No `apps` output is declared.
+- `checks.<system>` covers public/private and host-profile boundaries, headless Darwin, Pi agent-bus composition/runtime, and commit hooks. Platform-specific checks cover the Linux greeter and Darwin headless browser.
+- `formatter.<system>` uses treefmt. `devShells.<system>.default` supplies local checks and test tools and installs commit hooks. These per-platform outputs are wired under `perSystem` in `flake.nix`.
 
-    subgraph SYSTEM [System Layer]
-        BASE[base.nix]
-        WORKSTATION[workstation.nix]
-        SERVER[server.nix]
-        ANDROMEDA[andromeda/]
-        STARFISH[starfish/]
-        FOUNDATION[foundation/]
-        TERMINUS[terminus/]
-    end
+## Hosts and roles
 
-    subgraph HOME [Home Manager]
-        subgraph MODULES [Nix Modules]
-            PKGS[packages.nix]
-            SHELLS[shells.nix]
-            PROGRAMS[programs.nix]
-        end
-        subgraph CONFIGS [Dotfiles]
-            NVIM[nvim]
-            GHOSTTY[ghostty]
-            HYPRLAND[hyprland]
-            OTHER[bin...]
-        end
-    end
+NixOS system attributes below live under `nixosConfigurations`; Relay lives under `darwinConfigurations`. Home attributes live under `homeConfigurations`.
 
-    subgraph INPUTS [Package Inputs]
-        TOOLS[mux, forte, llm-agents...]
-    end
+| Host / system attribute | Machine and system role | Home attribute / role |
+| --- | --- | --- |
+| `andromeda` | Thelio Major Threadripper workstation; System76 support and NVIDIA RTX 5090 configuration | `william@andromeda` / `workstation` |
+| `starfish` | Dell Precision 5750 workstation; host-specific hardware and filesystem configuration | `william@starfish` / `legacy` |
+| `foundation` | Framework 13 AMD AI-300 workstation; nixos-hardware support and patched MT7925 driver | `william@foundation` / `workstation` |
+| `terminus` | Beelink headless NAS; ZFS media storage, Immich, Audiobookshelf and Pi Switchboard hub | `william@terminus` / `nas` |
+| `relay` | Apple Silicon headless macOS automation node | `william@relay` / `automation` |
 
-    ROOT --> SYSTEM & HOME & INPUTS
+`legacy` preserves the full workstation capabilities for Starfish and generic Linux homes. Terminus excludes desktop configuration and work integrations while retaining maintenance and NAS tools. Relay uses headless browser automation rather than the workstation desktop profile.
 
-    classDef box stroke:#6366f1,stroke-width:2px
-    class ROOT,SYSTEM,HOME,INPUTS,MODULES,CONFIGS,ANDROMEDA,STARFISH,FOUNDATION,TERMINUS box
-```
+Terminus receives `immichPkgs` from the locked unstable input for Immich; its main package set remains on the release input. Foundation receives `nixos-hardware` through its host special arguments. Host-specific services and hardware live in [system/](system/); do not substitute another host's configuration.
 
-## Hosts
+### Homes without a host-qualified name
 
-### andromeda - Desktop Workstation
+| Home attribute | Intended use |
+| --- | --- |
+| `laptop` | Public reference identity, not the current user. The installer supplies the actual username, home and checkout paths. |
+| `william-linux` | Generic owner Linux home, with the `legacy` role. |
+| `william` | Alias of `william-linux`, not automatic platform detection. Avoid it on macOS. |
+| `william-darwin` | Alias of Relay's automation home, not a generic macOS desktop profile. |
 
-System76 Thelio Major with AMD Threadripper and an NVIDIA RTX 5090. Steam is enabled with firewall rules for local game transfers.
+## What to run
 
-### starfish - Laptop
+### Public Home Manager installation
 
-Dell Precision 5750. Inherits everything from the common configuration with no host-specific overrides.
-
-### foundation - Travel Laptop
-
-Framework 13 AMD AI-300 Series. Uses the `nixos-hardware` module for Framework-specific hardware support (power management, firmware, etc).
-
-### terminus - Beelink NAS / headless host
-
-Headless server role with ZFS media storage, Immich, and Audiobookshelf. Its Home Manager profile also excludes workstation browsers, graphical desktop settings, and graphical NetworkManager agents, while retaining Herdr for remote sessions. Desktop, audio, printing, Bluetooth, and workstation Docker configuration are excluded by the server boundary. `system/terminus/storage.nix` declares monthly ZFS scrubs and SMART monitoring. Terminus media is treated as replaceable and has no snapshot or off-host backup policy.
-
-### System Roles
-
-All hosts share `system/modules/base.nix`, which provides boot, locale, Nix, the William user, OpenSSH, Tailscale, NetworkManager, Fish, and base command-line tools.
-
-- `system/modules/workstation.nix` adds the graphical workstation role, PipeWire, CUPS/Avahi, Bluetooth, Docker, fonts, and workstation user groups. Hyprland is the supported session; see [Hyprland](docs/hyprland.md).
-- `system/modules/server.nix` disables documentation and asserts that graphical services remain off.
-- Host modules layer hardware, kernel, service, and storage choices on their role.
-
-Operational build, activation, rollback, and Terminus health commands are documented in [NixOS Host Operations](docs/nixos-host-operations.md).
-
-## Home Manager
-
-The user configuration is split into focused modules that are composed in `home/user/default.nix`.
-
-### Packages
-
-Over 100 packages organised by purpose. Platform-specific GUI apps, clipboard tools, and system tracers are conditionally included using `lib.optionals stdenv.isDarwin` / `lib.optionals stdenv.isLinux`.
-
-| Category | Packages | Platform |
-|----------|----------|----------|
-| **AI** | pi | All |
-| **Desktop** | Brave, Ghostty, Slack, Spotify, Telegram | Darwin |
-| **Desktop** | Brave, Chrome, Slack, Telegram, LibreOffice, Variety | Linux |
-| **Dev Tools** | gh, delta, lazydocker, dive, fzf, ripgrep, fd, jq, yq, httpie | All |
-| **Networking** | nmap, mtr, doggo | All |
-| **Networking** | tshark, bandwhich, iftop, nload | Linux |
-| **Languages** | Node.js, Python 3, Ruby (YJIT), Go, Terraform, Lua | All |
-| **LSP Servers** | nil, lua-language-server, gopls, ccls, bash-language-server, marksman, typescript-language-server | All |
-| **Monitoring** | btop, htop | All |
-| **Databases** | PostgreSQL, Valkey, pgcli | All |
-| **Custom** | mux, ecs | All |
-
-### AI / LLM Agent Harness
-
-The LLM harness is deliberately single-source: universal rules, job guides, and job-specific skills live once in `home/config/llm/` and Home Manager expands them into each tool's expected config directories.
-
-- **Universal rules** live in `home/config/llm/AGENTS.md` and are deployed to:
-  - `~/.pi/agent/AGENTS.md`
-  - `~/.agents/AGENTS.md`
-
-- **Job-specific guides** live in `home/config/llm/guides/` and are deployed to every supported guide root. Shared branch references for PRs, RSpec, and related workflows are wired explicitly from `home/user/llm-harness.nix`.
-
-- **The deployment catalog** in `home/config/llm/skill-catalog.json` owns skill names, classifications and explicit reference mappings. Home Manager and the structural auditor consume the same registry; skill frontmatter still owns runtime/manual-invocation gates.
-
-- **Shared job-specific skills** live in `home/config/llm/skills/` and are deployed to `~/.agents/skills/`. Skill-local `references/` trees are discovered from the filesystem, and per-skill explicit-invocation metadata is preserved when present.
-
-- **Process skills and reference library** live in `home/config/llm/process-skills/` and `home/config/llm/references/`, deployed under `~/.agents/skills/` and `~/.agents/references/` respectively.
-
-- **Router and maintenance helpers** live alongside the harness:
-  - `skill-router` is the entry point when an agent or user is unsure which skill applies.
-  - `skill-evaluation` defines the audit/review workflow for harness quality.
-  - `home/config/llm/scripts/audit-skills` checks structural issues, stale freshness metadata, broken references, and routing gaps.
-
-Pi loads these shared skills on demand and reaches cloud models through its provider configuration.
-
-### Shell
-
-Fish is the default shell with extensive configuration:
-
-- **Abbreviations** for navigation (`cdr`, `cdn`), Rails (`be`, `bx`, `rc`), Terraform (`tf`, `tfi`, `tfa`, `tfp`), Git, and AWS
-- **Functions** for fetching `.gitignore` templates and managing dated notes
-- **Zoxide** integration for fast directory jumping
-- **Environment:** Neovim as editor/pager, YJIT-enabled Ruby, AWS eu-west-2 defaults
-
-### Git
-
-Signed commits with GPG key `BC6DED9479D436F5`. Delta as the diff viewer with the GitHub theme. Histogram diff algorithm, zdiff3 merge conflicts, auto-stash on rebase, and a commit template with JIRA format guidance. LFS enabled.
-
-### Desktop (Linux only)
-
-Hyprland is the supported graphical session. Editable settings live in `home/config/hyprland/` and are applied by Home Manager. Login, greeter theme input, and recovery are in [Hyprland](docs/hyprland.md).
-
-### Neovim
-
-Single `init.lua` configuration. Leader key is comma. Key mappings include `jk` for escape, JIRA ticket insertion from branch names, and quickfix list toggling.
-
-Stylix owns Neovim's colour scheme through the shared Rose Pine Base16 palette. For this repository, Conform delegates formatting to `nix fmt` so save-on-format follows the same treefmt configuration as pre-commit and CI checks.
-
-### Ghostty
-
-JetBrains Mono font, Catppuccin Mocha theme, slight transparency, 10K line scrollback, and a collection of custom GLSL shaders.
-
-## Package Inputs And Overlays
-
-Personal tools and agent CLIs are exposed through flake inputs and package overlays:
-
-| Package | Source | Reason | Platform |
-|---------|--------|--------|----------|
-| `pi` | `llm-agents` flake input | Agent tooling | Mixed |
-| `mux`, `forte` | GitHub flake inputs | Personal tools | Mixed |
-
-## Custom Scripts
-
-Located in `home/config/bin/` and added to `$PATH`:
-
-| Script | Purpose |
-|--------|---------|
-| `notes` / `notes_on` | Fzf-based note browser and dated note creator with templates |
-| `gcall` | Nix garbage collection for user and root stores |
-
-## Usage
-
-For another user's laptop, use the [credential-free Home Manager installer](docs/public-install.md):
+Use an existing normal account with Git, Bash and working Nix. The isolated installation test targets x86_64 Linux. This installs user configuration, not NixOS, disks, graphics drivers or system services. Review the [prerequisites and recovery notes](docs/public-install.md) before adopting it over a customised home.
 
 ```bash
 git clone https://github.com/willfish/nix.git ~/.dotfiles
 cd ~/.dotfiles
-bash scripts/install-home
+bash scripts/install-home --public --dry  # Build only; skip private-access detection
 ```
 
-It uses the current identity and disables private integrations unless actual
-SSH-derived secret decryption succeeds. The commands below are for William's
-existing hosts, not generic laptop installation.
-
-Rebuild a NixOS system:
+**Activation changes the current user's managed files and settings.** Run without `sudo`:
 
 ```bash
-sudo nixos-rebuild switch --flake .#andromeda   # desktop
-sudo nixos-rebuild switch --flake .#starfish    # dell laptop
-sudo nixos-rebuild switch --flake .#foundation  # framework laptop
-sudo nixos-rebuild switch --flake .#terminus    # beelink nas / headless
+bash scripts/install-home --public
 ```
 
-Rebuild the Home Manager configuration:
+Without `--public`, the installer enables private composition only after SSH-derived secret decryption and access to the required private inputs succeed. After installation, `hmswitch` remembers the checkout location. Pi needs the new user's own provider credentials.
+
+### Build an owner configuration without activation
+
+Run from this checkout in its dev environment, using `direnv exec .` as below or an already active `nix develop` shell. Owner commands require private input access. Build on the target platform or a suitable native builder.
 
 ```bash
-hmswitch                                                # Selects this host automatically
-nh home switch . --configuration william-linux         # Linux via nh
-home-manager switch --flake .#william-linux            # Linux direct
-home-manager switch --flake .#william-darwin           # macOS direct
-home-manager switch --flake ".#william@$(hostname)"    # explicit Linux host attr
+# NixOS: replace foundation with the selected NixOS host from the table.
+direnv exec . nix build --no-link .#nixosConfigurations.foundation.config.system.build.toplevel
+
+# Home Manager: choose the host-qualified home, especially for Terminus.
+direnv exec . nix build --no-link '.#homeConfigurations."william@foundation".activationPackage'
+
+# Relay: run on native macOS; the system pins its matching home generation.
+direnv exec . nix build --no-link .#darwinConfigurations.relay.system
 ```
 
-Update all flake inputs:
+### Activate an existing owner host
+
+**These commands change the running host or home.** Build first and follow the relevant runbook's preflight and recovery steps.
+
+On the selected NixOS host, from this checkout:
 
 ```bash
-nix flake update
+nh os test .    # Activate temporarily, without changing the boot default
+nh os switch .  # Make the system generation persistent, after smoke checks
 ```
 
-Format and verify the repository:
+For Home Manager, prefer the installed wrapper:
 
 ```bash
-nix fmt -- --ci
-nix flake check -L
-python3 home/config/llm/scripts/audit-skills
-nix build --no-link .#homeConfigurations.william-linux.activationPackage
-direnv exec . python3 scripts/check-behavior.py "$(nix eval --raw .#homeConfigurations.william-linux.activationPackage.outPath)"
-# Realise each NixOS host, matching the Linux CI matrix.
-for host in andromeda starfish foundation terminus; do
-  nix build -L ".#nixosConfigurations.${host}.config.system.build.toplevel" --no-link
-done
+hmswitch
 ```
 
-`flake-parts` owns the per-system outputs in `flake.nix`, so new formatter, check, package, app, and dev shell outputs should usually be added under `perSystem`.
+It selects a known Linux host's `william@<host>` home, falling back to `william-linux`. On Relay after the initial handover, it builds and deploys the matching Darwin system before activating that system's exact home generation; sudo may prompt. Use [headless macOS operations](docs/headless-darwin.md) for first handover, native SSH access and recovery. `hmswitch --dry` previews the Relay pair without activation.
 
-## Pre-commit Hooks
+If invoking `nh` directly on Linux, pass the flake path and configuration separately, for example `nh home switch . --configuration william@foundation`. Do not use `nh home switch '.#william-darwin'`, or bypass Relay's paired deployment with a standalone home switch.
 
-Managed inline in `flake.nix` through `git-hooks.nix` and available in the dev shell (`nix develop`). Formatting is intentionally centralised through treefmt: `nix fmt`, pre-commit, and Neovim all use the same formatter path for this repository.
+For routine read-only health reports, [Justfile](Justfile) provides `just health` for reachable known hosts and `just health terminus` for one host. `just terminus-health` adds detailed ZFS/SMART checks and may prompt for sudo.
 
-- **actionlint** - GitHub Actions workflow linting
-- **check-added-large-files** - Prevent unexpectedly large files from being committed
-- **check-case-conflicts** - Detect filename case conflicts
-- **check-json** - JSON syntax validation
-- **check-merge-conflicts** - Detect unresolved merge conflict markers
-- **check-yaml** - YAML syntax validation
-- **deadnix** - Detect unused Nix code
-- **detect-private-keys** - Prevent private keys from being committed
-- **eclint** - EditorConfig validation
-- **end-of-file-fixer** - Ensure files end with a newline
-- **fish-syntax** - Fish script syntax validation for custom scripts
-- **nil** - Nix language linting
-- **treefmt** - Shared formatting for Nix, Lua, shell, Fish, JSON, and YAML
-- **shellcheck** - Shell script linting
-- **statix** - Nix anti-pattern linting with the repository warning policy
-- **trim-trailing-whitespace** - Clean up trailing spaces
+## Checks and maintenance
+
+There is **no CI workflow in this checkout**. Local commit hooks are not host builds, and pushes do not build NixOS or Home Manager configurations.
+
+For owner repository checks:
+
+```bash
+direnv exec . nix fmt -- --ci
+direnv exec . nix flake check -L
+```
+
+These do not replace native host builds or runtime checks. [tests/](tests/) contains Nix boundary checks, Python, Node/TypeScript and Bats suites, plus the public clean-install test. [scripts/check-behavior.py](scripts/check-behavior.py) runs the offline behavioral gate against a built immutable home generation; live integrations need separate checks. Follow [host operations](docs/nixos-host-operations.md) for the commands and coverage boundaries. Public installers should use the narrower checks in [public-install.md](docs/public-install.md), because root-wide flake commands can fetch owner inputs.
+
+Follow [AGENTS.md](AGENTS.md) when changing this repository: do not create branches unless explicitly instructed, and fast-forward any authorized branch into `master` before pushing. Build, activate and verify affected configurations before committing module changes, subject to authorization. Use `hmswitch` for home activation.
+
+## Where to go next
+
+| Task | Documentation |
+| --- | --- |
+| Install or reuse the public home | [Public install](docs/public-install.md) |
+| Build, activate, roll back or check NixOS and Terminus services | [NixOS host operations](docs/nixos-host-operations.md) |
+| Provision or operate Relay's paired system and home | [Headless macOS](docs/headless-darwin.md) |
+| Configure the desktop, login or recovery | [Hyprland](docs/hyprland.md) |
+| Change shared themes and fonts | [Appearance](docs/appearance.md) |
+| Use Pi's coding workflow | [Pi workflow](docs/pi-workflow.md) |
+| Configure Pi's MCP integration | [Pi MCP](docs/pi-mcp.md) |
+| Operate local models | [Local LLM](docs/local-llm.md) |
+
+Shared agent rules, guides and skills live under [home/config/llm/](home/config/llm/); [home/user/llm-harness.nix](home/user/llm-harness.nix) wires their deployment. Edit maintained source rather than generated files in the home directory.
