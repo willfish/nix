@@ -57,6 +57,65 @@ let
     inherit icon text keywords;
     actions."menus:default" = command;
   };
+  sessionEntries = (import ../config/hyprland/settings.nix).session.entries;
+  sessionMetadata = {
+    lock = {
+      icon = "";
+      keywords = [
+        "lock"
+        "screen"
+      ];
+    };
+    display-off = {
+      icon = "󰍹";
+      keywords = [
+        "display"
+        "screen"
+        "monitor"
+        "off"
+      ];
+    };
+    display-toggle = {
+      icon = "󰍹";
+      keywords = [
+        "display"
+        "screen"
+        "monitor"
+        "toggle"
+      ];
+    };
+    suspend = {
+      icon = "󰒲";
+      keywords = [
+        "suspend"
+        "sleep"
+      ];
+    };
+    logout = {
+      icon = "󰍃";
+      keywords = [
+        "logout"
+        "log out"
+        "sign out"
+      ];
+    };
+    reboot = {
+      icon = "󰜉";
+      keywords = [
+        "reboot"
+        "restart"
+      ];
+    };
+    poweroff = {
+      icon = "";
+      keywords = [
+        "poweroff"
+        "power off"
+        "shutdown"
+        "shut down"
+      ];
+    };
+  };
   openUrl = url: "${pkgs.xdg-utils}/bin/xdg-open ${lib.escapeShellArg url}";
   sessionUnit = {
     PartOf = [ "hyprland-session.target" ];
@@ -96,6 +155,7 @@ in
             "windows"
             "menus:projects"
             "menus:desktop"
+            "menus:session"
           ];
           empty = [
             "menus:daily"
@@ -139,6 +199,15 @@ in
               {
                 action = "menus:default";
                 label = "open";
+                default = true;
+                bind = "Return";
+                after = "Close";
+              }
+            ];
+            "menus:session" = [
+              {
+                action = "menus:default";
+                label = "select";
                 default = true;
                 bind = "Return";
                 after = "Close";
@@ -229,13 +298,7 @@ in
           (action "" "Bluetooth controls" [ "headphones" "pair" ] "${profileBin}/hypr-controls bluetooth")
           (action "󰖩" "Network controls" [ "wifi" "internet" "vpn" ] "${profileBin}/hypr-controls network")
           (action "󰖂" "Tailscale" [ "vpn" "tailnet" "taildrop" ] "${profileBin}/hypr-controls tailscale")
-          (action "" "Session menu" [
-            "lock"
-            "logout"
-            "reboot"
-            "power"
-            "suspend"
-          ] "${profileBin}/hypr-session menu")
+          (action "" "Session menu" [ "session" "system menu" ] "${profileBin}/hypr-session menu")
           (action "󰚩" "Qwen chat on Relay" [ "ai" "llama" "assistant" "remote" ] (
             openUrl "http://relay.taile09696.ts.net:8081"
           ))
@@ -248,6 +311,22 @@ in
             openUrl "http://127.0.0.1:8081"
           ))
         ];
+      };
+      "elephant/menus/session.toml".source = toml.generate "session-menu.toml" {
+        name = "session";
+        name_pretty = "Session";
+        icon = "system-shutdown";
+        # Explicit searches only: do not promote power actions into recent items.
+        history = false;
+        entries = map (
+          entry:
+          let
+            metadata = sessionMetadata.${entry.action};
+          in
+          action metadata.icon (
+            entry.label + lib.optionalString entry.confirm " (confirm)"
+          ) metadata.keywords "${profileBin}/hypr-session select ${lib.escapeShellArg entry.action}"
+        ) sessionEntries;
       };
       "elephant/menus/projects.lua".text = ''
         Name = "projects"
