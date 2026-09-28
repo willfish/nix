@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Fill missing keys in a writable Pi settings.json from declared defaults.
 
-Also retarget a leftover grok-4.6 defaultModel to grok-4.7 so existing
-profiles pick up the current Grok default without clobbering other keys.
+Also retarget leftover xAI Grok defaults to the declared OpenCode Go
+GLM 5.3 default so existing profiles pick it up without clobbering other keys.
 
 The previous home default turned observational memory on. Flip that exact
 leftover once, then leave /settings in charge of enabledByDefault.
@@ -17,6 +17,11 @@ from pathlib import Path
 
 OM_KEY = "observational-memory-jev"
 OM_DEFAULT_OFF_MARKER = ".om-default-off-migrated"
+LEFTOVER_DEFAULTS = {
+    ("xai", "grok-4.6"),
+    ("xai", "grok-4.7"),
+}
+GLM_DEFAULT = ("opencode-go", "glm-5.3")
 
 
 def merge_missing(defaults: dict, settings: dict) -> tuple[dict, bool]:
@@ -26,11 +31,10 @@ def merge_missing(defaults: dict, settings: dict) -> tuple[dict, bool]:
         if key not in merged:
             merged[key] = value
             changed = True
-    if (
-        merged.get("defaultModel") == "grok-4.6"
-        and defaults.get("defaultModel") == "grok-4.7"
-    ):
-        merged["defaultModel"] = "grok-4.7"
+    current = (merged.get("defaultProvider"), merged.get("defaultModel"))
+    declared = (defaults.get("defaultProvider"), defaults.get("defaultModel"))
+    if current in LEFTOVER_DEFAULTS and declared == GLM_DEFAULT:
+        merged["defaultProvider"], merged["defaultModel"] = declared
         changed = True
     return merged, changed
 

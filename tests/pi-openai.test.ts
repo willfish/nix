@@ -58,8 +58,9 @@ test('Tailscale Qwen providers are selectable without embedding keys', () => {
 });
 test('Pi settings defaults enable quiet startup without clobbering user keys', () => {
   const defaults = JSON.parse(readFileSync(new URL('../home/config/pi/settings-defaults.json', import.meta.url)));
-  assert.equal(defaults.defaultProvider, 'xai');
-  assert.equal(defaults.defaultModel, 'grok-4.7');
+  assert.equal(defaults.defaultProvider, 'opencode-go');
+  assert.equal(defaults.defaultModel, 'glm-5.3');
+  assert.equal(defaults.modelThinkingLevels['opencode-go/glm-5.3'], 'high');
   assert.equal(defaults.quietStartup, true);
   assert.equal(defaults.editorPaddingX, 1);
   const keybindings = JSON.parse(readFileSync(new URL('../home/config/pi/keybindings-defaults.json', import.meta.url)));

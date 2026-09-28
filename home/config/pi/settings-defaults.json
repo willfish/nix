@@ -1,6 +1,9 @@
 {
-  "defaultProvider": "xai",
-  "defaultModel": "grok-4.7",
+  "defaultProvider": "opencode-go",
+  "defaultModel": "glm-5.3",
+  "modelThinkingLevels": {
+    "opencode-go/glm-5.3": "high"
+  },
   "quietStartup": true,
   "editorPaddingX": 1,
   "observational-memory-jev": {
