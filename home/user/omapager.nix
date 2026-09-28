@@ -20,6 +20,41 @@ let
     url = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";
     hash = "sha256-bW73vt4EFrbr7iAUvlhSV2286JI1/hbqXETtAb1SITI=";
   };
+  whatsappIcon = pkgs.fetchurl {
+    url = "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg";
+    hash = "sha256-3WpNssOUyhGqirCHNp8vUKEub4dOSdt7HVYJ0Kj7KMo=";
+  };
+  claimBus = pkgs.writeShellApplication {
+    name = "omapager-claim-bus";
+    runtimeInputs = [
+      pkgs.procps
+      pkgs.systemd
+    ];
+    text = ''
+      owner=$(busctl --user status org.freedesktop.Notifications 2>/dev/null | sed -n 's/^PID=//p' | head -n 1 || true)
+      if [[ -z ''${owner:-} ]]; then
+        exit 0
+      fi
+      comm=$(ps -p "$owner" -o comm= 2>/dev/null || true)
+      case "$comm" in
+        mako | .mako-wrapped) ;;
+        *) exit 0 ;;
+      esac
+      # The retired daemon can keep the name after its unit is disabled.
+      # Release only that process so this service can register.
+      mapfile -t units < <(systemctl --user list-units --all --no-legend 'dbus-*org.freedesktop.Notifications@*' | awk '{print $1}')
+      if (( ''${#units[@]} )); then
+        systemctl --user stop -- "''${units[@]}" || true
+      fi
+      if kill -0 "$owner" 2>/dev/null; then
+        kill "$owner" || true
+        for _ in {1..20}; do
+          kill -0 "$owner" 2>/dev/null || break
+          sleep 0.1
+        done
+      fi
+    '';
+  };
   prepare = ../config/hyprland/omapager/prepare-shell.py;
   bundle =
     pkgs.runCommand "omapager-shell"
@@ -67,6 +102,8 @@ let
                   'icon_paths.allowed_icon(hit, [base])' \
                   --replace-fail 'os.path.realpath(fields["Icon"]).startswith(os.path.realpath(d) + os.sep)' \
                   'icon_paths.allowed_icon(fields["Icon"], [d])'
+                python3 ${../config/hyprland/omapager/patch-icon.py} \
+                  "$out/shell/omapager/bin/omapager-icon"
                 {
                   echo 'module Omapager'
                   for qml in "$out/shell/omapager"/*.qml; do
@@ -175,6 +212,7 @@ let
     runtimeInputs = [
       pkgs.gh
       pkgs.libnotify
+      pkgs.xdg-utils
       python
     ];
     text = ''
@@ -191,6 +229,7 @@ in
     ];
     # Claim the name before a profile copy of Mako can be bus-activated.
     xdg.dataFile."icons/hicolor/512x512/apps/github.png".source = githubIcon;
+    xdg.dataFile."icons/hicolor/scalable/apps/whatsapp.svg".source = whatsappIcon;
     xdg.dataFile."applications/github-notifications.desktop".text = ''
       [Desktop Entry]
       Type=Application
@@ -215,6 +254,7 @@ in
         StartLimitBurst = 3;
       };
       Service = {
+        ExecStartPre = "${claimBus}/bin/omapager-claim-bus";
         ExecStart = "${shell}/bin/hypr-omapager-shell";
         Restart = "on-failure";
         RestartSec = 2;

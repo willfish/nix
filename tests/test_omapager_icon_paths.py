@@ -32,6 +32,22 @@ class IconPathTest(unittest.TestCase):
             link.symlink_to(outside)
             self.assertFalse(icon_paths.allowed_icon(str(link), [str(base)]))
 
+    def test_chat_app_names_expand_to_installed_icons(self):
+        self.assertIn(
+            "org.telegram.desktop",
+            icon_paths.expand_names(["Telegram Desktop"]),
+        )
+        self.assertIn("whatsapp", icon_paths.expand_names(["WhatsApp"]))
+        self.assertIn("discord", icon_paths.expand_names(["Discord"]))
+        self.assertIn("github", icon_paths.expand_names(["GitHub"]))
+
+    def test_desktop_entry_names_match_dotted_ids(self):
+        haystack = "org.telegram.desktop telegram telegramdesktop telegram -- u"
+        self.assertTrue(icon_paths.name_matches("Telegram", haystack))
+        self.assertTrue(icon_paths.name_matches("Discord", "discord discord"))
+        self.assertFalse(icon_paths.name_matches("app", "whatsapp"))
+        self.assertFalse(icon_paths.name_matches("hub", "github-notifications"))
+
     def test_nix_store_symlink_under_the_icon_dir_is_allowed(self):
         store = next(Path("/nix/store").glob("*-GitHub-Mark.png"), None)
         if store is None or not store.is_file():

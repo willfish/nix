@@ -3,6 +3,7 @@
 
 import json
 import subprocess
+import threading
 import time
 import urllib.parse
 from pathlib import Path
@@ -15,18 +16,32 @@ def html_url(api_url):
     if not api_url:
         return ""
     parsed = urllib.parse.urlsplit(api_url)
-    if parsed.netloc != "api.github.com":
+    hosts = {"api.github.com", "github.com"}
+    if parsed.scheme != "https" or parsed.netloc not in hosts:
         return ""
+    if parsed.netloc == "github.com":
+        if not parsed.path or parsed.path == "/":
+            return ""
+        return urllib.parse.urlunsplit(
+            ("https", "github.com", parsed.path, "", "")
+        )
     parts = [part for part in parsed.path.split("/") if part]
     if len(parts) < 4 or parts[0] != "repos":
         return ""
     owner, repo, kind = parts[1], parts[2], parts[3]
     rest = parts[4:]
+    # /issues/comments/1 has no issue number, so it is not a page to open.
+    if rest[:1] == ["comments"]:
+        return ""
     if kind == "pulls" and rest:
         kind = "pull"
     elif kind == "commits" and rest:
         kind = "commit"
+    elif kind == "issues" and len(rest) >= 3 and rest[1] == "comments":
+        rest = rest[:1]
     elif kind not in {"issues", "pull", "commit", "discussions"}:
+        return ""
+    if not rest and kind in {"pull", "commit", "issues", "discussions"}:
         return ""
     return urllib.parse.urlunsplit(
         ("https", "github.com", "/".join([owner, repo, kind, *rest]), "", "")
@@ -54,13 +69,23 @@ def reason_label(reason):
 def normalise(item):
     subject = item.get("subject") or {}
     repo = (item.get("repository") or {}).get("full_name") or "GitHub"
+    url = html_url(subject.get("url") or "") or html_url(
+        subject.get("latest_comment_url") or ""
+    )
     return {
         "id": str(item.get("id") or ""),
         "repo": repo,
         "title": subject.get("title") or "GitHub notification",
         "reason": reason_label(item.get("reason")),
-        "url": html_url(subject.get("url") or ""),
+        "url": url,
     }
+
+
+def message_body(row):
+    body = f"{row['reason']}: {row['title']}"
+    if row.get("url"):
+        body = f"{body}\n{row['url']}"
+    return body
 
 
 def plan(items, seen, seeded):
@@ -85,10 +110,13 @@ def plan(items, seen, seeded):
     announcements = []
     shown = fresh[:BURST_LIMIT]
     for row in shown:
-        body = f"{row['reason']}: {row['title']}"
-        if row["url"]:
-            body = f"{body}\n{row['url']}"
-        announcements.append({"summary": row["repo"], "body": body})
+        announcements.append(
+            {
+                "summary": row["repo"],
+                "body": message_body(row),
+                "url": row["url"],
+            }
+        )
     if len(fresh) > BURST_LIMIT:
         announcements.append(
             {
@@ -131,23 +159,61 @@ def fetch_notifications():
     return payload
 
 
+def notify_command(item):
+    command = [
+        "notify-send",
+        "-a",
+        "GitHub",
+        "-i",
+        "github",
+        "-u",
+        "normal",
+        "-t",
+        "30000",
+        "-h",
+        "string:desktop-entry:github-notifications",
+    ]
+    if item.get("url"):
+        # The action name is what the daemon prints back. Card click also
+        # opens a bare https URL, but the button is the obvious control.
+        command += ["-A", "open=Open"]
+    command += ["--", item["summary"], item["body"]]
+    return command
+
+
+def chosen_action(output):
+    return str(output or "").strip()
+
+
+def open_chosen(output, url):
+    if chosen_action(output) != "open" or not url:
+        return False
+    subprocess.run(["xdg-open", url], check=False, timeout=10)
+    return True
+
+
+def _finish_announce(proc, url):
+    try:
+        output, _ = proc.communicate(timeout=60)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.communicate()
+        return
+    open_chosen(output, url)
+
+
 def announce(item):
-    subprocess.run(
-        [
-            "notify-send",
-            "-a",
-            "GitHub",
-            "-i",
-            "github",
-            "-u",
-            "normal",
-            "--",
-            item["summary"],
-            item["body"],
-        ],
-        check=False,
-        timeout=10,
+    proc = subprocess.Popen(
+        notify_command(item),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
     )
+    threading.Thread(
+        target=_finish_announce,
+        args=(proc, item.get("url") or ""),
+        daemon=True,
+    ).start()
 
 
 def main():
