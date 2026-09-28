@@ -1,5 +1,5 @@
 {
-  "providers": ["opencode-go", "openrouter"],
+  "providers": ["opencode-go"],
   "ids": [
     "claude-fable-5",
     "claude-fable-5-1",

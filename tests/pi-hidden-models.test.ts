@@ -16,7 +16,7 @@ const config = JSON.parse(readFileSync(new URL('../home/config/pi/hidden-models.
 const piNix = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
 
 test('hidden model keys cover the OpenCode console denylist', () => {
-  assert.deepEqual(config.providers, ['opencode-go', 'openrouter']);
+  assert.deepEqual(config.providers, ['opencode-go']);
   assert.equal(config.ids.length, 46);
   assert.equal(new Set(config.ids).size, 46);
   for (const id of ['claude-sonnet-4-5', 'gpt-5.4', 'gpt-6-astra', 'qwen3.6-plus']) {
@@ -62,7 +62,10 @@ test('extension replaces OpenCode Go and OpenRouter with the remaining catalog',
   t.after(() => rm(dir, { recursive: true, force: true }));
   const hiddenPath = join(dir, 'hidden-models.json');
   const storePath = join(dir, 'models-store.json');
-  await writeFile(hiddenPath, JSON.stringify(config));
+  await writeFile(hiddenPath, JSON.stringify({
+    ...config,
+    providers: ['opencode-go', 'openrouter'],
+  }));
   await writeFile(storePath, JSON.stringify({
     'opencode-go': {
       models: [

@@ -81,14 +81,13 @@ test('Pi settings defaults enable quiet startup without clobbering user keys', (
   const appearance = readFileSync(new URL('../home/user/appearance.nix', import.meta.url), 'utf8');
   assert.doesNotMatch(appearance, /piEditorPadding/);
 });
-test('Home Manager wires OpenCode Go and OpenRouter keys onto built-in catalogs', () => {
+test('Home Manager wires the OpenCode Go key onto the built-in catalog', () => {
   const pi = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
   const flake = readFileSync(new URL('../flake.nix', import.meta.url), 'utf8');
   assert.match(flake, /nix-config\.homeModules\.default/);
   assert.doesNotMatch(pi, /sopsApiKey "OPENCODE_API_KEY"/);
-  for (const name of ['OPENCODE_GO_KEY', 'OPENROUTER_API_KEY']) {
-    assert.match(pi, new RegExp(`sopsApiKey "${name}"`));
-  }
+  assert.match(pi, /sopsApiKey "OPENCODE_GO_KEY"/);
+  assert.doesNotMatch(pi, /OPENROUTER_API_KEY/);
   for (const name of ['PI_OPENAI_CODEX_REFRESH', 'PI_OPENAI_CODEX_ACCOUNT_ID']) {
     assert.match(pi, new RegExp(name));
   }

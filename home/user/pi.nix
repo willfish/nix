@@ -25,13 +25,11 @@ let
   piModelsJson = pkgs.runCommand "pi-models.json" { src = ../config/pi/models.json; } ''
     ${pkgs.jq}/bin/jq \
       --arg go ${lib.escapeShellArg (sopsApiKey "OPENCODE_GO_KEY")} \
-      --arg openrouter ${lib.escapeShellArg (sopsApiKey "OPENROUTER_API_KEY")} \
       --arg relay ${lib.escapeShellArg (sopsApiKey "LOCAL_LLM_RELAY_API_KEY")} \
       --arg andromeda ${lib.escapeShellArg (sopsApiKey "LOCAL_LLM_ANDROMEDA_API_KEY")} \
       --arg relayUrl ${lib.escapeShellArg (qwenBaseUrl "relay")} \
       --arg andromedaUrl ${lib.escapeShellArg (qwenBaseUrl "andromeda")} \
       '.providers["opencode-go"].apiKey = $go
-       | .providers.openrouter.apiKey = $openrouter
        | .providers.relay.apiKey = $relay
        | .providers.andromeda.apiKey = $andromeda
        | .providers.relay.baseUrl = $relayUrl
@@ -129,7 +127,7 @@ in
   home.file.".pi/agent/models.json" = lib.mkIf config.dotfiles.privateEnabled {
     source = piModelsJson;
   };
-  # OpenCode console-disabled ids stay out of /model for Go and OpenRouter.
+  # OpenCode console-disabled ids stay out of /model for Go.
   home.file.".pi/agent/hidden-models.json".source = ../config/pi/hidden-models.json;
   home.file.".pi/agent/extensions/hidden-models.ts".source = ../config/pi/extensions/hidden-models.ts;
   home.file.".pi/agent/extensions/pi-qwen.ts".source = ../config/local-llm/pi-qwen.ts;

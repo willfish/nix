@@ -97,7 +97,6 @@ let
     assert require (
       c.sops.secrets ? PI_OPENAI_CODEX_REFRESH
       && c.sops.secrets ? PI_AGENT_BUS_TOKEN
-      && c.sops.secrets ? OPENROUTER_API_KEY
       && c.sops.secrets ? GPG_SIGNING_PRIVATE_KEY
       && c.sops.secrets ? LOCAL_LLM_RELAY_API_KEY
       && c.sops.secrets ? LOCAL_LLM_ANDROMEDA_API_KEY
