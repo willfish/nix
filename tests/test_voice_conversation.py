@@ -79,7 +79,17 @@ class ConversationTests(unittest.TestCase):
 
     def test_personaplex_is_last_in_the_voice_menu(self):
         rows = menu.rows_for(
-            {"phase": "idle", "conversation_available": True}, "menu"
+            {
+                "phase": "idle",
+                "conversation_available": True,
+                "stt_backends": {"whisper": "Whisper"},
+                "voices": {"samantha": "Samantha"},
+                "sessions": [{
+                    "token": "other", "id": "thread", "label": "other",
+                    "selected": False,
+                }],
+            },
+            "menu",
         )
         self.assertEqual(rows[-1][0], "conversation:start")
         self.assertLess(

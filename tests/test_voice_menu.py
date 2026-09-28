@@ -58,10 +58,11 @@ class MenuTests(unittest.TestCase):
         self.assertFalse(before["selection_explicit"])
         self.assertEqual(len(before["sessions"]), 1)
         self.assertNotIn("recover-stage", dict(menu.rows_for(before, "menu")))
-        label = before["sessions"][0]["label"]
-        self.assertEqual(menu.rows_for(before, "sessions"), [
-            (f"select:{token}", f"Confirm {label} for retained dictation")
-        ])
+        shown = menu.rows_for(before, "sessions")
+        self.assertEqual([action for action, _ in shown], [f"select:{token}"])
+        self.assertTrue(shown[0][1].startswith("* Confirm "))
+        self.assertTrue(shown[0][1].endswith(" for retained dictation"))
+        self.assertIn("w1:p1", shown[0][1])
         request = lambda message: voice.dispatch(fixture.app, message)
         menu.run_menu("sessions", request=request,
                       picker=Mock(return_value=f"select:{token}"))
@@ -138,8 +139,10 @@ class MenuTests(unittest.TestCase):
     def test_selected_team_child_remains_visible_without_toggle(self):
         state = status()
         state["sessions"][0]["team_child"] = True
-        self.assertIn(("select:a", "* same label"),
-                      menu.rows_for(state, "sessions"))
+        shown = dict(menu.rows_for(state, "sessions"))
+        self.assertTrue(shown["select:a"].startswith("* same label"))
+        self.assertIn("select:b", shown)
+        self.assertNotEqual(shown["select:a"], "* " + shown["select:b"])
         request = Mock(return_value=state)
         menu.run_menu("sessions", request=request,
                       picker=Mock(return_value="select:a"))
@@ -298,6 +301,101 @@ class MenuTests(unittest.TestCase):
             menu.run_menu(
                 request=request, picker=Mock(return_value="auto-toggle")
             )
+
+    def test_phase_controls_are_first_and_empty_launchers_are_omitted(self):
+        recording = status()
+        recording.update(
+            phase="recording",
+            stt_backends={"whisper": "Whisper", "deepgram": "Deepgram"},
+        )
+        rows = menu.rows_for(recording, "menu")
+        self.assertEqual(rows[0], ("stop", "Cancel recording"))
+        self.assertNotIn("menu:sessions", dict(rows))
+        self.assertNotIn("menu:dictation", dict(rows))
+        self.assertIn("menu:voices", dict(rows))
+
+        ready = status()
+        ready.update(draft=True, pending=True)
+        self.assertEqual(menu.rows_for(ready, "menu")[0][0], "append")
+        self.assertNotIn(
+            "send", dict(menu.rows_for(ready, "menu"))
+        )
+
+        idle = status()
+        idle["reply"] = "private reply"
+        self.assertEqual(menu.rows_for(idle, "menu")[0][0], "read")
+
+    def test_recovery_orders_confirmation_then_named_stage(self):
+        held = status()
+        held.update(retained=True, selection_explicit=False, harness="pi")
+        self.assertEqual(menu.rows_for(held, "menu")[0][0], "menu:sessions")
+        held["selection_explicit"] = True
+        held["pending"] = True
+        rows = dict(menu.rows_for(held, "menu"))
+        self.assertTrue(rows["recover-stage"].startswith("Stage in same label"))
+        self.assertEqual(rows["discard"], "Discard waiting dictation")
+        self.assertEqual(
+            rows["recover-discard"], "Discard unrecovered dictation"
+        )
+        self.assertNotIn("stop", rows)
+        self.assertLess(
+            list(rows).index("recover-stage"), list(rows).index("discard")
+        )
+
+    def test_prompt_hides_error_detail_and_names_missing_session(self):
+        missing = {"phase": "idle"}
+        self.assertEqual(menu.prompt_for(missing, "menu"), "Voice | No session")
+        self.assertLessEqual(len(menu.prompt_for({
+            "pane": "p", "retained": True,
+            "retained_source": "pi \u00b7 " + ("workspace " * 8),
+        }, "menu")), 28)
+        shell = menu.prompt_for({
+            "pane": "p", "phase": "recording",
+            "recording_label": "pi \u00b7 trade-tariff-backend \u00b7 shell",
+        }, "menu")
+        review = menu.prompt_for({
+            "pane": "p", "phase": "recording",
+            "recording_label": "pi \u00b7 trade-tariff-backend \u00b7 review",
+        }, "menu")
+        self.assertNotEqual(shell, review)
+        self.assertTrue(shell.endswith("shell"))
+        self.assertTrue(review.endswith("review"))
+        self.assertLessEqual(len(shell), 28)
+        self.assertLessEqual(len(review), 28)
+        failed = status()
+        failed.update(phase="error", error="secret microphone fault")
+        prompt = menu.prompt_for(failed, "menu")
+        self.assertIn("Unavailable", prompt)
+        self.assertNotIn("secret", prompt)
+        self.assertNotIn("microphone", prompt)
+
+    def test_locked_dictation_notice_differs_from_missing_backend(self):
+        locked = status()
+        locked.update(phase="recording", stt_backends={"whisper": "Whisper"})
+        with self.assertRaisesRegex(RuntimeError, "locked"):
+            menu.run_menu(
+                "dictation", request=Mock(return_value=locked), picker=Mock()
+            )
+        with self.assertRaisesRegex(RuntimeError, "No dictation backends"):
+            menu.run_menu(
+                "dictation", request=Mock(return_value=status()), picker=Mock()
+            )
+
+    def test_colliding_session_labels_keep_tokens_and_tail(self):
+        state = status()
+        for row in state["sessions"]:
+            row["selected"] = False
+            row["label"] = ("alpha workspace " * 6) + " · pane-9"
+        state["pane"] = None
+        rows = menu.rows_for(state, "sessions")
+        self.assertEqual(
+            [action for action, _ in rows], ["select:a", "select:b"]
+        )
+        self.assertNotEqual(rows[0][1], rows[1][1])
+        for _, label in rows:
+            self.assertIn("pane-9", label)
+            self.assertIn("\u2026", label)
+            self.assertNotIn("secret", label)
 
     @patch.object(menu.subprocess, "run")
     def test_index_maps_original_rows_and_sanitizes_labels(self, run):

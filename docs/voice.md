@@ -84,11 +84,15 @@ instead of sending a prepared prompt.
 
 On Andromeda and Foundation, **Super+Shift+V** opens `voice-menu`, a short-lived
 Fuzzel popup. Type to fuzzy-filter, use Up/Down, press Enter to choose, or Escape
-to close without changing anything. Mouse input is disabled. Choose **session**, **voice** (Qwen characters, Samantha by default) or
-**dictation** (Whisper locally, or Deepgram in the cloud). The default
-dictation backend is Whisper. Deepgram is recognition only; playback stays on
-Qwen. Or select one of the same contextual actions: record more, retry, discard, replay, or rebind.
-The existing recording and send hotkeys are unchanged; the picker does not
+to close without changing anything, including from a submenu. Mouse input is disabled.
+The first row is the control for the current moment: cancel while recording or
+transcribing, record more when dictation is ready to send, replay when a reply
+can be read, or the recovery choice when dictation is held for a lost destination.
+Session, voice, and dictation follow those, then playback and team toggles.
+Discard stays below the non-destructive choices. PersonaPlex, when offered, is last.
+Empty session, voice, or dictation lists are omitted rather than opened.
+The default dictation backend is Whisper. Deepgram is recognition only; playback stays on
+Qwen. The existing recording and send hotkeys are unchanged; the picker does not
 introduce another Send action.
 
 ```bash
@@ -158,18 +162,20 @@ requires NVIDIA CUDA and is not offered on Foundation or other hosts.
 show team members and read replies aloud. Team panes are not registered, so that
 toggle does not reveal them. Dictation is a radio choice between local Whisper
 and cloud Deepgram. It is locked while recording or transcribing so the current
-take keeps one backend. **Read replies aloud** toggles automatic playback of
+take keeps one backend; opening that submenu then says it is locked, which is
+different from having no backend installed. **Read replies aloud** toggles automatic playback of
 completed replies. Other actions appear only when useful: Replay last reply,
-Record more, Retry transcription, Discard retained dictation/recording, and Bind
+Record more, Retry transcription, Discard waiting dictation or a retained recording, and Bind
 to current conversation. Cancel recording, Cancel transcription or Stop speaking
-appears while that voice work is active. These controls do not cancel a running
+appears first while that voice work is active. These controls do not cancel a running
 coding-agent turn. Super+Space handles the normal record/transcribe/send flow.
 There is no StatusNotifier icon.
 
-The top pill is the only voice message. It does not raise a separate desktop
-notification, and it never shows the transcript or the reply. Its charcoal
-surface stays consistent across themes; the status indicator uses the active
+The top pill is the persistent voice status. It never shows the transcript or the reply.
+Its charcoal surface stays consistent across themes; the status indicator uses the active
 theme's colour roles. Silence produces a flat meter, not a microphone error.
+A menu that cannot open, or a stale choice, uses a separate desktop notice and asks you to reopen.
+The pill does not repeat that notice, and the menu does not copy the pill's error text.
 Clipping must persist beyond the capture peak latch before it raises a warning;
 the first two seconds of capture have a warning grace period. Muting is immediate.
 
@@ -218,13 +224,11 @@ removes retained text and retry audio. Cancel does not remove text already
 pasted into a terminal editor; that prompt remains available for review.
 
 If a Pi destination is lost or replaced while dictation is pending, the pill
-names its source. **Super+Shift+V** offers **Copy retained dictation**, **Stage in selected Pi
-session**, or **Discard retained dictation**. Staging requires a connected Pi
+names its source. **Super+Shift+V** offers **Copy retained dictation**, a stage row that names the destination, or **Discard unrecovered dictation**. That discard removes only the held copy. **Discard waiting dictation** is the separate choice for text already prepared in the current session. Staging requires a connected Pi
 destination without a blocking dialog and preserves its editor text. If the
-current destination was selected automatically, first choose
-**Confirm <label> for retained dictation**
-in the session selector, even when it is the only session. Confirmation only
-selects the destination; then choose **Stage in selected Pi session**.
+current destination was selected automatically, **Choose session** is first.
+Confirm **Confirm <label> for retained dictation** in the session selector, even when it is the only session. The selected row is marked with `*`.
+Confirmation only selects the destination; then choose the stage row.
 Recovery never submits automatically:
 review the staged text and send explicitly. Retained text is memory-only and
 is not silently redirected to another session.
