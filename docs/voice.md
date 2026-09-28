@@ -163,7 +163,9 @@ show team members and read replies aloud. Team panes are not registered, so that
 toggle does not reveal them. Dictation is a radio choice between local Whisper
 and cloud Deepgram. It is locked while recording or transcribing so the current
 take keeps one backend; opening that submenu then says it is locked, which is
-different from having no backend installed. **Read replies aloud** toggles automatic playback of
+different from having no backend installed. **Read replies aloud** is shown only where speech synthesis is installed.
+Turning it on starts the speech service and keeps it running; turning it off
+stops playback and that service. It toggles automatic playback of
 completed replies. Other actions appear only when useful: Replay last reply,
 Record more, Retry transcription, Discard waiting dictation or a retained recording, and Bind
 to current conversation. Cancel recording, Cancel transcription or Stop speaking

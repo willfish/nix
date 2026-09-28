@@ -188,6 +188,13 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("Speech models loading", context)
         self.assertEqual(view["colour"], "amber")
 
+    def test_read_aloud_is_hidden_without_speech(self):
+        view = self.tray.presentation({
+            "pane": "p1", "auto": True, "speech_available": False,
+        })
+        self.assertNotIn("auto-toggle", view["actions"])
+        self.assertIn("team-toggle", view["actions"])
+
     def test_idle_menu_has_only_the_read_replies_toggle_and_sessions(self):
         view = self.tray.presentation({"pane": "p1", "auto": True})
         self.assertEqual(view["actions"], {

@@ -24,6 +24,7 @@ class EngineState:
     command: str | None = None
     running: bool = False
     error: str | None = None
+    retire_when_idle: bool = False
 
 
 def systemctl(engine, command, timeout):
@@ -109,6 +110,7 @@ class EngineManager:
             raise ValueError('invalid engines')
         self._states = {engine: EngineState() for engine in engines}
         self._leases = set()
+        self._residents = {}
         self._idle_timers = {}
         self._queued_stops = set()
         self._sessions = self._admissions = self._population_generation = 0
@@ -163,6 +165,55 @@ class EngineManager:
     def state(self, engine):
         with self._lock:
             return replace(self._states[engine])
+
+    def ensure_resident(self, engine):
+        """Keep one lease so idle timeout cannot stop this engine."""
+        with self._lock:
+            if engine not in self._states:
+                raise RuntimeError(f"{engine} is not available")
+            self._states[engine].retire_when_idle = False
+            current = self._residents.get(engine)
+            if current and not current._released:
+                return current
+        lease = self.acquire(engine)
+        with self._lock:
+            current = self._residents.get(engine)
+            if current and not current._released:
+                extra = lease
+            else:
+                self._residents[engine] = lease
+                extra = None
+        if extra:
+            extra.release()
+            return current
+        return lease
+
+    def retire(self, engine):
+        """Drop the resident lease and stop an unused unit."""
+        with self._lock:
+            if engine not in self._states:
+                return
+            lease = self._residents.pop(engine, None)
+            state = self._states[engine]
+            state.retire_when_idle = True
+            if state.users == 0 and state.running:
+                state.last_release = self.clock() - self.idle_timeout
+        if lease:
+            lease.release()
+        self._retire_now(engine)
+
+    def _retire_now(self, engine):
+        with self._lock:
+            state = self._states.get(engine)
+            if (
+                not state
+                or not state.retire_when_idle
+                or state.users
+                or not state.running
+            ):
+                return
+            state.last_release = self.clock() - self.idle_timeout
+        self.sweep()
 
     def acquire(self, engine):
         with self._lock:
@@ -255,6 +306,8 @@ class EngineManager:
             state = self._states[lease.engine]
             state.users -= 1
             state.last_release = self.clock()
+            if state.retire_when_idle and state.users == 0:
+                state.last_release = self.clock() - self.idle_timeout
             if state.users == 0 and not self._closed:
                 old = self._idle_timers.pop(lease.engine, None)
                 if old:

@@ -159,11 +159,12 @@ def presentation(status):
         "full_labels": {},
         "show_team": bool(status.get("show_team", False)),
         "actions": {
-            "auto-toggle": ("Read replies aloud", True),
             "team-toggle": ("Show team members", True),
         },
     }
     actions = view["actions"]
+    if status.get("speech_available", True):
+        actions["auto-toggle"] = ("Read replies aloud", True)
     can_speak = status.get('can_speak', True)
     if selected and not can_speak:
         context.append('Team members are silent')

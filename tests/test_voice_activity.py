@@ -330,12 +330,26 @@ class ActivityTests(unittest.TestCase):
 
     def test_tray_can_toggle_automatic_reading(self):
         del self.terminal.activity
+        engines = SimpleNamespace(
+            _states={"tts": object()},
+            ensure_resident=Mock(),
+            retire=Mock(),
+        )
+        self.app.engines = engines
         self.assertTrue(voice.dispatch(
             self.app, {"action": "auto-toggle"}
         )["auto"])
+        engines.ensure_resident.assert_called_once_with("tts")
         self.assertFalse(voice.dispatch(
             self.app, {"action": "auto-toggle"}
         )["auto"])
+        engines.retire.assert_called_once_with("tts")
+
+    def test_read_aloud_is_rejected_without_speech(self):
+        del self.terminal.activity
+        self.app.speech_available = False
+        with self.assertRaisesRegex(RuntimeError, "not available"):
+            voice.dispatch(self.app, {"action": "auto-toggle"})
 
 
 if __name__ == "__main__":

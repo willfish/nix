@@ -306,6 +306,7 @@ class Controller:
         self.thread = None
         self.turns = set()
         self.auto = False
+        self.speech_available = True
         self.playback = None
         self.audible = False
         self.capture = None
@@ -1341,6 +1342,7 @@ class Controller:
                 ) in ("edited", "empty", "none"),
                 "reply": self.reply,
                 "auto": self.auto,
+                "speech_available": self.speech_available,
                 "can_speak": bool(
                     self.target and not self.target.get('team_child')
                 ),
@@ -1579,6 +1581,22 @@ class Controller:
             "last-assistant-message": event.get("text", ""),
         })
         return True if target.get('managed') else notified
+
+    def set_auto(self, enabled):
+        if not self.speech_available:
+            raise RuntimeError("Speech is not available on this machine")
+        enabled = bool(enabled)
+        with self.lock:
+            self.auto = enabled
+            engines = self.engines
+        if not engines or "tts" not in getattr(engines, "_states", {}):
+            return
+        if enabled:
+            engines.ensure_resident("tts")
+            return
+        self.cancelled.set()
+        self.audio.stop()
+        engines.retire("tts")
 
     def read(self, replace=False):
         with self.lock:
@@ -2427,11 +2445,9 @@ def dispatch(app, request):
         app.notice(message, tone=request.get("tone") or "orange")
         return app.status()
     elif action == "auto":
-        with app.lock:
-            app.auto = bool(request["enabled"])
+        app.set_auto(bool(request["enabled"]))
     elif action == "auto-toggle":
-        with app.lock:
-            app.auto = not app.auto
+        app.set_auto(not app.auto)
     elif action in ("append", "replace"):
         app.record(mode=action)
     elif action == "discard":
@@ -2474,9 +2490,14 @@ def serve(runtime, config):
     )
     for stale in runtime.glob("*.wav"):
         stale.unlink(missing_ok=True)
-    app.auto = config.get("auto_speak", True)
+    app.speech_available = bool(config.get("tts_enabled", True))
+    app.auto = (
+        bool(config.get("auto_speak", True)) and app.speech_available
+    )
     app.restore()
     engines.reconcile_startup()
+    if app.auto:
+        engines.ensure_resident("tts")
     path = runtime / "control.sock"
     path.unlink(missing_ok=True)
 

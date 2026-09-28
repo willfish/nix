@@ -89,6 +89,25 @@ class EngineTests(unittest.TestCase):
         self.queue.drain()
         self.assertEqual(self.commands, [('stt', 'stop')])
 
+    def test_resident_speech_survives_idle_until_retired(self):
+        lease = self.manager.ensure_resident('tts')
+        self.queue.drain()
+        self.readies.drain()
+        self.assertEqual(self.commands, [('tts', 'start')])
+        self.now += 10000
+        self.manager.sweep()
+        self.queue.drain()
+        self.assertEqual(self.commands, [('tts', 'start')])
+        playback = self.manager.acquire('tts')
+        self.queue.drain()
+        self.manager.retire('tts')
+        self.queue.drain()
+        self.assertEqual(self.commands, [('tts', 'start')])
+        playback.release()
+        self.queue.drain()
+        self.assertEqual(self.commands, [('tts', 'start'), ('tts', 'stop')])
+        self.assertTrue(lease._released)
+
     def test_systemctl_activity_query_is_bounded_and_distinguishes_unknown(
         self,
     ):
