@@ -20,6 +20,11 @@
       settings = import ../config/hyprland/settings.nix;
       omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
       ttfx = pkgs.callPackage ./ttfx.nix { };
+      agentStatus = pkgs.writeShellApplication {
+        name = "hypr-agent-status";
+        runtimeInputs = [ pkgs.python3 ];
+        text = "exec python3 ${../config/hyprland/agents}/status.py";
+      };
       tailscaleStatus = pkgs.writeShellApplication {
         name = "hypr-tailscale-status";
         runtimeInputs = [
@@ -403,7 +408,7 @@
         }
 
         #battery.critical:not(.charging), #pulseaudio.muted, #custom-recording,
-        #custom-notifications.quiet {
+        #custom-notifications.quiet, #custom-agents.alarm {
           color: @red;
         }
 
@@ -606,6 +611,17 @@
               tooltip-format = "Applications · right-click Files";
               on-click = settings.bar.commands.launcher;
               on-click-right = settings.bar.commands.files;
+            };
+            "custom/agents" = {
+              exec = "${agentStatus}/bin/hypr-agent-status";
+              return-type = "json";
+              format = "{}";
+              interval = 30;
+              signal = 9;
+              tooltip = true;
+              on-click = settings.bar.commands.agents;
+              on-click-right = "${settings.bar.commands.agents} refresh";
+              on-click-middle = "${settings.bar.commands.agents} next";
             };
             "custom/recording" = {
               exec = "printf '%s' '●'";

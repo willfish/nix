@@ -108,12 +108,14 @@ rec {
       bluetooth = "hypr-controls bluetooth";
       tailscale = "hypr-controls tailscale";
       calendar = "hypr-controls calendar";
+      agents = "hypr-controls agents";
       notifications = "hypr-notifications";
       music = cliampCommand;
       power = "hypr-session menu";
     };
     modulesLeft = [
       "custom/launcher"
+      "custom/agents"
       "custom/recording"
       "hyprland/workspaces"
     ];

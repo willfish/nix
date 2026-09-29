@@ -2,14 +2,23 @@
 panel=${1:-}
 action=${2:-open}
 case "$panel" in
-audio | bluetooth | network | tailscale | calendar) ;;
+audio | bluetooth | network | tailscale | calendar | agents) ;;
 *)
-  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar [toggle]' >&2
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|agents [toggle|refresh|next]' >&2
   exit 2
   ;;
 esac
-if [[ $action != open && ! ($panel == tailscale && $action == toggle) ]]; then
-  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar [toggle]' >&2
+if [[ $action == refresh && $panel == agents ]]; then
+  omarchy-agent-usage-update --force >/dev/null 2>&1 || true
+  pkill -RTMIN+9 waybar >/dev/null 2>&1 || true
+  exit 0
+fi
+if [[ $action != open && $action != next && ! ($panel == tailscale && $action == toggle) ]]; then
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|agents [toggle|refresh|next]' >&2
+  exit 2
+fi
+if [[ $action == next && $panel != agents ]]; then
+  echo 'Usage: hypr-controls agents next' >&2
   exit 2
 fi
 systemctl --user is-active --quiet hyprland-session.target || {
@@ -36,6 +45,9 @@ for _ in {1..30}; do
     grep -q 'controls'; then
     if [[ $action == toggle ]]; then
       exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call omarchy.tailscale toggleTailscale
+    fi
+    if [[ $action == next ]]; then
+      exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call omarchy.agents next
     fi
     exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call controls toggle \
       "$panel" "${anchor[@]}"

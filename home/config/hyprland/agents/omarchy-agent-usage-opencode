@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""OpenCode Go usage from the key Pi already stores.
+
+An upgraded Go plan stays on this record. The plan line follows the API when
+it names one; otherwise the current subscription is Go.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pi_auth
+import usage_lib
+
+USAGE_ENDPOINT = "https://opencode.ai/zen/go/v1/usage"
+AUTH_HELP = "Connect OpenCode Go in Pi (`/login opencode-go`)."
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def probe(key: str) -> dict:
+    request = urllib.request.Request(
+        USAGE_ENDPOINT,
+        headers={
+            "Authorization": "Bearer " + key,
+            "Accept": "application/json",
+            "User-Agent": "hypr-agent-usage",
+        },
+    )
+    opener = urllib.request.build_opener(_NoRedirect)
+    with opener.open(request, timeout=15) as response:
+        payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    if not isinstance(payload, dict):
+        raise RuntimeError("usage returned no object")
+    return payload
+
+
+def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] in {"-h", "--help"}:
+        print(
+            "usage: omarchy-agent-usage-opencode [--force] [--limits-only]",
+            file=sys.stderr,
+        )
+        return 0
+    home = Path(
+        os.environ.get("PI_AGENT_DIR") or str(Path.home() / ".pi/agent")
+    )
+    stats = usage_lib.scan_pi_sessions(home / "sessions", "opencode-go")
+    try:
+        key = pi_auth.opencode_go_key()
+    except Exception:
+        key = ""
+    limits: list = []
+    tier = "Go"
+    status = ""
+    help_text = ""
+    retry = False
+    if not key:
+        status = "Waiting for auth"
+        help_text = AUTH_HELP
+    else:
+        try:
+            payload = probe(key)
+        except urllib.error.HTTPError as exc:
+            status = "OpenCode limits unavailable"
+            if exc.code == 403:
+                help_text = "This OpenCode key has no Go subscription."
+            elif exc.code == 401:
+                help_text = AUTH_HELP
+            else:
+                help_text = f"OpenCode Go usage returned status {exc.code}."
+        except Exception:
+            status = "OpenCode limits unavailable"
+            help_text = "Couldn't reach OpenCode Go usage."
+            retry = True
+        else:
+            limits, plan = usage_lib.parse_opencode_usage(payload)
+            tier = plan or "Go"
+            if not limits:
+                status = "OpenCode limits unavailable"
+                help_text = "OpenCode Go usage returned no allowance."
+    record = usage_lib.record(
+        "opencode",
+        "OpenCode",
+        stats,
+        limits=limits,
+        tier=tier,
+        status=status,
+        help_text=help_text,
+        retry=retry,
+    )
+    json.dump(record, sys.stdout, separators=(",", ":"))
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

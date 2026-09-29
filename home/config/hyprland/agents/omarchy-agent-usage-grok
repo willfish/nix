@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Grok subscription usage from Pi's xAI login.
+
+Pi's xAI OAuth token is the same client the Grok CLI uses. The Grok CLI is
+not required.
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pi_auth
+import usage_lib
+
+BILLING_ENDPOINT = "https://cli-chat-proxy.grok.com/v1/billing?format=credits"
+AUTH_HELP = "Run /login xai in Pi."
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def jwt_claims(token: str) -> dict:
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        data = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def probe(token: str) -> dict:
+    claims = jwt_claims(token)
+    request = urllib.request.Request(
+        BILLING_ENDPOINT,
+        headers={
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json",
+            "x-xai-token-auth": "xai-grok-cli",
+            "x-userid": str(
+                claims.get("principal_id") or claims.get("sub") or ""
+            ),
+        },
+    )
+    opener = urllib.request.build_opener(_NoRedirect)
+    with opener.open(request, timeout=15) as response:
+        payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    if not isinstance(payload, dict):
+        raise RuntimeError("billing returned no object")
+    return payload
+
+
+def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] in {"-h", "--help"}:
+        print(
+            "usage: omarchy-agent-usage-grok [--force] [--limits-only]",
+            file=sys.stderr,
+        )
+        return 0
+    home = Path(
+        os.environ.get("PI_AGENT_DIR") or str(Path.home() / ".pi/agent")
+    )
+    stats = usage_lib.scan_pi_sessions(home / "sessions", "xai")
+    token, failure = pi_auth.oauth_access(
+        "xai", pi_auth.XAI_TOKEN_URL, pi_auth.XAI_CLIENT_ID
+    )
+    limits: list = []
+    tier = usage_lib.grok_tier_label(jwt_claims(token)) if token else ""
+    status = failure
+    help_text = AUTH_HELP if failure else ""
+    retry = False
+    if token:
+        try:
+            payload = probe(token)
+        except urllib.error.HTTPError as exc:
+            status = "Grok limits unavailable"
+            help_text = f"Grok billing returned status {exc.code}."
+        except Exception:
+            status = "Grok limits unavailable"
+            help_text = (
+                "Couldn't reach Grok billing. Local Pi stats are still shown."
+            )
+            retry = True
+        else:
+            limits = usage_lib.parse_grok_billing(payload)
+            help_text = ""
+            status = "" if limits else "Grok limits unavailable"
+            if not limits:
+                help_text = "Grok billing returned no allowance."
+    record = usage_lib.record(
+        "grok",
+        "Grok",
+        stats,
+        limits=limits,
+        tier=tier,
+        status=status,
+        help_text=help_text,
+        retry=retry,
+    )
+    json.dump(record, sys.stdout, separators=(",", ":"))
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

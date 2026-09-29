@@ -8,6 +8,7 @@ import "plugins/panels/bluetooth" as Bluetooth
 import "plugins/panels/network" as Network
 import "plugins/panels/tailscale" as Tailscale
 import "plugins/panels/calendar" as Calendar
+import "plugins/agents" as Agents
 import "plugins/polkit" as Polkit
 import "plugins/menu" as OmarchyMenu
 
@@ -15,7 +16,8 @@ import "plugins/menu" as OmarchyMenu
 ShellRoot {
   id: host
   property var options: JSON.parse(Quickshell.env("HYPR_CONTROLS_SETTINGS"))
-  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale, calendar: calendar })
+  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale, calendar: calendar, agents: agents })
+  property var agentSettings: JSON.parse(Quickshell.env("HYPR_AGENTS_SETTINGS") || "{}")
 
   function firstPartyServiceFor(id) { return null }
   function updateEntryInline(moduleName, entry) {
@@ -91,6 +93,13 @@ ShellRoot {
       id: calendar
       bar: barApi
       anchorItem: calendarAnchor
+    }
+    // Waybar owns the click. Keep the popup available before the first record lands.
+    Agents.Panel {
+      id: agents
+      bar: barApi
+      settings: host.agentSettings
+      visible: true
     }
     // Same palette as the panels. Replaces the unthemed Hyprland agent.
     Polkit.PolkitAgent { }

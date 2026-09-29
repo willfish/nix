@@ -9,6 +9,7 @@ let
   settings = import ../config/hyprland/settings.nix;
   source = import ./themes/omarchy-source.nix;
   local = ../config/hyprland/controls;
+  agents = ../config/hyprland/agents;
   # Pinned bar-widget plugin. The sync scripts stay out: they expect Google
   # OAuth, and the rail reads the existing private iCal export instead.
   calendarPlugin = pkgs.fetchFromGitHub {
@@ -60,6 +61,10 @@ let
     done
     cp ${calendarPlugin}/LICENSE ${calendarPlugin}/Model.js ${calendarPlugin}/manifest.json \
       ${calendarPlugin}/*.qml "$out/shell/plugins/panels/calendar/"
+    cp -r ${source}/shell/plugins/agents "$out/shell/plugins/"
+    chmod -R u+w "$out/shell/plugins/agents"
+    cp ${agents}/grok.svg ${agents}/grok-light.svg ${agents}/opencode.svg ${agents}/opencode-light.svg \
+      "$out/shell/plugins/agents/assets/"
     cp -r ${source}/shell/plugins/polkit "$out/shell/plugins/"
     cp -r ${source}/shell/plugins/menu "$out/shell/plugins/"
     chmod -R u+w "$out"
@@ -179,6 +184,42 @@ let
       exit 1
     '';
   };
+  # Reviewed collectors only. The pinned panel watches their JSON records.
+  # Codex and Grok use Pi's OAuth logins; OpenCode Go uses Pi's stored key.
+  # Omarchy's installer, plugin loader, and agent launcher stay out.
+  agentUpdate = pkgs.writeShellScript "omarchy-agent-usage-update" ''
+    here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+    export OMARCHY_PATH=$(CDPATH= cd -- "$here/.." && pwd)
+    export PATH="${pkgs.jq}/bin:${pkgs.python3}/bin:${pkgs.bash}/bin:$PATH"
+    usage="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage"
+    mkdir -p "$usage"
+    chmod 700 "$usage" || true
+    ${pkgs.bash}/bin/bash "$OMARCHY_PATH/libexec/omarchy-agent-usage-update" "$@"
+    status=$?
+    chmod 600 "$usage"/*.json 2>/dev/null || true
+    exit $status
+  '';
+  agentCollectors =
+    pkgs.runCommand "omarchy-agent-collectors"
+      {
+        nativeBuildInputs = [
+          pkgs.python3
+          pkgs.bash
+        ];
+      }
+      ''
+        mkdir -p "$out/bin" "$out/libexec"
+        cp ${agents}/usage_lib.py ${agents}/pi_auth.py "$out/bin/"
+        for name in codex grok opencode; do
+          install -m755 ${agents}/omarchy-agent-usage-"$name" "$out/bin/omarchy-agent-usage-$name"
+        done
+        install -m755 ${source}/bin/omarchy-agent-usage-update "$out/libexec/omarchy-agent-usage-update"
+        install -m755 ${agentUpdate} "$out/bin/omarchy-agent-usage-update"
+        patchShebangs "$out/bin/omarchy-agent-usage-codex" \
+          "$out/bin/omarchy-agent-usage-grok" \
+          "$out/bin/omarchy-agent-usage-opencode" \
+          "$out/libexec/omarchy-agent-usage-update"
+      '';
   runtime = with pkgs; [
     bash
     coreutils
@@ -207,6 +248,8 @@ let
     laptopClosed
     tailscaleSend
     calendarSettings
+    agentCollectors
+    pkgs.findutils
     quickshell
   ];
   shell = pkgs.writeShellApplication {
@@ -217,6 +260,22 @@ let
       export PATH="/run/wrappers/bin:$PATH"
       export HYPR_CONTROLS_THEME=${lib.escapeShellArg "${config.xdg.stateHome}/theme-menu/active"}
       export HYPR_CALENDAR_SETTINGS=${lib.escapeShellArg "${config.xdg.configHome}/hyprland/calendar-settings.json"}
+      export HYPR_AGENTS_SETTINGS=${
+        lib.escapeShellArg (
+          builtins.toJSON {
+            providers = {
+              claude.enabled = false;
+              fireworks.enabled = false;
+              codex.enabled = true;
+              grok.enabled = true;
+              opencode.enabled = true;
+            };
+            refreshIntervalSec = 900;
+            syncMode = "Off";
+          }
+        )
+      }
+      export OMARCHY_PATH=${agentCollectors}
       export HYPR_CONTROLS_SETTINGS=${
         lib.escapeShellArg (
           builtins.toJSON {
@@ -329,6 +388,8 @@ let
       pkgs.gnugrep
       pkgs.coreutils
       pkgs.libnotify
+      pkgs.procps
+      agentCollectors
     ];
     text = ''
       export HYPR_CONTROLS_CONFIG=${bundle}/shell
@@ -355,6 +416,23 @@ in
     '';
     # Authentication prompts remain visible even when notifications are muted.
     dconf.settings."org/blueman/general".notification-daemon = false;
+    systemd.user.services.hypr-agent-usage = {
+      Unit.Description = "Refresh AI subscription usage for the bar";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${agentCollectors}/bin/omarchy-agent-usage-update";
+        UMask = "0077";
+        TimeoutStartSec = 120;
+      };
+    };
+    systemd.user.timers.hypr-agent-usage = {
+      Unit.Description = "Refresh AI subscription usage every fifteen minutes";
+      Timer = {
+        OnStartupSec = "45s";
+        OnUnitActiveSec = "15min";
+      };
+      Install.WantedBy = [ "hyprland-session.target" ];
+    };
     systemd.user.services.hyprland-panels = {
       Unit = {
         Description = "Themed control panels and authentication prompt";
