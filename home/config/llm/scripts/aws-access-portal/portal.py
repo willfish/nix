@@ -314,8 +314,13 @@ class PortalClient:
 
     def fill_and_submit(self, page, field, button, value):
         expression = """((field, button, value) => {
-          const el = document.querySelector(field);
-          const submit = document.querySelector(button);
+          const fieldElement = document.querySelector(field);
+          const buttonElement = document.querySelector(button);
+          const el = fieldElement?.matches('input')
+            ? fieldElement : fieldElement?.querySelector('input');
+          const submit = buttonElement?.matches('button, input[type="submit"]')
+            ? buttonElement
+            : buttonElement?.querySelector('button, input[type="submit"]');
           if (!el || !submit) return false;
           const proto = HTMLInputElement.prototype;
           const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;

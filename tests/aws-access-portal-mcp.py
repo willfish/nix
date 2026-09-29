@@ -324,6 +324,78 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(events[-1], "close")
         self.assertNotIn("Target.activateTarget", json.dumps(events))
 
+    def test_fill_targets_native_controls_inside_awsui_wrappers(self):
+        harness = textwrap.dedent(
+            """
+            const {readFileSync} = require('node:fs');
+            const {runInNewContext} = require('node:vm');
+            const expression = readFileSync(0, 'utf8');
+            const mode = process.argv[1];
+            const events = [];
+            class Input {
+              set value(value) {
+                if (!(this instanceof Input)) {
+                  throw new TypeError('Illegal invocation');
+                }
+                this.currentValue = value;
+              }
+              matches(selector) { return selector === 'input'; }
+              dispatchEvent(event) { events.push(event.type); }
+            }
+            class Event {
+              constructor(type) { this.type = type; }
+            }
+            const input = new Input();
+            const button = {
+              matches: () => true, click: () => events.push('submit'),
+            };
+            const wrapper = child => ({
+              matches: () => false, querySelector: () => child,
+            });
+            const fields = {
+              field: mode === 'native' ? input : wrapper(input),
+              button: mode === 'native' ? button : wrapper(button),
+            };
+            if (mode === 'missing-field') fields.field = wrapper(null);
+            if (mode === 'missing-button') fields.button = null;
+            const result = runInNewContext(expression, {
+              document: {querySelector: selector => fields[selector]},
+              HTMLInputElement: Input, InputEvent: Event, Event,
+            });
+            console.log(JSON.stringify({
+              result, events, value: input.currentValue,
+            }));
+            """
+        )
+        for mode in ("native", "wrapped", "missing-field", "missing-button"):
+            with self.subTest(mode=mode):
+                class Page:
+                    def evaluate(self, expression):
+                        completed = subprocess.run(
+                            ["node", "-e", harness, mode],
+                            input=expression,
+                            text=True,
+                            capture_output=True,
+                            check=True,
+                        )
+                        self.result = json.loads(completed.stdout)
+                        return self.result["result"]
+
+                page = Page()
+                result = portal.PortalClient().fill_and_submit(
+                    page, "field", "button", "synthetic-input"
+                )
+                expected = mode in ("native", "wrapped")
+                self.assertEqual(result, expected)
+                self.assertEqual(
+                    page.result["events"],
+                    ["input", "change", "submit"] if expected else [],
+                )
+                self.assertEqual(
+                    page.result.get("value"),
+                    "synthetic-input" if expected else None,
+                )
+
     def test_focus_methods_are_refused(self):
         socket = portal.CdpSocket.__new__(portal.CdpSocket)
         with self.assertRaises(portal.PortalError):
