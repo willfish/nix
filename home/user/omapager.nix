@@ -104,6 +104,9 @@ let
                   'icon_paths.allowed_icon(fields["Icon"], [d])'
                 python3 ${../config/hyprland/omapager/patch-icon.py} \
                   "$out/shell/omapager/bin/omapager-icon"
+                python3 ${../config/hyprland/omapager/patch-herdr-focus.py} \
+                  "$out/shell/omapager/Service.qml" \
+                  ${herdrFocus}/bin/herdr-notification-focus
                 {
                   echo 'module Omapager'
                   for qml in "$out/shell/omapager"/*.qml; do
@@ -205,6 +208,17 @@ let
       fi
       jq -nc --arg tooltip "$tooltip" --arg class "$class" \
         '{text:"󰂚", tooltip:$tooltip, class:$class}'
+    '';
+  };
+  herdrFocus = pkgs.writeShellApplication {
+    name = "herdr-notification-focus";
+    runtimeInputs = [
+      python
+      pkgs.herdr
+      pkgs.hyprland
+    ];
+    text = ''
+      exec ${python}/bin/python3 ${../config/hyprland/omapager/herdr_notification_focus.py} "$@"
     '';
   };
   githubWatch = pkgs.writeShellApplication {
