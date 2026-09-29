@@ -80,11 +80,76 @@ class GitCleanupTest(unittest.TestCase):
             self.fixture.log.exists(), "protected tree reached service cleanup"
         )
 
-    def test_unpublished_merged_worktree_is_retained(self):
+    def test_unpublished_landed_worktree_is_removed(self):
         path, state = self.fixture.worktree()
         result = self.run_cleanup()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assert_retained(path, state, "branch-feature")
+        self.assertFalse(path.exists())
+        self.assertFalse(state.exists())
+        branches = self.real(
+            "for-each-ref", "--format=%(refname)", "refs/heads"
+        ).stdout
+        self.assertNotIn("refs/heads/branch-feature", branches)
+
+    def test_squash_landed_worktree_without_upstream_is_removed(self):
+        path, state = self.fixture.worktree()
+        (path / "landed.txt").write_text("already on main\n")
+        self.real("add", "landed.txt", cwd=path)
+        self.real("commit", "-m", "squash landed feature", cwd=path)
+        self.real("checkout", "main")
+        self.real(
+            "commit", "--allow-empty", "-m", "squash landed feature (#9)"
+        )
+        self.real("push", "origin", "main")
+        result = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(path.exists())
+        self.assertFalse(state.exists())
+        branches = self.real(
+            "for-each-ref", "--format=%(refname)", "refs/heads"
+        ).stdout
+        self.assertNotIn("refs/heads/branch-feature", branches)
+
+    def test_duplicate_landed_tip_keeps_branch_and_removes_worktree(self):
+        path, state = self.fixture.worktree()
+        (path / "old.txt").write_text("still only local\n")
+        self.real("add", "old.txt", cwd=path)
+        self.real("commit", "-m", "unpublished parent", cwd=path)
+        (path / "tip.txt").write_text("landed tip\n")
+        self.real("add", "tip.txt", cwd=path)
+        self.real("commit", "-m", "landed tip", cwd=path)
+        self.real("branch", "keeper", "branch-feature")
+        self.real("checkout", "main")
+        self.real("commit", "--allow-empty", "-m", "landed tip")
+        self.real("push", "origin", "main")
+        result = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(path.exists())
+        self.assertFalse(state.exists())
+        self.real("show-ref", "--verify", "refs/heads/branch-feature")
+        self.real("show-ref", "--verify", "refs/heads/keeper")
+
+    def test_detached_landed_worktree_is_removed_with_service_state(self):
+        path, state = self.fixture.worktree()
+        self.real("checkout", "--detach", cwd=path)
+        self.real("checkout", "main")
+        result = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(path.exists())
+        self.assertFalse(state.exists())
+
+    def test_detached_unpublished_worktree_is_retained(self):
+        path, state = self.fixture.worktree()
+        (path / "only-here.txt").write_text("do not drop\n")
+        self.real("add", "only-here.txt", cwd=path)
+        self.real("commit", "-m", "detached only here", cwd=path)
+        self.real("checkout", "--detach", cwd=path)
+        self.real("branch", "-D", "branch-feature")
+        result = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(path.is_dir())
+        self.assertTrue((state / "sentinel").is_file())
+        self.assertFalse(self.fixture.log.exists())
 
     def test_unpublished_unmerged_worktree_is_retained(self):
         path, state = self.fixture.worktree()
@@ -164,8 +229,10 @@ class GitCleanupTest(unittest.TestCase):
         result = self.run_cleanup()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((state / "sentinel").is_file())
-        self.real("show-ref", "--verify", "refs/heads/branch-feature")
-        self.assertFalse(self.fixture.log.exists())
+        self.assertFalse(
+            self.fixture.log.exists(),
+            "missing checkout must not reach service cleanup",
+        )
 
     def test_missing_origin_default_stops_before_cleanup(self):
         path, state, branch = self.tracked_tree()
@@ -197,10 +264,33 @@ class GitCleanupTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_retained(path, state, branch)
 
-    def test_unpublished_branch_without_worktree_is_retained(self):
-        self.real("branch", "unpublished")
-        self.assertEqual(self.run_cleanup().returncode, 0)
-        self.real("show-ref", "--verify", "refs/heads/unpublished")
+    def test_landed_branch_without_worktree_is_removed(self):
+        self.real("branch", "already-on-main")
+        result = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        branches = self.real(
+            "for-each-ref", "--format=%(refname)", "refs/heads"
+        ).stdout
+        self.assertNotIn("refs/heads/already-on-main", branches)
+
+    def test_generated_ignored_files_do_not_keep_a_landed_worktree(self):
+        path, state = self.fixture.worktree()
+        (self.repo / ".git/info/exclude").write_text(".direnv/\n")
+        (path / ".direnv").mkdir()
+        (path / ".direnv" / "cache").write_text("generated\n")
+        result = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(path.exists())
+        self.assertFalse(state.exists())
+
+    def test_assume_unchanged_deletion_does_not_keep_a_landed_worktree(self):
+        path, state = self.fixture.worktree()
+        self.real("update-index", "--assume-unchanged", "flake.nix", cwd=path)
+        (path / "flake.nix").unlink()
+        result = self.run_cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(path.exists())
+        self.assertFalse(state.exists())
 
     def test_cleanup_from_feature_uses_default_ancestry(self):
         path, state, branch = self.tracked_tree(merged=False, gone=False)

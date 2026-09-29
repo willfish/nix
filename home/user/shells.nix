@@ -54,62 +54,146 @@ let
     current_root="$(git rev-parse --show-toplevel)"
     git pull --ff-only
 
-    # Prune administrative records only. Automatic housekeeping must not delete
-    # service state belonging to an unavailable or unpublished worktree.
+    # Prune administrative records only. A missing checkout may still be
+    # unpublished, so this raw prune must not delete its service state.
     ${pkgs.git}/bin/git worktree prune
 
-    eligible_branch() {
+    subjects_file="$(mktemp)"
+    trap 'rm -f "$subjects_file"' EXIT
+    git log "$default_ref" --format=%s | sed -E 's/ \(#[0-9]+\)$//' | sort -u > "$subjects_file"
+
+    subject_on_default() {
+      local subject="$1"
+      subject="$(printf '%s\n' "$subject" | sed -E 's/ \(#[0-9]+\)$//')"
+      [ -n "$subject" ] || return 1
+      grep -qxF -e "$subject" "$subjects_file"
+    }
+
+    # Landed means every commit not in the default branch has the same
+    # normalized subject as a default-branch commit. That covers a real merge
+    # and a squash whose hashes are no longer ancestors.
+    history_landed() {
+      local rev="$1" subject
+      while IFS= read -r subject || [ -n "$subject" ]; do
+        subject_on_default "$subject" || return 1
+      done < <(git log --format=%s "$rev" --not "$default_ref")
+    }
+
+    no_live_upstream() {
       local branch="$1" upstream
-      [ "$branch" != "$default" ] || return 1
+      [ -n "$branch" ] || return 0
       upstream="$(git for-each-ref --format='%(upstream)' "refs/heads/$branch")" || return 1
       case "$upstream" in
-        refs/remotes/origin/*) ;;
-        *) return 1 ;;
+        refs/remotes/origin/*)
+          if git show-ref --verify --quiet "$upstream"; then
+            return 1
+          fi
+          ;;
       esac
-      if git show-ref --verify --quiet "$upstream"; then
-        return 1
+      return 0
+    }
+
+    commits_only_here() {
+      local rev="$1" branch="$2" obj name
+      local -a excludes=()
+      while IFS=' ' read -r obj name; do
+        [ -n "$obj" ] || continue
+        if [ -n "$branch" ] && [ "$name" = "refs/heads/$branch" ]; then
+          continue
+        fi
+        excludes+=("$obj")
+      done < <(git for-each-ref --format='%(objectname) %(refname)' refs/heads refs/remotes refs/tags)
+      excludes+=("$default_ref")
+      git rev-list --count "$rev" --not "''${excludes[@]}"
+    }
+
+    checkout_landed() {
+      local rev="$1" branch="$2"
+      [ -z "$branch" ] || [ "$branch" != "$default" ] || return 1
+      no_live_upstream "$branch" || return 1
+      if history_landed "$rev"; then
+        return 0
       fi
-      git merge-base --is-ancestor "refs/heads/$branch" "$default_ref"
+      # A detached or duplicate checkout can go when its tip message is already
+      # on the default branch and another ref still holds the old history.
+      subject_on_default "$(git log -1 --format=%s "$rev")" || return 1
+      [ "$(commits_only_here "$rev" "$branch")" -eq 0 ]
+    }
+
+    blocking_dirt() {
+      local wt="$1" line code path
+      while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        code="''${line:0:2}"
+        path="''${line:3}"
+        case "$code" in
+          '!!')
+            case "$path" in
+              .envrc|*/.envrc) return 0 ;;
+            esac
+            ;;
+          ' D'|'D ')
+            git -C "$wt" ls-files -v -- "$path" | grep -q '^[HS]' || return 0
+            ;;
+          *)
+            return 0
+            ;;
+        esac
+      done < <(git -C "$wt" status --porcelain --untracked-files=all --ignored)
+      return 1
     }
 
     remove_if_safe() {
-      local wt="$1" branch="$2" state
+      local wt="$1" rev="$2" branch="$3" label="$branch"
       [ "$wt" != "$current_root" ] && [ -d "$wt" ] || return 0
-      eligible_branch "$branch" || return 0
-      state="$(git -C "$wt" status --porcelain --untracked-files=all --ignored)" || return 1
-      [ -z "$state" ] || return 0
+      checkout_landed "$rev" "$branch" || return 0
+      if blocking_dirt "$wt"; then
+        return 0
+      fi
+      [ -n "$label" ] || label="detached"
 
-      if git worktree remove "$wt"; then
-        echo "Removed worktree: $wt ($branch)"
-        git branch -d "$branch" || echo "Branch $branch retained by Git"
+      # Force only after the dirt filter. Git otherwise keeps assume-unchanged
+      # deletions and generated ignored files, which are not local work.
+      if git worktree remove "$wt" || git worktree remove --force "$wt"; then
+        echo "Removed worktree: $wt ($label)"
+        if [ -n "$branch" ]; then
+          if history_landed "refs/heads/$branch"; then
+            git branch -D "$branch" || echo "Branch $branch retained by Git"
+          else
+            echo "Branch $branch retained; its history is not on $default"
+          fi
+        fi
       else
         echo "Could not remove worktree $wt; retained remaining state" >&2
         return 1
       fi
     }
 
-    wt="" branch="" locked=0
-    git worktree list --porcelain -z | while IFS= read -r -d "" field; do
+    wt="" rev="" branch="" locked=0
+    while IFS= read -r -d "" field; do
       case "$field" in
         worktree\ *) wt="''${field#worktree }" ;;
+        HEAD\ *) rev="''${field#HEAD }" ;;
         branch\ refs/heads/*) branch="''${field#branch refs/heads/}" ;;
+        detached) branch="" ;;
         locked|locked\ *) locked=1 ;;
         "")
-          if [ "$locked" -eq 0 ] && [ -n "$branch" ]; then
-            remove_if_safe "$wt" "$branch"
+          if [ "$locked" -eq 0 ] && [ -n "$rev" ]; then
+            remove_if_safe "$wt" "$rev" "$branch"
           fi
-          wt="" branch="" locked=0
+          wt="" rev="" branch="" locked=0
           ;;
       esac
-    done
+    done < <(git worktree list --porcelain -z)
 
-    # Apply the same policy to branches without a worktree. Git additionally
-    # refuses deletion of branches still checked out in retained worktrees.
-    git for-each-ref --format='%(refname:short)' --merged="$default_ref" refs/heads |
-      while IFS= read -r branch; do
-        eligible_branch "$branch" || continue
-        git branch -d "$branch" 2>/dev/null || true
-      done
+    # Same landing rule for branches with no checkout. Git still refuses to
+    # delete a branch that a retained worktree has checked out.
+    while IFS= read -r branch; do
+      [ "$branch" = "$default" ] && continue
+      no_live_upstream "$branch" || continue
+      history_landed "refs/heads/$branch" || continue
+      git branch -D "$branch" 2>/dev/null || true
+    done < <(git for-each-ref --format='%(refname:short)' refs/heads)
   '';
   git-cm = pkgs.writeShellScriptBin "git-cm" ''
     set -euo pipefail
