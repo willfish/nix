@@ -345,8 +345,13 @@
           hermesInput = inputs.hermes-agent;
           inherit system;
         };
-        # Static Go client; safe to pull from unstable while 26.05 lags.
-        inherit (nixpkgs-unstable.legacyPackages.${system}) tailscale;
+        # Pull from unstable while nixos-26.05 lags.
+        # tailscale: 26.05 is still on 1.98.x.
+        # cliamp: 26.05 is 1.50.0; unstable has 2.0.1 (taller visualizer, more modes).
+        inherit (nixpkgs-unstable.legacyPackages.${system})
+          cliamp
+          tailscale
+          ;
       };
       mkPkgs =
         system:
