@@ -20,7 +20,7 @@ An active `/goal` is an approved objective. Do not convert it into a plan-approv
 
 Track multi-step work with a checklist; plan/todo tools are optional. Subagents are optional: give narrow scopes, collect results and clean up.
 
-When reporting work, pass a concise single-line label of at most 60 characters, verb plus object. Herdr tabs and bus presence show that label, not the full goal text or ask.
+Session titles are generated silently. Do not spend a separate tool call labelling routine work; use `set_agent_label` for deliberate overrides.
 
 ## Verification
 
