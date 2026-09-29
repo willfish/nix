@@ -8,7 +8,7 @@ This is the short operational reference for the four NixOS hosts and the shared 
 |---|---|---|
 | `andromeda` | workstation | System76 hardware, RTX 5090 with NVIDIA 595.99.02 open driver, Steam, Linux 6.18 |
 | `starfish` | workstation | Dell Precision laptop |
-| `foundation` | workstation | Framework AI 300 hardware and patched MT7925 driver |
+| `foundation` | workstation | Framework AI 300 hardware |
 | `terminus` | headless server | ZFS media pool, Immich, Audiobookshelf |
 
 All hosts import `system/modules/base.nix`. Workstations additionally import `system/modules/workstation.nix`; Terminus imports `system/modules/server.nix`.

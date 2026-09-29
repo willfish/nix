@@ -1,5 +1,4 @@
 {
-  config,
   pkgs,
   nixos-hardware,
   ...
@@ -18,15 +17,7 @@
   # linux 7.0.7–7.0.9. Use the latest kernel so this host retains the fix.
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  boot.extraModulePackages = [
-    (pkgs.callPackage ./mt7925-patched-driver.nix {
-      inherit (config.boot.kernelPackages) kernel;
-    })
-  ];
-
-  # Keep power-management mitigations alongside the patched MT7925 module set.
-  # nixos-hardware's generic MT7925 module also sets mt7925e power_save=0, but
-  # this kernel only exposes disable_aspm and disable_clc as module parameters.
+  # In-tree mt7925e has no power_save parameter. ASPM and CLC still drop the link.
   boot.extraModprobeConfig = ''
     options mt7925e disable_aspm=1
     options mt7925-common disable_clc=1

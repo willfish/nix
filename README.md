@@ -49,7 +49,7 @@ NixOS system attributes below live under `nixosConfigurations`; Relay lives unde
 | --- | --- | --- |
 | **andromeda** | Thelio Major Threadripper workstation; System76 support and NVIDIA RTX 5090 configuration | `william@andromeda`<br>`workstation` |
 | **starfish** | Dell Precision 5750 workstation; host-specific hardware and filesystem configuration | `william@starfish`<br>`legacy` |
-| **foundation** | Framework 13 AMD AI-300 workstation; nixos-hardware support and patched MT7925 driver | `william@foundation`<br>`workstation` |
+| **foundation** | Framework 13 AMD AI-300 workstation; nixos-hardware support | `william@foundation`<br>`workstation` |
 | **terminus** | Beelink headless NAS; ZFS media storage, Immich, Audiobookshelf and Pi Switchboard hub | `william@terminus`<br>`nas` |
 | **relay** | Apple Silicon headless macOS automation node | `william@relay`<br>`automation` |
 
