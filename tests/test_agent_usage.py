@@ -302,6 +302,21 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(status, "")
         self.assertEqual(limits[0]["title"], "Weekly")
         self.assertEqual(limits[0]["percent"], 0.99)
+        self.assertEqual(limits[0]["resetsAt"], "2026-09-29T13:00:00+00:00")
+        stamped, _, _ = self.lib.parse_codex_wham(
+            {
+                "plan_type": "pro",
+                "rate_limit": {
+                    "primary_window": {
+                        "used_percent": 99,
+                        "limit_window_seconds": 604800,
+                        "reset_at": 1791050635,
+                    }
+                },
+            }
+        )
+        self.assertTrue(stamped[0]["resetsAt"].startswith("2026-10-03T"))
+        self.assertNotIn("1791050635", stamped[0]["resetsAt"])
 
     def test_pi_refresh_keeps_account_id(self):
         merged = self.lib.merge_pi_oauth(

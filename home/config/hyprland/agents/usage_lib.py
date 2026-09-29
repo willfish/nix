@@ -622,6 +622,24 @@ def scan_pi_sessions(
     return finalize_stats(stats, sessions, today_sessions, active_days)
 
 
+def iso_timestamp(value: Any) -> str:
+    """Turn a Unix reset instant into a date the panel can parse."""
+
+    if value is None or value == "":
+        return ""
+    if isinstance(value, str) and not value.strip().isdigit():
+        return value
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if seconds > 10_000_000_000:
+        seconds /= 1000.0
+    if seconds <= 0:
+        return ""
+    return datetime.fromtimestamp(seconds, timezone.utc).isoformat()
+
+
 def parse_codex_wham(
     payload: dict[str, Any], now: datetime | None = None
 ) -> tuple[list[dict[str, Any]], str, str]:
@@ -649,7 +667,7 @@ def parse_codex_wham(
             label, title = f"{max(1, round(seconds / 3600))}h window", "Session"
         else:
             label, title = "Limit", "Limit"
-        resets = window.get("reset_at") or ""
+        resets = iso_timestamp(window.get("reset_at"))
         if not resets and window.get("reset_after_seconds") is not None:
             resets = (
                 moment
