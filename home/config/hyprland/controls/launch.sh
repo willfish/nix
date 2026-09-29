@@ -54,7 +54,7 @@ for _ in {1..30}; do
       exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call omarchy.agents next
     fi
     if [[ $action == show ]]; then
-      exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call controls show \
+      exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call controls reveal \
         "$panel" "${anchor[@]}"
     fi
     exec quickshell ipc --path "$HYPR_CONTROLS_CONFIG" call controls toggle \

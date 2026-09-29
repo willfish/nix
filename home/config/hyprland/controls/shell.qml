@@ -143,7 +143,8 @@ ShellRoot {
       barApi.externalAnchor = Qt.point(x, y)
       return panel
     }
-    function show(name: string, output: string, x: real, y: real): void {
+    // Not named show: quickshell ipc treats show as its own subcommand.
+    function reveal(name: string, output: string, x: real, y: real): void {
       var panel = place(name, output, x, y)
       if (panel && !panel.opened) panel.open()
     }

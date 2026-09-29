@@ -7,7 +7,8 @@ setup_file() {
 @test "Super+Shift+G shows agent usage" {
   grep -q 'SUPER SHIFT, G, Agent usage, exec, hypr-controls agents show' \
     "$FLAKE_ROOT/home/config/hyprland/settings.nix"
-  grep -q 'function show' "$FLAKE_ROOT/home/config/hyprland/controls/shell.qml"
+  grep -q 'function reveal' "$FLAKE_ROOT/home/config/hyprland/controls/shell.qml"
+  grep -q 'call controls reveal' "$FLAKE_ROOT/home/config/hyprland/controls/launch.sh"
 }
 
 @test "describes Super+K as the Omarchy keybindings menu" {
