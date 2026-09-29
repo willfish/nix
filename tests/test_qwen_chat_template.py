@@ -96,6 +96,8 @@ class QwenChatTemplateTest(unittest.TestCase):
             "<parameter=key>\nvalue\n</parameter>",
             "<tool_response>\nResult\n</tool_response><|im_end|>",
             "<system-reminder>\nContinue\n</system-reminder>",
+            "not a complete answer",
+            "call it before answering",
         ):
             self.assertIn(expected, text)
 
