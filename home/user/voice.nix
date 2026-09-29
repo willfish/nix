@@ -223,7 +223,14 @@ in
     xdg.configFile."voice-menu/fuzzel.ini".source = menuConfig;
 
     systemd.user.services.pi-voice = {
-      Unit.Description = "Agent voice hotkeys and selected session";
+      Unit = {
+        Description = "Agent voice hotkeys and selected session";
+        # Deepgram needs DEEPGRAM_API_KEY from the sops-nix rendered file, read
+        # once at exec. Order after decryption so the backend is registered
+        # and offered as an option instead of silently dropped at boot.
+        After = [ "sops-nix.service" ];
+        Wants = [ "sops-nix.service" ];
+      };
       Install.WantedBy = [ "default.target" ];
       Service = common // {
         ExecStart = "${voice}/bin/pi-voice serve";
