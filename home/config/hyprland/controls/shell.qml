@@ -135,14 +135,23 @@ ShellRoot {
 
   IpcHandler {
     target: "controls"
-    function toggle(name: string, output: string, x: real, y: real): void {
+    function place(name: string, output: string, x: real, y: real) {
       var panel = host.panels[name]
-      if (!panel) return
-      if (panel.opened) { panel.close(); return }
+      if (!panel) return null
       barApi.externalScreen = Quickshell.screens.find(s => s.name === output)
         ?? Quickshell.screens[0]
       barApi.externalAnchor = Qt.point(x, y)
-      panel.open()
+      return panel
+    }
+    function show(name: string, output: string, x: real, y: real): void {
+      var panel = place(name, output, x, y)
+      if (panel && !panel.opened) panel.open()
+    }
+    function toggle(name: string, output: string, x: real, y: real): void {
+      var panel = place(name, output, x, y)
+      if (!panel) return
+      if (panel.opened) panel.close()
+      else panel.open()
     }
   }
 }

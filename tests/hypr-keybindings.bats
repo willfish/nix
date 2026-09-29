@@ -4,6 +4,12 @@ setup_file() {
   export FLAKE_ROOT="$BATS_TEST_DIRNAME/.."
 }
 
+@test "Super+Shift+G shows agent usage" {
+  grep -q 'SUPER SHIFT, G, Agent usage, exec, hypr-controls agents show' \
+    "$FLAKE_ROOT/home/config/hyprland/settings.nix"
+  grep -q 'function show' "$FLAKE_ROOT/home/config/hyprland/controls/shell.qml"
+}
+
 @test "describes Super+K as the Omarchy keybindings menu" {
   grep -q 'SUPER, K, Keybindings, exec, omarchy-menu-keybindings' \
     "$FLAKE_ROOT/home/config/hyprland/settings.nix"

@@ -295,6 +295,7 @@ rec {
       "SUPER, Q, Close window, killactive,"
       "SUPER, F, Full screen, fullscreen, 0"
       "SUPER, G, Toggle window floating, togglefloating,"
+      "SUPER SHIFT, G, Agent usage, exec, hypr-controls agents show"
       "SUPER, W, Focus on above window, movefocus, u"
       "SUPER, A, Focus on left window, movefocus, l"
       "SUPER, S, Focus on below window, movefocus, d"
