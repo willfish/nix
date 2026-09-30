@@ -177,9 +177,36 @@ let
     rev = "e945ae85ec0f55eb6432c13b8e8e23907ca0d21d";
     hash = "sha256-kJD1RSuEwvNkQMAUsgP1r9xhzc00peXl3Dsc1Cfu7ZM=";
   };
-  # Omarchy's helper only fills the clipboard, then sends Shift+Insert.
-  # Ghostty's default Shift+Insert pastes the primary selection, so a click
-  # in Pi inserted nothing. Hold the emoji on both until the paste has landed.
+  # Remember the window that had focus when the shortcut was pressed.
+  # Focus follows the mouse, so the click that picks an emoji would otherwise
+  # paste into whatever is under the pointer.
+  emojiRemember = pkgs.writeShellApplication {
+    name = "hypr-emoji-remember";
+    runtimeInputs = [
+      pkgs.hyprland
+      pkgs.jq
+      pkgs.coreutils
+    ];
+    text = ''
+      dest="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/emoji-target"
+      install -d -m 700 -- "$(dirname "$dest")"
+      umask 077
+      hyprctl activewindow -j | jq -r '[.address // "", .class // ""] | .[]' >"$dest"
+    '';
+  };
+  emojiOpen = pkgs.writeShellApplication {
+    name = "hypr-emojis";
+    runtimeInputs = [
+      emojiRemember
+      omarchyShell
+    ];
+    text = ''
+      hypr-emoji-remember
+      exec omarchy-shell shell toggle omarchy.emojis
+    '';
+  };
+  # Ghostty's Shift+Insert pastes the selection, and this Ghostty does not
+  # remap it. Ctrl+Shift+V is the binding that reads the clipboard.
   emojiInsert = pkgs.writeShellApplication {
     name = "omarchy-menu-emoji-insert";
     runtimeInputs = [
@@ -192,20 +219,38 @@ let
     text = ''
       emoji=''${1:-}
       [[ -n $emoji ]] || exit 0
+      target="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/emoji-target"
+      address=""
+      class=""
+      if [[ -f $target ]]; then
+        {
+          IFS= read -r address
+          IFS= read -r class
+        } <"$target"
+      fi
       printf '%s' "$emoji" | wl-copy --type text/plain --sensitive --foreground &
       clip=$!
-      printf '%s' "$emoji" | wl-copy --primary --type text/plain --sensitive --foreground &
-      primary=$!
-      # The picker still owns the keyboard for a moment after it closes.
-      for _ in {1..20}; do
-        sleep 0.03
-        if hyprctl activewindow -j | jq -e '.address' >/dev/null; then
-          break
-        fi
-      done
-      wtype -M shift -k Insert -m shift || true
-      sleep 0.2
-      kill "$clip" "$primary" 2>/dev/null || true
+      if [[ -n $address ]]; then
+        hyprctl dispatch focuswindow "address:$address" >/dev/null || true
+        for _ in {1..25}; do
+          current=$(hyprctl activewindow -j | jq -r '.address // empty')
+          [[ $current == "$address" ]] && break
+          sleep 0.02
+        done
+      fi
+      sleep 0.05
+      case $class in
+        *ghostty* | *Ghostty*)
+          wtype -M ctrl -M shift -k v -m shift -m ctrl || true
+          ;;
+        *)
+          printf '%s' "$emoji" | wl-copy --primary --type text/plain --sensitive --foreground &
+          primary=$!
+          wtype -M shift -k Insert -m shift || true
+          ;;
+      esac
+      sleep 0.25
+      kill "$clip" "''${primary:-}" 2>/dev/null || true
     '';
   };
   bundle = pkgs.runCommand "omarchy-panels" { nativeBuildInputs = [ pkgs.patch ]; } ''
@@ -578,6 +623,7 @@ in
       launcher
       keybindings
       omarchyShell
+      emojiOpen
       pkgs.quickshell
       pkgs.blueman
     ];

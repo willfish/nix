@@ -6,7 +6,7 @@ setup_file() {
 
 @test "Super+Ctrl+E opens the emoji picker" {
   grep -q \
-    'SUPER CTRL, E, Emojis, exec, omarchy-shell shell toggle omarchy.emojis' \
+    'SUPER CTRL, E, Emojis, exec, hypr-emojis' \
     "$FLAKE_ROOT/home/config/hyprland/settings.nix"
 }
 
