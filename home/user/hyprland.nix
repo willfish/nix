@@ -121,13 +121,42 @@
       selectedPalette = paletteFor settings.appearance.palette;
       wallpaper = pkgs.writeShellScript "hypr-wallpaper" ''
         image=${lib.escapeShellArg (themeFile "wallpaper.png")}
-        # theme-menu materialises this file. Do not fall back to a store image:
-        # that would keep every selected wallpaper in the Home Manager closure.
+        live="''${image%/*}/wallpaper-live.png"
+        # theme-menu materialises wallpaper.png. The cycle timer may replace
+        # the shown file with the next image from that theme's backgrounds.
+        # Do not fall back to a store image: that would keep every selected
+        # wallpaper in the Home Manager closure.
+        if [ -s "$live" ]; then
+          image=$live
+        fi
         if [ ! -s "$image" ]; then
           exit 0
         fi
         exec ${pkgs.swaybg}/bin/swaybg --image "$image" --mode ${lib.escapeShellArg settings.wallpaper.mode}
       '';
+      wallpaperCycle = pkgs.writeShellApplication {
+        name = "hypr-wallpaper-cycle";
+        runtimeInputs = [
+          pkgs.python3
+          pkgs.imagemagick
+          pkgs.systemd
+          pkgs.nix
+        ];
+        text = ''
+          state="''${XDG_STATE_HOME:-$HOME/.local/state}/theme-menu"
+          status=0
+          python3 ${../config/hyprland/wallpaper_cycle.py} \
+            --state "$state" \
+            --catalogue ${lib.escapeShellArg "${config.xdg.configHome}/theme-menu/catalogue.json"} \
+            --flake ${lib.escapeShellArg config.dotfiles.sourceDirectory} \
+            || status=$?
+          if [ "$status" -eq 0 ]; then
+            systemctl --user restart hypr-wallpaper.service
+          elif [ "$status" -ne 3 ]; then
+            exit "$status"
+          fi
+        '';
+      };
       base16Tokens = [
         "base00"
         "base01"
@@ -872,6 +901,23 @@
           ExecStart = toString wallpaper;
           Restart = "on-failure";
           RestartSec = 2;
+        };
+        Install.WantedBy = [ "hyprland-session.target" ];
+      };
+      systemd.user.services.hypr-wallpaper-cycle = lib.mkIf (settings.wallpaper.intervalMinutes > 0) {
+        Unit.Description = "Advance to the next wallpaper in the picked theme";
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${wallpaperCycle}/bin/hypr-wallpaper-cycle";
+        };
+      };
+      systemd.user.timers.hypr-wallpaper-cycle = lib.mkIf (settings.wallpaper.intervalMinutes > 0) {
+        Unit.Description = "Rotate the picked theme's wallpapers";
+        Timer = {
+          # OnStartupSec is relative to the user manager, which is already
+          # running, so enabling the timer would rotate immediately.
+          OnActiveSec = "${toString settings.wallpaper.intervalMinutes}min";
+          OnUnitActiveSec = "${toString settings.wallpaper.intervalMinutes}min";
         };
         Install.WantedBy = [ "hyprland-session.target" ];
       };

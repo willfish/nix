@@ -96,17 +96,22 @@ system rebuild; desktop activation does not restart the display manager.
 
 ## Wallpapers and applications
 
-In Hyprland, each theme uses its first sorted upstream wallpaper, matching
-Omarchy's default selection order. The catalogue records a theme id, not a
-store path. Applying a theme builds `.#theme-<id>` and copies that one
-image into the session state. Swaybg displays it on all outputs and follows
-the Hyprland session only. Changing the theme replaces the wallpaper too.
+In Hyprland, each theme package keeps every upstream image in `backgrounds/`.
+The session starts on the first sorted image, or the theme's preferred image
+when one is named, matching Omarchy's default selection. Every five minutes
+the session advances to the next image in that directory. A theme with one
+image stays put. The catalogue records a theme id, not a store path. Applying
+a theme builds `.#theme-<id>` and copies the starting image into the session
+state. Swaybg displays the current image on all outputs and follows the
+Hyprland session only. Changing the theme replaces the wallpaper and starts
+the rotation again from that theme's first image.
 
 `home/config/hyprland/settings.nix` controls the default palette, fonts,
 Base16 overrides and wallpaper sizing. For a custom image, set an absolute path
 such as `wallpaper.overrides.tokyo-night.dark = "/home/william/Pictures/sky.png";`.
-The file must exist when applying the theme. It is a Hyprland wallpaper, not a
-greeter wallpaper.
+The file must exist when applying the theme. An override does not rotate.
+`wallpaper.intervalMinutes` is the rotation interval, and 0 turns it off.
+It is a Hyprland wallpaper, not a greeter wallpaper.
 
 The shared colours feed Ghostty, Neovim, Herdr, btop and the desktop shell.
 Herdr only accepts its built-in theme names. A palette it does not know keeps

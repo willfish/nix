@@ -313,10 +313,60 @@ class Themes:
             os.close(descriptor)
         return []
 
+    def reset_wallpaper_cycle(self):
+        """Drop the rotated image so a new theme shows its first picture.
+
+        The cycle timer roots the package and advances from there. An override
+        has no package, so the root goes too.
+        """
+        live = self.state / "active" / "wallpaper-live.png"
+        current = self.state / "wallpaper-current"
+        stamp = self.state / "wallpaper-theme"
+        if os.environ.get("THEME_MENU_PUBLISH") != "1":
+            return
+        palette = self.resolve(self.selection())
+        source = (
+            ((palette.get("session") or {}).get(self.current_mode()) or {})
+            .get("wallpaper.png")
+        )
+        link = self.state / "wallpaper-source"
+        if not (
+            isinstance(source, str) and source.startswith("nix-theme:")
+        ):
+            live.unlink(missing_ok=True)
+            current.unlink(missing_ok=True)
+            stamp.unlink(missing_ok=True)
+            if link.is_symlink() or link.exists():
+                link.unlink()
+            return
+        name = source.removeprefix("nix-theme:")
+        if not name or any(part in name for part in ("/", "..", " ")):
+            return
+        previous = stamp.read_text().strip() if stamp.exists() else ""
+        if previous != name:
+            live.unlink(missing_ok=True)
+            current.unlink(missing_ok=True)
+            atomic_write(stamp, (name + "\n").encode())
+        flake = os.environ.get(
+            "THEME_WALLPAPER_FLAKE", str(Path.home() / ".dotfiles")
+        )
+        subprocess.run(
+            [
+                "nix",
+                "build",
+                "--out-link",
+                str(link),
+                f"{flake}#theme-{name}",
+            ],
+            check=True,
+            timeout=120,
+        )
+
     def publish_session(self):
         # Direct imports, including tests, must not touch the live desktop.
         if os.environ.get("THEME_MENU_PUBLISH") != "1":
             return []
+        self.reset_wallpaper_cycle()
         warnings = self.publish_greeter(self.selection())
         if not hyprland_session():
             return warnings

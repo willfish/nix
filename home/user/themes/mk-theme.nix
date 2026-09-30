@@ -26,6 +26,7 @@ let
         palette
         ;
       backgrounds = map builtins.baseNameOf theme.backgrounds;
+      preferred = if theme.backgrounds == [ ] then null else builtins.baseNameOf wallpaper;
     }
   );
   colours = (pkgs.formats.toml { }).generate "${theme.name}-colors.toml" theme.colours;

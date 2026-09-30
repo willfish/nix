@@ -54,8 +54,11 @@ rec {
   # All upstream default themes include their matching wallpaper.
   wallpaper = {
     mode = "fill";
+    # Rotate the picked theme's backgrounds. 0 keeps the first image.
+    intervalMinutes = 5;
     # Optional absolute image paths by palette ID and mode, e.g.
     # overrides.tokyo-night.dark = "/home/william/Pictures/wallpaper.png";
+    # An override is one image, so it does not rotate.
     overrides = { };
   };
 
