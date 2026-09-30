@@ -205,8 +205,9 @@ let
       exec omarchy-shell shell toggle omarchy.emojis
     '';
   };
-  # Ghostty's Shift+Insert pastes the selection, and this Ghostty does not
-  # remap it. Ctrl+Shift+V is the binding that reads the clipboard.
+  # Ghostty ignores synthetic keys, including Shift+Insert and Ctrl+Shift+V.
+  # A click there can only copy. Pi reads that clipboard on Ctrl+V.
+  # Other apps still get a real paste, because they accept those keys.
   emojiInsert = pkgs.writeShellApplication {
     name = "omarchy-menu-emoji-insert";
     runtimeInputs = [
@@ -215,6 +216,7 @@ let
       pkgs.coreutils
       pkgs.hyprland
       pkgs.jq
+      pkgs.libnotify
     ];
     text = ''
       emoji=''${1:-}
@@ -228,29 +230,25 @@ let
           IFS= read -r class
         } <"$target"
       fi
-      printf '%s' "$emoji" | wl-copy --type text/plain --sensitive --foreground &
-      clip=$!
       if [[ -n $address ]]; then
         hyprctl dispatch focuswindow "address:$address" >/dev/null || true
-        for _ in {1..25}; do
-          current=$(hyprctl activewindow -j | jq -r '.address // empty')
-          [[ $current == "$address" ]] && break
-          sleep 0.02
-        done
       fi
-      sleep 0.05
       case $class in
         *ghostty* | *Ghostty*)
-          wtype -M ctrl -M shift -k v -m shift -m ctrl || true
+          printf '%s' "$emoji" | wl-copy --type text/plain
+          notify-send -a Emojis 'Copied' 'Ctrl+V pastes into Pi'
           ;;
         *)
-          printf '%s' "$emoji" | wl-copy --primary --type text/plain --sensitive --foreground &
+          printf '%s' "$emoji" | wl-copy --type text/plain --foreground &
+          clip=$!
+          printf '%s' "$emoji" | wl-copy --primary --type text/plain --foreground &
           primary=$!
+          sleep 0.08
           wtype -M shift -k Insert -m shift || true
+          sleep 0.25
+          kill "$clip" "$primary" 2>/dev/null || true
           ;;
       esac
-      sleep 0.25
-      kill "$clip" "''${primary:-}" 2>/dev/null || true
     '';
   };
   bundle = pkgs.runCommand "omarchy-panels" { nativeBuildInputs = [ pkgs.patch ]; } ''
