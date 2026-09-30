@@ -108,6 +108,7 @@ rec {
       bluetooth = "hypr-controls bluetooth";
       tailscale = "hypr-controls tailscale";
       calendar = "hypr-controls calendar";
+      weather = "hypr-controls weather";
       agents = "hypr-controls agents";
       notifications = "hypr-notifications";
       music = cliampCommand;
@@ -128,6 +129,7 @@ rec {
       "network"
       "custom/tailscale"
       "bluetooth"
+      "custom/weather"
       "idle_inhibitor"
       "battery"
       "custom/notifications"

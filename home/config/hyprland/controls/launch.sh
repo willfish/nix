@@ -2,9 +2,9 @@
 panel=${1:-}
 action=${2:-open}
 case "$panel" in
-audio | bluetooth | network | tailscale | calendar | agents) ;;
+audio | bluetooth | network | tailscale | calendar | weather | agents) ;;
 *)
-  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|agents [toggle|show|refresh|next]' >&2
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|weather|agents [toggle|show|refresh|next]' >&2
   exit 2
   ;;
 esac
@@ -18,7 +18,7 @@ if [[ $action == show && $panel != agents ]]; then
   exit 2
 fi
 if [[ $action != open && $action != show && $action != next && ! ($panel == tailscale && $action == toggle) ]]; then
-  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|agents [toggle|show|refresh|next]' >&2
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|weather|agents [toggle|show|refresh|next]' >&2
   exit 2
 fi
 if [[ $action == next && $panel != agents ]]; then

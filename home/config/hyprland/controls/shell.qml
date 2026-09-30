@@ -8,6 +8,7 @@ import "plugins/panels/bluetooth" as Bluetooth
 import "plugins/panels/network" as Network
 import "plugins/panels/tailscale" as Tailscale
 import "plugins/panels/calendar" as Calendar
+import "plugins/panels/weather" as WeatherRadar
 import "plugins/agents" as Agents
 import "plugins/polkit" as Polkit
 import "plugins/menu" as OmarchyMenu
@@ -16,19 +17,27 @@ import "plugins/menu" as OmarchyMenu
 ShellRoot {
   id: host
   property var options: JSON.parse(Quickshell.env("HYPR_CONTROLS_SETTINGS"))
-  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale, calendar: calendar, agents: agents })
+  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale, calendar: calendar, weather: weather, agents: agents })
   property var agentSettings: JSON.parse(Quickshell.env("HYPR_AGENTS_SETTINGS") || "{}")
 
   function firstPartyServiceFor(id) { return null }
   function updateEntryInline(moduleName, entry) {
-    if (moduleName !== "tmn73.calendar" || !entry) return
-    calendar.settings = entry
-    Quickshell.execDetached(["hypr-calendar-settings", JSON.stringify(entry)])
+    if (!entry) return
+    if (moduleName === "tmn73.calendar") {
+      calendar.settings = entry
+      Quickshell.execDetached(["hypr-calendar-settings", JSON.stringify(entry)])
+    } else if (moduleName === "eduardodallecort.weather-radar") {
+      weather.settings = entry
+      radar.settings = entry
+      Quickshell.execDetached(["hypr-weather-settings", JSON.stringify(entry)])
+    }
   }
-  function applyCalendarSettings(raw) {
+  function applyStoredSettings(raw, panel, service) {
     try {
       var parsed = JSON.parse(raw || "")
-      if (parsed && typeof parsed === "object") calendar.settings = parsed
+      if (!parsed || typeof parsed !== "object") return
+      panel.settings = parsed
+      if (service) service.settings = parsed
     } catch (error) {
     }
   }
@@ -94,6 +103,19 @@ ShellRoot {
       bar: barApi
       anchorItem: calendarAnchor
     }
+    WeatherRadar.Service { id: radar }
+    Item {
+      id: weatherAnchor
+      width: 1
+      height: 1
+      visible: false
+    }
+    WeatherRadar.Panel {
+      id: weather
+      bar: barApi
+      anchorItem: weatherAnchor
+      radar: radar
+    }
     // Waybar owns the click. Keep the popup available before the first record lands.
     Agents.Panel {
       id: agents
@@ -109,7 +131,15 @@ ShellRoot {
     path: Quickshell.env("HYPR_CALENDAR_SETTINGS") || ""
     watchChanges: true
     printErrors: false
-    onLoaded: host.applyCalendarSettings(text())
+    onLoaded: host.applyStoredSettings(text(), calendar, null)
+    onFileChanged: reload()
+  }
+
+  FileView {
+    path: Quickshell.env("HYPR_WEATHER_SETTINGS") || ""
+    watchChanges: true
+    printErrors: false
+    onLoaded: host.applyStoredSettings(text(), weather, radar)
     onFileChanged: reload()
   }
 

@@ -53,14 +53,138 @@ let
       PY
     '';
   };
+  # Waybar owns the bar, so the plugin's bar pill stays out. The panel and its
+  # one service mount in the existing controls shell, same as the calendar.
+  weatherPlugin = pkgs.fetchFromGitHub {
+    owner = "eduardodallecort";
+    repo = "omarchy-weather-radar";
+    rev = "7234f1abc6f47738f37d13d8d354c62aca7d82f7";
+    hash = "sha256-BA4PgDY2PCJ+5upQCbnWxh0ig3vE7627ZPOWKeGDMds=";
+  };
+  weatherSettings = pkgs.writeShellApplication {
+    name = "hypr-weather-settings";
+    runtimeInputs = [
+      pkgs.python3
+      pkgs.coreutils
+    ];
+    text = ''
+      dest=${lib.escapeShellArg "${config.xdg.configHome}/hyprland/weather-settings.json"}
+      python3 - "$dest" "$@" <<'PY'
+      import json, os, sys, tempfile
+      dest = sys.argv[1]
+      if len(sys.argv) != 3 or len(sys.argv[2]) > 8000:
+          raise SystemExit(2)
+      value = json.loads(sys.argv[2])
+      if not isinstance(value, dict):
+          raise SystemExit(2)
+      parent = os.path.dirname(dest)
+      os.makedirs(parent, mode=0o700, exist_ok=True)
+      fd, temporary = tempfile.mkstemp(prefix=".weather-settings-", dir=parent)
+      try:
+          with os.fdopen(fd, "w") as stream:
+              json.dump(value, stream)
+              stream.write("\n")
+              stream.flush()
+              os.fchmod(stream.fileno(), 0o600)
+          os.replace(temporary, dest)
+      except Exception:
+          try:
+              os.unlink(temporary)
+          except OSError:
+              pass
+          raise
+      PY
+    '';
+  };
+  # The panel's city picker. Same file the service already watches.
+  weatherLocation = pkgs.writeShellApplication {
+    name = "omarchy-weather-location";
+    runtimeInputs = [
+      pkgs.jq
+      pkgs.coreutils
+    ];
+    text = ''
+      loc_file="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/settings/weather.json"
+      coords_pattern='^(-?[0-9]+(\.[0-9]+)?),(-?[0-9]+(\.[0-9]+)?)$'
+      case "''${1:-}" in
+      --set)
+        [[ -n ''${2:-} ]] || {
+          echo 'Usage: omarchy-weather-location --set <name> [lat,lon]' >&2
+          exit 1
+        }
+        if [[ -n ''${3:-} ]]; then
+          [[ ''${3} =~ $coords_pattern ]] || {
+            echo "Invalid coordinates: ''${3} (expected lat,lon)" >&2
+            exit 1
+          }
+          location=$(jq -n --arg name "''${2}" --argjson latitude "''${3%,*}" --argjson longitude "''${3#*,}" '{$name, $latitude, $longitude}')
+        else
+          location=$(jq -n --arg name "''${2}" '{$name}')
+        fi
+        install -d -m 700 -- "$(dirname "$loc_file")"
+        umask 077
+        printf '%s\n' "$location" >"$loc_file"
+        ;;
+      --clear)
+        rm -f -- "$loc_file"
+        ;;
+      *)
+        echo 'Usage: omarchy-weather-location --set <name> [lat,lon] | --clear' >&2
+        exit 1
+        ;;
+      esac
+    '';
+  };
+  weatherNotify = pkgs.writeShellApplication {
+    name = "omarchy-weather-notify";
+    runtimeInputs = [ pkgs.libnotify ];
+    text = ''
+      urgency=normal
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --app-name)
+          shift 2
+          ;;
+        -g)
+          shift 2
+          ;;
+        -u | --urgency)
+          urgency=$2
+          shift 2
+          ;;
+        *) break ;;
+        esac
+      done
+      [[ $# -ge 1 ]] || exit 2
+      headline=$1
+      shift
+      description=
+      if [[ $# -gt 0 && $1 != -* ]]; then
+        description=$1
+      fi
+      case $urgency in
+      low | normal | critical) ;;
+      *) urgency=normal ;;
+      esac
+      exec notify-send -a 'Weather Radar' -u "$urgency" -- "$headline" "$description"
+    '';
+  };
   bundle = pkgs.runCommand "omarchy-panels" { nativeBuildInputs = [ pkgs.patch ]; } ''
-    mkdir -p "$out/shell/plugins/panels/calendar"
+    mkdir -p "$out/shell/plugins/panels/calendar" "$out/shell/plugins/panels/weather"
     cp -r ${source}/shell/Ui ${source}/shell/Commons "$out/shell/"
     for panel in audio bluetooth network tailscale; do
       cp -r ${source}/shell/plugins/panels/"$panel" "$out/shell/plugins/panels/"
     done
     cp ${calendarPlugin}/LICENSE ${calendarPlugin}/Model.js ${calendarPlugin}/manifest.json \
       ${calendarPlugin}/*.qml "$out/shell/plugins/panels/calendar/"
+    cp -r ${weatherPlugin}/ui ${weatherPlugin}/lib ${weatherPlugin}/data "$out/shell/plugins/panels/weather/"
+    cp ${weatherPlugin}/LICENSE ${weatherPlugin}/manifest.json ${weatherPlugin}/Panel.qml \
+      ${weatherPlugin}/Service.qml "$out/shell/plugins/panels/weather/"
+    chmod -R u+w "$out/shell/plugins/panels/weather"
+    substituteInPlace "$out/shell/plugins/panels/weather/Panel.qml" \
+      --replace-fail '"omarchy-weather-location"' '"${weatherLocation}/bin/omarchy-weather-location"'
+    substituteInPlace "$out/shell/plugins/panels/weather/Service.qml" \
+      --replace-fail '"omarchy-notification-send"' '"${weatherNotify}/bin/omarchy-weather-notify"'
     cp -r ${source}/shell/plugins/agents "$out/shell/plugins/"
     chmod -R u+w "$out/shell/plugins/agents"
     cp ${agents}/grok.svg ${agents}/grok-light.svg ${agents}/opencode.svg ${agents}/opencode-light.svg \
@@ -223,6 +347,7 @@ let
   runtime = with pkgs; [
     bash
     coreutils
+    curl
     gawk
     gnused
     gnugrep
@@ -248,6 +373,7 @@ let
     laptopClosed
     tailscaleSend
     calendarSettings
+    weatherSettings
     agentCollectors
     pkgs.findutils
     quickshell
@@ -260,6 +386,7 @@ let
       export PATH="/run/wrappers/bin:$PATH"
       export HYPR_CONTROLS_THEME=${lib.escapeShellArg "${config.xdg.stateHome}/theme-menu/active"}
       export HYPR_CALENDAR_SETTINGS=${lib.escapeShellArg "${config.xdg.configHome}/hyprland/calendar-settings.json"}
+      export HYPR_WEATHER_SETTINGS=${lib.escapeShellArg "${config.xdg.configHome}/hyprland/weather-settings.json"}
       export HYPR_AGENTS_SETTINGS=${
         lib.escapeShellArg (
           builtins.toJSON {

@@ -623,6 +623,11 @@
               on-click-right = "${settings.bar.commands.agents} refresh";
               on-click-middle = "${settings.bar.commands.agents} next";
             };
+            "custom/weather" = {
+              format = "󰐷";
+              tooltip = "Weather radar";
+              on-click = settings.bar.commands.weather;
+            };
             "custom/recording" = {
               exec = "printf '%s' '●'";
               exec-if = "${record}/bin/hypr-record status";
