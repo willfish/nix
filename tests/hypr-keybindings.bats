@@ -4,11 +4,16 @@ setup_file() {
   export FLAKE_ROOT="$BATS_TEST_DIRNAME/.."
 }
 
-@test "Super+Shift+G shows agent usage" {
-  grep -q 'SUPER SHIFT, G, Agent usage, exec, hypr-controls agents show' \
+@test "Super+Shift+G toggles agent usage" {
+  grep -q 'SUPER SHIFT, G, Toggle agent usage, exec, hypr-controls agents"' \
     "$FLAKE_ROOT/home/config/hyprland/settings.nix"
-  grep -q 'function reveal' "$FLAKE_ROOT/home/config/hyprland/controls/shell.qml"
-  grep -q 'call controls reveal' "$FLAKE_ROOT/home/config/hyprland/controls/launch.sh"
+  if grep -q 'hypr-controls agents show' \
+    "$FLAKE_ROOT/home/config/hyprland/settings.nix"; then
+    return 1
+  fi
+  grep -q 'if (panel.opened) panel.close()' \
+    "$FLAKE_ROOT/home/config/hyprland/controls/shell.qml"
+  grep -q 'call controls toggle' "$FLAKE_ROOT/home/config/hyprland/controls/launch.sh"
 }
 
 @test "describes Super+K as the Omarchy keybindings menu" {
