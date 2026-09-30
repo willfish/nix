@@ -169,6 +169,25 @@ let
       exec notify-send -a 'Weather Radar' -u "$urgency" -- "$headline" "$description"
     '';
   };
+  # Drop-in for the stock emoji overlay. Waybar is not involved: this is a
+  # centred picker, opened with Super+Ctrl+E.
+  emojiPlugin = pkgs.fetchFromGitHub {
+    owner = "Wessel-Boers";
+    repo = "omarchy-better-emojis";
+    rev = "e945ae85ec0f55eb6432c13b8e8e23907ca0d21d";
+    hash = "sha256-kJD1RSuEwvNkQMAUsgP1r9xhzc00peXl3Dsc1Cfu7ZM=";
+  };
+  emojiInsert = pkgs.writeShellApplication {
+    name = "omarchy-menu-emoji-insert";
+    runtimeInputs = [
+      pkgs.wl-clipboard
+      pkgs.wtype
+      pkgs.coreutils
+    ];
+    text = lib.removePrefix "#!/bin/bash\n" (
+      builtins.readFile "${source}/bin/omarchy-menu-emoji-insert"
+    );
+  };
   bundle = pkgs.runCommand "omarchy-panels" { nativeBuildInputs = [ pkgs.patch ]; } ''
     mkdir -p "$out/shell/plugins/panels/calendar" "$out/shell/plugins/panels/weather"
     cp -r ${source}/shell/Ui ${source}/shell/Commons "$out/shell/"
@@ -185,6 +204,13 @@ let
       --replace-fail '"omarchy-weather-location"' '"${weatherLocation}/bin/omarchy-weather-location"'
     substituteInPlace "$out/shell/plugins/panels/weather/Service.qml" \
       --replace-fail '"omarchy-notification-send"' '"${weatherNotify}/bin/omarchy-weather-notify"'
+    mkdir -p "$out/shell/plugins/emojis"
+    cp ${emojiPlugin}/BetterEmojis.qml ${emojiPlugin}/EmojiData.js ${emojiPlugin}/emojis.json \
+      ${emojiPlugin}/LICENSE "$out/shell/plugins/emojis/"
+    chmod -R u+w "$out/shell/plugins/emojis"
+    substituteInPlace "$out/shell/plugins/emojis/BetterEmojis.qml" \
+      --replace-fail 'root.omarchyPath + "/bin/omarchy-menu-emoji-insert"' \
+      '"${emojiInsert}/bin/omarchy-menu-emoji-insert"'
     cp -r ${source}/shell/plugins/agents "$out/shell/plugins/"
     chmod -R u+w "$out/shell/plugins/agents"
     cp ${agents}/grok.svg ${agents}/grok-light.svg ${agents}/opencode.svg ${agents}/opencode-light.svg \
@@ -531,6 +557,7 @@ in
     home.packages = [
       launcher
       keybindings
+      omarchyShell
       pkgs.quickshell
       pkgs.blueman
     ];

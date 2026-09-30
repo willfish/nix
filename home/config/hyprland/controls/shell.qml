@@ -12,6 +12,7 @@ import "plugins/panels/weather" as WeatherRadar
 import "plugins/agents" as Agents
 import "plugins/polkit" as Polkit
 import "plugins/menu" as OmarchyMenu
+import "plugins/emojis" as BetterEmojis
 
 // Only a host adapter. The panel implementations and shared UI are upstream.
 ShellRoot {
@@ -149,16 +150,38 @@ ShellRoot {
     shell: host
   }
 
+  BetterEmojis.BetterEmojis {
+    id: emojis
+    shell: host
+  }
+
+  function emojiId(id) {
+    return id === "omarchy.emojis" || id === "wessel.better-emojis"
+  }
+
   IpcHandler {
     target: "shell"
     function summon(id: string, payloadJson: string): string {
+      if (host.emojiId(id)) {
+        emojis.open(payloadJson || "{}")
+        return "ok"
+      }
       if (id !== "omarchy.menu") return "unknown"
       keybindingsMenu.open(payloadJson || "{}")
       return "ok"
     }
     function hide(id: string): string {
+      if (host.emojiId(id)) {
+        emojis.close()
+        return "ok"
+      }
       if (id !== "omarchy.menu") return "unknown"
       keybindingsMenu.close()
+      return "ok"
+    }
+    function toggle(id: string, payloadJson: string): string {
+      if (!host.emojiId(id)) return "unknown"
+      emojis.toggle()
       return "ok"
     }
   }

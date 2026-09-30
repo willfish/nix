@@ -315,6 +315,7 @@ rec {
       "SUPER, C, Slack, exec, hypr-open slack:Slack slack"
       "SUPER, T, Telegram, exec, hypr-open org.telegram.desktop:TelegramDesktop Telegram"
       "SUPER, E, File manager, exec, hypr-open org.gnome.Nautilus nautilus --new-window"
+      "SUPER CTRL, E, Emojis, exec, omarchy-shell shell toggle omarchy.emojis"
       "SUPER, P, CLIamp, exec, ${cliampCommand}"
       "SUPER, O, Spotify, exec, hypr-spotify-focus"
       "SUPER SHIFT, T, Theme menu, exec, theme-menu"

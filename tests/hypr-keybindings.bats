@@ -4,9 +4,16 @@ setup_file() {
   export FLAKE_ROOT="$BATS_TEST_DIRNAME/.."
 }
 
-@test "Super+Shift+Left and Right step the wallpaper" {
+@test "Super+Ctrl+E opens the emoji picker" {
   grep -q \
-    'SUPER SHIFT, left, Previous wallpaper, exec, hypr-wallpaper-cycle previous' \
+    'SUPER CTRL, E, Emojis, exec, omarchy-shell shell toggle omarchy.emojis' \
+    "$FLAKE_ROOT/home/config/hyprland/settings.nix"
+}
+
+@test "Super+Shift+Left and Right step the wallpaper" {
+  grep -q 'SUPER SHIFT, left, Previous wallpaper,' \
+    "$FLAKE_ROOT/home/config/hyprland/settings.nix"
+  grep -q 'exec, hypr-wallpaper-cycle previous' \
     "$FLAKE_ROOT/home/config/hyprland/settings.nix"
   grep -q \
     'SUPER SHIFT, right, Next wallpaper, exec, hypr-wallpaper-cycle next' \
