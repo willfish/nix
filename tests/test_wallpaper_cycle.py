@@ -28,6 +28,11 @@ class NextWallpaperTest(unittest.TestCase):
             cycle.next_name(["a.png", "b.png"], "b.png", "a.png"), "a.png"
         )
 
+    def test_previous_wraps_to_the_end(self):
+        names = ["a.png", "b.png", "c.png"]
+        self.assertEqual(cycle.next_name(names, "a.png", "a.png", -1), "c.png")
+        self.assertEqual(cycle.next_name(names, "", "b.png", -1), "a.png")
+
     def test_rejects_a_path_segment(self):
         self.assertIsNone(
             cycle.next_name(["../secret.png", "a.png"], "", "a.png")

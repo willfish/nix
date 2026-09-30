@@ -99,7 +99,8 @@ system rebuild; desktop activation does not restart the display manager.
 In Hyprland, each theme package keeps every upstream image in `backgrounds/`.
 The session starts on the first sorted image, or the theme's preferred image
 when one is named, matching Omarchy's default selection. Every five minutes
-the session advances to the next image in that directory. A theme with one
+the session advances to the next image in that directory. Super+Shift+Left
+and Super+Shift+Right step through the same list. A theme with one
 image stays put. The catalogue records a theme id, not a store path. Applying
 a theme builds `.#theme-<id>` and copies the starting image into the session
 state. Swaybg displays the current image on all outputs and follows the

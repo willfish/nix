@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 
-def next_name(names, current, preferred):
+def next_name(names, current, preferred, step=1):
     ordered = [
         name
         for name in names
@@ -20,11 +20,11 @@ def next_name(names, current, preferred):
         and "/" not in name
         and name not in (".", "..")
     ]
-    if len(ordered) < 2:
+    if len(ordered) < 2 or step not in (1, -1):
         return None
     if current not in ordered:
         current = preferred if preferred in ordered else ordered[0]
-    return ordered[(ordered.index(current) + 1) % len(ordered)]
+    return ordered[(ordered.index(current) + step) % len(ordered)]
 
 
 def wallpaper_reference(catalogue, selection, mode):
@@ -51,7 +51,7 @@ def _read_json(path):
         return None
 
 
-def advance(state, catalogue_path, flake, magick="magick", nix="nix"):
+def advance(state, catalogue_path, flake, magick="magick", nix="nix", step=1):
     """Show the next background. Return True when the image changed."""
     state = Path(state)
     link = state / "wallpaper-source"
@@ -95,7 +95,7 @@ def advance(state, catalogue_path, flake, magick="magick", nix="nix"):
     current = ""
     if current_path.exists():
         current = current_path.read_text().strip()
-    chosen = next_name(names, current, meta.get("preferred"))
+    chosen = next_name(names, current, meta.get("preferred"), step)
     if chosen is None:
         return False
     source = (package / "backgrounds" / chosen).resolve()
@@ -123,8 +123,14 @@ def main(argv):
     parser.add_argument("--catalogue", required=True)
     parser.add_argument("--flake", required=True)
     parser.add_argument("--magick", default="magick")
+    parser.add_argument(
+        "--direction", choices=("next", "previous"), default="next"
+    )
     args = parser.parse_args(argv)
-    changed = advance(args.state, args.catalogue, args.flake, args.magick)
+    step = -1 if args.direction == "previous" else 1
+    changed = advance(
+        args.state, args.catalogue, args.flake, args.magick, step=step
+    )
     return 0 if changed else 3
 
 

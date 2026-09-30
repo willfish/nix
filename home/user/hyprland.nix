@@ -144,11 +144,21 @@
         ];
         text = ''
           state="''${XDG_STATE_HOME:-$HOME/.local/state}/theme-menu"
+          direction=next
+          case "''${1:-}" in
+            "" | next) ;;
+            previous) direction=previous ;;
+            *)
+              echo 'Usage: hypr-wallpaper-cycle [next|previous]' >&2
+              exit 2
+              ;;
+          esac
           status=0
           python3 ${../config/hyprland/wallpaper_cycle.py} \
             --state "$state" \
             --catalogue ${lib.escapeShellArg "${config.xdg.configHome}/theme-menu/catalogue.json"} \
             --flake ${lib.escapeShellArg config.dotfiles.sourceDirectory} \
+            --direction "$direction" \
             || status=$?
           if [ "$status" -eq 0 ]; then
             systemctl --user restart hypr-wallpaper.service
@@ -465,6 +475,7 @@
         screensaver
         launchScreensaver
         themeSeed
+        wallpaperCycle
         pkgs.brightnessctl
         pkgs.playerctl
         pkgs.fuzzel

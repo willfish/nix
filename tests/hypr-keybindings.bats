@@ -4,6 +4,15 @@ setup_file() {
   export FLAKE_ROOT="$BATS_TEST_DIRNAME/.."
 }
 
+@test "Super+Shift+Left and Right step the wallpaper" {
+  grep -q \
+    'SUPER SHIFT, left, Previous wallpaper, exec, hypr-wallpaper-cycle previous' \
+    "$FLAKE_ROOT/home/config/hyprland/settings.nix"
+  grep -q \
+    'SUPER SHIFT, right, Next wallpaper, exec, hypr-wallpaper-cycle next' \
+    "$FLAKE_ROOT/home/config/hyprland/settings.nix"
+}
+
 @test "Super+Shift+G toggles agent usage" {
   grep -q 'SUPER SHIFT, G, Toggle agent usage, exec, hypr-controls agents"' \
     "$FLAKE_ROOT/home/config/hyprland/settings.nix"

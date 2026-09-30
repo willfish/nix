@@ -318,6 +318,8 @@ rec {
       "SUPER, P, CLIamp, exec, ${cliampCommand}"
       "SUPER, O, Spotify, exec, hypr-spotify-focus"
       "SUPER SHIFT, T, Theme menu, exec, theme-menu"
+      "SUPER SHIFT, left, Previous wallpaper, exec, hypr-wallpaper-cycle previous"
+      "SUPER SHIFT, right, Next wallpaper, exec, hypr-wallpaper-cycle next"
       "SUPER SHIFT, B, Toggle display power, exec, hypr-session display-toggle"
       "SUPER, Escape, Lock system, exec, hypr-session lock"
       "SUPER SHIFT, Escape, System menu, exec, hypr-session menu"
