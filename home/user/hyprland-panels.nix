@@ -259,6 +259,43 @@ let
       esac
     '';
   };
+  # Pinned arXiv bar widget. Marketplace install is unavailable and expects
+  # Omarchy's own bar. Waybar stays the bar; this timer and the popup live here.
+  # 1a3a799c is the v1.0.2 tree that passed the marketplace compatibility check.
+  arxivPlugin = pkgs.fetchFromGitHub {
+    owner = "linuskelsey";
+    repo = "arxiv-scanner";
+    rev = "1a3a799c00a5d3bc6d99150257bb89dcf267013b";
+    hash = "sha256-YszLLtVUFSkPY8uG3KeTItcmcAWoYPGAQxbrzWkmfRo=";
+  };
+  arxivScripts =
+    pkgs.runCommand "arxiv-scanner-scripts"
+      {
+        nativeBuildInputs = [ pkgs.patch ];
+      }
+      ''
+        mkdir -p "$out/bin"
+        cp ${arxivPlugin}/bin/poll.py ${arxivPlugin}/bin/check-authors.py \
+          ${arxivPlugin}/bin/save-settings.sh "$out/bin/"
+        chmod -R u+w "$out"
+        substituteInPlace "$out/bin/poll.py" \
+          --replace-fail '["claude", "-p"' '["${pkgs.claude-code}/bin/claude", "-p"' \
+          --replace-fail '["omarchy", "notification", "send", "--app-name", "arXiv Scanner", "-u", "normal", title, body],' \
+          '["${pkgs.libnotify}/bin/notify-send", "-a", "arXiv Scanner", "-u", "normal", "--", title, body],'
+        patch --batch -d "$out/bin" -p1 < ${../config/hyprland/arxiv/timer-dropin.patch}
+        rm -f "$out/bin/"*.orig
+        patchShebangs "$out/bin"
+      '';
+  arxivConfig = pkgs.writeText "arxiv-scanner-config.json" ''
+    {
+      "category": "quant-ph",
+      "interestAreas": [],
+      "watchedAuthors": [],
+      "maxAreaMatches": 3,
+      "maxWatchedMatches": 3,
+      "pollTime": "07:30"
+    }
+  '';
   bundle = pkgs.runCommand "omarchy-panels" { nativeBuildInputs = [ pkgs.patch ]; } ''
     mkdir -p "$out/shell/plugins/panels/calendar" "$out/shell/plugins/panels/weather"
     cp -r ${source}/shell/Ui ${source}/shell/Commons "$out/shell/"
@@ -275,6 +312,14 @@ let
       --replace-fail '"omarchy-weather-location"' '"${weatherLocation}/bin/omarchy-weather-location"'
     substituteInPlace "$out/shell/plugins/panels/weather/Service.qml" \
       --replace-fail '"omarchy-notification-send"' '"${weatherNotify}/bin/omarchy-weather-notify"'
+    mkdir -p "$out/shell/plugins/arxiv"
+    cp ${arxivPlugin}/BarWidget.qml ${arxivPlugin}/LICENSE "$out/shell/plugins/arxiv/"
+    chmod -R u+w "$out/shell/plugins/arxiv"
+    substituteInPlace "$out/shell/plugins/arxiv/BarWidget.qml" \
+      --replace-fail 'function close() { popupOpen = false }' \
+      'function close() { popupOpen = false } function closeForPopoutSwitch() { close() }' \
+      --replace-fail 'readonly property string pluginDir: Quickshell.env("HOME") + "/.config/omarchy/plugins/prometheus.arxiv-scanner/"' \
+      'readonly property string pluginDir: "${arxivScripts}/"'
     mkdir -p "$out/shell/plugins/emojis"
     cp ${emojiPlugin}/BetterEmojis.qml ${emojiPlugin}/EmojiData.js ${emojiPlugin}/emojis.json \
       ${emojiPlugin}/LICENSE "$out/shell/plugins/emojis/"
@@ -462,6 +507,7 @@ let
     wl-clipboard
     blueman
     libnotify
+    systemd
     which
     tailscale
     helpers
@@ -632,7 +678,34 @@ in
       emojiOpen
       pkgs.quickshell
       pkgs.blueman
+      pkgs.claude-code
     ];
+    # Seed only. The panel writes this file; do not replace an existing config.
+    home.activation.arxivScannerConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      config_file=${lib.escapeShellArg "${config.xdg.configHome}/omarchy-arxiv-scanner/config.json"}
+      if [[ ! -e $config_file && ! -L $config_file ]]; then
+        run install -D -m 0600 ${arxivConfig} "$config_file"
+      fi
+    '';
+    systemd.user.services.omarchy-arxiv-scanner = {
+      Unit.Description = "arXiv new-submissions scan";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${arxivScripts}/bin/poll.py";
+        ExecStartPost = "-${pkgs.procps}/bin/pkill -RTMIN+10 waybar";
+        UMask = "0077";
+        TimeoutStartSec = 400;
+      };
+    };
+    systemd.user.timers.omarchy-arxiv-scanner = {
+      Unit.Description = "Daily arXiv scan";
+      Timer = {
+        OnCalendar = "*-*-* 07:30:00";
+        Persistent = true;
+        AccuracySec = "5min";
+      };
+      Install.WantedBy = [ "timers.target" ];
+    };
     # Start its pairing agent on demand via D-Bus, not a second login applet.
     xdg.configFile."autostart/blueman.desktop".text = ''
       [Desktop Entry]

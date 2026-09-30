@@ -25,6 +25,11 @@
         runtimeInputs = [ pkgs.python3 ];
         text = "exec python3 ${../config/hyprland/agents}/status.py";
       };
+      arxivStatus = pkgs.writeShellApplication {
+        name = "hypr-arxiv-status";
+        runtimeInputs = [ pkgs.python3 ];
+        text = "exec python3 ${../config/hyprland/arxiv}/status.py";
+      };
       tailscaleStatus = pkgs.writeShellApplication {
         name = "hypr-tailscale-status";
         runtimeInputs = [
@@ -451,6 +456,10 @@
           color: @red;
         }
 
+        #custom-arxiv.unseen {
+          color: @accent;
+        }
+
         /* Optical centring for the asymmetric Wi-Fi glyph. */
         #network.wifi {
           padding-right: 4px;
@@ -667,6 +676,16 @@
               format = "󰐷";
               tooltip = "Weather radar";
               on-click = settings.bar.commands.weather;
+            };
+            "custom/arxiv" = {
+              exec = "${arxivStatus}/bin/hypr-arxiv-status";
+              return-type = "json";
+              format = "{}";
+              interval = 30;
+              signal = 10;
+              tooltip = true;
+              on-click = settings.bar.commands.arxiv;
+              on-click-right = "${settings.bar.commands.arxiv} refresh";
             };
             "custom/recording" = {
               exec = "printf '%s' '●'";

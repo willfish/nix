@@ -2,12 +2,16 @@
 panel=${1:-}
 action=${2:-open}
 case "$panel" in
-audio | bluetooth | network | tailscale | calendar | weather | agents) ;;
+audio | bluetooth | network | tailscale | calendar | weather | agents | arxiv) ;;
 *)
-  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|weather|agents [toggle|show|refresh|next]' >&2
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|weather|agents|arxiv [toggle|show|refresh|next]' >&2
   exit 2
   ;;
 esac
+if [[ $action == refresh && $panel == arxiv ]]; then
+  systemctl --user start --no-block omarchy-arxiv-scanner.service
+  exit $?
+fi
 if [[ $action == refresh && $panel == agents ]]; then
   omarchy-agent-usage-update --force >/dev/null 2>&1 || true
   pkill -RTMIN+9 waybar >/dev/null 2>&1 || true
@@ -18,7 +22,7 @@ if [[ $action == show && $panel != agents ]]; then
   exit 2
 fi
 if [[ $action != open && $action != show && $action != next && ! ($panel == tailscale && $action == toggle) ]]; then
-  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|weather|agents [toggle|show|refresh|next]' >&2
+  echo 'Usage: hypr-controls audio|bluetooth|network|tailscale|calendar|weather|agents|arxiv [toggle|show|refresh|next]' >&2
   exit 2
 fi
 if [[ $action == next && $panel != agents ]]; then

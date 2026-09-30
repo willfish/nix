@@ -1,0 +1,32 @@
+--- a/save-settings.sh
++++ b/save-settings.sh
+@@ -77,13 +77,24 @@
+ mv -f "$TMP_FILE" "$CONFIG_FILE"
+
+ # Only touch the timer if poll time is a valid HH:MM and actually differs —
+ # a systemctl restart on every settings save (even unrelated ones) would
+-# reset the timer's elapse countdown for no reason.
+-if [[ "$POLL_TIME" =~ ^([01][0-9]|2[0-3]):([0-5][0-9])$ ]] && is_ours "$TIMER_FILE"; then
+-  CURRENT="$(grep -oP '(?<=OnCalendar=\*-\*-\* )\d{2}:\d{2}(?=:00)' "$TIMER_FILE" || true)"
+-  if [[ "$CURRENT" != "$POLL_TIME" ]]; then
+-    sed -i "s/^OnCalendar=.*/OnCalendar=*-*-* ${POLL_TIME}:00/" "$TIMER_FILE"
++# reset the timer's elapse countdown for no reason. Home Manager owns the
++# unit file, so the chosen time lives in a drop-in rather than that file.
++if [[ "$POLL_TIME" =~ ^([01][0-9]|2[0-3]):([0-5][0-9])$ ]]; then
++  dropin_dir="$HOME/.config/systemd/user/omarchy-arxiv-scanner.timer.d"
++  dropin_file="$dropin_dir/poll-time.conf"
++  mkdir -p "$dropin_dir"
++  tmp="$(mktemp "$dropin_dir/.poll-time.conf.XXXXXX")"
++  printf '%s\n' '[Timer]' 'OnCalendar=' "OnCalendar=*-*-* ${POLL_TIME}:00" > "$tmp"
++  current=""
++  if [[ -f "$dropin_file" ]]; then
++    current="$(cat "$dropin_file")"
++  fi
++  if [[ "$current" == "$(cat "$tmp")" ]]; then
++    rm -f "$tmp"
++  else
++    mv -f "$tmp" "$dropin_file"
+     systemctl --user daemon-reload
+     systemctl --user restart omarchy-arxiv-scanner.timer
+   fi
+ fi

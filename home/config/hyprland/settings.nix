@@ -112,6 +112,7 @@ rec {
       tailscale = "hypr-controls tailscale";
       calendar = "hypr-controls calendar";
       weather = "hypr-controls weather";
+      arxiv = "hypr-controls arxiv";
       agents = "hypr-controls agents";
       notifications = "hypr-notifications";
       music = cliampCommand;
@@ -133,6 +134,7 @@ rec {
       "custom/tailscale"
       "bluetooth"
       "custom/weather"
+      "custom/arxiv"
       "idle_inhibitor"
       "battery"
       "custom/notifications"

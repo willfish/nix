@@ -10,6 +10,7 @@ import "plugins/panels/tailscale" as Tailscale
 import "plugins/panels/calendar" as Calendar
 import "plugins/panels/weather" as WeatherRadar
 import "plugins/agents" as Agents
+import "plugins/arxiv" as ArxivScanner
 import "plugins/polkit" as Polkit
 import "plugins/menu" as OmarchyMenu
 import "plugins/emojis" as BetterEmojis
@@ -18,7 +19,7 @@ import "plugins/emojis" as BetterEmojis
 ShellRoot {
   id: host
   property var options: JSON.parse(Quickshell.env("HYPR_CONTROLS_SETTINGS"))
-  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale, calendar: calendar, weather: weather, agents: agents })
+  property var panels: ({ audio: audio, bluetooth: bluetooth, network: network, tailscale: tailscale, calendar: calendar, weather: weather, agents: agents, arxiv: arxiv })
   property var agentSettings: JSON.parse(Quickshell.env("HYPR_AGENTS_SETTINGS") || "{}")
 
   function firstPartyServiceFor(id) { return null }
@@ -123,6 +124,22 @@ ShellRoot {
       bar: barApi
       settings: host.agentSettings
       visible: true
+    }
+    // Waybar owns the badge. This is the pinned scanner popup.
+    Item {
+      id: arxiv
+      property bool opened: scanner.popupOpen
+      function open() {
+        scanner.popupOpen = true
+        scanner.markViewed()
+      }
+      function close() {
+        scanner.close()
+      }
+      ArxivScanner.BarWidget {
+        id: scanner
+        bar: barApi
+      }
     }
     // Same palette as the panels. Replaces the unthemed Hyprland agent.
     Polkit.PolkitAgent { }
