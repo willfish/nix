@@ -221,17 +221,24 @@ let
     text = ''
       emoji=''${1:-}
       [[ -n $emoji ]] || exit 0
-      target="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/emoji-target"
-      address=""
-      class=""
-      if [[ -f $target ]]; then
-        {
-          IFS= read -r address
-          IFS= read -r class
-        } <"$target"
-      fi
-      if [[ -n $address ]]; then
-        hyprctl dispatch focuswindow "address:$address" >/dev/null || true
+      # The picker is not a normal window. Whatever Hyprland still calls
+      # active is the app that should receive the emoji. A saved address from
+      # an earlier shortcut must not steal a Telegram paste.
+      class=$(hyprctl activewindow -j | jq -r '.class // empty')
+      address=$(hyprctl activewindow -j | jq -r '.address // empty')
+      if [[ -z $class ]]; then
+        target="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/emoji-target"
+        if [[ -f $target ]]; then
+          {
+            IFS= read -r address
+            IFS= read -r class
+          } <"$target"
+        fi
+        if [[ -n $address ]]; then
+          hyprctl dispatch focuswindow "address:$address" >/dev/null || true
+          sleep 0.12
+          class=$(hyprctl activewindow -j | jq -r '.class // empty')
+        fi
       fi
       case $class in
         *ghostty* | *Ghostty*)
@@ -243,9 +250,10 @@ let
           clip=$!
           printf '%s' "$emoji" | wl-copy --primary --type text/plain --foreground &
           primary=$!
-          sleep 0.08
+          # Let the picker release the keyboard before the paste key.
+          sleep 0.2
           wtype -M shift -k Insert -m shift || true
-          sleep 0.25
+          sleep 0.3
           kill "$clip" "$primary" 2>/dev/null || true
           ;;
       esac
