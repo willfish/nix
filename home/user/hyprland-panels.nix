@@ -288,6 +288,24 @@ let
       '';
   arxivConfig = pkgs.writeText "arxiv-scanner-config.json" ''
     {
+      "category": "cs.IR",
+      "interestAreas": [
+        "hybrid lexical and dense retrieval, including reciprocal rank fusion",
+        "query rewriting or expansion for short product and goods descriptions",
+        "embedding models, cross-encoders, and rerankers for product search",
+        "hierarchical or legal classification of goods, HS codes, and customs tariffs",
+        "clarifying questions that narrow an ambiguous product description",
+        "sentence-transformer classifiers for product categorization"
+      ],
+      "watchedAuthors": [],
+      "maxAreaMatches": 4,
+      "maxWatchedMatches": 3,
+      "pollTime": "07:30"
+    }
+  '';
+  # The first shared seed. Activation replaces this exact file and nothing else.
+  arxivPreviousConfig = pkgs.writeText "arxiv-scanner-config-previous.json" ''
+    {
       "category": "quant-ph",
       "interestAreas": [],
       "watchedAuthors": [],
@@ -680,10 +698,13 @@ in
       pkgs.blueman
       pkgs.claude-code
     ];
-    # Seed only. The panel writes this file; do not replace an existing config.
+    # Shared default for a new machine. A panel edit stays local; only the
+    # untouched quantum-physics seed is replaced.
     home.activation.arxivScannerConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       config_file=${lib.escapeShellArg "${config.xdg.configHome}/omarchy-arxiv-scanner/config.json"}
-      if [[ ! -e $config_file && ! -L $config_file ]]; then
+      if [[ -L $config_file ]]; then
+        :
+      elif [[ ! -e $config_file ]] || ${pkgs.diffutils}/bin/cmp -s ${arxivPreviousConfig} "$config_file"; then
         run install -D -m 0600 ${arxivConfig} "$config_file"
       fi
     '';
