@@ -177,16 +177,36 @@ let
     rev = "e945ae85ec0f55eb6432c13b8e8e23907ca0d21d";
     hash = "sha256-kJD1RSuEwvNkQMAUsgP1r9xhzc00peXl3Dsc1Cfu7ZM=";
   };
+  # Omarchy's helper only fills the clipboard, then sends Shift+Insert.
+  # Ghostty's default Shift+Insert pastes the primary selection, so a click
+  # in Pi inserted nothing. Hold the emoji on both until the paste has landed.
   emojiInsert = pkgs.writeShellApplication {
     name = "omarchy-menu-emoji-insert";
     runtimeInputs = [
       pkgs.wl-clipboard
       pkgs.wtype
       pkgs.coreutils
+      pkgs.hyprland
+      pkgs.jq
     ];
-    text = lib.removePrefix "#!/bin/bash\n" (
-      builtins.readFile "${source}/bin/omarchy-menu-emoji-insert"
-    );
+    text = ''
+      emoji=''${1:-}
+      [[ -n $emoji ]] || exit 0
+      printf '%s' "$emoji" | wl-copy --type text/plain --sensitive --foreground &
+      clip=$!
+      printf '%s' "$emoji" | wl-copy --primary --type text/plain --sensitive --foreground &
+      primary=$!
+      # The picker still owns the keyboard for a moment after it closes.
+      for _ in {1..20}; do
+        sleep 0.03
+        if hyprctl activewindow -j | jq -e '.address' >/dev/null; then
+          break
+        fi
+      done
+      wtype -M shift -k Insert -m shift || true
+      sleep 0.2
+      kill "$clip" "$primary" 2>/dev/null || true
+    '';
   };
   bundle = pkgs.runCommand "omarchy-panels" { nativeBuildInputs = [ pkgs.patch ]; } ''
     mkdir -p "$out/shell/plugins/panels/calendar" "$out/shell/plugins/panels/weather"
