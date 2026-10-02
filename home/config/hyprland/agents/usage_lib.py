@@ -284,6 +284,39 @@ def fraction(value: Any) -> float:
     return min(1.0, parsed)
 
 
+def _grok_credit_percent(
+    config: dict[str, Any], period_end: str
+) -> float | None:
+    """Read included-credit usage, treating a proto3 omitted zero as unused.
+
+    The credits endpoint drops creditUsagePercent when it is zero. A known
+    weekly or monthly period with that field absent is an unused pool, not
+    a missing allowance. A present but unreadable percent stays unknown.
+    """
+
+    for key in ("creditUsagePercent", "credit_usage_percent"):
+        if key not in config:
+            continue
+        parsed = fraction(config.get(key))
+        return parsed if parsed >= 0 else None
+    if not period_end:
+        return None
+    known = config.get("isUnifiedBillingUser") is True or any(
+        name in config
+        for name in (
+            "onDemandCap",
+            "on_demand_cap",
+            "prepaidBalance",
+            "prepaid_balance",
+            "billingPeriodEnd",
+            "billing_period_end",
+            "currentPeriod",
+            "current_period",
+        )
+    )
+    return 0.0 if known else None
+
+
 def parse_grok_billing(payload: dict[str, Any]) -> list[dict[str, str | float]]:
     config = (
         payload.get("config")
@@ -309,10 +342,8 @@ def parse_grok_billing(payload: dict[str, Any]) -> list[dict[str, str | float]]:
     )
     label = "Monthly" if "MONTH" in kind else "Weekly (7-day)"
     limits: list[dict[str, str | float]] = []
-    overall = fraction(
-        config.get("creditUsagePercent", config.get("credit_usage_percent"))
-    )
-    if overall >= 0:
+    overall = _grok_credit_percent(config, end)
+    if overall is not None:
         limits.append(
             {
                 "label": label,

@@ -116,6 +116,51 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(limits[0]["title"], "Weekly")
         self.assertEqual(limits[1]["title"], "Grok Build")
 
+    def test_grok_billing_reads_omitted_percent_as_unused_weekly_pool(self):
+        limits = self.lib.parse_grok_billing(
+            {
+                "config": {
+                    "currentPeriod": {
+                        "type": "USAGE_PERIOD_TYPE_WEEKLY",
+                        "start": "2026-10-01T20:25:49+00:00",
+                        "end": "2026-10-08T20:25:49+00:00",
+                    },
+                    "onDemandCap": {"val": 0},
+                    "onDemandUsed": {"val": 0},
+                    "isUnifiedBillingUser": True,
+                    "prepaidBalance": {"val": 0},
+                    "billingPeriodEnd": "2026-10-08T20:25:49+00:00",
+                }
+            }
+        )
+        self.assertEqual(len(limits), 1)
+        self.assertEqual(limits[0]["title"], "Weekly")
+        self.assertEqual(limits[0]["percent"], 0.0)
+        self.assertEqual(limits[0]["resetsAt"], "2026-10-08T20:25:49+00:00")
+
+    def test_grok_billing_does_not_invent_usage_without_a_period(self):
+        self.assertEqual(
+            self.lib.parse_grok_billing(
+                {"config": {"isUnifiedBillingUser": True}}
+            ),
+            [],
+        )
+        self.assertEqual(
+            self.lib.parse_grok_billing(
+                {
+                    "config": {
+                        "currentPeriod": {
+                            "type": "USAGE_PERIOD_TYPE_WEEKLY",
+                            "end": "2026-10-08T20:25:49+00:00",
+                        },
+                        "creditUsagePercent": "nope",
+                        "isUnifiedBillingUser": True,
+                    }
+                }
+            ),
+            [],
+        )
+
     def test_refresh_replaces_tokens_and_keeps_profile_fields(self):
         merged = self.lib.merge_refreshed_login(
             {
