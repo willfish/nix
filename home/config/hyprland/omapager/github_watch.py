@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Announce new GitHub notification threads through the desktop bus."""
+"""Announce new GitHub notification threads through the desktop bus.
+
+A systemd user timer runs one pass and then this process exits. The Open
+action is joined before exit so a click is not lost, but nothing stays
+resident between polls.
+"""
 
 import json
 import subprocess
 import threading
-import time
 import urllib.parse
 from pathlib import Path
 
-POLL_SECONDS = 60
 BURST_LIMIT = 8
 
 
@@ -209,27 +212,28 @@ def announce(item):
         stderr=subprocess.DEVNULL,
         text=True,
     )
-    threading.Thread(
+    thread = threading.Thread(
         target=_finish_announce,
         args=(proc, item.get("url") or ""),
-        daemon=True,
-    ).start()
+    )
+    thread.start()
+    return thread
 
 
 def main():
     state_path = Path.home() / ".local/state/github-notifications/seen.json"
-    while True:
-        seen, seeded = load_state(state_path)
-        try:
-            items = fetch_notifications()
-        except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
-            items = None
-        if items is not None:
-            announcements, seen, seeded = plan(items, seen, seeded)
-            for item in announcements:
-                announce(item)
-            save_state(state_path, seen, seeded)
-        time.sleep(POLL_SECONDS)
+    seen, seeded = load_state(state_path)
+    try:
+        items = fetch_notifications()
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        return
+    if items is None:
+        return
+    announcements, seen, seeded = plan(items, seen, seeded)
+    threads = [announce(item) for item in announcements]
+    save_state(state_path, seen, seeded)
+    for thread in threads:
+        thread.join()
 
 
 if __name__ == "__main__":

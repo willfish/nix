@@ -1,122 +1,49 @@
 """Herdr working state is the only reason to hold idle and sleep."""
 
-import importlib.util
-import json
-import socket
-import threading
-import unittest
+import os
 from pathlib import Path
+import shutil
+import socket
+import subprocess
+import tempfile
+import time
+import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location(
-    "agent_awake", ROOT / "home/config/hyprland/agent_awake.py"
-)
-awake = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(awake)
+SOURCE = ROOT / "home/config/hyprland/agent-awake.c"
 
 
-class StatusTests(unittest.TestCase):
-    def test_only_working_holds_the_machine(self):
-        self.assertFalse(
-            awake.busy(
-                {
-                    "blocked": "blocked",
-                    "idle": "idle",
-                    "done": "done",
-                    "unknown": "unknown",
-                }
+def compile_agent(directory):
+    binary = Path(directory) / "herdr-agent-awake"
+    subprocess.run(
+        [
+            "cc",
+            "-std=c17",
+            "-Wall",
+            "-Wextra",
+            "-Wpedantic",
+            "-Werror",
+            "-O2",
+            "-o",
+            str(binary),
+            str(SOURCE),
+        ],
+        check=True,
+    )
+    return binary
+
+
+class BuildTests(unittest.TestCase):
+    def test_self_test_passes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = compile_agent(directory)
+            completed = subprocess.run(
+                [str(binary), "--self-test"],
+                text=True,
+                capture_output=True,
+                timeout=10,
             )
-        )
-        self.assertTrue(awake.busy({"one": "idle", "two": "working"}))
-
-    def test_list_replaces_stale_panes(self):
-        statuses = awake.statuses_from_agents(
-            [
-                {"pane_id": "w1:p1", "agent": "pi", "agent_status": "blocked"},
-                {"pane_id": "w2:p1", "agent": "codex", "agent_status": "done"},
-                {"agent_status": "working"},
-                {"pane_id": "w3:p1"},
-            ]
-        )
-        self.assertEqual(statuses, {"w1:p1": "blocked", "w2:p1": "done"})
-        self.assertFalse(awake.busy(statuses))
-
-    def test_status_event_updates_without_refresh(self):
-        statuses = {"w1:p1": "idle"}
-        action = awake.apply_message(
-            statuses,
-            {
-                "event": "pane.agent_status_changed",
-                "data": {
-                    "pane_id": "w1:p1",
-                    "agent_status": "working",
-                    "agent": "pi",
-                },
-            },
-        )
-        self.assertEqual(action, "status")
-        self.assertTrue(awake.busy(statuses))
-
-    def test_generic_status_event_is_accepted(self):
-        statuses = {}
-        action = awake.apply_message(
-            statuses,
-            {
-                "event": "pane_agent_status_changed",
-                "data": {
-                    "type": "pane_agent_status_changed",
-                    "pane_id": "w9:p1",
-                    "agent_status": "working",
-                },
-            },
-        )
-        self.assertEqual(action, "status")
-        self.assertEqual(statuses["w9:p1"], "working")
-
-    def test_closed_pane_is_removed_and_refreshed(self):
-        statuses = {"w1:p1": "working"}
-        action = awake.apply_message(
-            statuses,
-            {
-                "event": "pane_closed",
-                "data": {"type": "pane_closed", "pane_id": "w1:p1"},
-            },
-        )
-        self.assertEqual(action, "refresh")
-        self.assertFalse(awake.busy(statuses))
-
-    def test_new_pane_requests_refresh(self):
-        self.assertEqual(
-            awake.apply_message(
-                {}, {"event": "pane_agent_detected", "data": {}}
-            ),
-            "refresh",
-        )
-        self.assertEqual(
-            awake.apply_message({}, {"event": "pane_created", "data": {}}),
-            "refresh",
-        )
-
-    def test_subscription_covers_lifecycle_and_known_panes(self):
-        request = awake.subscription_request(
-            ["w1:p1", "w2:p1"], "awake-subscribe"
-        )
-        types = [item["type"] for item in request["params"]["subscriptions"]]
-        self.assertEqual(
-            types,
-            [
-                "pane.created",
-                "pane.closed",
-                "pane.exited",
-                "pane.agent_detected",
-                "pane.agent_status_changed",
-                "pane.agent_status_changed",
-            ],
-        )
-        self.assertEqual(
-            request["params"]["subscriptions"][-1],
-            {"type": "pane.agent_status_changed", "pane_id": "w2:p1"},
-        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
     def test_session_menu_suspend_overrides_the_inhibitor(self):
         script = (ROOT / "home/config/hyprland/session.sh").read_text()
@@ -124,139 +51,142 @@ class StatusTests(unittest.TestCase):
         self.assertNotIn("systemctl reboot --ignore-inhibitors", script)
 
 
-class InhibitorTests(unittest.TestCase):
-    def test_busy_starts_once_and_release_stops_the_group(self):
-        started = []
-        stopped = []
-
-        class Proc:
-            pid = 42
-
-            def poll(self):
-                return None
-
-            def wait(self, timeout=None):
-                return 0
-
-        def popen(argv, start_new_session):
-            started.append((argv, start_new_session))
-            return Proc()
-
-        original = awake.os.killpg
-        awake.os.killpg = lambda pid, sig: stopped.append((pid, sig))
-        try:
-            inhibitor = awake.Inhibitor(["sleep", "infinity"], popen=popen)
-            inhibitor.set_busy(True)
-            inhibitor.set_busy(True)
-            inhibitor.set_busy(False)
-        finally:
-            awake.os.killpg = original
-
-        self.assertEqual(len(started), 1)
-        self.assertTrue(started[0][1])
-        self.assertEqual(stopped, [(42, awake.signal.SIGTERM)])
-        self.assertIsNone(inhibitor.proc)
-
-
 class SocketTests(unittest.TestCase):
-    def test_watch_follows_status_then_refreshes_on_close(self):
-        path = self._serve()
-        started = []
+    def test_missing_socket_fails_open(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = compile_agent(directory)
+            missing = str(Path(directory) / "missing.sock")
+            proc = subprocess.Popen(
+                [str(binary)],
+                env={
+                    **os.environ,
+                    "HERDR_SOCKET_PATH": missing,
+                    "PATH": "/usr/bin:/bin",
+                },
+                stderr=subprocess.PIPE,
+                text=True,
+                start_new_session=True,
+            )
+            try:
+                deadline = time.monotonic() + 3
+                err = ""
+                while (
+                    time.monotonic() < deadline
+                    and "sleep allowed" not in err
+                ):
+                    chunk = proc.stderr.readline()
+                    if not chunk:
+                        break
+                    err += chunk
+                self.assertIn("sleep allowed", err)
+                self.assertIsNone(proc.poll())
+            finally:
+                os.killpg(proc.pid, 15)
+                proc.wait(timeout=3)
+                proc.stderr.close()
 
-        class Proc:
-            pid = 7
+    def _readline(self, conn):
+        raw = b""
+        conn.settimeout(5)
+        while b"\n" not in raw:
+            chunk = conn.recv(65536)
+            if not chunk:
+                break
+            raw += chunk
+        return raw.partition(b"\n")[0].decode()
 
-            def poll(self):
-                return None
-
-            def wait(self, timeout=None):
-                return 0
-
-        def popen(argv, start_new_session):
-            started.append(argv)
-            return Proc()
-
-        inhibitor = awake.Inhibitor(["inhibit"], popen=popen)
-        awake.os.killpg = lambda pid, sig: started.append(("stop", pid, sig))
-        try:
-            awake.watch_once(path, {}, inhibitor, refresh_seconds=2)
-        finally:
-            awake.os.killpg = os_killpg
-
-        self.assertEqual(started[0], ["inhibit"])
-        self.assertEqual(started[-1][0], "stop")
-
-    def _serve(self):
-        import tempfile
-
-        self._tmp = tempfile.TemporaryDirectory()
-        path = str(Path(self._tmp.name) / "herdr.sock")
-        server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        server.bind(path)
-        server.listen(2)
-        self.addCleanup(server.close)
-        self.addCleanup(self._tmp.cleanup)
-
-        def accept_one():
-            conn, _ = server.accept()
-            with conn:
-                raw = b""
-                while b"\n" not in raw:
-                    raw += conn.recv(65536)
-                request = json.loads(raw.split(b"\n", 1)[0])
-                if request["method"] == "agent.list":
-                    body = {
-                        "id": request["id"],
-                        "result": {
-                            "type": "agent_list",
-                            "agents": [
-                                {
-                                    "pane_id": "w1:p1",
-                                    "agent": "pi",
-                                    "agent_status": "working",
-                                }
-                            ],
-                        },
-                    }
-                    conn.sendall(json.dumps(body).encode() + b"\n")
-                    return
+    def test_working_agent_inhibits_until_it_stops(self):
+        sleep = shutil.which("sleep")
+        self.assertIsNotNone(sleep)
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            binary = compile_agent(directory)
+            log = directory / "inhibit.log"
+            bindir = directory / "bin"
+            bindir.mkdir()
+            inhibit = bindir / "systemd-inhibit"
+            inhibit.write_text(
+                "#!/bin/sh\n"
+                'printf \'start %s\\n\' "$*" >> "$HERDR_INHIBIT_LOG"\n'
+                'echo $$ >> "$HERDR_INHIBIT_LOG"\n'
+                f"exec {sleep} infinity\n"
+            )
+            inhibit.chmod(0o755)
+            path = str(directory / "herdr.sock")
+            server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            server.bind(path)
+            server.listen(4)
+            server.settimeout(5)
+            proc = subprocess.Popen(
+                [str(binary)],
+                env={
+                    **os.environ,
+                    "HERDR_SOCKET_PATH": path,
+                    "HERDR_INHIBIT_LOG": str(log),
+                    "PATH": f"{bindir}:{os.environ.get('PATH', '')}",
+                },
+                stderr=subprocess.PIPE,
+                text=True,
+                start_new_session=True,
+            )
+            try:
+                conn, _ = server.accept()
+                line = self._readline(conn)
+                self.assertIn("agent.list", line)
                 conn.sendall(
-                    json.dumps(
-                        {
-                            "id": request["id"],
-                            "result": {"type": "subscription_started"},
-                        }
-                    ).encode()
-                    + b"\n"
+                    b'{"id":"awake-list","result":{"agents":['
+                    b'{"pane_id":"w1:p1","agent_status":"working"}]}}\n'
                 )
-                conn.sendall(
-                    json.dumps(
-                        {
-                            "event": "pane.agent_status_changed",
-                            "data": {
-                                "pane_id": "w1:p1",
-                                "agent_status": "blocked",
-                            },
-                        }
-                    ).encode()
-                    + b"\n"
+                deadline = time.monotonic() + 5
+                text = ""
+                while time.monotonic() < deadline and "start " not in text:
+                    time.sleep(0.05)
+                    text = log.read_text() if log.exists() else ""
+                self.assertIn("--what=idle:sleep", text)
+                self.assertIn("--who=herdr-agents", text)
+                pid = int(text.strip().splitlines()[-1])
+                self.assertTrue(Path(f"/proc/{pid}").exists())
+                conn.close()
+
+                conn, _ = server.accept()
+                subscribe = self._readline(conn)
+                self.assertIn("events.subscribe", subscribe)
+                self.assertIn("pane.created", subscribe)
+                self.assertIn("pane.closed", subscribe)
+                self.assertIn("pane.exited", subscribe)
+                self.assertIn("pane.agent_detected", subscribe)
+                self.assertIn("w1:p1", subscribe)
+                ack = (
+                    b'{"id":"awake-subscribe","result":'
+                    b'{"type":"subscription_started"}}\n'
                 )
-                conn.sendall(
-                    json.dumps(
-                        {
-                            "event": "pane_closed",
-                            "data": {"type": "pane_closed", "pane_id": "w1:p1"},
-                        }
-                    ).encode()
-                    + b"\n"
+                blocked = (
+                    b'{"event":"pane.agent_status_changed","data":'
+                    b'{"pane_id":"w1:p1","agent_status":"blocked"}}\n'
                 )
+                closed = b'{"event":"pane_closed","data":{"pane_id":"w1:p1"}}\n'
+                conn.sendall(ack + blocked + closed)
+                deadline = time.monotonic() + 5
+                alive = Path(f"/proc/{pid}").exists()
+                while time.monotonic() < deadline and alive:
+                    time.sleep(0.05)
+                    alive = Path(f"/proc/{pid}").exists()
+                self.assertFalse(
+                    Path(f"/proc/{pid}").exists(),
+                    "inhibitor still running",
+                )
+                conn.close()
 
-        threading.Thread(target=accept_one, daemon=True).start()
-        threading.Thread(target=accept_one, daemon=True).start()
-        return path
-
-
-os_killpg = awake.os.killpg
+                conn, _ = server.accept()
+                again = self._readline(conn)
+                self.assertIn("agent.list", again)
+                conn.sendall(b'{"id":"awake-list","result":{"agents":[]}}\n')
+                conn.close()
+            finally:
+                os.killpg(proc.pid, 15)
+                proc.wait(timeout=3)
+                proc.stderr.close()
+                server.close()
 
 
 if __name__ == "__main__":

@@ -65,6 +65,18 @@ class GithubNotificationTest(unittest.TestCase):
         self.assertEqual(github_watch.chosen_action("open\n"), "open")
         self.assertNotEqual(github_watch.chosen_action("closed"), "open")
 
+    def test_poll_exits_instead_of_staying_resident(self):
+        source = (
+            ROOT / "home/config/hyprland/omapager/github_watch.py"
+        ).read_text()
+        unit = (ROOT / "home/user/omapager.nix").read_text()
+        self.assertNotIn("while True", source)
+        self.assertNotIn("time.sleep", source)
+        self.assertIn("thread.join", source)
+        self.assertIn("timers.github-notifications", unit)
+        self.assertIn('Type = "oneshot"', unit)
+        self.assertIn('OnUnitInactiveSec = "60s"', unit)
+
 
 if __name__ == "__main__":
     unittest.main()

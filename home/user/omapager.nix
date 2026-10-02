@@ -286,9 +286,21 @@ in
         ConditionEnvironment = "WAYLAND_DISPLAY";
       };
       Service = {
+        Type = "oneshot";
         ExecStart = "${githubWatch}/bin/github-notification-watch";
-        Restart = "on-failure";
-        RestartSec = 10;
+        TimeoutStartSec = "3min";
+      };
+    };
+    systemd.user.timers.github-notifications = {
+      Unit = {
+        Description = "Poll GitHub notifications";
+        PartOf = [ "hyprland-session.target" ];
+        After = [ "hyprland-session.target" ];
+      };
+      Timer = {
+        OnActiveSec = "10s";
+        OnUnitInactiveSec = "60s";
+        AccuracySec = "1s";
       };
       Install.WantedBy = [ "hyprland-session.target" ];
     };

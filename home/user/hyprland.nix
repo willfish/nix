@@ -366,17 +366,14 @@
         ];
         text = builtins.readFile ../config/hyprland/record.sh;
       };
-      agentAwake = pkgs.writeShellApplication {
-        name = "herdr-agent-awake";
-        runtimeInputs = [
-          pkgs.coreutils
-          pkgs.python3
-          pkgs.systemd
-        ];
-        text = ''
-          exec python3 ${../config/hyprland/agent_awake.py}
-        '';
-      };
+      agentAwake = pkgs.runCommandCC "herdr-agent-awake" { } ''
+        mkdir -p "$out/bin"
+        $CC -std=c17 -Wall -Wextra -Wpedantic -Werror -O2 \
+          -DSYSTEMD_INHIBIT=\"${lib.getExe' pkgs.systemd "systemd-inhibit"}\" \
+          -DSLEEP_BIN=\"${lib.getExe' pkgs.coreutils "sleep"}\" \
+          -o "$out/bin/herdr-agent-awake" \
+          ${../config/hyprland/agent-awake.c}
+      '';
       session = pkgs.writeShellApplication {
         name = "hypr-session";
         runtimeInputs = [

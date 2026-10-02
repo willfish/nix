@@ -705,6 +705,9 @@
               assert desktop.systemd.user.services ? nm-auto-secret-agent;
               assert desktop.systemd.user.services ? herdr-agent-awake;
               assert !(server.systemd.user.services ? herdr-agent-awake);
+              assert desktop.systemd.user.timers ? github-notifications;
+              assert !(server.systemd.user.timers ? github-notifications);
+              assert desktop.systemd.user.services.github-notifications.Service.Type == "oneshot";
               assert desktop.home.sessionVariables.BROWSER == "brave";
               assert hasNetcat desktop && hasNetcat server && !hasNetcat darwin;
               pkgs.runCommand "home-profile-boundaries" { } "touch $out";
