@@ -10,11 +10,6 @@ let
   inherit (pkgs) stdenv;
   capabilities = config.dotfiles.capabilities;
   isTerminus = capabilities.nas;
-  skipsForte = builtins.elem hostName [
-    "foundation"
-    "relay"
-    "terminus"
-  ];
   muxWithDefaultBackend = pkgs.writeShellScriptBin "mux" ''
     export MUX_BACKEND="''${MUX_BACKEND:-herdr}"
     exec ${pkgs.mux}/bin/mux "$@"
@@ -296,7 +291,6 @@ in
     ++ lib.optionals (stdenv.isDarwin && (capabilities.desktop || capabilities.hermes)) [
       docker_29 # Docker client for talking to Colima or other Docker daemons
       docker-compose # Docker Compose CLI
-      # forte omitted on Darwin: 1.1.0 checkPhase fails without libmpv.2.dylib.
       pango # Text layout/rendering tools used by graphics/document pipelines
     ]
     ++ lib.optionals stdenv.isLinux [
@@ -338,11 +332,6 @@ in
     ++ lib.optionals (stdenv.isDarwin && capabilities.personal) [
       discord
       spotify
-    ]
-    # Source-built personal flakes. Keep them off Relay, Foundation, and
-    # Terminus, where they are not needed.
-    ++ lib.optionals (stdenv.isLinux && !skipsForte) [
-      forte
     ];
 
   home.activation.fixDarwinBraveSignature = lib.mkIf (stdenv.isDarwin && capabilities.desktop) (

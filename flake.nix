@@ -66,10 +66,6 @@
       url = "github:herdrdev/herdr/v0.9.1";
       flake = false;
     };
-    forte = {
-      url = "github:willfish/forte";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent/08a2e7dbccfc9aafbf6715965963d8b31347f37d";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
@@ -317,7 +313,6 @@
       arxiv-mcp,
       herdr,
       herdr-source,
-      forte,
       llm-agents,
       nixos-hardware,
       # nixpkgs-local,
@@ -339,7 +334,6 @@
         arxiv-library = arxiv-mcp.packages.${system}.maintenance;
         herdr = herdr.packages.${system}.default;
         herdr-source = herdr-source.outPath;
-        forte = forte.packages.${system}.default;
         pi-coding-agent = llm-agents.packages.${system}.pi;
         hermes-agent = import ./home/user/hermes-package.nix {
           hermesInput = inputs.hermes-agent;
