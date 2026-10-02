@@ -75,6 +75,12 @@ because that profile disables automatic extension discovery. Both profiles
 read the shared server configuration; each keeps its own writable metadata
 cache in its agent directory.
 
+Plain Pi disables Pi's built-in `mcp` extension with `-builtin:mcp` in the
+settings defaults. The adapter registers `/mcp`, and Pi 1.0 skips that built-in
+and warns at startup if both are enabled. `qwen-pi` already passes
+`--no-extensions`, then loads the adapter explicitly. Shell `pi mcp` remains
+Pi's own client and does not read this adapter configuration.
+
 Make permanent changes in the Nix files. The shared JSON is a Home Manager
 symlink. The adapter also supports project `.mcp.json` and `.pi/mcp.json`
 overrides. `/mcp enable` and `/mcp disable` write project overrides.

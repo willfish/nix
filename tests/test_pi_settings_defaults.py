@@ -40,6 +40,7 @@ class PiSettingsDefaultsTest(unittest.TestCase):
         )
         self.assertEqual(defaults["quietStartup"], True)
         self.assertEqual(defaults["editorPaddingX"], 1)
+        self.assertEqual(defaults["extensions"], ["-builtin:mcp"])
         keybindings = json.loads(KEYBINDINGS.read_text())
         self.assertEqual(keybindings["app.session.rename"], "ctrl+shift+r")
 
@@ -52,6 +53,7 @@ class PiSettingsDefaultsTest(unittest.TestCase):
         )
         self.assertEqual(merged["quietStartup"], True)
         self.assertEqual(merged["editorPaddingX"], 1)
+        self.assertEqual(merged["extensions"], ["-builtin:mcp"])
         mode = stat.S_IMODE(self.settings.stat().st_mode)
         self.assertEqual(mode, 0o600)
 
@@ -96,9 +98,18 @@ class PiSettingsDefaultsTest(unittest.TestCase):
         self.assertEqual(merged["theme"], "dark")
         self.assertEqual(merged["editorPaddingX"], 2)
         self.assertEqual(merged["quietStartup"], True)
+        self.assertEqual(merged["extensions"], ["-builtin:mcp"])
         self.assertEqual(
             merged["modelThinkingLevels"][DEFAULT_MODEL_KEY], "high"
         )
+
+    def test_leaves_existing_extension_overrides_alone(self):
+        self.settings.parent.mkdir(parents=True)
+        self.settings.write_text(
+            json.dumps({"extensions": ["-builtin:codemode"]}) + "\n"
+        )
+        merged = self.run_merge()
+        self.assertEqual(merged["extensions"], ["-builtin:codemode"])
 
     def test_does_not_rewrite_when_complete(self):
         first = self.run_merge()
