@@ -284,6 +284,22 @@ def fraction(value: Any) -> float:
     return min(1.0, parsed)
 
 
+def grok_usage_fraction(value: Any) -> float:
+    """Read a Grok credits percent.
+
+    creditUsagePercent and product usagePercent are a 0-100 scale. 1.0 means
+    one percent of the pool, not a fraction of one. Values above 100 clamp.
+    """
+
+    try:
+        parsed = float(str(value).strip().replace("%", ""))
+    except (TypeError, ValueError):
+        return -1.0
+    if parsed < 0 or parsed != parsed:
+        return -1.0
+    return min(1.0, parsed / 100.0)
+
+
 def _grok_credit_percent(
     config: dict[str, Any], period_end: str
 ) -> float | None:
@@ -292,12 +308,13 @@ def _grok_credit_percent(
     The credits endpoint drops creditUsagePercent when it is zero. A known
     weekly or monthly period with that field absent is an unused pool, not
     a missing allowance. A present but unreadable percent stays unknown.
+    A present 1.0 is one percent, not a full pool.
     """
 
     for key in ("creditUsagePercent", "credit_usage_percent"):
         if key not in config:
             continue
-        parsed = fraction(config.get(key))
+        parsed = grok_usage_fraction(config.get(key))
         return parsed if parsed >= 0 else None
     if not period_end:
         return None
@@ -360,7 +377,9 @@ def parse_grok_billing(payload: dict[str, Any]) -> list[dict[str, str | float]]:
                 or str(row.get("product") or "") != "GrokBuild"
             ):
                 continue
-            build = fraction(row.get("usagePercent", row.get("usage_percent")))
+            build = grok_usage_fraction(
+                row.get("usagePercent", row.get("usage_percent"))
+            )
             if build >= 0:
                 limits.append(
                     {

@@ -114,7 +114,43 @@ class UsageTests(unittest.TestCase):
         )
         self.assertEqual(limits[0]["percent"], 0.32)
         self.assertEqual(limits[0]["title"], "Weekly")
+        self.assertEqual(limits[1]["percent"], 0.29)
         self.assertEqual(limits[1]["title"], "Grok Build")
+
+    def test_grok_billing_reads_one_point_zero_as_one_percent(self):
+        limits = self.lib.parse_grok_billing(
+            {
+                "config": {
+                    "creditUsagePercent": 1.0,
+                    "currentPeriod": {
+                        "type": "USAGE_PERIOD_TYPE_WEEKLY",
+                        "end": "2026-10-08T20:25:49+00:00",
+                    },
+                    "productUsage": [
+                        {"product": "GrokBuild", "usagePercent": 1.0},
+                        {"product": "GrokChat"},
+                    ],
+                }
+            }
+        )
+        self.assertEqual(limits[0]["percent"], 0.01)
+        self.assertEqual(limits[1]["percent"], 0.01)
+        self.assertEqual(
+            self.lib.parse_grok_billing(
+                {
+                    "config": {
+                        "creditUsagePercent": 2.0,
+                        "currentPeriod": {
+                            "end": "2026-10-08T20:25:49+00:00",
+                        },
+                        "productUsage": [
+                            {"product": "GrokBuild", "usagePercent": 2.0}
+                        ],
+                    }
+                }
+            )[0]["percent"],
+            0.02,
+        )
 
     def test_grok_billing_reads_omitted_percent_as_unused_weekly_pool(self):
         limits = self.lib.parse_grok_billing(
