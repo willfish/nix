@@ -24,10 +24,17 @@ ACTIVATE_NEW = """    if (!handled && row && openHerdrTarget(row)) {
 """
 
 EXEC_ARGV = (
-    '    Quickshell.execDetached(argv[0].charAt(0) === "/" ? argv : '
-    '["/usr/bin/env"].concat(argv))\n'
+    "  function runExecArgv(argv) {\n"
+    "    if (argv[0] === \"xdg-open\" "
+    "|| argv[0] === \"omarchy-agent-crash\")\n"
+    "      Quickshell.execDetached([\"/usr/bin/python3\", \"-I\", "
+    "service.actionBin].concat(argv))\n"
+    "    else\n"
+    "      Quickshell.execDetached(argv[0].charAt(0) === \"/\" "
+    "? argv : [\"/usr/bin/env\"].concat(argv))\n"
+    "  }\n"
 )
-HELPER_ANCHOR = "  function runExecArgv(argv) {\n" + EXEC_ARGV + "  }\n"
+HELPER_ANCHOR = EXEC_ARGV
 
 
 def helper(script):
@@ -40,8 +47,7 @@ def helper(script):
         '    return text.indexOf("finished:") >= 0 || '
         'text.indexOf("needs attention:") >= 0\n'
     )
-    return f"""  function runExecArgv(argv) {{
-{exec_line}  }}
+    return f"""{exec_line}
 
   function herdrToast(row) {{
     var summary = String(row && row.summary || "")

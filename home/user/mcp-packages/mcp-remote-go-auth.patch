@@ -1,15 +1,18 @@
-diff --git a/proxy/explicit_auth_test.go b/proxy/explicit_auth_test.go
+diff --git i/proxy/explicit_auth_test.go w/proxy/explicit_auth_test.go
 new file mode 100644
-index 0000000..5ab3fbb
+index 0000000..ac6df77
 --- /dev/null
-+++ b/proxy/explicit_auth_test.go
-@@ -0,0 +1,50 @@
++++ w/proxy/explicit_auth_test.go
+@@ -0,0 +1,65 @@
 +package proxy
 +
 +import (
++	"context"
 +	"net/http"
 +	"net/http/httptest"
++	"sync"
 +	"testing"
++	"time"
 +
 +	"github.com/naotama2002/mcp-remote-go/auth"
 +)
@@ -28,9 +31,14 @@ index 0000000..5ab3fbb
 +	} {
 +		t.Run(tc.name, func(t *testing.T) {
 +			t.Setenv("MCP_REMOTE_CONFIG_DIR", t.TempDir())
-+			received := make(chan string, 1)
++			var mu sync.Mutex
++			var posts []string
 +			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-+				received <- r.Header.Get("Authorization")
++				if r.Method == http.MethodPost {
++					mu.Lock()
++					posts = append(posts, r.Header.Get("Authorization"))
++					mu.Unlock()
++				}
 +				w.WriteHeader(http.StatusAccepted)
 +			}))
 +			defer server.Close()
@@ -45,20 +53,30 @@ index 0000000..5ab3fbb
 +			}
 +
 +			transport := p.createTransport(TransportModeStreamableHTTP)
-+			if err := transport.Send(t.Context(), []byte(`{"jsonrpc":"2.0","method":"notifications/initialized"}`)); err != nil {
++			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++			defer cancel()
++			if err := transport.Send(ctx, []byte(`{"jsonrpc":"2.0","method":"notifications/initialized"}`)); err != nil {
 +				t.Fatal(err)
 +			}
-+			if got := <-received; got != tc.want {
++			mu.Lock()
++			defer mu.Unlock()
++			if len(posts) == 0 {
++				t.Fatal("server received no POST")
++			}
++			if got := posts[len(posts)-1]; got != tc.want {
 +				t.Errorf("outgoing Authorization = %q, want %q", got, tc.want)
 +			}
 +		})
 +	}
 +}
-diff --git a/proxy/proxy.go b/proxy/proxy.go
-index eeca9db..62724e3 100644
---- a/proxy/proxy.go
-+++ b/proxy/proxy.go
-@@ -149,0 +150,7 @@ func (p *Proxy) getAuthToken() string {
+diff --git i/proxy/proxy.go w/proxy/proxy.go
+index 1419b01..e17962f 100644
+--- i/proxy/proxy.go
++++ w/proxy/proxy.go
+@@ -236,6 +236,13 @@ func (p *Proxy) Shutdown() {
+ // authorization lock nor retries a renewal that has just failed: in both cases
+ // the token in hand is presented and the server decides.
+ func (p *Proxy) getAuthToken() string {
 +	// Explicit credentials take precedence over a previous interactive login.
 +	for name, value := range p.headers {
 +		if strings.EqualFold(name, "Authorization") && value != "" {
@@ -66,3 +84,6 @@ index eeca9db..62724e3 100644
 +		}
 +	}
 +
+ 	tokens, err := p.authCoord.LoadTokens()
+ 	if err != nil || tokens.AccessToken == "" {
+ 		return ""

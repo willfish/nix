@@ -3,12 +3,13 @@
 PI_MCP_TEST_EXTENSION must name the packaged adapter's index.ts.
 PI_MCP_TEST_BIN optionally selects the packaged Pi executable (default: pi).
 Run with Python's standard library: python3 tests/pi-mcp-runtime.py -v
-The adapter must include settings.namespaceTools support for the gateway-only
-regression. Temporary profiles and whitelisted child environments avoid loading
-live authentication or configuration. Only a loopback model fixture and a
-local Python MCP process are used, with synthetic credentials and no hosted
-inference. For OS-enforced isolation, run the whole suite inside a network
-namespace with loopback enabled; both fixtures must share Pi's namespace.
+The adapter must honor settings.namespaceProxyTools so the gateway stays
+the only MCP tool. Temporary profiles and whitelisted child environments
+avoid loading live authentication or configuration. Only a loopback model
+fixture and a local Python MCP process are used, with synthetic credentials
+and no hosted inference. For OS-enforced isolation, run the whole suite
+inside a network namespace with loopback enabled; both fixtures must share
+Pi's namespace.
 """
 
 import json
@@ -315,7 +316,7 @@ class PiMcpRuntimeTest(unittest.TestCase):
                     },
                     "settings": {
                         "directTools": False,
-                        "namespaceTools": self.namespace_tools,
+                        "namespaceProxyTools": self.namespace_tools,
                         "scriptMode": False,
                         "hostConfigDiscovery": "off",
                     },

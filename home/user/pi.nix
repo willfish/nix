@@ -205,7 +205,7 @@ in
     settings = {
       hostConfigDiscovery = "off";
       directTools = false;
-      namespaceTools = false;
+      namespaceProxyTools = false;
       scriptMode = false;
       idleTimeout = 10;
       mcpFooterStatus = "compact";

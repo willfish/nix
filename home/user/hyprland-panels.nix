@@ -261,12 +261,11 @@ let
   };
   # Pinned arXiv bar widget. Marketplace install is unavailable and expects
   # Omarchy's own bar. Waybar stays the bar; this timer and the popup live here.
-  # 1a3a799c is the v1.0.2 tree that passed the marketplace compatibility check.
   arxivPlugin = pkgs.fetchFromGitHub {
     owner = "linuskelsey";
     repo = "arxiv-scanner";
-    rev = "1a3a799c00a5d3bc6d99150257bb89dcf267013b";
-    hash = "sha256-YszLLtVUFSkPY8uG3KeTItcmcAWoYPGAQxbrzWkmfRo=";
+    rev = "5f4e8db6590a96743aea271365a49439919e18c5";
+    hash = "sha256-g9972zsbtZ9PEtBAsEprmsiWb8ec0M2GaUICgQorNec=";
   };
   arxivScripts =
     pkgs.runCommand "arxiv-scanner-scripts"

@@ -5,13 +5,13 @@
 }:
 buildGoModule rec {
   pname = "mcp-dap-server";
-  version = "0-unstable-2026-07-23";
+  version = "0-unstable-2026-09-23";
 
   src = fetchFromGitHub {
     owner = "go-delve";
     repo = "mcp-dap-server";
-    rev = "ca7f841a8ab2311ec8c533153c0802e9a68785d3";
-    hash = "sha256-bx5H305MJyiqGKiqV5NoL9PoQW10fPbm1M9Mh+2yiX4=";
+    rev = "5e4d952bd171ad670e1744b4f182a32fe00fa710";
+    hash = "sha256-NrHsVTFzWR5U5OEAjpy+LtFlaEn5VvvMipV1WE54X7s=";
   };
   vendorHash = "sha256-/1dBkkz/YuCYzlneLVPYtjjCkzSY2lpYzcnzP/6CXGo=";
   env.CGO_ENABLED = 0;

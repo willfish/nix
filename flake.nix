@@ -67,7 +67,7 @@
       flake = false;
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
-    hermes-agent.url = "github:NousResearch/hermes-agent/08a2e7dbccfc9aafbf6715965963d8b31347f37d";
+    hermes-agent.url = "github:NousResearch/hermes-agent/bd0affe5e5f723579df8902852f5d0c47795f355";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # Data-only theme inputs. omarchy-theme-* inputs are discovered automatically.
     omarchy = {

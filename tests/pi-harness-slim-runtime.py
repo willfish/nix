@@ -144,7 +144,7 @@ class SkillCatalogRuntimeTest(unittest.TestCase):
             "directTools": False,
             "requestTimeoutMs": 5000,
         }}, "settings": {"hostConfigDiscovery": "off", "directTools": False,
-                         "namespaceTools": False, "scriptMode": False}}
+                         "namespaceProxyTools": False, "scriptMode": False}}
         (config_dir / "mcp.json").write_text(json.dumps(config))
         self.env["XDG_CONFIG_HOME"] = str(self.root / ".config")
         # Use the deployed auto-discovered extension set rather than a tool

@@ -9,24 +9,24 @@ let
   braveCdpEndpoint = "http://127.0.0.1:9222";
   inherit (import ./llm-mcps.nix { inherit config; }) servers;
   enabled = name: builtins.any (server: server.name == name) servers;
-  agentBrowserVersion = "0.37.1";
+  agentBrowserVersion = "0.38.2";
   agentBrowserRelease =
     {
       x86_64-linux = {
         asset = "agent-browser-linux-musl-x64";
-        hash = "sha256-Uxjy7QOp+uBKnh+NJ00aD9a/f9Qn8ypEIkvhHy3Do30=";
+        hash = "sha256-mT1GL03PwZhg2TplIaRS66RQK/xEn+ASAwPCzLmY5nU=";
       };
       aarch64-linux = {
         asset = "agent-browser-linux-musl-arm64";
-        hash = "sha256-q3r8TnTRIY0yvRJRlHTb1u2b8ys6kF12SOnZQA9QCD0=";
+        hash = "sha256-6v7KnKD9svoqpgxFVHIzSMc5ZWsN26DYL/ZU1NMzEbE=";
       };
       x86_64-darwin = {
         asset = "agent-browser-darwin-x64";
-        hash = "sha256-x50eBSXAv3nfnuw1UmmuQLzanEo/zj8kLCT67Kqu74Q=";
+        hash = "sha256-eHy0DghqGI0LsT/ympmgsjgK/zql6GALj4ExoLmMppw=";
       };
       aarch64-darwin = {
         asset = "agent-browser-darwin-arm64";
-        hash = "sha256-5S8GR26g8dFDV8GSTOHX8b8IJ58mQtdMz6fuk1xGrqE=";
+        hash = "sha256-gWi4arXZS+j2cJkt/k/hRFAWUYqGS0i9oQXmQULny/k=";
       };
     }
     .${pkgs.stdenv.hostPlatform.system}

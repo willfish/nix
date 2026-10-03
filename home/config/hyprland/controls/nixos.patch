@@ -1,31 +1,69 @@
---- a/shell/Commons/Color.qml
-+++ b/shell/Commons/Color.qml
-@@ -17 +17 @@
+diff --git i/shell/Commons/Color.qml w/shell/Commons/Color.qml
+index 4fd2452b..58dd5392 100644
+--- i/shell/Commons/Color.qml
++++ w/shell/Commons/Color.qml
+@@ -14,7 +14,7 @@ QtObject {
+
+   readonly property string home: Quickshell.env("HOME")
+   readonly property string stateHome: home + "/.local/state"
 -  readonly property string currentThemePath: stateHome + "/omarchy/current/theme"
 +  readonly property string currentThemePath: Quickshell.env("HYPR_CONTROLS_THEME")
-@@ -222,2 +222 @@
+
+   property color foreground: "#cacccc"
+   property color background: "#101315"
+@@ -225,19 +225,20 @@ QtObject {
+     mergeShell()
+   }
+
 -  // Startup load only. Runtime theme switches push the payload explicitly
 -  // through shell IPC.
 +  // theme-menu publishes these files atomically; no Omarchy shell IPC.
-@@ -227 +226,2 @@
+   property FileView colorsFile: FileView {
+     id: colorsFile
+     path: root.currentThemePath + "/colors.toml"
 -    watchChanges: false
 +    watchChanges: true
 +    onFileChanged: reload()
-@@ -234 +234,2 @@
+     printErrors: false
+     onLoaded: root.loadColors(text())
+   }
+   property FileView shellFile: FileView {
+     id: shellFile
+     path: root.currentThemePath + "/shell.toml"
 -    watchChanges: false
 +    watchChanges: true
 +    onFileChanged: reload()
-@@ -244,2 +245,2 @@
+     printErrors: false
+     onLoaded: root.loadShell(text())
+     onLoadFailed: root.loadShell("")
+@@ -247,8 +248,8 @@ QtObject {
+   // CLI takes effect live without restarting the shell; absent by default.
+   property FileView userShellFile: FileView {
+     id: userShellFile
 -    path: root.home + "/.config/omarchy/shell.toml"
 -    watchChanges: true
 +    path: "" // Central settings.nix owns appearance overrides.
 +    watchChanges: false
---- a/shell/Ui/KeyboardPanel.qml
-+++ b/shell/Ui/KeyboardPanel.qml
-@@ -80 +80 @@
+     printErrors: false
+     onLoaded: root.loadUserShell(text())
+     // Re-read on change (including first creation) before loading — `text()`
+diff --git i/shell/Ui/KeyboardPanel.qml w/shell/Ui/KeyboardPanel.qml
+index 38a2979c..984a3481 100644
+--- i/shell/Ui/KeyboardPanel.qml
++++ w/shell/Ui/KeyboardPanel.qml
+@@ -77,7 +77,7 @@ PanelWindow {
+
+   // --- screen + lifetime ---------------------------------------------------
+
 -  screen: anchorWindow ? anchorWindow.screen : null
 +  screen: bar.externalScreen
-@@ -126,0 +127,8 @@
+   visible: open || card.opacity > 0 || popoutSwitching
+   color: "transparent"
+   exclusionMode: ExclusionMode.Ignore
+@@ -124,6 +124,14 @@ PanelWindow {
+   mask: Region {
+     width: root.screenW
+     height: root.screenH
 +    // The real Waybar receives clicks directly, including popup switching.
 +    Region {
 +      intersection: Intersection.Subtract
@@ -34,32 +72,93 @@
 +      width: root.bar.vertical ? root.bar.barSize : root.screenW
 +      height: root.bar.vertical ? root.screenH : root.bar.barSize
 +    }
-@@ -146 +154,2 @@
+   }
+
+   // Track every layout change between the bar's contentItem and the
+@@ -143,7 +151,8 @@ PanelWindow {
+   // below uses `barH` for the perpendicular axis instead of this y.
+   readonly property point anchorScreenPos: {
+     anchorWatcher.transform  // reactive dependency
 -    if (!anchorItem || !anchorWindow) return Qt.point(0, 0)
 +    if (!anchorWindow) return Qt.point(bar.externalAnchor.x - anchorW / 2,
 +                                      bar.externalAnchor.y - anchorH / 2)
-@@ -192,2 +201,2 @@
+     return anchorItem.mapToItem(anchorWindow.contentItem, 0, 0)
+   }
+   readonly property real anchorW: anchorItem ? anchorItem.width : 0
+@@ -189,8 +198,8 @@ PanelWindow {
+   // parallel axis (along the bar) the anchor item's reported position is
+   // still consistent with the bar content origin, so it's accurate for
+   // centering the card under the icon.
 -  readonly property real barW: anchorWindow ? anchorWindow.width : screenW
 -  readonly property real barH: anchorWindow ? anchorWindow.height : 0
 +  readonly property real barW: bar.vertical ? bar.barSize : screenW
 +  readonly property real barH: bar.vertical ? screenH : bar.barSize
---- a/shell/plugins/panels/network/Panel.qml
-+++ b/shell/plugins/panels/network/Panel.qml
-@@ -128 +128 @@
+   readonly property point cardOrigin: {
+     if (!anchorItem || !bar) return Qt.point(margin, margin)
+     var x = 0, y = 0
+diff --git i/shell/plugins/panels/bluetooth/Panel.qml w/shell/plugins/panels/bluetooth/Panel.qml
+index 11b0ce0c..08406214 100644
+--- i/shell/plugins/panels/bluetooth/Panel.qml
++++ w/shell/plugins/panels/bluetooth/Panel.qml
+@@ -276,7 +276,11 @@ Panel {
+   function connectDevice(device) {
+     if (!device || device.connected) return
+     if (device.paired || device.bonded || device.trusted) runDeviceAction(device, "connect", "connecting")
+-    else runDeviceAction(device, "pair", "connecting")
++    else {
++      // BlueZ pairing needs an interactive agent, not unattended trust.
++      root.close()
++      Quickshell.execDetached(["blueman-manager"])
++    }
+   }
+
+   function disconnectDevice(device) {
+diff --git i/shell/plugins/panels/network/Panel.qml w/shell/plugins/panels/network/Panel.qml
+index 87f160c1..59e60b7e 100644
+--- i/shell/plugins/panels/network/Panel.qml
++++ w/shell/plugins/panels/network/Panel.qml
+@@ -125,7 +125,7 @@ Panel {
+   property int headerIndex: 0
+   readonly property bool canDisconnect: !!connectedWifiNetwork
+   readonly property bool headerHasDisconnect: false
 -  readonly property bool canShareWifi: info.type === "wifi" && canShareNetwork(connectedWifiNetwork)
 +  readonly property bool canShareWifi: false // Optional plugin not hosted.
-@@ -141 +141 @@
+   // The hero switch is the Wi-Fi radio, so it only exists when there is a
+   // radio to switch. On a wired box it would otherwise sit there reading
+   // "off" beside a perfectly live Ethernet connection.
+@@ -138,7 +138,7 @@ Panel {
+   readonly property bool speedHeaderHasCursor: cursorActive && focusSection === "header" && headerIndex === speedHeaderIndex
+   readonly property bool toggleHeaderHasCursor: cursorActive && focusSection === "header" && headerIndex === toggleHeaderIndex
+   readonly property string toggleHint: Networking.wifiEnabled ? "Turn Wi-Fi off" : "Turn Wi-Fi on"
 -  readonly property var dnsProviders: ["DHCP", "Cloudflare", "Google", "Custom"]
 +  readonly property var dnsProviders: ["Advanced settings"]
-@@ -166 +166 @@
+   property int dnsIndex: 0
+   // ["2.4", "5", ...], or empty when there is nothing to choose between.
+   // Wi-Fi only: on Ethernet the band of a secondary radio is not what the
+@@ -163,7 +163,7 @@ Panel {
+   readonly property bool bandBusy: pendingBand !== ""
+   // The speed test needs an interface to test, so its hero action only
+   // appears once there is one.
 -  readonly property bool canRunSpeedTest: !!info.iface
 +  readonly property bool canRunSpeedTest: false // Optional plugin not hosted.
-@@ -529,4 +528,0 @@
+   property int bandIndex: 0
+   // The band section has up to two cursor rows: the Automatic switch on the
+   // header line, then the pills. Same shape as wifiActionFocused.
+@@ -526,10 +526,6 @@ Panel {
+     checkConnectivity()
+     if (scanWifi === undefined) scanWifi = false
+     if (!detailsProc.running) detailsProc.running = true
 -    if (!dnsProc.running) {
 -      dnsProc.command = ["bash", "-c", root.dnsCommand("")]
 -      dnsProc.running = true
 -    }
-@@ -723,12 +719,2 @@
+     if (!bandProc.running) {
+       bandProc.command = ["omarchy-network-band"]
+       bandProc.running = true
+@@ -720,19 +716,10 @@ Panel {
+   }
+
+   function setDns(provider) {
 -    if (!root.bar || !provider || actionProc.running) return
 -
 -    if (provider === "Custom") {
@@ -74,9 +173,15 @@
 -    actionProc.running = true
 +    // NixOS owns /etc. Edit NetworkManager profiles rather than applying
 +    // Omarchy's system-wide DNS script and its Arch privilege assumptions.
-@@ -735,0 +722 @@
+     root.close()
 +    Quickshell.execDetached(["nm-connection-editor"])
-@@ -742,0 +730,7 @@
+   }
+
+   function requiresCredentials(security) {
+@@ -740,6 +727,13 @@ Panel {
+   }
+
+   function openPasswordPrompt(ssid) {
 +    var network = networkForSsid(ssid)
 +    if (network && (network.security === WifiSecurityType.WpaEap
 +        || network.security === WifiSecurityType.Wpa2Eap
@@ -84,7 +189,13 @@
 +      setDns("Advanced settings")
 +      return
 +    }
-@@ -823,5 +817,2 @@
+     if (passwordSsid !== ssid) {
+       passwordText = ""
+       identityText = ""
+@@ -820,11 +814,8 @@ Panel {
+   }
+
+   function connectEnterprise(ssid, identity, passphrase) {
 -    runNetworkAction("connect", networkForSsid(ssid), function(network) {
 -      enterpriseConnect.secret = passphrase
 -      enterpriseConnect.command = ["bash", "-c", Model.enterpriseConnectScript, "nmcli-eap", ssid, identity]
@@ -92,17 +203,29 @@
 -    })
 +    cancelPasswordPrompt()
 +    setDns("Advanced settings")
-@@ -1525 +1516 @@
+   }
+
+   // Creates and activates the 802.1X profile (see Model.enterpriseConnectScript).
+@@ -1522,7 +1513,7 @@ Panel {
+         spacing: Style.space(10)
+
+         PanelSectionHeader {
 -          text: "DNS PROVIDER"
 +          text: "NETWORK PROFILES"
-@@ -1535,3 +1525,0 @@
+           foreground: root.bar.foreground
+           fontFamily: root.bar.fontFamily
+         }
+@@ -1532,38 +1523,11 @@ Panel {
+           width: parent.width
+           spacing: Style.space(6)
+
 -          readonly property int count: 4
 -          readonly property real cellWidth: (width - spacing * (count - 1)) / count
 -
-@@ -1539 +1527 @@
+           DnsProviderPill {
 -            provider: "DHCP"
 +            provider: "Advanced settings"
-@@ -1541,26 +1529,2 @@
+             index: 0
 -            tooltipText: "Use DNS from DHCP"
 -            width: dnsRow.cellWidth
 -            onClicked: root.setDns(provider)
@@ -131,12 +254,6 @@
 -            width: dnsRow.cellWidth
 +            tooltipText: "Edit DNS, VPN and enterprise connection profiles"
 +            width: dnsRow.width
---- a/shell/plugins/panels/bluetooth/Panel.qml
-+++ b/shell/plugins/panels/bluetooth/Panel.qml
-@@ -279 +279,5 @@
--    else runDeviceAction(device, "pair", "connecting")
-+    else {
-+      // BlueZ pairing needs an interactive agent, not unattended trust.
-+      root.close()
-+      Quickshell.execDetached(["blueman-manager"])
-+    }
+             onClicked: root.setDns(provider)
+           }
+         }

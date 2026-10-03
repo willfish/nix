@@ -31,7 +31,7 @@ test('persona allowlists explicitly retain their permissions and permit skill ca
   assert.doesNotMatch(worker.split('---')[1], /^tools:/m);
 });
 
-test('packaged config preserves namespaceTools through normalization, merge and reload', {
+test('packaged config preserves namespaceProxyTools through normalization, merge and reload', {
   skip: !extension && 'Set PI_MCP_TEST_EXTENSION to the candidate packaged index.ts',
 }, (t) => {
   const home = mkdtempSync(join(tmpdir(), 'pi-mcp-config-'));
@@ -46,19 +46,19 @@ test('packaged config preserves namespaceTools through normalization, merge and 
     mkdirSync('.pi', { recursive: true });
     const shared = join(process.cwd(), '.config/mcp/mcp.json');
     const project = join(process.cwd(), '.pi/mcp.json');
-    save(shared, { namespaceTools: false, directTools: false, hostConfigDiscovery: 'off' });
+    save(shared, { namespaceProxyTools: false, directTools: false, hostConfigDiscovery: 'off' });
     save(project, { idleTimeout: 10 });
     const config = loadMcpConfig();
-    assert.equal(config.settings.namespaceTools, false);
+    assert.equal(config.settings.namespaceProxyTools, false);
     assert.equal(config.settings.idleTimeout, 10);
-    assert.equal(cloneMcpConfig(config).settings.namespaceTools, false);
-    save(project, { namespaceTools: true });
-    assert.equal(loadMcpConfig().settings.namespaceTools, true);
-    save(project, { namespaceTools: false });
-    assert.equal(loadMcpConfig().settings.namespaceTools, false);
+    assert.equal(cloneMcpConfig(config).settings.namespaceProxyTools, false);
+    save(project, { namespaceProxyTools: true });
+    assert.equal(loadMcpConfig().settings.namespaceProxyTools, true);
+    save(project, { namespaceProxyTools: false });
+    assert.equal(loadMcpConfig().settings.namespaceProxyTools, false);
     save(shared, { directTools: false, hostConfigDiscovery: 'off' });
     save(project, {});
-    assert.equal(loadMcpConfig().settings.namespaceTools, undefined);
+    assert.equal(loadMcpConfig().settings.namespaceProxyTools, undefined);
   `], {
     cwd: home,
     env: { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config'),
@@ -134,7 +134,7 @@ test('packaged namespace registration lifecycle', {
   for (const [label, settings] of [
     ['settings absent', undefined],
     ['setting unspecified', { directTools: false }],
-    ['explicitly enabled', { namespaceTools: true }],
+    ['explicitly enabled', { namespaceProxyTools: true }],
   ]) {
     await t.test(label, () => {
       const f = fixture(settings);
@@ -144,7 +144,7 @@ test('packaged namespace registration lifecycle', {
   }
 
   await t.test('false generates no namespace tools and leaves the gateway and other tools untouched', () => {
-    const f = fixture({ namespaceTools: false });
+    const f = fixture({ namespaceProxyTools: false });
     const before = f.active();
     const result = f.refresh();
     assert.equal(result.specs.length, 0);
@@ -156,25 +156,25 @@ test('packaged namespace registration lifecycle', {
 
   for (const unregister of [true, false]) {
     await t.test(`refresh removes stale active namespaces, unregister API ${unregister ? 'present' : 'absent'}`, () => {
-      const f = fixture({ namespaceTools: true }, unregister);
+      const f = fixture({ namespaceProxyTools: true }, unregister);
       const before = f.active();
       f.refresh();
-      f.input.config.settings.namespaceTools = false;
+      f.input.config.settings.namespaceProxyTools = false;
       assert.deepEqual([...f.refresh().deactivated], ['mcp__fixture']);
       assert.deepEqual(f.active(), before);
       assert.equal(f.tools.get('mcp'), f.gateway);
       assert.equal(f.tools.has('mcp__fixture'), !unregister);
       assert.equal(f.input.existingNamespaceNames.size, 0);
       assert.equal(f.refresh().deactivated.length, 0);
-      f.input.config.settings.namespaceTools = true;
+      f.input.config.settings.namespaceProxyTools = true;
       assert.deepEqual([...f.refresh().added], ['mcp__fixture']);
     });
   }
 
   await t.test('stale cleanup preserves a namespace name now owned by an active direct tool', () => {
-    const f = fixture({ namespaceTools: true });
+    const f = fixture({ namespaceProxyTools: true });
     f.refresh();
-    f.input.config.settings.namespaceTools = false;
+    f.input.config.settings.namespaceProxyTools = false;
     f.input.activeDirectNames = new Set(['mcp__fixture']);
     assert.equal(f.refresh().deactivated.length, 0);
     assert.ok(f.active().includes('mcp__fixture'));

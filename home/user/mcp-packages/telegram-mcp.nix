@@ -6,7 +6,7 @@
   python3,
 }:
 let
-  version = "3.2.36";
+  version = "3.2.60";
   interpreter = python3.withPackages (ps: [
     # Upstream pyproject dependencies, plus the mcp[cli] extras
     # (typer, python-dotenv) that nixpkgs' mcp keeps optional.
@@ -31,7 +31,7 @@ stdenvNoCC.mkDerivation {
     owner = "chigwell";
     repo = "telegram-mcp";
     tag = "v${version}";
-    hash = "sha256-EfSe11vmr10wbETsJVDkDQxQnLo3wCFWLyeWhVo/888=";
+    hash = "sha256-u1DEJIpk5ngoqizJJwrmrCyrqMZxcQwOVkLHYGr2qNQ=";
   };
 
   dontConfigure = true;

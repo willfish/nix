@@ -8,12 +8,13 @@
 let
   settings = import ../config/hyprland/settings.nix;
   omarchySource = import ./themes/omarchy-source.nix;
-  # Catalogue commit last marked compatible with Omapager 1.1.1.
+  # Catalogue commit. The packaged daemon remains the 1.1.1-compatible shell
+  # API; the Herdr focus patch tracks the current runExecArgv helper.
   pluginSrc = pkgs.fetchFromGitHub {
     owner = "njpatel";
     repo = "omapager";
-    rev = "5cde92ac662418a877fc858bb5859a0933526d64";
-    hash = "sha256-xCa9XRVafgCkwPYnhCH8ZPG97uz9eCdoj4cmC1VM1Cc=";
+    rev = "c389e73516828d18f26e8efec2127c0c3dc3cb97";
+    hash = "sha256-hAsYN9zxTYumvEHMQ6Y9vD1vd7cTs4TCDOp4TjOrJDI=";
   };
   python = pkgs.python3.withPackages (ps: [ ps.pillow ]);
   githubIcon = pkgs.fetchurl {

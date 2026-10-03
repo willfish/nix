@@ -473,17 +473,17 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1789275602,
-        "narHash": "sha256-ddJj7sZBeSCKrxZU4nESp68Z0hTvcQsp8KMMOBEF6vU=",
+        "lastModified": 1791001375,
+        "narHash": "sha256-ujR70s7rotL9CW3k7nJYuFFU3MvAINEf7SPrldax55Q=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "08a2e7dbccfc9aafbf6715965963d8b31347f37d",
+        "rev": "bd0affe5e5f723579df8902852f5d0c47795f355",
         "type": "github"
       },
       "original": {
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "08a2e7dbccfc9aafbf6715965963d8b31347f37d",
+        "rev": "bd0affe5e5f723579df8902852f5d0c47795f355",
         "type": "github"
       }
     },
@@ -557,11 +557,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790742243,
-        "narHash": "sha256-kaNo6xHiL31AbNNEreG0OTKf4j6Cxlo5bPawjX7lnbQ=",
+        "lastModified": 1790996401,
+        "narHash": "sha256-f+kOxEmOUnQazVAmGg0i8hzwgd1kX/geY+k/Dpheye8=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "e5fcd298a00f08b6e8390baf04aa8edb62203070",
+        "rev": "db7d5e2332710f5abb088f6b5de927d7f9511b35",
         "type": "github"
       },
       "original": {
@@ -580,11 +580,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1790947657,
-        "narHash": "sha256-Qhw25MEtJdqzYshdaLc1EPGpIQOwxI++D50w/A7p1rs=",
+        "lastModified": 1791001326,
+        "narHash": "sha256-pwJhtpRcNX1pJ9luUy3Eh1EYUFsZjv5m2xSqZ1hEhMU=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "54b915b290377072e2903d2fcdae122dd37f64fc",
+        "rev": "83984ebbbe5322b261d9fdc24eb15cf44f23abec",
         "type": "github"
       },
       "original": {
@@ -848,11 +848,11 @@
     "omarchy": {
       "flake": false,
       "locked": {
-        "lastModified": 1790904845,
-        "narHash": "sha256-pgiltTj1hlgRXq058HlibqHX3QDeIayYzRaRGltcFhU=",
+        "lastModified": 1790994078,
+        "narHash": "sha256-aksNVqx02RXkReRSPhH/4tOU48i1NBuErWjMMt+tT6w=",
         "owner": "basecamp",
         "repo": "omarchy",
-        "rev": "821ae589059ffdadc970315f866c94b55d268af7",
+        "rev": "a85e29abb556816f4644cf975e98da694b486aa8",
         "type": "github"
       },
       "original": {
