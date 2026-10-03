@@ -534,6 +534,12 @@
               passes = 1;
             };
           };
+          # Omarchy turns workspace slides off. The compiled-in fallback is an
+          # 800ms default-bezier slide, which jolts in the middle of a switch.
+          animations = {
+            enabled = true;
+            animation = [ "workspaces, 0" ];
+          };
           dwindle.preserve_split = settings.window.preserveSplit;
           env = [
             "XCURSOR_THEME,${settings.cursor.theme}"
