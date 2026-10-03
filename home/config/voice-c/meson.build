@@ -8,9 +8,18 @@ threads = dependency('threads')
 libpivoice = library(
   'pivoice',
   'src/version.c',
+  'src/spoken.c',
+  include_directories: include_directories('include'),
   dependencies: [yyjson, libcurl, pcre2, threads],
   install: false,
 )
 
-test_exe = executable('voice-tests', 'tests/test_main.c', link_with: libpivoice)
+included = include_directories('include')
+test_exe = executable(
+  'voice-tests',
+  'tests/test_main.c',
+  'tests/test_spoken.c',
+  link_with: libpivoice,
+  include_directories: included,
+)
 test('voice', test_exe)
