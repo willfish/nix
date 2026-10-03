@@ -123,6 +123,13 @@ in
         exec ${pkgs.opencode}/bin/opencode "$@"
       '';
     };
+    ".config/opencode/tui.json".text = builtins.toJSON {
+      "$schema" = "https://opencode.ai/tui.json";
+      keybinds = {
+        editor_open = "ctrl+g,<leader>e";
+        messages_first = "home";
+      };
+    };
     ".config/opencode/opencode.json".text = builtins.toJSON (
       {
         "$schema" = "https://opencode.ai/config.json";

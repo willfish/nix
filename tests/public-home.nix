@@ -14,6 +14,7 @@ let
   caps = c.dotfiles.capabilities;
   servers = (builtins.fromJSON c.home.file.".config/mcp/mcp.json".text).mcpServers;
   absentFile = path: !(builtins.hasAttr path c.home.file);
+  tui = builtins.fromJSON c.home.file.".config/opencode/tui.json".text;
 in
 assert c.home.username == "new-user";
 assert c.home.homeDirectory == "/srv/homes/new-user";
@@ -67,6 +68,8 @@ assert !lib.hasInfix "read-sops-secret" c.home.file.".local/bin/pi".text;
 assert !lib.hasInfix "read-sops-secret" c.home.file.".local/bin/opencode".text;
 assert !lib.hasInfix "taile09696" c.home.file.".config/opencode/opencode.json".text;
 assert !lib.hasInfix "OPENCODE_GO_KEY" c.home.file.".config/opencode/opencode.json".text;
+assert tui.keybinds.editor_open == "ctrl+g,<leader>e";
+assert tui.keybinds.messages_first == "home";
 assert !(builtins.hasAttr ".config/opencode/plugins/agent-bus.ts" c.home.file);
 pkgs.runCommand "public-home-boundaries" { } ''
   touch "$out"
