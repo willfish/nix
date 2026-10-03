@@ -264,6 +264,12 @@ in
 
   config.home.file =
     mkAgentRuleFiles
+    // {
+      ".config/opencode/AGENTS.md" = {
+        text = effectiveAgentRules + "\n\n" + builtins.readFile ../config/opencode/addendum.md;
+        force = config.dotfiles.privateEnabled;
+      };
+    }
     // mkGuideFiles
     // mkSharedSkillFiles
     // mkHermesSharedSkillFiles

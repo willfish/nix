@@ -50,6 +50,7 @@
     ./network.nix
     ./packages.nix
     ./pi.nix
+    ./opencode.nix
     ./programs.nix
     ./prompt-capture-file.nix
     ./shells.nix

@@ -64,6 +64,10 @@ assert builtins.all (name: !(builtins.hasAttr name c.systemd.user.services)) [
   "wifi-auto-reconnect"
 ];
 assert !lib.hasInfix "read-sops-secret" c.home.file.".local/bin/pi".text;
+assert !lib.hasInfix "read-sops-secret" c.home.file.".local/bin/opencode".text;
+assert !lib.hasInfix "taile09696" c.home.file.".config/opencode/opencode.json".text;
+assert !lib.hasInfix "OPENCODE_GO_KEY" c.home.file.".config/opencode/opencode.json".text;
+assert !(builtins.hasAttr ".config/opencode/plugins/agent-bus.ts" c.home.file);
 pkgs.runCommand "public-home-boundaries" { } ''
   touch "$out"
 ''
