@@ -334,7 +334,9 @@
         arxiv-library = arxiv-mcp.packages.${system}.maintenance;
         herdr = herdr.packages.${system}.default;
         herdr-source = herdr-source.outPath;
+        # Agent CLIs come from llm-agents, not the nixpkgs pin.
         pi-coding-agent = llm-agents.packages.${system}.pi;
+        opencode = llm-agents.packages.${system}.opencode;
         hermes-agent = import ./home/user/hermes-package.nix {
           hermesInput = inputs.hermes-agent;
           inherit system;
