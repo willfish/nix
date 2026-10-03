@@ -9,6 +9,8 @@ libpivoice = library(
   'pivoice',
   'src/version.c',
   'src/spoken.c',
+  'src/chunks.c',
+  'src/text.c',
   include_directories: include_directories('include'),
   dependencies: [yyjson, libcurl, pcre2, threads],
   install: false,
@@ -19,6 +21,7 @@ test_exe = executable(
   'voice-tests',
   'tests/test_main.c',
   'tests/test_spoken.c',
+  'tests/test_chunks.c',
   link_with: libpivoice,
   include_directories: included,
 )
