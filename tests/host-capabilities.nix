@@ -49,6 +49,12 @@ let
       accountingSkills = c.privateConfig.llm.capabilities.accounting or [ ];
       overlayTimers = c.privateConfig.overlayTimers or [ ];
       hermesActivations = c.privateConfig.hermesActivations or [ ];
+      localVoice = name == "william@andromeda";
+      voiceHost = builtins.elem name [
+        "william@andromeda"
+        "william@foundation"
+      ];
+      voiceConfigPath = "pi-voice/config.json";
     in
     assert require (c.dotfiles.role == spec.role) "wrong role";
     assert require (
@@ -197,6 +203,28 @@ let
         !c.dconf.enable && !(c.home.activation ? dconfSettings) && !(c.home.activation ? stylixLookAndFeel)
       )
     ) "desktop activation on NAS";
+    assert require ((c.systemd.user.services ? pi-voice) == voiceHost) "voice controller boundary";
+    assert require (
+      ((c.systemd.user.services ? pi-voice-api) == localVoice)
+      && ((c.systemd.user.services ? pi-voice-stt) == localVoice)
+      && ((c.systemd.user.services ? pi-voice-tts) == localVoice)
+      && ((builtins.elem "pi-voice-models" packageNames) == localVoice)
+    ) "local voice engines are Andromeda-only";
+    assert require ((c.xdg.configFile ? ${voiceConfigPath}) == voiceHost) "voice config boundary";
+    assert require (
+      !voiceHost
+      || (
+        let
+          text = c.xdg.configFile.${voiceConfigPath}.text;
+          ids = map (backend: backend.id) (builtins.fromJSON text).backends;
+          wants = c.systemd.user.services.pi-voice.Unit.Wants or [ ];
+        in
+        builtins.elem "deepgram" ids
+        && ((builtins.elem "whisper" ids) == localVoice)
+        && ((lib.hasInfix "127.0.0.1:8180" text) == localVoice)
+        && ((builtins.elem "pi-voice-api.service" wants) == localVoice)
+      )
+    ) "Foundation voice stays on Deepgram";
     assert require (
       spec.role != "nas"
       || builtins.all (p: !(builtins.elem p packageNames)) [

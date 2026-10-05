@@ -109,11 +109,15 @@ test('voice installation and explicit Qwen loading share the supported-host pred
   assert.match(qwen, /lib\.optionalString voiceFeatures\.stt "--extension \$\{config\.home\.homeDirectory\}\/\.pi\/agent\/extensions\/pi-voice\.ts"/);
   assert.equal((qwen.match(/\/extensions\/pi-voice\.ts/g) ?? []).length, 1);
   assert.match(voice, /config = lib\.mkIf voiceStt/);
+  assert.match(readFileSync(new URL('../home/user/voice-supported.nix', import.meta.url), 'utf8'), /localStt = linux && hostName == "andromeda"/);
 });
 
-test('voice packages Python and clipboard support but starts only the controller at login', () => {
+test('voice packages clipboard support and starts only the controller at login', () => {
   const source = readFileSync(new URL('../home/user/voice.nix', import.meta.url), 'utf8');
-  assert.match(source, /cp \$\{\.\.\/config\/voice\}\/\*\.py "\$out\/"/);
+  assert.match(source, /python3 \$\{\.\.\/config\/voice\/voice_api\.py\} --config/);
+  assert.match(source, /systemd\.user\.services\.pi-voice-api = lib\.mkIf localEngines/);
+  assert.match(source, /systemd\.user\.services\.pi-voice-stt = lib\.mkIf voiceLocalStt/);
+  assert.match(source, /lib\.optionals voiceLocalStt \[/);
   assert.ok(!source.includes('*.mjs'));
   assert.match(source, /runtimeInputs = \[[\s\S]*?pkgs\.wl-clipboard[\s\S]*?\];/);
   const controller = source.split('systemd.user.services.pi-voice = {')[1].split('systemd.user.services.pi-voice-stt')[0];

@@ -1,14 +1,17 @@
 # Local agent voice on Andromeda
 
 One local recorder, status pill and pair of speech engines serve Pi and Qwen Pi.
-The control command is `pi-voice`; units are `pi-voice`, `pi-voice-stt` and
-`pi-voice-tts`. Andromeda uses Whisper large-v3-turbo Q5 on NVIDIA Vulkan; Foundation keeps
-Whisper small.en on the Radeon iGPU. Pause detection stays in the local
+The control command is `pi-voice`. Andromeda also runs `pi-voice-api`,
+`pi-voice-stt` and `pi-voice-tts`, using Whisper large-v3-turbo Q5 on NVIDIA
+Vulkan. Foundation keeps the recorder, hotkeys and pill, but its generated
+config lists Deepgram only, so the frontend offers only those backends.
+Pause detection stays in the local
 recorder. The recogniser does not run a second VAD pass, because short slices
 were being dropped. audio.cpp
 runs Qwen3-TTS 0.6B with two pinned Samantha references. Andromeda uses CUDA
 for local TTS. Deepgram Aura-2 provides cloud speech on both Andromeda and
-Foundation using the existing Deepgram API key. Foundation has no local TTS.
+Foundation using the existing Deepgram API key. Foundation has no local speech
+engines.
 macOS needs separate platform adapters.
 
 The controller, command-line tools, GTK pill and Fuzzel menu are native C
@@ -73,7 +76,8 @@ paths or provider-specific voice policies in C. An optional
 `X-Voice-Context-Words` header carries the complete reply's word count across
 playback chunks; only the backend interprets it for voice-reference selection.
 
-`pi-voice-api.service` runs the standard-library-only
+`pi-voice-api.service` is installed only where the generated config offers a
+local backend. It runs the standard-library-only
 `home/config/voice/voice_api.py` on loopback port 8180. Its separate configuration
 contains inference URLs, systemd unit names, readiness URLs, idle timeout and
 trusted voice-reference mappings. The backend starts the necessary engine,
@@ -253,8 +257,9 @@ requires NVIDIA CUDA and is not offered on Foundation or other hosts.
 
 **Super+Shift+V** is the only voice menu. It contains session, voice, dictation,
 show team members and read replies aloud. Team panes are not registered, so that
-toggle does not reveal them. Dictation is a radio choice between local Whisper
-and cloud Deepgram. It is locked while recording or transcribing so the current
+toggle does not reveal them. Dictation choices come from the generated backend
+list: Andromeda offers local Whisper and Deepgram, Foundation offers Deepgram
+only. It is locked while recording or transcribing so the current
 take keeps one backend; opening that submenu then says it is locked, which is
 different from having no backend installed. **Read replies aloud** is shown only
 when local speech or a Deepgram key is available. With local speech selected,
@@ -437,12 +442,13 @@ The existing service names remain for compatibility:
 - `pi-voice-stt.service`: Whisper at `127.0.0.1:8178`.
 - `pi-voice-tts.service`: Qwen3 TTS at `127.0.0.1:8179`.
 
-The controller and API start at login. The API starts an engine only when a
+The controller starts at login on Andromeda and Foundation. On Andromeda the
+API starts with it and starts an engine only when a
 request needs it; compatibility launchers do not warm models. Models stop after
 two idle minutes measured from completed use, never during active work. Stopping
 the API also drains requests and stops its engines. Ports must be available. The default models
-occupy about 2.93 GB in `~/.local/share/pi-voice/models`. Run
-`pi-voice-models` on a fresh host, and `pi-voice-models --check-only` to
+occupy about 2.93 GB in `~/.local/share/pi-voice/models`. On Andromeda, run
+`pi-voice-models`, and `pi-voice-models --check-only` to
 verify sizes and hashes. Silero VAD is also fetched with a fixed hash by Nix,
 so enabling it requires no extra setup. Inference uses local
 files without cloud speech APIs or runtime Python package downloads. Prompt
@@ -468,8 +474,9 @@ journalctl --user -u pi-voice -u pi-voice-stt -u pi-voice-tts -n 100
 
 On Andromeda, pull the configuration, run `hmswitch`, then
 `pi-voice-models` and verify the microphone, NVIDIA Vulkan and playback.
-On Foundation, `hmswitch` then `pi-voice-models` installs Whisper small.en only
-(about 500 MB). Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
+On Foundation, `hmswitch` is enough: it installs the controller and a
+Deepgram-only config, and stops any previously installed local voice units.
+Do not run `pi-voice-models` there. Terminus and Relay are excluded. The macOS/Relay browser setup remains text-only.
 
 ## Voice choice and measured performance
 

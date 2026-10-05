@@ -24,15 +24,6 @@ ASSETS = json.loads(r"""
     "experimental": false
   },
   {
-    "path": "models/ggml-small.en.bin",
-    "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small.en.bin",
-    "sha256": "c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d",
-    "bytes": 487614201,
-    "role": "stt",
-    "hosts": ["foundation"],
-    "experimental": false
-  },
-  {
     "path": "models/ggml-large-v3-turbo-q5_0.bin",
     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin",
     "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
