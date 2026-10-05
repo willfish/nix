@@ -19,7 +19,22 @@ test('real Pi changes context, keeps registry defaults, restores sessions and op
     await mkdir(agentDir);
     const models = JSON.parse(await readFile(new URL('../home/config/pi/models.json', import.meta.url), 'utf8'));
     // No production credentials or network requests are needed to select a model.
-    models.providers = { 'openai-codex': { ...models.providers['openai-codex'], apiKey: 'offline-test-only' } };
+    const localModels = ['relay', 'andromeda'].map(provider => ({
+      provider, ...models.providers[provider].models[0],
+    }));
+    models.providers = {
+      'openai-codex': { ...models.providers['openai-codex'], apiKey: 'offline-test-only' },
+      xai: { ...models.providers.xai, apiKey: 'offline-test-only' },
+      ...Object.fromEntries(localModels.map(model => [model.provider, {
+        api: 'openai-completions', baseUrl: 'http://127.0.0.1:9/v1', apiKey: 'offline-test-only',
+        models: [model],
+      }])),
+      'context-fixture': {
+        api: 'openai-completions', baseUrl: 'http://127.0.0.1:9/v1', apiKey: 'offline-test-only',
+        models: [{ id: 'future-model', name: 'Future fixture', contextWindow: 200000, maxTokens: 16384,
+          input: ['text'], reasoning: false, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
+      },
+    };
     await writeFile(join(agentDir, 'models.json'), JSON.stringify(models));
     await writeFile(join(agentDir, 'settings.json'), JSON.stringify({
       defaultProvider: 'openai-codex', defaultModel: 'gpt-6-astra',
@@ -50,7 +65,7 @@ test('real Pi changes context, keeps registry defaults, restores sessions and op
     ], { cwd: dir, env: { ...process.env, PI_CODING_AGENT_DIR: agentDir, CAPTURE_PROMPTS: '0' }, stdio: ['pipe', 'pipe', 'pipe'] });
     let buffer = '', stderr = '', counter = 0;
     const pending = new Map(), events = [];
-    let choice = 1;
+    let choice = 'Extended:';
     const send = message => child.stdin.write(`${JSON.stringify(message)}\n`);
     child.stderr.setEncoding('utf8').on('data', text => { stderr += text; });
     child.stdout.setEncoding('utf8').on('data', text => {
@@ -63,7 +78,8 @@ test('real Pi changes context, keeps registry defaults, restores sessions and op
         const event = JSON.parse(line);
         events.push(event);
         if (event.type === 'extension_ui_request' && event.method === 'select') {
-          send({ type: 'extension_ui_response', id: event.id, value: event.options[choice] });
+          send({ type: 'extension_ui_response', id: event.id,
+            value: event.options.find(option => option.startsWith(choice)) });
         }
         if (event.type === 'extension_ui_request' && event.method === 'confirm') {
           send({ type: 'extension_ui_response', id: event.id, confirmed: true });
@@ -92,7 +108,7 @@ test('real Pi changes context, keeps registry defaults, restores sessions and op
     await request('prompt', { message: '/context' });
     assert.equal((await request('get_state')).model.contextWindow, 500000);
     assert.equal((await request('get_state')).thinkingLevel, 'high');
-    assert.ok(events.some(event => event.method === 'select' && event.options.length === 3));
+    assert.ok(events.some(event => event.method === 'select' && event.options.length === 6));
     const catalogue = await request('get_available_models');
     assert.equal(catalogue.models.find(model => model.id === 'gpt-6-astra').contextWindow, 272000);
     assert.equal((await request('get_session_stats')).contextUsage.contextWindow, 500000);
@@ -110,9 +126,44 @@ test('real Pi changes context, keeps registry defaults, restores sessions and op
     assert.equal((await request('get_state')).model.contextWindow, 272000);
     await request('switch_session', { sessionPath: sessionFile });
     assert.equal((await request('get_state')).model.contextWindow, 872000);
-    choice = 0;
+    choice = 'Default:';
     await request('prompt', { message: '/context' });
     assert.equal((await request('get_state')).model.contextWindow, 272000);
+    // Exercise independent saved budgets through the real registry and lifecycle.
+    const genericModels = [
+      { provider: 'xai', id: 'grok-4.7', contextWindow: 500000 },
+      ...localModels,
+      { provider: 'context-fixture', id: 'future-model', contextWindow: 200000 },
+    ];
+    for (const model of genericModels) {
+      await request('set_model', { provider: model.provider, modelId: model.id });
+      assert.equal((await request('get_state')).model.contextWindow, model.contextWindow);
+      await request('prompt', { message: '/context 64k' });
+      assert.equal((await request('get_state')).model.contextWindow, 64000);
+      await request('prompt', { message: `/context ${model.contextWindow + 1}` });
+      assert.equal((await request('get_state')).model.contextWindow, 64000);
+      assert.equal((await request('get_session_stats')).contextUsage.contextWindow, 64000);
+      await request('prompt', { message: '/fixture-reload' });
+      assert.equal((await request('get_state')).model.contextWindow, 64000);
+      await request('set_model', { provider: model.provider, modelId: model.id });
+      await request('prompt', { message: 'offline input fixture' });
+      assert.equal((await request('get_state')).model.contextWindow, 64000);
+      const available = await request('get_available_models');
+      assert.equal(available.models.find(item => item.provider === model.provider && item.id === model.id).contextWindow,
+        model.contextWindow);
+    }
+    const multiModelSession = (await request('get_state')).sessionFile;
+    await request('new_session');
+    assert.equal((await request('get_state')).model.contextWindow, 272000, 'new sessions use the configured startup model');
+    await request('switch_session', { sessionPath: multiModelSession });
+    assert.equal((await request('get_state')).model.contextWindow, 64000);
+    for (const model of genericModels) {
+      await request('set_model', { provider: model.provider, modelId: model.id });
+      await request('prompt', { message: 'offline input fixture' });
+      assert.equal((await request('get_state')).model.contextWindow, 64000);
+      await request('prompt', { message: '/context default' });
+      assert.equal((await request('get_state')).model.contextWindow, model.contextWindow);
+    }
     assert.equal(events.filter(event => event.type === 'extension_error').length, 0);
     assert.equal(events.filter(event => event.type === 'agent_start').length, 0, 'must not call an LLM');
   } finally {

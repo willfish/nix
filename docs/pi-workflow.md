@@ -111,8 +111,19 @@ in a selected Pi editor, or discard. Recovery never auto-submits. See
 
 ## Session context budget
 
-In `pi` and `pi-voice`, `/context` opens a picker for the
-`openai-codex/gpt-6-astra` subscription model:
+In `pi` and `pi-voice`, `/context` opens a picker based on the active model's
+registered context window. It works for Grok, OpenCode Go, local Qwen models
+and other registered models with a valid window. Common smaller budgets are
+64k, 128k, 256k, 500k and 1000k, offered only below the registered default.
+`/context default` restores that default. Exact token counts and decimal `k`
+values also work, for example `/context 100000` and `/context 131.072k`.
+
+Numeric budgets must be between 64k and the registered window. For models
+whose window is below 64k, only their default is available. These are local
+compaction budgets, not backend capacity changes. Output limits stay unchanged.
+
+The `openai-codex/gpt-6-astra` subscription model also retains its existing
+named presets and numeric aliases:
 
 | Preset | Context ceiling | Command |
 | --- | --- | --- |
@@ -120,12 +131,15 @@ In `pi` and `pi-voice`, `/context` opens a picker for the
 | Extended | 500k | `/context extended` |
 | Maximum | 872k | `/context maximum` |
 
-Numeric aliases `/context 272k`, `/context 500k` and `/context 872k` also work.
 The footer shows the active ceiling. Changes require an idle session and affect
 only that session's model, not `models.json`, authentication, output limits or
-startup defaults. The choice follows the active session branch through resume,
-reload and model switching. Forks inherit choices on their copied branch;
-new sessions start lean. Other models and the isolated Qwen profile are unchanged.
+startup defaults. Each provider/model has its own choice on the active session
+branch, restored through resume, reload and model switching. Forks inherit
+choices on their copied branch; new sessions use registered defaults. A saved
+`default` choice follows catalogue updates, while saved numeric budgets outside
+the current allowed range are ignored. A custom budget is shown in the picker
+when it does not match a preset. The isolated `qwen-pi` profile does not load
+this extension.
 
 The 872k maximum comes from Astra's locally cached Codex catalogue on
 2026-09-09, not a successful large-request test. Extended and Maximum are
