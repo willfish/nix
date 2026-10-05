@@ -3,7 +3,7 @@
 Replace repository-owned Python utilities with compiled tools while preserving
 command names, configuration, output formats and host boundaries. Use Rust for
 HTTP, WebSocket and MCP services; use C for small command-line and desktop
-helpers. Third-party Python runtimes, including moshi/personaplex and
+helpers. Third-party Python runtimes, including moshi/personaplex, DDGS and
 telegram-mcp, are not ports in this plan.
 
 ## Execution
@@ -36,7 +36,7 @@ Rust dependencies and existing C libraries where practical.
 - [x] Tailscale authentication proxy: Rust `home/config/tailscale-proxy`.
   Preserve peer-address-only trust, caller credentials, streaming and WebSocket
   upgrades. Never put the relay key in the Nix store or logs.
-- [ ] Local assistant MCP service: `home/config/local-llm/assistant_tools.py`.
+- [x] Local assistant MCP service: Rust `home/config/assistant-tools`.
   Preserve read/write roots, credential exclusions and web-fetch restrictions.
 
 ### Desktop helpers
@@ -73,6 +73,7 @@ Rust dependencies and existing C libraries where practical.
 
 ## Current coverage limits
 
-The voice REST adapter and Tailscale proxy have package/fixture coverage on Linux.
-Native Darwin execution and live GPU inference on Andromeda have not been verified.
-Foundation activation does not run the local voice API or Relay-only services.
+The voice REST adapter, Tailscale proxy and assistant MCP service have
+package/fixture coverage on Linux. Native Darwin execution, live search-provider
+results and live GPU inference on Andromeda have not been verified. Foundation
+activation does not run the local voice API or Relay-only services.

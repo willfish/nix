@@ -33,7 +33,19 @@ history caused another denial despite tools being supplied, while the same
 question with fresh history called `filesystem_scope` successfully.
 This connection provides
 internet search, reading web pages, listing and searching files, reading text
-files, and writing text files in a dedicated workspace.
+files, and writing text files in a dedicated workspace. The service is the compiled
+Rust `local-assistant-tools` package, with its source and Cargo tests in
+`home/config/assistant-tools`. It uses the official Rust MCP SDK with stateless
+JSON responses; the existing third-party DDGS search engine runs on demand through
+its CLI, retaining the original 15-second per-provider timeout and fallback
+sequence. DDGS remains outside the handwritten-Python migration.
+
+Web-page fetching stays native: every redirect revalidates DNS, pins its connection
+to a public address and checks TLS against the original hostname. Proxy environment
+variables are ignored. Files remain limited to 1 MiB, read excerpts to 500 lines
+and 24,000 characters, directory listings to 100 entries and file searches to 50
+matches. New workspace files use mode 0600; replacing a file requires explicit
+overwrite.
 
 The assistant can read `~/Repositories`, `~/Notes`, `~/.dotfiles` and
 `~/LocalAssistant`. It can only write in `~/LocalAssistant`. Common credential

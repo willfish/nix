@@ -232,11 +232,9 @@ let
         --tools read,bash,edit,write,mcp,todo,question "$@"
     '';
   };
-  toolsPython = pkgs.python3.withPackages (ps: [
-    ps.mcp
-    ps.ddgs
-    ps.beautifulsoup4
-  ]);
+  # DDGS remains the third-party search provider, invoked on demand.
+  toolsPython = assistantPackage.searchProvider;
+  assistantPackage = import ./assistant-tools-package.nix { inherit pkgs; };
   uiConfig = pkgs.writeText "local-llm-ui.json" (
     builtins.toJSON {
       mcpServers = builtins.toJSON [
@@ -282,7 +280,8 @@ let
         )
       }
       export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
-      exec ${toolsPython}/bin/python3 ${../config/local-llm/assistant_tools.py}
+      export LOCAL_ASSISTANT_SEARCH_BIN=${toolsPython}/bin/ddgs
+      exec ${assistantPackage}/bin/local-assistant-tools
     '';
   };
 

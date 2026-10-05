@@ -97,6 +97,16 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   assert.match(source, /90-huihui-trial\.conf/);
 });
 
+test('local assistant runs the Rust service and only delegates third-party search', () => {
+  const source = readFileSync(new URL('../home/user/local-llm.nix', import.meta.url), 'utf8');
+  assert.match(source, /assistantPackage = import \.\/assistant-tools-package\.nix/);
+  assert.match(source, /exec \$\{assistantPackage\}\/bin\/local-assistant-tools/);
+  assert.match(source, /LOCAL_ASSISTANT_SEARCH_BIN=\$\{toolsPython\}\/bin\/ddgs/);
+  assert.ok(!source.includes('assistant_tools.py'));
+  assert.ok(!source.includes('ps.beautifulsoup4'));
+  assert.ok(!source.includes('ps.mcp'));
+});
+
 test('voice installation and explicit Qwen loading share the supported-host predicate', () => {
   const standard = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
   const qwen = readFileSync(new URL('../home/user/local-llm.nix', import.meta.url), 'utf8');
