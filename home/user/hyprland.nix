@@ -131,10 +131,10 @@
         fi
         exec ${pkgs.swaybg}/bin/swaybg --image "$image" --mode ${lib.escapeShellArg settings.wallpaper.mode}
       '';
+      wallpaperCycleHelper = import ./wallpaper-cycle-package.nix { inherit pkgs; };
       wallpaperCycle = pkgs.writeShellApplication {
         name = "hypr-wallpaper-cycle";
         runtimeInputs = [
-          pkgs.python3
           pkgs.imagemagick
           pkgs.systemd
           pkgs.nix
@@ -151,7 +151,7 @@
               ;;
           esac
           status=0
-          python3 ${../config/hyprland/wallpaper_cycle.py} \
+          ${wallpaperCycleHelper}/bin/wallpaper-cycle \
             --state "$state" \
             --catalogue ${lib.escapeShellArg "${config.xdg.configHome}/theme-menu/catalogue.json"} \
             --flake ${lib.escapeShellArg config.dotfiles.sourceDirectory} \

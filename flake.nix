@@ -629,6 +629,7 @@
             agent-usage = import ./home/user/agent-usage-package.nix { inherit pkgs; };
             arxiv-status = import ./home/user/arxiv-status-package.nix { inherit pkgs; };
             github-watch = import ./home/user/github-watch-package.nix { inherit pkgs; };
+            wallpaper-cycle = import ./home/user/wallpaper-cycle-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)
