@@ -165,6 +165,8 @@ typedef struct harness {
     int boom;
     test_timer *timers[16];
     int ntimers;
+    engine_lease *held[32];
+    int nheld;
     engine_manager *manager;
 } harness;
 
@@ -298,6 +300,15 @@ static void setup(harness *h) {
     CHECK(h->manager != NULL);
 }
 
+static void hold(harness *h, engine_lease *lease) {
+    if (lease && h->nheld < 32) h->held[h->nheld++] = lease;
+}
+
+static void release_held(harness *h) {
+    for (int i = 0; i < h->nheld; i++) engine_lease_unref(h->held[i]);
+    h->nheld = 0;
+}
+
 static void teardown(harness *h) {
     h->block_all = 0;
     h->block_stop = 0;
@@ -307,6 +318,7 @@ static void teardown(harness *h) {
     if (h->manager) {
         q_drain(&h->queue);
         q_drain(&h->readies);
+        release_held(h);
         engine_manager_close(h->manager);
         engine_manager_free(h->manager);
         h->manager = NULL;
@@ -360,6 +372,7 @@ static engine_lease *must_acquire(harness *h, const char *engine) {
         CHECK(lease != NULL);
         return NULL;
     }
+    hold(h, lease);
     return lease;
 }
 
@@ -430,6 +443,7 @@ static void test_resident_speech_survives_idle_until_retired(void) {
     setup(&h);
     engine_lease *lease = NULL;
     CHECK(engine_manager_ensure_resident(h.manager, "tts", &lease) == ENGINE_OK);
+    hold(&h, lease);
     q_drain(&h.queue);
     q_drain(&h.readies);
     expect_cmds(&h, 1);
@@ -690,6 +704,7 @@ static void test_initial_zero_and_warm_completion_release_time(void) {
     engine_lease *leases[1] = {0};
     size_t n = 0;
     CHECK(engine_manager_warm(h.manager, names, 1, 30, leases, 1, &n) == ENGINE_OK);
+    hold(&h, leases[0]);
     CHECK(n == 1);
     q_drain(&h.queue);
     CHECK(took(&h, "stt").users == 1);
@@ -716,6 +731,8 @@ static void test_warm_timeout_and_one_backend_failure_release(void) {
     engine_lease *leases[2] = {0};
     size_t n = 0;
     CHECK(engine_manager_warm(h.manager, names, 2, 30, leases, 2, &n) == ENGINE_OK);
+    hold(&h, leases[0]);
+    hold(&h, leases[1]);
     CHECK(n == 2);
     q_drain(&h.queue);
     q_drain(&h.readies);
@@ -731,6 +748,7 @@ static void test_warm_timeout_and_one_backend_failure_release(void) {
     const char *again[] = {"stt"};
     engine_lease *timed[1] = {0};
     CHECK(engine_manager_warm(h.manager, again, 1, 10, timed, 1, &n) == ENGINE_OK);
+    hold(&h, timed[0]);
     test_timer *timer = h.timers[h.ntimers - 1];
     h.now = 10;
     timer_fire(timer);
@@ -948,6 +966,8 @@ static void test_default_worker_serializes_commands_while_readiness_blocks(void)
         engine_lease_release(stt);
         CHECK(engine_lease_cancelled(stt));
         engine_lease_release(tts);
+        engine_lease_unref(stt);
+        engine_lease_unref(tts);
     }
     gate_set(&box.stt_release);
     engine_manager_close(manager);
@@ -1012,6 +1032,8 @@ static void test_warm_all_releases_on_readiness(void) {
     engine_lease *leases[2] = {0};
     size_t n = 0;
     CHECK(engine_manager_warm(h.manager, NULL, 0, 30, leases, 2, &n) == ENGINE_OK);
+    hold(&h, leases[0]);
+    hold(&h, leases[1]);
     CHECK(n == 2);
     q_drain(&h.queue);
     CHECK(took(&h, "stt").users == 1);
@@ -1093,6 +1115,7 @@ static void test_default_timers_do_not_accumulate(void) {
     CHECK(engine_lease_wait(warm, 2000, err, sizeof err) == ENGINE_WAIT_OK);
     engine_lease_release(warm);
     CHECK(engine_lease_released(warm));
+    engine_lease_unref(warm);
     long before = vm_size_kb();
     for (int i = 0; i < 12; i++) {
         engine_lease *lease = NULL;
@@ -1100,6 +1123,7 @@ static void test_default_timers_do_not_accumulate(void) {
         CHECK(engine_lease_wait(lease, 2000, err, sizeof err) == ENGINE_WAIT_OK);
         engine_lease_release(lease);
         CHECK(engine_lease_released(lease));
+        engine_lease_unref(lease);
     }
     long after = vm_size_kb();
     /* Cancellation is nonblocking: let callbacks exit, then trigger reaping.
@@ -1112,11 +1136,53 @@ static void test_default_timers_do_not_accumulate(void) {
         CHECK(engine_manager_acquire(manager, "stt", &lease) == ENGINE_OK);
         CHECK(engine_lease_wait(lease, 2000, err, sizeof err) == ENGINE_WAIT_OK);
         engine_lease_release(lease);
+        engine_lease_unref(lease);
         after = vm_size_kb();
     }
     CHECK(before > 0 && after > 0);
     if (after > before + 49152) fprintf(stderr, "timer VmSize: %ld -> %ld KiB\n", before, after);
     CHECK(after <= before + 49152);
+    engine_manager_free(manager);
+}
+
+static void test_lease_refs_reclaim_during_daemon_life(void) {
+    test_name = "lease_refs_reclaim";
+    engine_config cfg;
+    memset(&cfg, 0, sizeof cfg);
+    cfg.runner = reap_runner;
+    cfg.readiness = reap_ready;
+    cfg.idle_timeout = 3600;
+    const char *names[] = {"stt"};
+    cfg.engines = names;
+    cfg.engine_count = 1;
+    engine_manager *manager = engine_manager_create(&cfg);
+    CHECK(manager != NULL);
+    if (!manager) return;
+    char err[128];
+    for (int i = 0; i < 128; i++) {
+        engine_lease *lease = NULL;
+        CHECK(engine_manager_acquire(manager, "stt", &lease) == ENGINE_OK);
+        CHECK(engine_lease_wait(lease, 2000, err, sizeof err) == ENGINE_WAIT_OK);
+        engine_lease_release(lease);
+        CHECK(engine_lease_released(lease));
+        engine_lease_unref(lease);
+    }
+    for (int retry = 0; engine_manager_live_leases(manager) != 0 && retry < 200; retry++) {
+        struct timespec pause = {.tv_nsec = 10000000};
+        nanosleep(&pause, NULL);
+    }
+    CHECK(engine_manager_live_leases(manager) == 0);
+    engine_lease *observer = NULL;
+    CHECK(engine_manager_ensure_resident(manager, "stt", &observer) == ENGINE_OK);
+    CHECK(engine_lease_wait(observer, 2000, err, sizeof err) == ENGINE_WAIT_OK);
+    engine_lease_unref(observer);
+    CHECK(engine_manager_live_leases(manager) == 1);
+    engine_manager_retire(manager, "stt");
+    for (int retry = 0; engine_manager_live_leases(manager) != 0 && retry < 200; retry++) {
+        struct timespec pause = {.tv_nsec = 10000000};
+        nanosleep(&pause, NULL);
+    }
+    CHECK(engine_manager_live_leases(manager) == 0);
     engine_manager_free(manager);
 }
 
@@ -1157,6 +1223,7 @@ int test_engines(void) {
     test_warm_all_releases_on_readiness();
     test_close_cancels_leases_without_stopping_units();
     test_default_timers_do_not_accumulate();
+    test_lease_refs_reclaim_during_daemon_life();
     test_negative_population_is_rejected();
     return failures;
 }

@@ -122,14 +122,20 @@ int engine_manager_set_population(engine_manager *manager, int sessions, int pen
 void engine_manager_sweep(engine_manager *manager);
 int engine_manager_state(engine_manager *manager, const char *engine, engine_state *out);
 
-/* A lease remains valid after engine_lease_release until engine_manager_free.
- * Release only drops the active link. The object stays so wait, done,
- * cancelled, and released stay defined, and because start or readiness work
- * may still hold it. Freeing on release is not safe. free joins built-in
- * workers, then frees every lease. It does not join an injected executor or
- * scheduler. Do not use a lease after free. A long-lived manager retains one
- * lease per acquire until then.
+/* Release drops the active user link only. It is idempotent and does not free.
+ * acquire returns one owned reference. ensure_resident returns an owned
+ * observer reference; residency is a separate manager reference released by
+ * retire or close. warm returns owned observer references. Timers and workers
+ * retain their own references. engine_lease_unref reclaims the object when the
+ * last reference drops, including during daemon life. Do not use a lease after
+ * its last unref or after engine_manager_free. free joins built-in workers,
+ * drops residency references, then destroys any caller references still held.
+ * It does not join an injected executor or scheduler. Drain those first.
  */
+void engine_lease_ref(engine_lease *lease);
+void engine_lease_unref(engine_lease *lease);
+/* Live lease objects, including released ones still referenced. */
+int engine_manager_live_leases(engine_manager *manager);
 const char *engine_lease_name(const engine_lease *lease);
 int engine_lease_done(engine_lease *lease);
 int engine_lease_cancelled(engine_lease *lease);

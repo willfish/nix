@@ -16,6 +16,15 @@ int test_audio(void);
 int test_labels(void);
 int test_osd(void);
 int test_pill(void);
+int test_ipc(void);
+int test_runtime_adapters(void);
+int test_harness(void);
+int test_controller(void);
+int test_main_adapters(void);
+int test_presentation(void);
+int test_menu(void);
+int test_conversation(void);
+int test_osd_main(void);
 
 static void *concurrent_text(void *arg) {
     int *failed = arg;
@@ -49,12 +58,34 @@ static int test_concurrent_initialization(void) {
     return failures;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    const struct { const char *name; int (*run)(void); } groups[] = {
+        {"concurrent-initialization", test_concurrent_initialization},
+        {"spoken", test_spoken}, {"chunks", test_chunks},
+        {"attachments", test_attachments}, {"engines", test_engines},
+        {"capture", test_capture}, {"devices", test_devices},
+        {"audio", test_audio}, {"labels", test_labels},
+        {"osd", test_osd}, {"pill", test_pill}, {"ipc", test_ipc},
+        {"runtime-adapters", test_runtime_adapters}, {"harness", test_harness},
+        {"controller", test_controller}, {"main-adapters", test_main_adapters},
+        {"presentation", test_presentation},
+        {"menu", test_menu}, {"conversation", test_conversation},
+        {"osd-main", test_osd_main},
+    };
     fprintf(stderr, "voice-c test driver ready\n");
-    int failed = test_concurrent_initialization();
-    failed += test_spoken() + test_chunks() + test_attachments() + test_engines()
-        + test_capture() + test_devices() + test_audio() + test_labels()
-        + test_osd() + test_pill();
-    if (failed) fprintf(stderr, "%d voice checks failed\n", failed);
+    int failed = 0, ran = 0;
+    for (size_t i = 0; i < sizeof groups / sizeof groups[0]; i++) {
+        if (argc > 1 && strcmp(argv[1], groups[i].name)) continue;
+        fprintf(stderr, "RUN %s\n", groups[i].name);
+        int result = groups[i].run();
+        fprintf(stderr, "END %s: %d failures\n", groups[i].name, result);
+        failed += result;
+        ran++;
+    }
+    if (!ran) {
+        fprintf(stderr, "Unknown voice test group\n");
+        return 2;
+    }
+    fprintf(stderr, "%d voice groups, %d checks failed\n", ran, failed);
     return failed ? 1 : 0;
 }

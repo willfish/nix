@@ -30,6 +30,19 @@ def unexpected_node_skips(output: str) -> list[str]:
     ]
 
 
+def native_voice_fixture(launcher: Path) -> Path | None:
+    """Locate the candidate's native fixture without executing its launcher."""
+    if not launcher.is_file():
+        return None
+    match = re.search(
+        r"^\s*exec (/nix/store/[^/\s]+)/bin/pi-voice-c(?:\s|$)",
+        launcher.read_text(), re.MULTILINE,
+    )
+    if not match:
+        raise ValueError(f"Candidate voice launcher is not native: {launcher}")
+    return Path(match[1]) / "libexec/voice-controller-fixture"
+
+
 def configure(home: Path) -> None:
     home = home.resolve(strict=True)
     if not str(home).startswith("/nix/store/"):
@@ -56,6 +69,12 @@ def configure(home: Path) -> None:
         "PI_TEAM_LIVE_TEST": "0", "PI_VOICE_LIVE_TEST": "0",
         "PYTHONDONTWRITEBYTECODE": "1",
     })
+    voice_fixture = native_voice_fixture(home / "home-path/bin/pi-voice")
+    if voice_fixture is not None:
+        if not voice_fixture.is_file():
+            raise ValueError(
+                f"Missing candidate voice fixture: {voice_fixture}")
+        os.environ["PI_VOICE_CONTROLLER_FIXTURE"] = str(voice_fixture)
     # Never accidentally run a deployed, real-user Qwen launcher from CI.
     os.environ.pop("QWEN_PI_HERDR_TEST_BIN", None)
 

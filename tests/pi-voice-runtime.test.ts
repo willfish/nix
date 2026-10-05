@@ -50,7 +50,8 @@ function guardedPanes() {
   return { owned, parent, call, layout: async () => (await call('layout.export', { pane_id: parent })).layout };
 }
 
-const controllerFixture = fileURLToPath(new URL('./fixtures/pi-voice-controller.py', import.meta.url));
+const controllerFixture = process.env.PI_VOICE_CONTROLLER_FIXTURE
+  ?? fileURLToPath(new URL('./fixtures/pi-voice-controller', import.meta.url));
 const controllerCall = (path, request) => new Promise((resolve, reject) => {
   const socket = net.createConnection(path);
   let data = '';
@@ -63,8 +64,8 @@ const controllerCall = (path, request) => new Promise((resolve, reject) => {
 });
 async function startController(runtime, extra = []) {
   let output = '', stderr = '';
-  const child = spawn('python3', [controllerFixture, '--runtime', runtime, ...extra], {
-    env: { PATH: process.env.PATH, HOME: runtime, PYTHONDONTWRITEBYTECODE: '1' },
+  const child = spawn(controllerFixture, ['--runtime', runtime, ...extra], {
+    env: { PATH: process.env.PATH, HOME: runtime },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stdout.on('data', chunk => { output += chunk; });

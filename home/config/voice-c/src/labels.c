@@ -84,7 +84,7 @@ static labels_stat_fn g_stat_fn;
 static void *g_stat_user;
 static labels_exec_fn g_exec_fn;
 static void *g_exec_user;
-static char g_error[256];
+static _Thread_local char g_error[256];
 
 static void set_error(const char *msg) {
     snprintf(g_error, sizeof g_error, "%s", msg ? msg : "");

@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix="voice-pill-native-") as temp:
     root = pathlib.Path(temp)
     runtime = root / "runtime"
     runtime.mkdir(mode=0o700)
-    (runtime / "pi-voice").mkdir()
+    (runtime / "pi-voice").mkdir(mode=0o700)
     config = root / "sway.conf"
     config.write_text(
         "output * mode 1280x800\noutput * bg #343c49 solid_color\n"

@@ -18,21 +18,12 @@ let
   whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
   sttModel = if hostName == "andromeda" then "ggml-large-v3-turbo-q5_0.bin" else "ggml-small.en.bin";
   vulkanDriver = if hostName == "andromeda" then "nvidia_icd.json" else "radeon_icd.x86_64.json";
-  voicePython = pkgs.python3;
-  osdPython = pkgs.python3.withPackages (ps: [
-    ps.pygobject3
-    ps.pycairo
-  ]);
-  voiceScripts = pkgs.runCommand "pi-voice-scripts" { } ''
-    mkdir -p "$out"
-    cp ${../config/voice}/*.py "$out/"
-  '';
+  nativeVoice = import ./voice-c-package.nix { inherit pkgs; };
   makeVoice =
     harness:
     pkgs.writeShellApplication {
       name = "${harness}-voice";
       runtimeInputs = [
-        voicePython
         pkgs.pipewire
         pkgs.wireplumber
         pkgs.wl-clipboard
@@ -49,7 +40,7 @@ let
           DEEPGRAM_API_KEY="$(${readSopsSecret}/bin/read-sops-secret "$secret")"
           export DEEPGRAM_API_KEY
         fi
-        exec python3 ${voiceScripts}/voice_controller.py "$@"
+        exec ${nativeVoice}/bin/pi-voice-c "$@"
       '';
     };
   voice = makeVoice "pi";
@@ -61,34 +52,16 @@ let
       exec ${voice}/bin/pi-voice interact "$@"
     '';
   };
-  voiceOsd = pkgs.stdenv.mkDerivation {
-    pname = "pi-voice-osd";
-    version = "1";
-    src = ../config/voice;
-    dontUnpack = true;
-    dontBuild = true;
-    nativeBuildInputs = [
-      pkgs.wrapGAppsHook4
-      pkgs.gobject-introspection
+  voiceOsd = pkgs.writeShellApplication {
+    name = "pi-voice-osd";
+    runtimeInputs = [
+      pkgs.hyprland
+      pkgs.systemd
+      voice
     ];
-    buildInputs = [
-      pkgs.gtk4
-      pkgs.gtk4-layer-shell
-    ];
-    dontWrapGApps = true;
-    installPhase = "mkdir -p $out/bin";
-    preFixup = ''
-      makeWrapper ${osdPython}/bin/python3 $out/bin/pi-voice-osd \
-        --add-flags ${voiceScripts}/voice_osd.py \
-        --prefix PATH : ${
-          lib.makeBinPath [
-            pkgs.hyprland
-            voice
-          ]
-        } \
-        ''${gappsWrapperArgs[@]} \
-        --set GDK_BACKEND wayland \
-        --set LD_PRELOAD ${pkgs.gtk4-layer-shell}/lib/libgtk4-layer-shell.so
+    text = ''
+      export GDK_BACKEND=wayland
+      exec ${nativeVoice}/bin/pi-voice-osd-c "$@"
     '';
   };
   desktopSettings = import ../config/hyprland/settings.nix;
@@ -105,13 +78,13 @@ let
   voiceMenu = pkgs.writeShellApplication {
     name = "voice-menu";
     runtimeInputs = [
-      voicePython
       pkgs.fuzzel
       pkgs.systemd
+      pkgs.xdg-utils
     ];
     text = ''
       export PI_PERSONAPLEX_ENABLED=${if hostName == "andromeda" then "1" else "0"}
-      exec python3 ${voiceScripts}/voice_menu.py --config ${menuConfig} "$@"
+      exec ${nativeVoice}/bin/voice-menu-c --config ${menuConfig} "$@"
     '';
   };
   modelSetup = pkgs.writeShellApplication {

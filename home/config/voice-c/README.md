@@ -1,13 +1,18 @@
-# Voice C library
+# Native voice frontend
 
-This is an incremental port of the Python voice modules in `../voice`. It builds
-`libpivoice` and an offline test driver. It does not install a controller, tray,
-menu or GTK application, and Home Manager still runs the Python implementation.
-The pill module provides a view model and Cairo painting, not a standalone window.
+The C frontend provides the voice controller and CLI, GTK status pill, Fuzzel
+menu and PersonaPlex conversation launcher. Home Manager installs them through
+`home/user/voice-c-package.nix`. The `pi-voice` and `qwen-pi-voice` wrappers retain
+the existing configuration and credential loading, then execute the native CLI.
+
+The Pi extension still uses the local JSON socket protocol. Model downloads and
+the PersonaPlex inference server remain separate Python-based tools; they are
+not part of the frontend migration.
 
 ## Build and test
 
-The Linux flake check builds and runs the full C suite with pinned dependencies:
+The Linux flake check builds and tests the same package that Home Manager installs,
+with pinned dependencies:
 
 ```sh
 direnv exec . nix build --no-link .#checks.x86_64-linux.voice-c
@@ -46,9 +51,10 @@ than bytes. Invalid UTF-8 is rejected; transcript and summary output buffers nev
 receive a silently truncated result. The headers document error returns and
 caller ownership. Concurrent first calls may safely initialize text patterns.
 
-Passing the offline suite is not a deployment check. Controller integration and
-live capture, playback and desktop interaction still need verification before
-switching the installed implementation to C. Released engine leases remain owned
-by their manager until destruction; long-running controller integration needs an
-explicit reclamation policy. Injected schedulers and executors must be drained
-before freeing their manager or label cache, as described in the headers.
+Passing the offline suite is not a deployment check. Verify the installed daemon,
+CLI and GTK process after activation, along with capture, playback and desktop
+interaction. A cancelled HTTP request can outlive the controller operation that
+started it: keep callback contexts and dependencies alive until workers drain.
+Injected schedulers and executors must be drained before freeing their manager or
+label cache, as described in the headers. Do not restart the controller while
+unrecovered dictation or retry audio is still in memory.

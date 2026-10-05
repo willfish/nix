@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,8 @@ struct engine_lease {
     lease_cb cbs[LEASE_CALLBACKS];
     void *cb_ctx[LEASE_CALLBACKS];
     int ncb;
+    int refs;
+    void *timer_hold;
     struct engine_lease *next;
     struct engine_lease *all_next;
 };
@@ -54,6 +57,7 @@ typedef struct stop_ticket {
 typedef struct job {
     struct job *next;
     void (*fn)(void *);
+    void (*discard)(void *);
     void *arg;
 } job;
 
@@ -223,7 +227,7 @@ static void *executor_main(void *arg) {
     return NULL;
 }
 
-static int executor_submit(void (*fn)(void *), void *arg, void *ctx) {
+static int executor_submit_owned(void (*fn)(void *), void (*discard)(void *), void *arg, void *ctx) {
     executor *executor = ctx;
     pthread_mutex_lock(&executor->mu);
     if (executor->stopping) {
@@ -255,6 +259,7 @@ static int executor_submit(void (*fn)(void *), void *arg, void *ctx) {
         return -1;
     }
     next->fn = fn;
+    next->discard = discard;
     next->arg = arg;
     if (executor->tail) executor->tail->next = next;
     else executor->head = next;
@@ -262,6 +267,10 @@ static int executor_submit(void (*fn)(void *), void *arg, void *ctx) {
     pthread_cond_signal(&executor->cv);
     pthread_mutex_unlock(&executor->mu);
     return 0;
+}
+
+static int executor_submit(void (*fn)(void *), void *arg, void *ctx) {
+    return executor_submit_owned(fn, NULL, arg, ctx);
 }
 
 static void executor_shutdown(executor *executor) {
@@ -277,7 +286,8 @@ static void executor_shutdown(executor *executor) {
     pthread_mutex_unlock(&executor->mu);
     while (pending) {
         job *next = pending->next;
-        free(pending->arg);
+        if (pending->discard) pending->discard(pending->arg);
+        else free(pending->arg);
         free(pending);
         pending = next;
     }
@@ -598,10 +608,150 @@ static void sweep_thunk(void *arg) {
     engine_manager_sweep(arg);
 }
 
+static void unlink_all(engine_manager *manager, engine_lease *lease) {
+    engine_lease **link = &manager->all_leases;
+    while (*link) {
+        if (*link == lease) {
+            *link = lease->all_next;
+            lease->all_next = NULL;
+            return;
+        }
+        link = &(*link)->all_next;
+    }
+}
+
+static void destroy_lease(engine_lease *lease) {
+    pthread_cond_destroy(&lease->cv);
+    pthread_mutex_destroy(&lease->mu);
+    free(lease);
+}
+
+void engine_lease_ref(engine_lease *lease) {
+    if (!lease) return;
+    pthread_mutex_lock(&lease->manager->lock);
+    lease->refs++;
+    pthread_mutex_unlock(&lease->manager->lock);
+}
+
+void engine_lease_unref(engine_lease *lease) {
+    if (!lease) return;
+    engine_manager *manager = lease->manager;
+    int free_now = 0;
+    pthread_mutex_lock(&manager->lock);
+    if (lease->refs > 0) lease->refs--;
+    free_now = lease->refs == 0;
+    if (free_now && !lease->released) {
+        lease->refs = 1;
+        pthread_mutex_unlock(&manager->lock);
+        engine_lease_release(lease);
+        pthread_mutex_lock(&manager->lock);
+        if (lease->refs > 0) lease->refs--;
+        free_now = lease->refs == 0;
+    }
+    if (free_now) unlink_all(manager, lease);
+    pthread_mutex_unlock(&manager->lock);
+    if (free_now) destroy_lease(lease);
+}
+
+int engine_manager_live_leases(engine_manager *manager) {
+    if (!manager) return 0;
+    pthread_mutex_lock(&manager->lock);
+    int count = 0;
+    for (engine_lease *lease = manager->all_leases; lease; lease = lease->all_next) count++;
+    pthread_mutex_unlock(&manager->lock);
+    return count;
+}
+
+typedef struct lease_hold {
+    engine_lease *lease;
+    void (*fn)(void *);
+    void *arg;
+    pthread_mutex_t mu;
+    pthread_cond_t cv;
+    int claimed;
+    int in_fn;
+    int dropped;
+    int fire_frees;
+} lease_hold;
+
+static __thread int hold_fire_depth;
+
+static void hold_fire(void *arg) {
+    lease_hold *hold = arg;
+    hold_fire_depth++;
+    pthread_mutex_lock(&hold->mu);
+    if (hold->dropped) {
+        pthread_mutex_unlock(&hold->mu);
+        hold_fire_depth--;
+        return;
+    }
+    hold->in_fn = 1;
+    pthread_mutex_unlock(&hold->mu);
+    if (hold->fn) hold->fn(hold->arg);
+    engine_lease_unref(hold->lease);
+    pthread_mutex_lock(&hold->mu);
+    hold->in_fn = 0;
+    hold->claimed = 1;
+    hold->fire_frees = hold->dropped;
+    pthread_cond_signal(&hold->cv);
+    int take = hold->fire_frees;
+    pthread_mutex_unlock(&hold->mu);
+    hold_fire_depth--;
+    if (take) free(hold);
+}
+
+static void hold_drop(lease_hold *hold) {
+    if (!hold) return;
+    if (hold_fire_depth) {
+        pthread_mutex_lock(&hold->mu);
+        hold->dropped = 1;
+        pthread_mutex_unlock(&hold->mu);
+        return;
+    }
+    pthread_mutex_lock(&hold->mu);
+    hold->dropped = 1;
+    while (hold->in_fn) pthread_cond_wait(&hold->cv, &hold->mu);
+    int fired = hold->claimed;
+    int fire_frees = hold->fire_frees;
+    pthread_mutex_unlock(&hold->mu);
+    if (!fired) engine_lease_unref(hold->lease);
+    if (!fire_frees) free(hold);
+}
+
+static lease_hold *hold_new(engine_lease *lease, void (*fn)(void *), void *arg) {
+    lease_hold *hold = calloc(1, sizeof *hold);
+    if (!hold) return NULL;
+    engine_lease_ref(lease);
+    hold->lease = lease;
+    hold->fn = fn;
+    hold->arg = arg;
+    pthread_mutex_init(&hold->mu, NULL);
+    pthread_cond_init(&hold->cv, NULL);
+    return hold;
+}
+
 struct ready_arg {
     engine_manager *manager;
     engine_lease *lease;
 };
+
+static void discard_lease_arg(void *arg) {
+    struct ready_arg *job = arg;
+    complete_lease(job->manager, job->lease, ENGINE_WAIT_CANCELLED, NULL);
+    engine_lease_unref(job->lease);
+    free(arg);
+}
+
+static int submit_lease_job(
+    engine_manager *manager, int readiness, void (*fn)(void *), void *arg, engine_lease *lease
+) {
+    engine_lease_ref(lease);
+    engine_submit_fn submit = readiness ? manager->submit_readiness : manager->submit_command;
+    void *ctx = readiness ? manager->submit_readiness_ctx : manager->submit_command_ctx;
+    int rc = submit == executor_submit ? executor_submit_owned(fn, discard_lease_arg, arg, ctx) : submit(fn, arg, ctx);
+    if (rc != 0) engine_lease_unref(lease);
+    return rc;
+}
 
 static void readiness_job(void *arg) {
     struct ready_arg *ready = arg;
@@ -617,19 +767,19 @@ static void readiness_job(void *arg) {
     void *ctx = manager->readiness_ctx;
     double timeout = manager->readiness_timeout;
     pthread_mutex_unlock(&manager->lock);
-    if (released) return;
-
-    char detail[256];
-    detail[0] = '\0';
-    int rc = readiness ? readiness(engine, timeout, ctx, detail, sizeof detail) : -1;
-    if (rc == 1) {
-        complete_lease(manager, lease, ENGINE_WAIT_OK, NULL);
-        return;
+    if (!released) {
+        char detail[256];
+        detail[0] = '\0';
+        int rc = readiness ? readiness(engine, timeout, ctx, detail, sizeof detail) : -1;
+        if (rc == 1) complete_lease(manager, lease, ENGINE_WAIT_OK, NULL);
+        else {
+            char message[512];
+            if (rc == 0) snprintf(message, sizeof message, "%s: readiness timeout", engine);
+            else snprintf(message, sizeof message, "%s: %s", engine, detail[0] ? detail : "readiness failed");
+            complete_lease(manager, lease, ENGINE_WAIT_FAILED, message);
+        }
     }
-    char message[512];
-    if (rc == 0) snprintf(message, sizeof message, "%s: readiness timeout", engine);
-    else snprintf(message, sizeof message, "%s: %s", engine, detail[0] ? detail : "readiness failed");
-    complete_lease(manager, lease, ENGINE_WAIT_FAILED, message);
+    engine_lease_unref(lease);
 }
 
 struct start_arg {
@@ -648,12 +798,14 @@ static void start_job(void *arg) {
     pthread_mutex_lock(&manager->lock);
     if (lease->released) {
         pthread_mutex_unlock(&manager->lock);
+        engine_lease_unref(lease);
         return;
     }
     engine_slot *slot = find_slot(manager, engine);
     if (!slot) {
         pthread_mutex_unlock(&manager->lock);
         complete_lease(manager, lease, ENGINE_WAIT_FAILED, "missing engine");
+        engine_lease_unref(lease);
         return;
     }
     int do_start = !slot->running || slot->has_error;
@@ -683,6 +835,7 @@ static void start_job(void *arg) {
             pthread_mutex_unlock(&manager->lock);
             complete_lease(manager, lease, ENGINE_WAIT_FAILED, message);
             engine_manager_sweep(manager);
+            engine_lease_unref(lease);
             return;
         }
         pthread_mutex_lock(&manager->lock);
@@ -698,6 +851,7 @@ static void start_job(void *arg) {
     if (lease->released) {
         pthread_mutex_unlock(&manager->lock);
         engine_manager_sweep(manager);
+        engine_lease_unref(lease);
         return;
     }
     struct ready_arg *ready = calloc(1, sizeof *ready);
@@ -706,11 +860,12 @@ static void start_job(void *arg) {
         char message[64];
         snprintf(message, sizeof message, "%s: out of memory", engine);
         complete_lease(manager, lease, ENGINE_WAIT_FAILED, message);
+        engine_lease_unref(lease);
         return;
     }
     ready->manager = manager;
     ready->lease = lease;
-    int submitted = manager->submit_readiness(readiness_job, ready, manager->submit_readiness_ctx);
+    int submitted = submit_lease_job(manager, 1, readiness_job, ready, lease);
     pthread_mutex_unlock(&manager->lock);
     if (submitted != 0) {
         free(ready);
@@ -718,6 +873,7 @@ static void start_job(void *arg) {
         snprintf(message, sizeof message, "%s: submit failed", engine);
         complete_lease(manager, lease, ENGINE_WAIT_FAILED, message);
     }
+    engine_lease_unref(lease);
 }
 
 struct adopt_arg {
@@ -820,6 +976,7 @@ static engine_lease *new_lease(engine_manager *manager, const char *engine) {
     pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
     pthread_cond_init(&lease->cv, &attr);
     pthread_condattr_destroy(&attr);
+    lease->refs = 1;
     lease->next = manager->leases;
     manager->leases = lease;
     lease->all_next = manager->all_leases;
@@ -944,7 +1101,13 @@ void engine_manager_close(engine_manager *manager) {
 void engine_manager_free(engine_manager *manager) {
     if (!manager) return;
     engine_manager_close(manager);
+    for (int i = 0; i < manager->nengines; i++) {
+        engine_lease *resident = manager->slots[i].resident;
+        manager->slots[i].resident = NULL;
+        if (resident) engine_lease_unref(resident);
+    }
     engine_lease *lease = manager->all_leases;
+    manager->all_leases = NULL;
     while (lease) {
         engine_lease *next = lease->all_next;
         pthread_cond_destroy(&lease->cv);
@@ -1021,7 +1184,7 @@ int engine_manager_acquire(engine_manager *manager, const char *engine, engine_l
     }
     start->manager = manager;
     start->lease = lease;
-    if (manager->submit_command(start_job, start, manager->submit_command_ctx) != 0) {
+    if (submit_lease_job(manager, 0, start_job, start, lease) != 0) {
         free(start);
         char message[64];
         snprintf(message, sizeof message, "%s: submit failed", engine);
@@ -1048,6 +1211,7 @@ int engine_manager_ensure_resident(engine_manager *manager, const char *engine, 
     slot->retire_when_idle = 0;
     engine_lease *current = slot->resident;
     if (current && !current->released) {
+        engine_lease_ref(current);
         pthread_mutex_unlock(&manager->lock);
         *out = current;
         return ENGINE_OK;
@@ -1062,10 +1226,15 @@ int engine_manager_ensure_resident(engine_manager *manager, const char *engine, 
     current = slot ? slot->resident : NULL;
     engine_lease *extra = NULL;
     if (current && !current->released) extra = lease;
-    else if (slot) slot->resident = lease;
+    else if (slot) {
+        slot->resident = lease;
+        engine_lease_ref(lease);
+    }
     pthread_mutex_unlock(&manager->lock);
     if (extra) {
         engine_lease_release(extra);
+        engine_lease_unref(extra);
+        engine_lease_ref(current);
         *out = current;
         return ENGINE_OK;
     }
@@ -1088,7 +1257,10 @@ void engine_manager_retire(engine_manager *manager, const char *engine) {
         slot->last_release = clock_of(manager) - manager->idle_timeout;
     }
     pthread_mutex_unlock(&manager->lock);
-    if (lease) engine_lease_release(lease);
+    if (lease) {
+        engine_lease_release(lease);
+        engine_lease_unref(lease);
+    }
     retire_now(manager, engine);
 }
 
@@ -1112,8 +1284,13 @@ void engine_lease_release(engine_lease *lease) {
     }
     if (lease->timer) {
         engine_timer *timer = lease->timer;
+        lease_hold *hold = lease->timer_hold;
         lease->timer = NULL;
+        lease->timer_hold = NULL;
         timer->cancel(timer);
+        pthread_mutex_unlock(&manager->lock);
+        hold_drop(hold);
+        pthread_mutex_lock(&manager->lock);
     }
     cancel_ready(lease);
     engine_slot *slot = find_slot(manager, lease->engine);
@@ -1173,7 +1350,10 @@ int engine_manager_warm(
     for (size_t i = 0; i < n; i++) {
         int rc = engine_manager_acquire(manager, owned[i], &leases[i]);
         if (rc != ENGINE_OK) {
-            for (size_t j = 0; j < i; j++) engine_lease_release(leases[j]);
+            for (size_t j = 0; j < i; j++) {
+                engine_lease_release(leases[j]);
+                engine_lease_unref(leases[j]);
+            }
             return rc;
         }
         lease_on_done(leases[i], warm_release, NULL);
@@ -1182,15 +1362,21 @@ int engine_manager_warm(
             char detail[256];
             detail[0] = '\0';
             engine_timer *timer = NULL;
-            int later = manager->call_later(
-                timeout, warm_expire, leases[i], manager->call_later_ctx,
-                &timer, detail, sizeof detail);
+            lease_hold *hold = hold_new(leases[i], warm_expire, leases[i]);
+            int later = hold ? manager->call_later(
+                timeout, hold_fire, hold, manager->call_later_ctx,
+                &timer, detail, sizeof detail) : -1;
             if (later != 0) {
                 pthread_mutex_unlock(&manager->lock);
-                for (size_t j = 0; j <= i; j++) engine_lease_release(leases[j]);
+                hold_drop(hold);
+                for (size_t j = 0; j <= i; j++) {
+                    engine_lease_release(leases[j]);
+                    engine_lease_unref(leases[j]);
+                }
                 return ENGINE_ERR;
             }
             leases[i]->timer = timer;
+            leases[i]->timer_hold = hold;
         }
         pthread_mutex_unlock(&manager->lock);
         out[i] = leases[i];

@@ -2,6 +2,7 @@
 #include "audio.h"
 #include "chunks.h"
 
+#include <yyjson.h>
 #include <curl/curl.h>
 
 #include <ctype.h>
@@ -108,7 +109,9 @@ struct audio {
     void *audible_user;
     audio_mic_status_fn mic_status;
     audio_mic_resolve_fn mic_resolve;
+    audio_mic_details_fn mic_details;
     void *mic_user;
+    void *mic_details_user;
     audio_capture_fn capture;
     void *capture_user;
     audio_player *player;
@@ -148,9 +151,17 @@ typedef struct job {
     op_result result;
     int done;
     int left;
+    void (*destroy_ctx)(void *);
+    void *destroy_arg;
+    atomic_int destroy_done;
     pthread_mutex_t mu;
     pthread_cond_t cv;
 } job;
+
+static void destroy_job_ctx(job *job) {
+    if (!job || !job->destroy_ctx) return;
+    if (atomic_exchange(&job->destroy_done, 1) == 0) job->destroy_ctx(job->destroy_arg);
+}
 
 typedef enum { JSON_NULL, JSON_BOOL, JSON_STRING, JSON_ARRAY, JSON_OBJECT, JSON_NUMBER } json_type;
 
@@ -1034,6 +1045,7 @@ publish:
     pthread_mutex_lock(&job->mu);
     if (job->left) {
         pthread_mutex_unlock(&job->mu);
+        destroy_job_ctx(job);
         free_result(&job->result);
         pthread_mutex_destroy(&job->mu);
         pthread_cond_destroy(&job->cv);
@@ -1050,9 +1062,15 @@ publish:
 
 static int run_cancellable(audio *audio, pthread_mutex_t *gate, const char *engine, atomic_int *cancelled,
     int (*op)(void *user, op_result *result), void *user, void (*free_user)(void *user),
-    audio_drained_fn on_drained, void *drain_user, op_result *result, char *err, size_t err_cap) {
+    audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *), void *destroy_arg,
+    op_result *result, char *err, size_t err_cap) {
     job *job = calloc(1, sizeof *job);
-    if (!job) { if (free_user) free_user(user); set_err(err, err_cap, "Out of memory"); return -1; }
+    if (!job) {
+        if (free_user) free_user(user);
+        if (destroy_ctx) destroy_ctx(destroy_arg);
+        set_err(err, err_cap, "Out of memory");
+        return -1;
+    }
     job->audio = audio;
     job->gate = gate;
     job->engine = engine;
@@ -1063,10 +1081,13 @@ static int run_cancellable(audio *audio, pthread_mutex_t *gate, const char *engi
     job->free_user = free_user;
     job->on_drained = on_drained;
     job->drain_user = drain_user;
+    job->destroy_ctx = destroy_ctx;
+    job->destroy_arg = destroy_arg;
     pthread_mutex_init(&job->mu, NULL);
     pthread_cond_init(&job->cv, NULL);
     if (spawn_detached(audio, job_main, job) != 0) {
         if (free_user) free_user(user);
+        destroy_job_ctx(job);
         pthread_mutex_destroy(&job->mu);
         pthread_cond_destroy(&job->cv);
         free(job);
@@ -1095,6 +1116,7 @@ static int run_cancellable(audio *audio, pthread_mutex_t *gate, const char *engi
     char error_copy[512];
     snprintf(error_copy, sizeof error_copy, "%s", job->result.error);
     pthread_mutex_unlock(&job->mu);
+    destroy_job_ctx(job);
     pthread_mutex_destroy(&job->mu);
     pthread_cond_destroy(&job->cv);
     free(job);
@@ -1291,6 +1313,13 @@ void audio_set_audible(audio *audio, audio_audible_fn fn, void *user) { audio->a
 void audio_set_microphone(audio *audio, audio_mic_status_fn status, audio_mic_resolve_fn resolve, void *user) {
     audio->mic_status = status; audio->mic_resolve = resolve; audio->mic_user = user;
 }
+void audio_set_microphone_details(audio *audio, audio_mic_details_fn fn, void *user) {
+    audio->mic_details = fn;
+    audio->mic_details_user = user;
+}
+const char *audio_preferred_microphone(const audio *audio) {
+    return audio && audio->preferred_microphone ? audio->preferred_microphone : NULL;
+}
 void audio_set_capture(audio *audio, audio_capture_fn fn, void *user) { audio->capture = fn; audio->capture_user = user; }
 void audio_set_playback_mode(audio *audio, const char *mode) {
     pthread_mutex_lock(&audio->mu);
@@ -1434,10 +1463,53 @@ int audio_status(audio *audio, audio_report *status) {
     snprintf(status->stt_ids[1], 32, "deepgram");
     snprintf(status->stt_labels[1], 64, "Deepgram (cloud)");
     status->stt_count = 2;
-    if (audio->mic_status)
+    if (audio->mic_details) {
+        audio_mic_details details;
+        memset(&details, 0, sizeof details);
+        audio->mic_details(audio->mic_details_user, &details);
+        snprintf(status->microphone_name, sizeof status->microphone_name, "%s", details.name);
+        snprintf(status->microphone_target, sizeof status->microphone_target, "%s", details.has_target ? details.target : "");
+        status->microphone_has_target = details.has_target;
+        status->microphone_muted = details.muted;
+        status->microphone_muted_known = details.muted_known;
+        snprintf(status->microphone_preferred, sizeof status->microphone_preferred, "%s", details.has_preferred ? details.preferred : "");
+        status->microphone_has_preferred = details.has_preferred;
+        status->microphone_missing = details.missing;
+        snprintf(status->microphone_error, sizeof status->microphone_error, "%s", details.has_error ? details.error : "");
+        status->microphone_has_error = details.has_error;
+    } else if (audio->mic_status) {
         audio->mic_status(audio->mic_user, status->microphone_name, sizeof status->microphone_name,
             status->microphone_target, sizeof status->microphone_target);
+        status->microphone_has_target = status->microphone_target[0] != '\0';
+    }
     return 0;
+}
+
+int audio_microphone_json(audio *audio, char **json) {
+    if (json) *json = NULL;
+    if (!audio || !json) return -1;
+    audio_report report;
+    if (audio_status(audio, &report) != 0) return -1;
+    yyjson_mut_doc *doc = yyjson_mut_doc_new(NULL);
+    if (!doc) return -1;
+    yyjson_mut_val *root = yyjson_mut_obj(doc);
+    yyjson_mut_doc_set_root(doc, root);
+    yyjson_mut_obj_add_strncpy(doc, root, "name", report.microphone_name, strlen(report.microphone_name));
+    if (report.microphone_has_target)
+        yyjson_mut_obj_add_strncpy(doc, root, "target", report.microphone_target, strlen(report.microphone_target));
+    else yyjson_mut_obj_add_null(doc, root, "target");
+    if (report.microphone_muted_known) yyjson_mut_obj_add_bool(doc, root, "muted", report.microphone_muted);
+    else yyjson_mut_obj_add_null(doc, root, "muted");
+    if (report.microphone_has_preferred)
+        yyjson_mut_obj_add_strncpy(doc, root, "preferred", report.microphone_preferred, strlen(report.microphone_preferred));
+    else yyjson_mut_obj_add_null(doc, root, "preferred");
+    yyjson_mut_obj_add_bool(doc, root, "missing", report.microphone_missing);
+    if (report.microphone_has_error)
+        yyjson_mut_obj_add_strncpy(doc, root, "error", report.microphone_error, strlen(report.microphone_error));
+    else yyjson_mut_obj_add_null(doc, root, "error");
+    *json = yyjson_mut_write(doc, 0, NULL);
+    yyjson_mut_doc_free(doc);
+    return *json ? 0 : -1;
 }
 
 int audio_playing(audio *audio) {
@@ -1647,10 +1719,16 @@ static int http_op_run(void *user, op_result *result) {
     return rc;
 }
 
+static void destroy_unused(void (*destroy_ctx)(void *), void *drain_user) {
+    if (destroy_ctx) destroy_ctx(drain_user);
+}
+
 static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cancelled,
-    audio_drained_fn on_drained, void *drain_user, char *out, size_t out_cap, char *err, size_t err_cap) {
+    audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *),
+    char *out, size_t out_cap, char *err, size_t err_cap) {
     char *key = copy_key();
     if (!key) {
+        destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Deepgram API key is not installed; stay on Whisper");
         return -1;
     }
@@ -1658,6 +1736,7 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
     size_t payload_len = 0;
     if (read_file(path, &payload, &payload_len) != 0) {
         free(key);
+        destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Could not read dictation audio");
         return -1;
     }
@@ -1680,6 +1759,7 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
     http_op *op = calloc(1, sizeof *op);
     if (!op) {
         free(url); free(payload); free(key);
+        destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Out of memory");
         return -1;
     }
@@ -1690,6 +1770,7 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
     op->body = payload;
     if (!op->url || !op->content_type || !op->authorization) {
         free(key); free_http_op(op);
+        destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Out of memory");
         return -1;
     }
@@ -1701,7 +1782,7 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
     op->deepgram_listen = 1;
     op_result result = {0};
     int rc = run_cancellable(audio, &audio->recognition_mu, NULL, cancelled, http_op_run, op, free_http_op,
-        on_drained, drain_user, &result, err, err_cap);
+        on_drained, drain_user, destroy_ctx, drain_user, &result, err, err_cap);
     if (rc != 0) return rc < 0 ? -1 : 0;
     if (!out || strlen(result.text) + 1 > out_cap) {
         free_result(&result);
@@ -1714,11 +1795,17 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
 }
 
 static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancelled,
-    audio_drained_fn on_drained, void *drain_user, char *out, size_t out_cap, char *err, size_t err_cap) {
-    if (!audio->stt_url) { set_err(err, err_cap, "Whisper request failed (HTTP 0); check pi-voice-stt.service"); return -1; }
+    audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *),
+    char *out, size_t out_cap, char *err, size_t err_cap) {
+    if (!audio->stt_url) {
+        destroy_unused(destroy_ctx, drain_user);
+        set_err(err, err_cap, "Whisper request failed (HTTP 0); check pi-voice-stt.service");
+        return -1;
+    }
     unsigned char *file = NULL;
     size_t file_len = 0;
     if (read_file(path, &file, &file_len) != 0) {
+        destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Could not read dictation audio");
         return -1;
     }
@@ -1745,6 +1832,7 @@ static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancel
         if (!header) {
             free(fields);
             free(file);
+            destroy_unused(destroy_ctx, drain_user);
             set_err(err, err_cap, "Out of memory");
             return -1;
         }
@@ -1767,6 +1855,7 @@ static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancel
         free(op);
         free(fields);
         free(file);
+        destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Out of memory");
         return -1;
     }
@@ -1783,6 +1872,7 @@ static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancel
         free(op->url);
         free(op->content_type);
         free(op);
+        destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Out of memory");
         return -1;
     }
@@ -1794,7 +1884,7 @@ static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancel
     op->engine = strdup("stt");
     op_result result = {0};
     int rc = run_cancellable(audio, &audio->recognition_mu, "stt", cancelled, http_op_run, op, free_http_op,
-        on_drained, drain_user, &result, err, err_cap);
+        on_drained, drain_user, destroy_ctx, drain_user, &result, err, err_cap);
     if (rc != 0) {
         if (rc > 0 && out && out_cap) out[0] = 0;
         return rc < 0 ? -1 : 0;
@@ -1809,14 +1899,41 @@ static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancel
     return 0;
 }
 
+static int transcribe_dispatch(audio *audio, const char *path, atomic_int *cancelled,
+    audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *),
+    char *out, size_t out_cap, char *err, size_t err_cap) {
+    if (out && out_cap) out[0] = 0;
+    if (!audio || !path) {
+        destroy_unused(destroy_ctx, drain_user);
+        set_err(err, err_cap, "transcription is unavailable");
+        return -1;
+    }
+    if (strcmp(audio->stt_backend, "deepgram") == 0)
+        return transcribe_deepgram(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
+    int ready = audio_wait_ready(audio, "stt", cancelled, err, err_cap);
+    if (ready <= 0) {
+        destroy_unused(destroy_ctx, drain_user);
+        return ready < 0 ? -1 : 0;
+    }
+    return transcribe_whisper(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
+}
+
 int audio_transcribe(audio *audio, const char *path, atomic_int *cancelled,
     audio_drained_fn on_drained, void *drain_user, char *out, size_t out_cap, char *err, size_t err_cap) {
-    if (out && out_cap) out[0] = 0;
-    if (strcmp(audio->stt_backend, "deepgram") == 0)
-        return transcribe_deepgram(audio, path, cancelled, on_drained, drain_user, out, out_cap, err, err_cap);
-    int ready = audio_wait_ready(audio, "stt", cancelled, err, err_cap);
-    if (ready <= 0) return ready < 0 ? -1 : 0;
-    return transcribe_whisper(audio, path, cancelled, on_drained, drain_user, out, out_cap, err, err_cap);
+    return transcribe_dispatch(audio, path, cancelled, on_drained, drain_user, NULL, out, out_cap, err, err_cap);
+}
+
+int audio_transcribe_owned(audio *audio, const char *path, atomic_int *cancelled,
+    audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *),
+    char *out, size_t out_cap, char *err, size_t err_cap) {
+    return transcribe_dispatch(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
+}
+
+void audio_drain(audio *audio) {
+    if (!audio) return;
+    pthread_mutex_lock(&audio->live_mu);
+    while (audio->live) pthread_cond_wait(&audio->live_cv, &audio->live_mu);
+    pthread_mutex_unlock(&audio->live_mu);
 }
 
 static int word_count(const char *text) {
@@ -1912,7 +2029,7 @@ static int synthesize(audio *audio, const char *chunk, const voice_choice *choic
         op->maximum = SPEAK_MAX;
         op->deepgram_speak = 1;
         return run_cancellable(audio, &audio->synthesis_mu, NULL, cancelled, http_op_run, op, free_http_op,
-            NULL, NULL, result, err, err_cap);
+            NULL, NULL, NULL, NULL, result, err, err_cap);
     }
     if (!audio->tts_url) {
         free(op);
@@ -1930,7 +2047,7 @@ static int synthesize(audio *audio, const char *chunk, const voice_choice *choic
         return -1;
     }
     return run_cancellable(audio, &audio->synthesis_mu, "tts", cancelled, http_op_run, op, free_http_op,
-        NULL, NULL, result, err, err_cap);
+        NULL, NULL, NULL, NULL, result, err, err_cap);
 }
 
 typedef struct real_player {
@@ -2433,7 +2550,7 @@ int audio_call(audio *audio, const char *engine, atomic_int *cancelled,
     call->user = user;
     op_result result = {0};
     int rc = run_cancellable(audio, &audio->call_mu, engine, cancelled, call_op_run, call, free_call_op,
-        NULL, NULL, &result, err, err_cap);
+        NULL, NULL, NULL, NULL, &result, err, err_cap);
     free_result(&result);
     return rc;
 }

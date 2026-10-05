@@ -103,6 +103,7 @@ int labels_state_set_field(SnapshotState *state, const char *pane_id, const char
 int labels_run_snapshot(const SocketKey *key, double timeout, char **snapshot_json);
 void labels_set_stat_fn(labels_stat_fn fn, void *user);
 void labels_set_exec_fn(labels_exec_fn fn, void *user);
+/* The calling thread's last error; valid until its next labels operation. */
 const char *labels_last_error(void);
 
 int labels_display_width(const char *text);

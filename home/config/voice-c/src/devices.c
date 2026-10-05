@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "devices.h"
+#include "ipc.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -728,89 +729,44 @@ int mic_runner_pw_dump(char *const *argv, double timeout, MicRunResult *out, voi
     (void)user;
     memset(out, 0, sizeof *out);
     if (!argv || !argv[0]) return -1;
-    int pipefd[2];
-    if (pipe(pipefd) != 0) return -1;
-    pid_t pid = fork();
-    if (pid < 0) {
-        close(pipefd[0]);
-        close(pipefd[1]);
-        return -1;
-    }
-    if (pid == 0) {
-        int devnull = open("/dev/null", O_RDONLY);
-        if (devnull >= 0) {
-            dup2(devnull, STDIN_FILENO);
-            dup2(devnull, STDERR_FILENO);
-            if (devnull > STDERR_FILENO) close(devnull);
-        }
-        dup2(pipefd[1], STDOUT_FILENO);
-        if (pipefd[0] > STDERR_FILENO) close(pipefd[0]);
-        if (pipefd[1] > STDERR_FILENO) close(pipefd[1]);
-        execvp(argv[0], argv);
-        _exit(127);
-    }
-    close(pipefd[1]);
-    size_t cap = 4096;
-    size_t n = 0;
-    char *buf = malloc(cap);
-    if (!buf) {
-        close(pipefd[0]);
-        kill(pid, SIGKILL);
-        waitpid(pid, NULL, 0);
-        return -1;
-    }
-    double deadline = mono() + (timeout > 0 ? timeout : 2.0);
-    int timed_out = 0;
-    while (1) {
-        if (mono() >= deadline) {
-            timed_out = 1;
-            break;
-        }
-        fd_set fds;
-        FD_ZERO(&fds);
-        FD_SET(pipefd[0], &fds);
-        struct timeval tv = {0, 50000};
-        int ready = select(pipefd[0] + 1, &fds, NULL, NULL, &tv);
-        if (ready < 0 && errno == EINTR) continue;
-        if (ready <= 0) continue;
-        if (n + 2048 + 1 > cap) {
-            size_t next = cap * 2;
-            char *grown = realloc(buf, next);
-            if (!grown) {
-                free(buf);
-                close(pipefd[0]);
-                kill(pid, SIGKILL);
-                waitpid(pid, NULL, 0);
-                return -1;
-            }
-            buf = grown;
-            cap = next;
-        }
-        ssize_t got = read(pipefd[0], buf + n, cap - n - 1);
-        if (got < 0 && errno == EINTR) continue;
-        if (got < 0) {
-            free(buf);
-            close(pipefd[0]);
-            kill(pid, SIGKILL);
-            waitpid(pid, NULL, 0);
-            return -1;
-        }
-        if (got == 0) break;
-        n += (size_t)got;
-    }
-    close(pipefd[0]);
-    int status = 0;
-    if (timed_out) kill(pid, SIGKILL);
-    waitpid(pid, &status, 0);
-    if (timed_out || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-        free(buf);
+    const char *list[8];
+    int argc = 0;
+    for (; argv[argc] && argc < 8; argc++) list[argc] = argv[argc];
+    if (argv[argc]) return -1;
+    double seconds = timeout > 0 && timeout < 2.0 ? timeout : 2.0;
+    ipc_process_request request;
+    memset(&request, 0, sizeof request);
+    request.argv = list;
+    request.argc = argc;
+    request.capture_stdout = 1;
+    request.deadline_ms = (int)(seconds * 1000.0);
+    if (request.deadline_ms < 1) request.deadline_ms = 1;
+    request.stdout_max = 4u * 1024u * 1024u;
+    ipc_process_result result;
+    memset(&result, 0, sizeof result);
+    char err[64];
+    int rc = ipc_process_run(&request, &result, err, sizeof err);
+    if (rc == IPC_TIMEOUT) {
+        ipc_process_result_free(&result);
         out->ok = 0;
-        out->exit_code = timed_out ? 124 : (WIFEXITED(status) ? WEXITSTATUS(status) : 1);
+        out->exit_code = 124;
         return 0;
     }
-    buf[n] = '\0';
-    out->ok = 1;
-    out->exit_code = 0;
-    out->stdout_text = buf;
+    if (rc != IPC_OK) {
+        ipc_process_result_free(&result);
+        return -1;
+    }
+    out->exit_code = result.exit_code;
+    out->ok = result.exit_code == 0 && result.stdout_bytes;
+    if (out->ok) {
+        out->stdout_text = malloc(result.stdout_len + 1);
+        if (!out->stdout_text) {
+            ipc_process_result_free(&result);
+            return -1;
+        }
+        if (result.stdout_len) memcpy(out->stdout_text, result.stdout_bytes, result.stdout_len);
+        out->stdout_text[result.stdout_len] = '\0';
+    }
+    ipc_process_result_free(&result);
     return 0;
 }

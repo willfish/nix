@@ -97,6 +97,24 @@ typedef audio_lease *(*audio_acquire_fn)(const char *engine, void *user);
 typedef void (*audio_audible_fn)(void *user);
 typedef void (*audio_mic_status_fn)(void *user, char *name, size_t name_cap, char *target, size_t target_cap);
 typedef int (*audio_mic_resolve_fn)(void *user, const char *preferred, char *target, size_t target_cap, char *name, size_t name_cap);
+
+/* Cached microphone metadata. Empty target means the PipeWire default, not failure.
+ * muted_known is 0 when mute was not reported (JSON null). has_error is 0 when error is null.
+ */
+typedef struct audio_mic_details {
+    char name[128];
+    char target[128];
+    int has_target;
+    int muted;
+    int muted_known;
+    char preferred[512];
+    int has_preferred;
+    int missing;
+    char error[160];
+    int has_error;
+} audio_mic_details;
+
+typedef void (*audio_mic_details_fn)(void *user, audio_mic_details *out);
 typedef void *(*audio_capture_fn)(const char *path, const char *target, void *user);
 typedef void (*audio_drained_fn)(const char *text, void *user);
 
@@ -123,6 +141,14 @@ typedef struct audio_report {
     char tts_error[512];
     char microphone_name[128];
     char microphone_target[128];
+    int microphone_has_target;
+    int microphone_muted;
+    int microphone_muted_known;
+    char microphone_preferred[512];
+    int microphone_has_preferred;
+    int microphone_missing;
+    char microphone_error[160];
+    int microphone_has_error;
 } audio_report;
 
 void audio_config_init(audio_config *config);
@@ -136,6 +162,8 @@ void audio_set_run(audio *audio, audio_run_fn fn, void *user);
 void audio_set_engines(audio *audio, audio_acquire_fn fn, void *user);
 void audio_set_audible(audio *audio, audio_audible_fn fn, void *user);
 void audio_set_microphone(audio *audio, audio_mic_status_fn status, audio_mic_resolve_fn resolve, void *user);
+void audio_set_microphone_details(audio *audio, audio_mic_details_fn fn, void *user);
+const char *audio_preferred_microphone(const audio *audio);
 void audio_set_capture(audio *audio, audio_capture_fn fn, void *user);
 void audio_set_playback_mode(audio *audio, const char *mode);
 
@@ -143,6 +171,10 @@ int audio_set_speech_backend(audio *audio, const char *backend, char *err, size_
 int audio_set_voice(audio *audio, const char *character, char *err, size_t err_cap);
 int audio_set_stt_backend(audio *audio, const char *backend, char *err, size_t err_cap);
 int audio_status(audio *audio, audio_report *status);
+/* Owned JSON object matching Python microphone status, including null target/muted/error.
+ * Caller frees *json. 0 on success.
+ */
+int audio_microphone_json(audio *audio, char **json);
 int audio_playing(audio *audio);
 
 /* 1 ready, 0 cancelled, -1 error. */
@@ -151,6 +183,15 @@ int audio_wait_ready(audio *audio, const char *engine, atomic_int *cancelled, ch
 int audio_transcribe(audio *audio, const char *path, atomic_int *cancelled,
     audio_drained_fn on_drained, void *drain_user,
     char *out, size_t out_cap, char *err, size_t err_cap);
+/* Same contract as audio_transcribe. destroy_ctx runs exactly once for drain_user:
+ * before return on the waiting path, or from the HTTP worker after an abandoned
+ * call returns. NULL destroy_ctx keeps the caller responsible for drain_user.
+ */
+int audio_transcribe_owned(audio *audio, const char *path, atomic_int *cancelled,
+    audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *ctx),
+    char *out, size_t out_cap, char *err, size_t err_cap);
+/* Blocks until detached audio workers have finished. */
+void audio_drain(audio *audio);
 /* 0 success or quiet cancel, -1 error. */
 int audio_speak(audio *audio, const char *text, atomic_int *cancelled, char *err, size_t err_cap);
 void audio_stop(audio *audio);

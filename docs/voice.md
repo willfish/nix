@@ -11,6 +11,11 @@ for local TTS. Deepgram Aura-2 provides cloud speech on both Andromeda and
 Foundation using the existing Deepgram API key. Foundation has no local TTS.
 macOS needs separate platform adapters.
 
+The controller, command-line tools, GTK pill and Fuzzel menu are native C
+executables. Python remains for model tooling and ML backends, including
+PersonaPlex. See the [native frontend](../home/config/voice-c/README.md)
+for build and lifecycle contracts.
+
 ## Launch and select a session
 
 On Andromeda and Foundation, interactive `pi` and `qwen-pi`
@@ -482,7 +487,9 @@ are in `~/.local/share/pi-voice/voices`, including
 ## Development checks
 
 ```sh
-direnv exec . node --test tests/*.test.ts
+native=$(direnv exec . nix build --no-link --print-out-paths .#checks.x86_64-linux.voice-c)
+PI_VOICE_CONTROLLER_FIXTURE="$native/libexec/voice-controller-fixture" \
+  direnv exec . node --test tests/*.test.ts
 direnv exec . nix build \
   '.#homeConfigurations."william@andromeda".activationPackage' --no-link
 direnv exec . nix build \
@@ -493,7 +500,7 @@ direnv exec . nix flake check
 Run the voice regressions with:
 
 ```sh
-direnv exec . python3 -m unittest discover -s tests -p 'test_voice*.py' -v
+direnv exec . nix build --no-link .#checks.x86_64-linux.voice-c
 ```
 
 Behavioral tests cover literal input, guarded submission, stale processes,
@@ -512,6 +519,7 @@ and socket framing. Isolated installed-harness checks verify Pi extension loadin
 Physical microphone and listening trials
 are still needed to assess recognition and speech quality.
 Capture tests use real subprocess fixtures for startup timeout, cancellation,
-stalls, disconnects, partial PCM reads and file-write failures. Tray integration
-uses a private D-Bus session to check registration, icon changes, menu actions,
-watcher replacement and responsiveness during blocked controller status reads.
+stalls, disconnects, partial PCM reads and file-write failures.
+`tests/voice_pill_native.py` exercises the installed pill in disposable headless
+Sway, including visibility, transparency, idle animation and click-through
+behavior. It does not establish assistive-technology accessibility.

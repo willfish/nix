@@ -8,6 +8,7 @@
 let
   enabled = hostName == "andromeda" && pkgs.stdenv.isLinux;
   runtime = import ./personaplex-package.nix { inherit pkgs; };
+  nativeVoice = import ./voice-c-package.nix { inherit pkgs; };
   dataDir = "${config.home.homeDirectory}/.local/share/pi-voice/personaplex";
   models = pkgs.writeShellApplication {
     name = "personaplex-models";
@@ -29,12 +30,11 @@ let
   open = pkgs.writeShellApplication {
     name = "personaplex-open";
     runtimeInputs = [
-      pkgs.python3
       pkgs.systemd
       pkgs.xdg-utils
     ];
     text = ''
-      exec python3 ${../config/voice}/voice_conversation.py
+      exec ${nativeVoice}/bin/personaplex-open-c "$@"
     '';
   };
 in

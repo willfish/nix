@@ -2931,6 +2931,85 @@ static void test_http_overflow_respects_tts_cap(void) {
     free(dir);
 }
 
+static gate owned_entered;
+static gate owned_release;
+static atomic_int owned_destroys;
+
+static void owned_destroy(void *ctx) {
+    int *flag = ctx;
+    if (flag) (*flag)++;
+    atomic_fetch_add(&owned_destroys, 1);
+}
+
+static int owned_blocking_http(const audio_http_request *request, audio_http_response *response, void *user) {
+    (void)request;
+    (void)user;
+    gate_set(&owned_entered);
+    gate_wait(&owned_release, 3000);
+    respond_text(response, 200, "{\"text\":\"owned words\"}");
+    return 0;
+}
+
+typedef struct owned_call {
+    audio *audio;
+    const char *path;
+    int *ctx;
+    int rc;
+    gate done;
+} owned_call;
+
+static void *owned_main(void *arg) {
+    owned_call *call = arg;
+    char out[128], err[512];
+    atomic_int cancelled = 0;
+    call->rc = audio_transcribe_owned(
+        call->audio, call->path, &cancelled, NULL, call->ctx, owned_destroy, out, sizeof out, err, sizeof err);
+    gate_set(&call->done);
+    return NULL;
+}
+
+static void test_transcribe_owned_destroys_context_once(void) {
+    test_name = "transcribe owned destructor";
+    use_key(NULL);
+    char *dir = make_tmp();
+    size_t wav_len = 0;
+    unsigned char *wav = silence_wav(&wav_len);
+    char path[512];
+    snprintf(path, sizeof path, "%s/dictation.wav", dir);
+    write_file(path, wav, wav_len);
+    audio_config config;
+    audio_config_init(&config);
+    config.stt_url = "http://whisper.test/inference";
+    audio *audio = audio_new(dir, &config);
+    attach_audio(audio);
+    gate_init(&owned_entered);
+    gate_init(&owned_release);
+    atomic_store(&owned_destroys, 0);
+    http_handle = owned_blocking_http;
+    int ctx = 0;
+    owned_call call = {.audio = audio, .path = path, .ctx = &ctx};
+    gate_init(&call.done);
+    pthread_t thread;
+    CHECK(pthread_create(&thread, NULL, owned_main, &call) == 0);
+    CHECK(gate_wait(&owned_entered, 2000));
+    audio_stop(audio);
+    CHECK(gate_wait(&call.done, 2000));
+    CHECK(call.rc == 0);
+    CHECK(atomic_load(&owned_destroys) == 0);
+    gate_set(&owned_release);
+    for (int i = 0; atomic_load(&owned_destroys) == 0 && i < 200; i++) sleep_ms(10);
+    CHECK(pthread_join(thread, NULL) == 0);
+    CHECK(atomic_load(&owned_destroys) == 1);
+    CHECK(ctx == 1);
+    gate_destroy(&owned_entered);
+    gate_destroy(&owned_release);
+    gate_destroy(&call.done);
+    audio_free(audio);
+    free(wav);
+    rm_rf(dir);
+    free(dir);
+}
+
 int test_audio(void) {
     failures = 0;
     stash_env_key();
@@ -2981,6 +3060,7 @@ int test_audio(void) {
     test_closed_player_pipe_does_not_raise_sigpipe();
     test_player_pipe_is_not_inherited_by_capture();
     test_http_overflow_respects_tts_cap();
+    test_transcribe_owned_destroys_context_once();
     restore_env_key();
     if (failures) fprintf(stderr, "%d audio tests failed\n", failures);
     return failures;

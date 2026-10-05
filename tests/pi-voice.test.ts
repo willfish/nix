@@ -843,7 +843,7 @@ if (existsSync(extensionPath)) {
   });
 
   test('replacement before the listening callback is never chmodded or unlinked', async t => {
-    const { readdirSync, unlinkSync, writeFileSync } = await import('node:fs');
+    const { chmodSync, readdirSync, unlinkSync, writeFileSync } = await import('node:fs');
     const directory = await mkdtemp(join(tmpdir(), 'piv-bind-'));
     const runtime = join(directory, 'pi-voice'), hooks = {};
     const ctx = { mode: 'tui', hasUI: true, cwd: directory, isIdle: () => true, hasPendingMessages: () => false,
@@ -857,6 +857,7 @@ if (existsSync(extensionPath)) {
     const path = join(runtime, readdirSync(runtime)[0]);
     unlinkSync(path);
     writeFileSync(path, 'unrelated', { mode: 0o644 });
+    chmodSync(path, 0o644); // Exercise ownership protection under restrictive umasks too.
     await start;
     await flush();
     await hooks.session_shutdown({}, ctx);
