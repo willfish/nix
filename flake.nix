@@ -651,6 +651,7 @@
           };
 
           checks = {
+            arxiv-status = import ./home/user/arxiv-status-package.nix { inherit pkgs; };
             agent-usage = import ./home/user/agent-usage-package.nix { inherit pkgs; };
             assistant-tools = import ./home/user/assistant-tools-package.nix { inherit pkgs; };
             tailscale-proxy = import ./home/user/tailscale-proxy-package.nix { inherit pkgs; };

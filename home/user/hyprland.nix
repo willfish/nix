@@ -21,11 +21,7 @@
       omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
       ttfx = pkgs.callPackage ./ttfx.nix { };
       agentStatus = import ./agent-usage-package.nix { inherit pkgs; };
-      arxivStatus = pkgs.writeShellApplication {
-        name = "hypr-arxiv-status";
-        runtimeInputs = [ pkgs.python3 ];
-        text = "exec python3 ${../config/hyprland/arxiv}/status.py";
-      };
+      arxivStatus = import ./arxiv-status-package.nix { inherit pkgs; };
       tailscaleStatus = pkgs.writeShellApplication {
         name = "hypr-tailscale-status";
         runtimeInputs = [

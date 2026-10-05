@@ -43,7 +43,7 @@ Rust dependencies and existing C libraries where practical.
 
 - [x] Agent usage/status family: C `home/config/agent-usage`, including
   the three collectors, status command and shared authentication/usage code.
-- [ ] arXiv status: `home/config/hyprland/arxiv/status.py`.
+- [x] arXiv status: C `home/config/arxiv-status`.
 - [ ] GitHub notifications: `home/config/hyprland/omapager/github_watch.py`.
 - [ ] Wallpaper cycling: `home/config/hyprland/wallpaper_cycle.py`.
 - [ ] Voice model setup and personaplex model/patch helpers in `home/config/voice`.
