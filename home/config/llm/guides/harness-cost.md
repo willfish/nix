@@ -36,8 +36,8 @@ discovery or payload budgets. For prose changes, apply
 From the candidate dotfiles worktree, stage only intended source files so Nix's
 Git flake includes new files. Inspect its `.envrc` before allowing direnv. Build
 without activating; select another explicit Home Manager attribute on other hosts.
-These are the self-contained payload/core checks from `.github/workflows/ci.yml`,
-using Andromeda's built generation rather than whichever generation is active:
+Run these self-contained payload/core checks against the built generation,
+not whichever generation is active. This example selects Andromeda:
 
 ```sh
 direnv exec . nix build '.#homeConfigurations."william@andromeda".activationPackage' --no-link
@@ -57,7 +57,7 @@ test -f "$generation/home-files/.pi/agent/extensions/orchestrator-addendum.ts"
 test -d "$PI_HARNESS_TEST_HOME_FILES/.agents/skills"
 test -f "$PI_HARNESS_TEST_HOME_FILES/.pi/agent/AGENTS.md"
 test -f "$PI_HARNESS_TEST_HOME_FILES/.pi/agent/ORCHESTRATOR.md"
-node --experimental-vm-modules --test tests/pi-skill-catalog.test.ts tests/pi-reading-policy.test.ts tests/pi-orchestrator-addendum.test.ts tests/pi-mcp-namespace-tools.test.ts
+node --experimental-vm-modules --test tests/pi-skill-catalog.test.ts tests/pi-reading-policy.test.ts tests/pi-orchestrator-addendum.test.ts tests/pi-mcp-namespace-tools.test.ts tests/pi-harness-payload.test.ts tests/pi-team-skills.test.ts
 python3 tests/pi-mcp-runtime.py -v
 python3 tests/pi-harness-slim-runtime.py -v
 SH
@@ -69,11 +69,14 @@ SH
 - Keep namespace registration, enable/disable/reload, restored sessions, read
   truncation and extension-composition regressions covered. A smaller payload
   does not excuse inaccessible tools or weaker roles.
-- The static budget in `tests/pi-harness-slim-runtime.py` counts instructions plus
-  serialized schemas against 23563 characters and asserts the full tool set.
-  It is a deterministic regression guard, not a complete workflow or billing test.
-  Investigate failures before changing ceilings; approve necessary increases with
-  a capability/cost rationale, never rubber-stamp a new snapshot.
+- `tests/pi-harness-payload.test.ts` captures the full 23-tool loadout, discovery
+  and resumed requests against a loopback provider. Its 36000-character ceiling
+  covers instructions plus serialized schemas, down from the observed 53200-character
+  pre-fix payload. This is a regression guard, not a billing-savings claim.
+  The legacy Python suite still has an obsolete 13-tool/23563-character assertion;
+  report that failure separately until its migration, never hide current tools to
+  satisfy it. Investigate failures before changing ceilings; retain a capability/cost
+  rationale rather than rubber-stamping a new snapshot.
 - Run `direnv exec . python3 home/config/llm/scripts/audit-skills` and normal
   repository hooks. Verify deployed guide links and unchanged skill metadata.
   Shared guides deploy recursively via `home/user/llm-harness.nix`; no new

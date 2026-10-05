@@ -1,6 +1,6 @@
 import { formatSkillsForPrompt, type ExtensionAPI, type Skill } from '@earendil-works/pi-coding-agent';
 import { Type } from 'typebox';
-import { searchCatalog, replaceSkillAdvertisement } from './catalog.ts';
+import { BOOTSTRAP, searchCatalog, replaceSkillAdvertisement } from './catalog.ts';
 
 export default function skillCatalog(pi: ExtensionAPI) {
   let skills: Skill[] | undefined;
@@ -27,6 +27,14 @@ export default function skillCatalog(pi: ExtensionAPI) {
     skills = event.systemPromptOptions?.skills;
     const systemPrompt = replaceSkillAdvertisement(event.systemPrompt, event.systemPromptOptions,
       pi.getActiveTools().includes('skill_catalog'), formatSkillsForPrompt);
-    if (systemPrompt !== event.systemPrompt) return { systemPrompt };
+    if (systemPrompt !== event.systemPrompt) {
+      const options = event.systemPromptOptions;
+      if (options?.sections && options.forceSystemPrompt === undefined) {
+        options.sections.skills = BOOTSTRAP.trim();
+      } else {
+        // Preserve an earlier extension's opaque prompt replacement.
+        return { systemPrompt };
+      }
+    }
   });
 }

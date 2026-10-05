@@ -4,6 +4,8 @@ export const RELEVANT_READING_RULE = '- Before implementing Pi changes, read the
 
 export function replaceReadingPolicy(prompt: string, options?: {
   customPrompt?: unknown;
+  forceSystemPrompt?: string;
+  sections?: Record<string, string>;
   appendSystemPrompt?: string;
   contextFiles?: { content?: string }[];
 }) {
@@ -13,8 +15,10 @@ export function replaceReadingPolicy(prompt: string, options?: {
   const headerIndex = prompt.indexOf(header);
   if (headerIndex < 0 || headerIndex >= index) return prompt;
   const docLines = prompt.slice(headerIndex + header.length, index).trim().split('\n');
-  if (docLines.some(line => !line.startsWith('- ')) || docLines.at(-1) !== CORE_DOC_TOPICS) return prompt;
-  const contributed = [options.appendSystemPrompt, ...(options.contextFiles ?? []).map(file => file.content)];
+  const topics = docLines.at(-1);
+  if (docLines.some(line => !line.startsWith('- ')) || !(topics === CORE_DOC_TOPICS || topics?.startsWith(`${CORE_DOC_TOPICS}, `))) return prompt;
+  if (options.sections?.docs !== undefined) return prompt;
+  const contributed = [options.appendSystemPrompt, ...Object.values(options.sections ?? {}), ...(options.contextFiles ?? []).map(file => file.content)];
   if (contributed.some(text => text?.includes(CORE_READING_RULE))) return prompt;
   return prompt.slice(0, index) + RELEVANT_READING_RULE + prompt.slice(index + CORE_READING_RULE.length);
 }
@@ -24,6 +28,14 @@ export default function readingPolicy(pi: {
 }) {
   pi.on('before_agent_start', event => {
     const systemPrompt = replaceReadingPolicy(event.systemPrompt, event.systemPromptOptions);
-    if (systemPrompt !== event.systemPrompt) return { systemPrompt };
+    if (systemPrompt !== event.systemPrompt) {
+      const options = event.systemPromptOptions;
+      const docs = systemPrompt.match(/<docs>\n([\s\S]*?)\n<\/docs>/);
+      if (options?.sections && options.forceSystemPrompt === undefined && docs) {
+        options.sections.docs = docs[1];
+      } else {
+        return { systemPrompt };
+      }
+    }
   });
 }

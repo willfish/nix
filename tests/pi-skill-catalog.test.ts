@@ -135,6 +135,35 @@ test('canonical exact names outrank aliases, partial queries page stably and rep
   assert.deepEqual(searchCatalog(registry, registered, { query: `${query} tests tests`, limit: 10 }).results, all.results);
 });
 
+test('installation directories never influence skill relevance', () => {
+  const registry = [
+    { name: 'local-dev-environment', description: 'Nix and Home Manager setup', filePath: '/home/william/.agents/skills/local-dev-environment/SKILL.md' },
+    { name: 'mailbox-login', description: 'Mailbox authentication', filePath: '/home/william/.agents/skills/mailbox-login/SKILL.md' },
+  ];
+  for (const query of ['agents', 'william', 'SKILL.md', 'agents menu usage grok reset']) {
+    assert.equal(searchCatalog(registry, [], { query }).total, 0, query);
+  }
+  assert.equal(searchCatalog(registry, [], { query: 'Home Manager' }).results[0].name, 'local-dev-environment');
+  const relocated = registry.map(skill => ({ ...skill, filePath: '/other/location' }));
+  assert.deepEqual(searchCatalog(registry, [], { query: 'Nix' }).results.map(s => s.name),
+    searchCatalog(relocated, [], { query: 'Nix' }).results.map(s => s.name));
+});
+
+test('structured Pi prompt only replaces the trusted generated skills section', () => {
+  const opts = { ...options, sections: { extension_notes: 'Keep prior extension' } };
+  const section = `<skills>\n${generated.trim()}\n</skills>`;
+  const original = `core\n${section}\n\n<cwd>\n/project\n</cwd>\nprior extension`;
+  assert.equal(replaceSkillAdvertisement(original, opts, true, format), original.replace(section, `<skills>\n${BOOTSTRAP.trim()}\n</skills>`));
+  for (const extra of [{ sections: { skills: 'custom skill policy' } },
+    { sections: { another: generated.trim() } }, { cwd: '/wrong' },
+    { appendSystemPrompt: generated.trim() }]) {
+    assert.equal(replaceSkillAdvertisement(original, { ...opts, ...extra }, true, format), original);
+  }
+  for (const changed of [original + section, original.replace('Use read', 'changed'), original + '<available_skills>user</available_skills>']) {
+    assert.equal(replaceSkillAdvertisement(changed, opts, true, format), changed);
+  }
+});
+
 test('only generated advertisement changes; team preload, context and chained additions survive', () => {
   assert.equal(replaceSkillAdvertisement(prompt, options, true, format), prompt.replace(generated, BOOTSTRAP));
   assert.match(BOOTSTRAP, /manual-only/i);
@@ -186,11 +215,11 @@ test('installed Pi exports formatter, loads extension and supplies trusted regis
         const manual = await tool.execute('test', { query: 'manual' });
         const all = await tool.execute('test', {});
         const reading = replaceReadingPolicy(original, options);
-        const advertisement = formatSkillsForPrompt(options.skills, 'read');
+        const advertisement = '<skills>\\n' + formatSkillsForPrompt(options.skills, 'read').trim() + '\\n</skills>';
         hooks.get('session_shutdown')();
         let cleared = false;
         try { await tool.execute('test', {}); } catch { cleared = true; }
-        writeFileSync(${JSON.stringify(output)}, JSON.stringify({ original, patched: patch?.systemPrompt,
+        writeFileSync(${JSON.stringify(output)}, JSON.stringify({ original, patched: patch?.systemPrompt, sections: options.sections, forced: options.forceSystemPrompt,
           advertisement, reading, hadCoreRule: original.includes(CORE_READING_RULE), result, manual, all,
           commandsUnchanged: JSON.stringify(before) === JSON.stringify(pi.getCommands()), cleared,
           active: options.selectedTools.includes('skill_catalog') }));
@@ -202,8 +231,12 @@ test('installed Pi exports formatter, loads extension and supplies trusted regis
     '--skill', visible, '--skill', manual, '-e', fixture, '-p', '/check-catalog',
   ], { cwd: dir, env: { ...process.env, PI_CODING_AGENT_DIR: agent, CAPTURE_PROMPTS: '0' }, encoding: 'utf8', timeout: 25000 });
   assert.equal(run.status, 0, `${run.error ?? ''}\n${run.stderr}\n${run.stdout}`);
-  const evidence = JSON.parse(await readFile(output, 'utf8'));
-  assert.equal(evidence.patched, evidence.original.replace(evidence.advertisement, BOOTSTRAP));
+  const evidence = JSON.parse(await readFile(output, 'utf8').catch(error => {
+    throw new Error(`${error}\n${run.stderr}\n${run.stdout}`);
+  }));
+  assert.equal(evidence.patched, undefined);
+  assert.equal(evidence.forced, undefined);
+  assert.deepEqual(evidence.sections, { skills: BOOTSTRAP.trim() });
   assert.equal(JSON.parse(evidence.result.content[0].text).results[0].command, '/skill:mailbox-login');
   assert.equal(JSON.parse(evidence.manual.content[0].text).results[0].manualOnly, true);
   assert.equal(JSON.parse(evidence.all.content[0].text).total, 2);

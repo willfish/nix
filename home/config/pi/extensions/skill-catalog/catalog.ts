@@ -42,7 +42,7 @@ export function searchCatalog(
     const primary = registered.find(command => command.name === `skill:${skill.name}`) ?? registered[0];
     const aliases = registered.map(command => command.name);
     const names = tokens(`${skill.name} ${aliases.join(' ')}`);
-    const haystack = tokens(`${skill.name} ${skill.description} ${skill.filePath} ${aliases.join(' ')}`);
+    const haystack = tokens(`${skill.name} ${skill.description} ${aliases.join(' ')}`);
     const exact = skill.name.toLowerCase() === requestedName ? 2
       : aliases.some(name => name.toLowerCase() === `skill:${requestedName}`) ? 1 : 0;
     const score = terms.filter(term => haystack.has(term)).length;
@@ -70,6 +70,8 @@ export function replaceSkillAdvertisement(
     skills?: unknown[];
     cwd?: string;
     customPrompt?: string;
+    forceSystemPrompt?: string;
+    sections?: Record<string, string>;
     appendSystemPrompt?: string;
     contextFiles?: { content?: string }[];
   } | undefined,
@@ -81,9 +83,18 @@ export function replaceSkillAdvertisement(
   if (!reader) return prompt;
   try {
     const generated = formatSkillsForPrompt(options.skills, reader);
-    if (!generated || prompt.split(generated).length !== 2 || prompt.split('<available_skills>').length !== 2 || prompt.split('</available_skills>').length !== 2) return prompt;
-    const contributed = [options.customPrompt, options.appendSystemPrompt, ...(options.contextFiles ?? []).map(file => file.content)];
-    if (contributed.some(text => text?.includes(generated))) return prompt;
+    if (!generated.trim() || prompt.split('<available_skills>').length !== 2 || prompt.split('</available_skills>').length !== 2) return prompt;
+    const contributed = [options.customPrompt, options.appendSystemPrompt, ...Object.values(options.sections ?? {}), ...(options.contextFiles ?? []).map(file => file.content)];
+    if (contributed.some(text => text?.includes(generated.trim()))) return prompt;
+    if (options.sections) {
+      // Pi 1.x trims the formatter and wraps it in a named prompt section.
+      // Match the trusted formatter, not arbitrary user-authored skill XML.
+      const section = `<skills>\n${generated.trim()}\n</skills>`;
+      const cwd = `<cwd>\n${options.cwd.replace(/\\/g, '/')}\n</cwd>`;
+      if (options.sections.skills !== undefined || prompt.split(section).length !== 2 || !prompt.includes(cwd)) return prompt;
+      return prompt.replace(section, `<skills>\n${BOOTSTRAP.trim()}\n</skills>`);
+    }
+    if (prompt.split(generated).length !== 2) return prompt;
     const index = prompt.indexOf(generated);
     const tail = prompt.slice(index + generated.length);
     const cwd = `\nCurrent working directory: ${options.cwd.replace(/\\/g, '/')}`;

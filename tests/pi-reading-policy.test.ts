@@ -21,6 +21,30 @@ test('version drift, custom prompts, missing options, ambiguous or contributed r
   }
 });
 
+test('upstream topic additions preserve the exact reading-policy match', () => {
+  const prompt = core.replace(CORE_DOC_TOPICS, `${CORE_DOC_TOPICS}, MCP servers (docs/mcp.md), codemode (docs/codemode.md)`);
+  assert.equal(replaceReadingPolicy(prompt, {}), prompt.replace(CORE_READING_RULE, RELEVANT_READING_RULE));
+  assert.equal(replaceReadingPolicy(core.replace(CORE_DOC_TOPICS, `${CORE_DOC_TOPICS} changed`), {}), core.replace(CORE_DOC_TOPICS, `${CORE_DOC_TOPICS} changed`));
+});
+
+test('structured prompt changes only docs, without forcing a replacement or overriding contributed sections', () => {
+  const handlers = new Map();
+  readingPolicy({ on: (name, handler) => handlers.set(name, handler) });
+  const handler = handlers.get('before_agent_start');
+  const header = core.slice(0, core.indexOf('\n'));
+  const docs = core.slice(core.indexOf('\n') + 1);
+  const prompt = `${header}\n\n<docs>\n${docs}\n</docs>\n<other>Keep me</other>`;
+  const options = { sections: { other: 'Keep me' } };
+  assert.equal(handler({ systemPrompt: prompt, systemPromptOptions: options }), undefined);
+  assert.deepEqual(options.sections, { other: 'Keep me', docs: docs.replace(CORE_READING_RULE, RELEVANT_READING_RULE) });
+  for (const sections of [{ docs: 'Custom docs' }, { extra: CORE_READING_RULE }]) {
+    assert.equal(replaceReadingPolicy(prompt, { sections }), prompt);
+  }
+  const forced = { sections: {}, forceSystemPrompt: prompt };
+  assert.deepEqual(handler({ systemPrompt: prompt, systemPromptOptions: forced }), { systemPrompt: prompt.replace(CORE_READING_RULE, RELEVANT_READING_RULE) });
+  assert.deepEqual(forced.sections, {});
+});
+
 test('extension uses chained event prompt and returns no patch for drift', () => {
   const handlers = new Map();
   readingPolicy({ on: (name, handler) => handlers.set(name, handler) });
