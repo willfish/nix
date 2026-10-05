@@ -112,7 +112,7 @@ static const char *audio_speech_backend(void *user) {
     audio_report report;
     memset(&report, 0, sizeof report);
     if (audio_status(user, &report) != 0 || !report.speech_backend[0]) {
-        snprintf(speech_backend_buf, sizeof speech_backend_buf, "local");
+        speech_backend_buf[0] = 0;
         return speech_backend_buf;
     }
     snprintf(speech_backend_buf, sizeof speech_backend_buf, "%s", report.speech_backend);
@@ -123,7 +123,7 @@ static const char *audio_stt_backend(void *user) {
     audio_report report;
     memset(&report, 0, sizeof report);
     if (audio_status(user, &report) != 0 || !report.selected_stt[0]) {
-        snprintf(stt_backend_buf, sizeof stt_backend_buf, "whisper");
+        stt_backend_buf[0] = 0;
         return stt_backend_buf;
     }
     snprintf(stt_backend_buf, sizeof stt_backend_buf, "%s", report.selected_stt);
@@ -350,45 +350,6 @@ static controller_capture *prod_start_capture(void *user, const char *path, char
     wrapped->clipping = cap_clipping;
     wrapped->destroy = cap_destroy;
     return wrapped;
-}
-
-static void engine_population(void *user, int sessions, int pending) {
-    engine_manager_set_population(user, sessions, pending);
-}
-static int engine_acquire(void *user, const char *engine, void **lease, char *err, size_t cap) {
-    (void)err;
-    (void)cap;
-    return engine_manager_acquire(user, engine, (engine_lease **)lease) == 0 ? 0 : -1;
-}
-static void engine_release(void *lease) {
-    engine_lease_release(lease);
-    engine_lease_unref(lease);
-}
-static int engine_wait(void *lease, int timeout_ms, char *err, size_t cap) {
-    int rc = engine_lease_wait(lease, timeout_ms, err, cap);
-    if (rc == ENGINE_WAIT_OK) return 0;
-    if (rc == ENGINE_WAIT_TIMED_OUT || rc == ENGINE_WAIT_UNREADY) return 1;
-    if (rc == ENGINE_WAIT_CANCELLED) return 2;
-    return -1;
-}
-static int engine_failed(void *lease) {
-    return engine_lease_cancelled(lease);
-}
-static void engine_resident(void *user, const char *engine) {
-    engine_lease *lease = NULL;
-    if (engine_manager_ensure_resident(user, engine, &lease) == 0 && lease) engine_lease_unref(lease);
-}
-static void engine_retire(void *user, const char *engine) { engine_manager_retire(user, engine); }
-static void engine_warm(void *user) {
-    engine_lease *leases[4];
-    size_t count = 0;
-    engine_manager_warm(user, NULL, 0, ENGINE_READINESS_TIMEOUT, leases, 4, &count);
-    for (size_t i = 0; i < count; i++) engine_lease_unref(leases[i]);
-}
-static void engine_sweep(void *user) { engine_manager_sweep(user); }
-static int engine_has_tts(void *user) {
-    engine_state state;
-    return engine_manager_state(user, "tts", &state) == 0;
 }
 
 static int copy_wl(void *user, const char *text, char *err, size_t cap) {
@@ -701,18 +662,6 @@ static int cmd_serve(void) {
     deps.audio.playing = (int (*)(void *))audio_playing;
     deps.herdr.user = voice_terminal_herdr(voice_runtime_terminal(rt));
     deps.herdr.request = herdr_bridge;
-    deps.has_engines = 1;
-    deps.engines.user = voice_runtime_engines(rt);
-    deps.engines.set_population = engine_population;
-    deps.engines.acquire = engine_acquire;
-    deps.engines.release = engine_release;
-    deps.engines.wait = engine_wait;
-    deps.engines.failed = engine_failed;
-    deps.engines.ensure_resident = engine_resident;
-    deps.engines.retire = engine_retire;
-    deps.engines.warm = engine_warm;
-    deps.engines.sweep = engine_sweep;
-    deps.engines.has_tts = engine_has_tts;
     LabelsCacheConfig labels_cfg = {0};
     labels_cfg.runner = label_runner;
     labels_cfg.clock = label_clock;
@@ -759,7 +708,7 @@ static int cmd_serve(void) {
     snprintf(sock, sizeof sock, "%s/%s", voice_runtime_path(rt), VOICE_SOCKET_NAME);
     unlink(sock);
     /* Keep controller callbacks alive through audio_drain. voice_runtime_close
-     * then unbinds and closes engines while audio still exists. */
+     * then unbinds microphone adapters before freeing audio. */
     controller_shutdown(app);
     audio_stop(voice_runtime_audio(rt));
     audio_drain(voice_runtime_audio(rt));
@@ -806,13 +755,6 @@ static int launch(int argc, char **argv, const char *harness) {
     if (mkdir(directory, 0700) != 0) return 1;
     char *response = NULL;
     if (client_call(runtime, "{\"action\":\"status\"}", &response, 1, err, sizeof err) != 0) {
-        fprintf(stderr, "pi-voice: %s\n", err);
-        rmdir(directory);
-        return 1;
-    }
-    free(response);
-    response = NULL;
-    if (client_call(runtime, "{\"action\":\"warm\"}", &response, 1, err, sizeof err) != 0) {
         fprintf(stderr, "pi-voice: %s\n", err);
         rmdir(directory);
         return 1;
@@ -970,7 +912,7 @@ int voice_main(int argc, char **argv) {
                "Super+Space: show the top dictation card and record, stop, or send the selected Pi session. "
                "Super+Shift+Space: send. Super+R: read/stop.\n"
                "Run inside Herdr. Prefix conflicting options with --.\n"
-               "Stop background engines: systemctl --user stop pi-voice{,-stt,-tts}.service\n");
+               "Stop the local backend: systemctl --user stop pi-voice-api.service\n");
         return 0;
     }
     int offset = argc > 1 && strcmp(argv[1], "--") == 0 ? 2 : 1;

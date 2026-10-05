@@ -343,8 +343,7 @@ static void copy_obj(yyjson_mut_doc *doc, yyjson_mut_val *root, const char *key,
     } else if (strcmp(key, "voices") == 0 || strcmp(key, "speech_backends") == 0 || strcmp(key, "stt_backends") == 0) {
         yyjson_mut_obj_add_val(doc, root, key, yyjson_mut_obj(doc));
     } else {
-        yyjson_mut_obj_add_strcpy(doc, root, key, strcmp(key, "selected_voice") == 0 ? "samantha" :
-            strcmp(key, "speech_backend") == 0 ? "local" : "whisper");
+        yyjson_mut_obj_add_strcpy(doc, root, key, "");
     }
 }
 

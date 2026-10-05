@@ -34,7 +34,7 @@ static int map_terminal(int rc) {
 int controller_stage(voice_controller *app, const char *text, const char *token, op_state *cancelled, int finish, char *err, size_t cap) {
     char cleaned[256 * 1024];
     if (dictation_text(text, cleaned, sizeof cleaned) != 0) {
-        snprintf(err, cap, "Whisper returned an invalid transcript");
+        snprintf(err, cap, "Dictation backend returned an invalid transcript");
         return CTRL_ERR;
     }
     pthread_mutex_lock(&app->state);
@@ -252,20 +252,7 @@ typedef struct speak_job {
 
 static void speak_run(void *arg) {
     speak_job *job = arg;
-    void *lease = NULL;
-    const char *backend = job->app->deps.audio.speech_backend ? job->app->deps.audio.speech_backend(job->app->deps.audio.user) : "local";
-    if (job->app->deps.has_engines && job->app->deps.engines.acquire && strcmp(backend, "local") == 0)
-        job->app->deps.engines.acquire(job->app->deps.engines.user, "tts", &lease, (char[CTRL_MSG]){0}, CTRL_MSG);
-    int ready = 1;
-    while (lease && !atomic_load(&job->op->cancelled) && job->app->deps.engines.wait) {
-        char err[CTRL_MSG] = {0};
-        int wr = job->app->deps.engines.wait(lease, 100, err, sizeof err);
-        if (wr == 0) break;
-        if (wr == 1 && job->app->deps.engines.failed && job->app->deps.engines.failed(lease)) break;
-        if (wr < 0) break;
-    }
-    if (atomic_load(&job->op->cancelled)) ready = 0;
-    if (ready && job->app->deps.audio.speak) {
+    if (!atomic_load(&job->op->cancelled) && job->app->deps.audio.speak) {
         char err[CTRL_MSG] = {0};
         if (job->app->deps.audio.speak(job->app->deps.audio.user, job->text, &job->op->cancelled, err, sizeof err) != 0
             && !atomic_load(&job->op->cancelled))
@@ -275,7 +262,6 @@ static void speak_run(void *arg) {
     job->app->audible = 0;
     job->app->speaking = 0;
     pthread_mutex_unlock(&job->app->state);
-    if (lease && job->app->deps.engines.release) job->app->deps.engines.release(lease);
     controller_op_release(job->op);
     free(job->text);
     free(job);

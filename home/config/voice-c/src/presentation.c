@@ -687,7 +687,7 @@ int voice_presentation(const VoiceMenuStatus *status, VoicePresentation **out, c
         snprintf(label, sizeof label, "Finishing recording");
         colour = "amber";
     } else if (strcmp(phase, "transcribing") == 0) {
-        snprintf(label, sizeof label, "Transcribing locally");
+        snprintf(label, sizeof label, "Transcribing");
         colour = "amber";
     } else if (strcmp(phase, "draft") == 0) {
         snprintf(label, sizeof label, "Dictation ready to send");
@@ -871,8 +871,8 @@ int voice_presentation(const VoiceMenuStatus *status, VoicePresentation **out, c
     view->colour = xstrdup(colour);
     view->glyph = xstrdup(glyph);
     view->auto_on = auto_on(status);
-    view->selected_voice = xstrdup(or_text(status->selected_voice, "samantha"));
-    view->selected_stt = xstrdup(or_text(status->selected_stt, "whisper"));
+    view->selected_voice = xstrdup(or_text(status->selected_voice, "none"));
+    view->selected_stt = xstrdup(or_text(status->selected_stt, "none"));
     view->show_team = status->show_team;
     if (!view->label || !view->colour || !view->glyph || !view->selected_voice || !view->selected_stt) {
         free(harness);
@@ -932,7 +932,13 @@ int voice_presentation(const VoiceMenuStatus *status, VoicePresentation **out, c
         }
         free(stt_label);
     }
-    if (add_context(view, strcmp(view->selected_stt, "deepgram") == 0 ? "Dictation: Deepgram" : "Dictation: Whisper")) {
+    const char *selected_stt_label = view->selected_stt;
+    for (size_t i = 0; i < status->stt_count; i++)
+        if (strcmp(status->stt_backends[i].key, view->selected_stt) == 0)
+            selected_stt_label = status->stt_backends[i].label;
+    char dictation_context[160];
+    snprintf(dictation_context, sizeof dictation_context, "Dictation: %.120s", selected_stt_label);
+    if (add_context(view, dictation_context)) {
         free(harness);
         voice_presentation_free(view);
         return fail(error, "Out of memory");

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer, request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,12 +17,20 @@ function wav() {
   return b;
 }
 
-async function fixture(t) {
+async function fixture(t, options: { managed?: boolean; unready?: boolean; startFailure?: boolean; loading?: number } = {}) {
   const requests: { url: string; body: Buffer; headers: object }[] = [];
   let upstreamStatus = 200;
   let upstreamBody: Buffer | undefined;
   let delay = 0;
+  let healthAttempts = 0;
   const upstream = createServer(async (req, res) => {
+    if (req.method === 'GET') {
+      const ready = !options.unready && healthAttempts++ >= (options.loading ?? 0);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(req.url === '/health' ? { status: ready ? 'ok' : 'loading' }
+        : { data: [{ id: 'pi-voice', loaded: ready }] }));
+      return;
+    }
     const parts = [];
     for await (const chunk of req) parts.push(chunk);
     requests.push({ url: req.url!, body: Buffer.concat(parts), headers: req.headers });
@@ -41,10 +49,25 @@ async function fixture(t) {
   await new Promise<void>(resolve => reserve.close(() => resolve()));
   const dir = await mkdtemp(join(tmpdir(), 'voice-api-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
+  const commandLog = join(dir, 'commands.jsonl');
+  await writeFile(commandLog, '');
+  await writeFile(join(dir, 'service.cjs'), `
+    require('node:fs').appendFileSync(${JSON.stringify(commandLog)}, JSON.stringify(process.argv.slice(2)) + '\\n');
+    if (${!!options.startFailure} && process.argv[2] === 'start') process.exit(1);
+  `);
   await writeFile(join(dir, 'config.json'), JSON.stringify({
     port: apiPort, stt_url: `http://127.0.0.1:${port}/inference`,
     tts_url: `http://127.0.0.1:${port}/speech`,
-    voices: { samantha: {}, data: { voice_ref: '/trusted/reference.wav', reference_text: 'Reference' } },
+    voices: { samantha: {}, 'samantha-long': { voice_ref: '/trusted/long.wav' }, data: { voice_ref: '/trusted/reference.wav', reference_text: 'Reference' } },
+    queue_timeout: 0.1,
+    ...(options.managed ? {
+      systemctl: [process.execPath, join(dir, 'service.cjs')],
+      readiness_timeout: 0.4, idle_timeout: 0.1, queue_timeout: 2,
+      engines: {
+        stt: { unit: 'fixture-stt.service', health_url: `http://127.0.0.1:${port}/health` },
+        tts: { unit: 'fixture-tts.service', health_url: `http://127.0.0.1:${port}/models` },
+      },
+    } : {}),
   }));
   const child = spawn('python3', ['home/config/voice/voice_api.py', '--config', join(dir, 'config.json')], { stdio: ['ignore', 'pipe', 'pipe'] });
   let errors = '';
@@ -63,7 +86,10 @@ async function fixture(t) {
     await new Promise(resolve => setTimeout(resolve, 20));
   }
   assert.ok(ready, errors);
-  return { requests, base, setReply(status: number, body?: Buffer, ms = 0) {
+  return { requests, base,
+    async commands() { return (await readFile(commandLog, 'utf8')).trim().split('\n').filter(Boolean).map(line => JSON.parse(line)); },
+    async stop() { const exit = once(child, 'exit'); child.kill(); await exit; },
+    setReply(status: number, body?: Buffer, ms = 0) {
     upstreamStatus = status; upstreamBody = body; delay = ms;
   }, post(path: string, body: Buffer | string, headers = {}) {
     return fetch(base + path, { method: 'POST', body, headers });
@@ -96,6 +122,18 @@ test('local speak accepts Deepgram text, uses configured references, and returns
     input: 'Hello', model: 'pi-voice', language: 'English',
     voice_ref: '/trusted/reference.wav', reference_text: 'Reference',
   });
+});
+
+test('whole-reply context keeps long-reference policy in the backend', async t => {
+  const f = await fixture(t);
+  for (const text of ['First short chunk.', 'Second short chunk.']) {
+    assert.equal((await f.post('/v1/speak?model=samantha', JSON.stringify({ text }), { 'X-Voice-Context-Words': '51' })).status, 200);
+    assert.equal(JSON.parse(f.requests.at(-1).body.toString()).voice_ref, '/trusted/long.wav');
+  }
+  assert.equal((await f.post('/v1/speak?model=samantha', '{"text":"Short reply."}', { 'X-Voice-Context-Words': '50' })).status, 200);
+  assert.equal(JSON.parse(f.requests.at(-1).body.toString()).voice_ref, undefined);
+  for (const words of ['-1', 'invalid', '1000001'])
+    assert.equal((await f.post('/v1/speak', '{"text":"Hello"}', { 'X-Voice-Context-Words': words })).status, 400);
 });
 
 test('bad input, unsupported formats, browser requests and unknown routes are rejected', async t => {
@@ -141,6 +179,45 @@ test('upstream errors and malformed output fail explicitly without fallback', as
     assert.ok(!(await response.text()).includes('private engine error'));
   }
   assert.equal(f.requests.length, 4);
+});
+
+test('backend owns service startup, readiness, voice policy and idle shutdown', async t => {
+  const f = await fixture(t, { managed: true, loading: 2 });
+  assert.equal((await f.post('/v1/listen', wav())).status, 200);
+  assert.ok((await f.commands()).some(args => args[0] === 'start' && args[1] === 'fixture-stt.service'));
+  assert.equal((await f.post('/v1/speak?model=samantha', JSON.stringify({ text: 'word '.repeat(51) }))).status, 200);
+  assert.equal(JSON.parse(f.requests[1].body.toString()).voice_ref, '/trusted/long.wav');
+  assert.ok((await f.commands()).some(args => args[0] === 'start' && args[1] === 'fixture-tts.service'));
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline && !(await f.commands()).some(args => args[0] === 'stop' && args[1] === 'fixture-stt.service'))
+    await new Promise(resolve => setTimeout(resolve, 30));
+  assert.ok((await f.commands()).some(args => args[0] === 'stop' && args[1] === 'fixture-stt.service'));
+  assert.equal((await f.post('/v1/listen', wav())).status, 200, 'idle engine restarts on demand');
+  await f.stop();
+  const commands = await f.commands();
+  assert.equal(commands.at(-1)[0], 'stop', 'shutdown releases owned engines');
+});
+
+test('backend reports failed startup and readiness without sending inference', async t => {
+  for (const options of [{ startFailure: true }, { unready: true }]) {
+    await t.test(JSON.stringify(options), async t => {
+      const f = await fixture(t, { managed: true, ...options });
+      const response = await f.post('/v1/listen', wav());
+      assert.equal(response.status, 503);
+      assert.equal(f.requests.length, 0);
+      assert.ok((await response.json()).err_code);
+    });
+  }
+});
+
+test('backend never stops an engine while its HTTP operation is active', async t => {
+  const f = await fixture(t, { managed: true });
+  f.setReply(200, undefined, 1500);
+  const response = f.post('/v1/listen', wav());
+  while (!f.requests.length) await new Promise(resolve => setTimeout(resolve, 5));
+  await new Promise(resolve => setTimeout(resolve, 1100));
+  assert.ok(!(await f.commands()).some(args => args[0] === 'stop'));
+  assert.equal((await response).status, 200);
 });
 
 test('concurrent inference is bounded and recovers after completion', async t => {

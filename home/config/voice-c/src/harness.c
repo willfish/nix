@@ -9,7 +9,6 @@ struct voice_runtime {
     char *path;
     voice_config *config;
     audio *audio;
-    engine_manager *engines;
     voice_audio_binding *binding;
     voice_terminal *terminal;
     int no_services;
@@ -61,31 +60,6 @@ static int silent_run(const char *const *argv, int argc, int timeout_sec, void *
     return 0;
 }
 
-static int fixture_runner(const char *engine, const char *command, double timeout, void *ctx, char *err, size_t err_cap) {
-    (void)engine;
-    (void)command;
-    (void)timeout;
-    (void)ctx;
-    (void)err;
-    (void)err_cap;
-    return 0;
-}
-
-static int fixture_ready(const char *engine, double timeout, void *ctx, char *err, size_t err_cap) {
-    (void)engine;
-    (void)timeout;
-    (void)ctx;
-    (void)err;
-    (void)err_cap;
-    return 1;
-}
-
-static int audio_ready(const char *engine, double timeout, void *ctx, char *err, size_t err_cap) {
-    (void)timeout;
-    atomic_int cancelled = 0;
-    return audio_wait_ready(ctx, engine, &cancelled, err, err_cap);
-}
-
 static void set_err(char *err, size_t cap, const char *msg) {
     if (err && cap) snprintf(err, cap, "%s", msg ? msg : "");
 }
@@ -118,23 +92,7 @@ voice_runtime *voice_runtime_open(
         audio_set_popen(runtime->audio, silent_popen, NULL);
         audio_set_run(runtime->audio, silent_run, NULL);
     }
-    engine_config engines;
-    memset(&engines, 0, sizeof engines);
-    if (runtime->no_services) {
-        engines.runner = fixture_runner;
-        engines.readiness = fixture_ready;
-    } else {
-        engines.runner = voice_systemctl_runner;
-        engines.readiness = audio_ready;
-        engines.readiness_ctx = runtime->audio;
-    }
-    runtime->engines = engine_manager_create(&engines);
-    if (!runtime->engines) {
-        voice_runtime_close(runtime);
-        set_err(err, err_cap, "could not create the engine manager");
-        return NULL;
-    }
-    runtime->binding = voice_audio_bind(runtime->audio, runtime->engines, runtime->no_services, err, err_cap);
+    runtime->binding = voice_audio_bind(runtime->audio, runtime->no_services, err, err_cap);
     runtime->terminal = voice_terminal_new();
     if (spec && spec->herdr_argv0) voice_terminal_set_herdr_argv0(runtime->terminal, spec->herdr_argv0);
     if (!runtime->binding || !runtime->terminal) {
@@ -154,11 +112,8 @@ void voice_runtime_close(voice_runtime *runtime) {
     }
     voice_audio_unbind(runtime->binding);
     runtime->binding = NULL;
-    if (runtime->engines) engine_manager_close(runtime->engines);
     if (runtime->audio) audio_free(runtime->audio);
     runtime->audio = NULL;
-    if (runtime->engines) engine_manager_free(runtime->engines);
-    runtime->engines = NULL;
     voice_terminal_free(runtime->terminal);
     runtime->terminal = NULL;
     voice_config_free(runtime->config);
@@ -169,7 +124,6 @@ void voice_runtime_close(voice_runtime *runtime) {
 }
 
 audio *voice_runtime_audio(voice_runtime *runtime) { return runtime ? runtime->audio : NULL; }
-engine_manager *voice_runtime_engines(voice_runtime *runtime) { return runtime ? runtime->engines : NULL; }
 voice_terminal *voice_runtime_terminal(voice_runtime *runtime) { return runtime ? runtime->terminal : NULL; }
 const char *voice_runtime_path(const voice_runtime *runtime) { return runtime ? runtime->path : NULL; }
 int voice_runtime_auto_speak(const voice_runtime *runtime) { return voice_config_auto_speak(runtime ? runtime->config : NULL); }

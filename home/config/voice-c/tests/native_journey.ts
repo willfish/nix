@@ -19,7 +19,7 @@ const speech = http.createServer(async (req, res) => {
       bodies.push(Buffer.concat(chunks));
       const number = bodies.length;
       if (number === 1) await delay(4200); // Accumulate three queued speech slices.
-      payload = { text: `Native phrase ${number}.` };
+      payload = { results: { channels: [{ alternatives: [{ transcript: `Native phrase ${number}.` }] }] } };
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(payload));
@@ -29,8 +29,7 @@ try {
   await new Promise<void>(resolve => speech.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${speech.address().port}`;
   const env = await environment(root, {
-    stt_url: base + '/inference', stt_health_url: base + '/health',
-    tts_url: base + '/speech', tts_health_url: base + '/models',
+    backends: [{ id: 'fixture', listen_url: base + '/v1/listen' }],
   });
   const privateDir = join(env.XDG_RUNTIME_DIR, 'pi-voice');
   await mkdir(privateDir, { mode: 0o700 });
@@ -127,7 +126,7 @@ else process.exit(97);
   await until(async () => (await request(control, { action: 'status' })).phase === 'draft', 'recording stopped');
   const expected = Array.from({ length: 4 }, (_, i) => `Native phrase ${i + 1}.`);
   assert.equal(bodies.length, 4);
-  assert.ok(bodies.every(body => body.includes(Buffer.from('RIFF'))));
+  assert.ok(bodies.every(body => body.subarray(0, 4).equals(Buffer.from('RIFF'))));
   assert.deepEqual(state.staged, expected);
   const microphone = (await request(control, { action: 'status' })).microphone;
   assert.equal(microphone.name, 'Synthetic microphone');

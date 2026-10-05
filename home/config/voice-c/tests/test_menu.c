@@ -309,6 +309,8 @@ int test_menu(void) {
             fail("dictation mark");
         voice_menu_rows_free(rows, count);
         rows = NULL;
+        free(state->speech_backend);
+        state->speech_backend = strdup("local");
         voice_menu_add_named(&state->speech_backends, &state->speech_count, "local", "Local");
         voice_menu_add_named(&state->speech_backends, &state->speech_count, "deepgram", "Deepgram");
         if (voice_menu_rows(state, "speech", &rows, &count, NULL) || !row_text(rows, count, "speech:local")

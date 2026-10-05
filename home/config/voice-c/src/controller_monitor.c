@@ -896,6 +896,5 @@ int controller_monitor(voice_controller *app) {
     pthread_mutex_unlock(&app->state);
     controller_refresh_reconnect(app);
     controller_refresh_labels(app);
-    if (app->deps.has_engines && app->deps.engines.sweep) app->deps.engines.sweep(app->deps.engines.user);
     return removed;
 }

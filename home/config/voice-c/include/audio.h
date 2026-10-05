@@ -6,7 +6,6 @@
 
 typedef struct audio audio;
 typedef struct audio_player audio_player;
-typedef struct audio_lease audio_lease;
 
 typedef struct audio_pair {
     const char *key;
@@ -16,34 +15,42 @@ typedef struct audio_pair {
 typedef struct audio_voice {
     const char *id;
     const char *label;
-    const audio_pair *options;
-    size_t option_count;
+    const char *model;
 } audio_voice;
 
-typedef struct audio_config {
-    const char *stt_url;
-    int local_deepgram_api; /* local endpoints use the Deepgram REST subset */
-    const char *stt_backend; /* explicit startup choice overrides saved preference */
-    const char *speech_backend;
-    const char *stt_health_url;
-    const char *tts_url;
-    const char *tts_health_url;
-    int tts_enabled; /* nonzero enables local characters; zero is cloud-only */
-    double readiness_timeout; /* seconds; 0 selects the 60 second default */
-    const char *stt_prompt;
-    const char *stt_language;
-    const char *tts_model;
-    const char *preferred_microphone;
+typedef struct audio_backend {
+    const char *id;
+    const char *label;
+    const char *listen_url;
+    const char *speak_url;
+    const char *auth_env;
+    const char *auth_scheme;
+    const char *listen_model;
+    const char *default_voice;
     const char *voice_preferences_path;
-    const char *stt_preferences_path;
-    const char *playback_mode; /* NULL or "buffered"; "streaming" is the other mode */
     const audio_voice *voices;
     size_t voice_count;
-    const audio_pair *long_voice;
-    size_t long_voice_count;
+    const audio_pair *query;
+    size_t query_count;
+    int timeout_ms;
+    int streaming_wav; /* endpoint may return unknown-length WAV data */
+} audio_backend;
+
+typedef struct audio_config {
+    const audio_backend *backends;
+    size_t backend_count;
+    const char *stt_backend; /* explicit startup choices override preferences */
+    const char *speech_backend;
+    const char *stt_prompt;
+    const char *stt_language;
+    const char *preferred_microphone;
+    const char *voice_preferences_path; /* directory anchor for backend choices */
+    const char *stt_preferences_path;
+    const char *playback_mode;
 } audio_config;
 
 typedef struct audio_http_request {
+    size_t context_words; /* Full reply length for backend policy across playback chunks. */
     const char *method;
     const char *url;
     const char *content_type;
@@ -89,14 +96,6 @@ typedef audio_player *(*audio_popen_fn)(const audio_spawn *spawn, void *user);
 /* 0 success, 1 timeout, other values are exit statuses. Must not abort the caller. */
 typedef int (*audio_run_fn)(const char *const *argv, int argc, int timeout_sec, void *user);
 
-struct audio_lease {
-    int (*wait_ms)(audio_lease *lease, int timeout_ms, char *err, size_t err_cap);
-    int (*ready_done)(audio_lease *lease);
-    void (*release)(audio_lease *lease);
-    void *user;
-};
-
-typedef audio_lease *(*audio_acquire_fn)(const char *engine, void *user);
 typedef void (*audio_audible_fn)(void *user);
 typedef void (*audio_mic_status_fn)(void *user, char *name, size_t name_cap, char *target, size_t target_cap);
 typedef int (*audio_mic_resolve_fn)(void *user, const char *preferred, char *target, size_t target_cap, char *name, size_t name_cap);
@@ -162,7 +161,6 @@ void audio_free(audio *audio);
 void audio_set_http(audio *audio, audio_http_fn fn, void *user);
 void audio_set_popen(audio *audio, audio_popen_fn fn, void *user);
 void audio_set_run(audio *audio, audio_run_fn fn, void *user);
-void audio_set_engines(audio *audio, audio_acquire_fn fn, void *user);
 void audio_set_audible(audio *audio, audio_audible_fn fn, void *user);
 void audio_set_microphone(audio *audio, audio_mic_status_fn status, audio_mic_resolve_fn resolve, void *user);
 void audio_set_microphone_details(audio *audio, audio_mic_details_fn fn, void *user);
@@ -180,8 +178,6 @@ int audio_status(audio *audio, audio_report *status);
 int audio_microphone_json(audio *audio, char **json);
 int audio_playing(audio *audio);
 
-/* 1 ready, 0 cancelled, -1 error. */
-int audio_wait_ready(audio *audio, const char *engine, atomic_int *cancelled, char *err, size_t err_cap);
 /* 0 success or quiet cancel (out empty on cancel), -1 error. Never deletes path. */
 int audio_transcribe(audio *audio, const char *path, atomic_int *cancelled,
     audio_drained_fn on_drained, void *drain_user,
@@ -203,7 +199,7 @@ int audio_cue(audio *audio, int frequency, char *err, size_t err_cap);
 void *audio_start_capture(audio *audio, const char *path, char *err, size_t err_cap);
 
 /* Test seam for a cancellable engine operation. 0 success, 1 abandoned, -1 error. */
-int audio_call(audio *audio, const char *engine, atomic_int *cancelled,
+int audio_call(audio *audio, atomic_int *cancelled,
     int (*op)(void *user, char *err, size_t err_cap), void *user,
     char *err, size_t err_cap);
 

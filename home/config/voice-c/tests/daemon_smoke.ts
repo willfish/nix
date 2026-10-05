@@ -11,8 +11,7 @@ const root = await mkdtemp('/tmp/voice-daemon-');
 let child, server;
 try {
   const env = await environment(root, {
-    stt_url: 'http://127.0.0.1:9/inference', stt_health_url: 'http://127.0.0.1:9/health',
-    tts_url: 'http://127.0.0.1:9/speech', tts_health_url: 'http://127.0.0.1:9/models',
+    backends: [{ id: 'fixture', listen_url: 'http://127.0.0.1:9/v1/listen' }],
   });
   const calls = join(root, 'calls.jsonl');
   const source = `const fs = require('node:fs'), path = require('node:path');
@@ -97,7 +96,7 @@ else process.exit(97);
   await stop(child);
   child = null;
   const observed = (await readFile(calls, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
-  assert.ok(observed.every(row => ['systemctl', 'pw-dump'].includes(basename(row[0]))));
+  assert.ok(observed.every(row => basename(row[0]) === 'pw-dump'), 'frontend must never manage backend services');
 
   const received = [];
   server = await listen(path, command => {
@@ -120,12 +119,12 @@ args: process.argv.slice(2), token: process.env.AGENT_VOICE_TOKEN, kind: process
     ...env, HERDR_ENV: '1', HERDR_PANE_ID: 'disposable-pane', HERDR_SOCKET_PATH: join(root, 'fake-herdr.sock'),
   }, 10000);
   assert.equal(launched.code, 0, launched.stderr);
-  assert.deepEqual(received.map(row => row.action), ['status', 'warm', 'register', 'unregister']);
+  assert.deepEqual(received.map(row => row.action), ['status', 'register', 'unregister']);
   const launchInfo = JSON.parse(await readFile(piResult, 'utf8'));
   assert.deepEqual(launchInfo.args, ['--native-smoke']);
   assert.equal(launchInfo.kind, 'pi');
+  assert.equal(received[1].token, launchInfo.token);
   assert.equal(received[2].token, launchInfo.token);
-  assert.equal(received[3].token, launchInfo.token);
   assert.equal(existsSync(join(env.XDG_RUNTIME_DIR, 'pi-voice', launchInfo.token)), false);
   console.log('Daemon: private IPC, persistence, concurrency, shutdown, launcher and no mutation replay');
 } finally {

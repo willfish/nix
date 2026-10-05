@@ -122,22 +122,6 @@ typedef struct controller_herdr {
         char **result_json, char *err, size_t err_cap);
 } controller_herdr;
 
-typedef struct controller_engines {
-    void *user;
-    void (*set_population)(void *user, int sessions, int pending);
-    int (*acquire)(void *user, const char *engine, void **lease, char *err, size_t err_cap);
-    void (*release)(void *lease);
-    /* 0 ready, 1 timeout, 2 cancelled, -1 error. */
-    int (*wait)(void *lease, int timeout_ms, char *err, size_t err_cap);
-    int (*failed)(void *lease);
-    void (*ensure_resident)(void *user, const char *engine);
-    void (*retire)(void *user, const char *engine);
-    void (*warm)(void *user);
-    void (*sweep)(void *user);
-    int (*has_tts)(void *user);
-    void (*close)(void *user);
-} controller_engines;
-
 typedef struct controller_catalogue {
     void *user;
     int max_keys;
@@ -154,9 +138,7 @@ typedef struct controller_deps {
     controller_terminal terminal;
     controller_audio audio;
     controller_herdr herdr;
-    controller_engines engines;
     controller_catalogue catalogue;
-    int has_engines;
     int has_catalogue;
     int speech_available;
     int auto_speak;
@@ -253,7 +235,6 @@ typedef struct op_state {
     int voice_target_lost;
     int recovery_revision;
     char delivery_outcome[16];
-    void *engine_lease;
 } op_state;
 
 typedef struct retained_dictation {
@@ -334,7 +315,6 @@ struct voice_controller {
     char *error;
     double record_started;
     int has_record_started;
-    void *retry_lease;
     char *retry_path;
     target_snap *retry_target;
     char retry_token[CTRL_TOKEN];

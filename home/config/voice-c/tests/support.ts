@@ -123,7 +123,7 @@ export async function environment(root, config) {
   await mkdir(tools, { mode: 0o700 });
   const configPath = join(root, 'config.json');
   await writeFile(configPath, JSON.stringify({
-    tts_enabled: false, auto_speak: false,
+    backends: [], auto_speak: false,
     voice_preferences_path: join(root, 'voice-mode'), ...config,
   }));
   return {

@@ -7,17 +7,14 @@
 
 /* Long-running voice library facade. Does not own a controller.
  *
- * Shutdown order is fixed:
- * 1. audio_stop and audio_drain, so callbacks finish before engines are freed.
- * 2. unbind audio from engines.
- * 3. engine_manager_close while audio still exists, because readiness probes it.
- * 4. audio_free, then engine_manager_free.
+ * Shutdown stops playback and drains HTTP workers before unbinding microphone
+ * adapters and freeing audio. Backend processes have their own lifecycle.
  */
 
 typedef struct voice_runtime voice_runtime;
 
 typedef struct voice_runtime_spec {
-    int no_services; /* no systemctl; readiness is immediately ready */
+    int no_services; /* use an in-process microphone fixture */
     int silent; /* playback and cue hooks do not spawn */
     const char *herdr_argv0; /* NULL selects "herdr" */
 } voice_runtime_spec;
@@ -31,7 +28,6 @@ voice_runtime *voice_runtime_open(
 void voice_runtime_close(voice_runtime *runtime);
 
 audio *voice_runtime_audio(voice_runtime *runtime);
-engine_manager *voice_runtime_engines(voice_runtime *runtime);
 voice_terminal *voice_runtime_terminal(voice_runtime *runtime);
 const char *voice_runtime_path(const voice_runtime *runtime);
 int voice_runtime_auto_speak(const voice_runtime *runtime);

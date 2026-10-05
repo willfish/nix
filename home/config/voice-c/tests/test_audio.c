@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
@@ -24,6 +25,49 @@
 static int failures;
 static const char *test_name;
 static char current_key[96];
+
+/* Provider names below are fixture data, never frontend implementation policy. */
+static audio_backend test_backends[3];
+static const audio_voice test_local_voices[] = {{"samantha", "Samantha", "samantha"}};
+static const audio_pair test_query[] = {{"mip_opt_out", "true"}};
+static const char *test_cloud_names[] = {
+    "amalthea", "andromeda", "apollo", "arcas", "aries", "asteria", "athena",
+    "atlas", "aurora", "callista", "cora", "cordelia", "delia", "draco",
+    "electra", "harmonia", "helena", "hera", "hermes", "hyperion", "iris",
+    "janus", "juno", "jupiter", "luna", "mars", "minerva", "neptune",
+    "odysseus", "ophelia", "orion", "orpheus", "pandora", "phoebe", "pluto",
+    "saturn", "selene", "thalia", "theia", "vesta", "zeus"
+};
+static audio_voice test_cloud_voices[41];
+static char test_cloud_models[41][128];
+
+static void test_config_init(audio_config *config) {
+    audio_config_init(config);
+    for (size_t i = 0; i < 41; i++) {
+        snprintf(test_cloud_models[i], sizeof test_cloud_models[i], "aura-2-%s-en", test_cloud_names[i]);
+        test_cloud_voices[i] = (audio_voice){test_cloud_names[i], test_cloud_names[i], test_cloud_models[i]};
+    }
+    test_backends[0] = (audio_backend){.id = "whisper", .label = "Whisper", .listen_url = "http://whisper.test/listen", .listen_model = "whisper"};
+    test_backends[1] = (audio_backend){.id = "deepgram", .label = "Deepgram", .listen_url = "https://api.deepgram.com/v1/listen", .speak_url = "https://api.deepgram.com/v1/speak", .listen_model = "nova-3", .auth_env = "DEEPGRAM_API_KEY", .default_voice = "thalia", .voices = test_cloud_voices, .voice_count = 41, .streaming_wav = 1, .query = test_query, .query_count = 1};
+    test_backends[2] = (audio_backend){.id = "local", .label = "Samantha TTS", .speak_url = "http://local.test/speak", .default_voice = "samantha", .voices = test_local_voices, .voice_count = 1};
+    config->backends = test_backends;
+    config->backend_count = 3;
+}
+
+static audio *test_audio_new(const char *dir, const audio_config *config) {
+    char cloud_pref[PATH_MAX];
+    if (config->voice_preferences_path) {
+        test_backends[2].voice_preferences_path = config->voice_preferences_path;
+        const char *slash = strrchr(config->voice_preferences_path, '/');
+        size_t keep = slash ? (size_t)(slash - config->voice_preferences_path + 1) : 0;
+        snprintf(cloud_pref, sizeof cloud_pref, "%.*sdeepgram-voice", (int)keep, config->voice_preferences_path);
+        test_backends[1].voice_preferences_path = cloud_pref;
+    }
+    audio *result = audio_new(dir, config);
+    test_backends[1].voice_preferences_path = NULL;
+    return result;
+}
+#define audio_new test_audio_new
 
 #define CHECK(cond) do { \
     if (!(cond)) { \
@@ -220,15 +264,6 @@ static unsigned char *build_wav(int channels, int rate, int width, const unsigne
 static unsigned char *silence_wav(size_t *len) {
     unsigned char frames[48] = {0};
     return build_wav(1, 24000, 2, frames, sizeof frames, len);
-}
-
-static int words_in(const char *text) {
-    int count = 0, in = 0;
-    for (const unsigned char *p = (const unsigned char *)(text ? text : ""); *p; p++) {
-        if (*p == ' ' || *p == '\n' || *p == '\t') in = 0;
-        else if (!in) { in = 1; count++; }
-    }
-    return count;
 }
 
 static int json_field(const char *body, size_t len, const char *key, char *out, size_t cap) {
@@ -508,40 +543,10 @@ static int argv_has(const char *text) {
 }
 
 static atomic_int acquire_count;
-static atomic_int lease_released;
-static char acquired_engine[32];
-
-static int lease_wait(audio_lease *lease, int timeout_ms, char *err, size_t err_cap) {
-    (void)lease; (void)timeout_ms; (void)err; (void)err_cap;
-    return 0;
-}
-
-static int lease_ready(audio_lease *lease) {
-    (void)lease;
-    return 1;
-}
-
-static void lease_release(audio_lease *lease) {
-    atomic_fetch_add(&lease_released, 1);
-    free(lease->user);
-}
-
-static audio_lease *acquire_engine(const char *engine, void *user) {
-    (void)user;
-    atomic_fetch_add(&acquire_count, 1);
-    snprintf(acquired_engine, sizeof acquired_engine, "%s", engine ? engine : "");
-    audio_lease *lease = calloc(1, sizeof *lease);
-    lease->wait_ms = lease_wait;
-    lease->ready_done = lease_ready;
-    lease->release = lease_release;
-    lease->user = lease;
-    return lease;
-}
 
 static void attach_audio(audio *audio) {
     audio_set_http(audio, record_http, NULL);
     audio_set_popen(audio, record_popen, NULL);
-    audio_set_engines(audio, acquire_engine, NULL);
 }
 
 static char *saved_key;
@@ -702,65 +707,6 @@ typedef struct hold_ctx {
     audio *audio;
 } hold_ctx;
 
-static int gpu_op(void *user, char *err, size_t err_cap) {
-    hold_ctx *ctx = user;
-    (void)err; (void)err_cap;
-    gate_set(&ctx->started);
-    if (!gate_wait(&ctx->drain, 2000)) return -1;
-    return 0;
-}
-
-static void *hold_main(void *arg) {
-    hold_ctx *ctx = arg;
-    char err[128];
-    ctx->rc = audio_call(ctx->audio, "stt", ctx->cancelled, gpu_op, ctx, err, sizeof err);
-    return NULL;
-}
-
-static void test_cancelled_request_holds_engine(void) {
-    test_name = "cancelled request holds engine";
-    use_key(NULL);
-    char *dir = make_tmp();
-    audio_config config;
-    audio_config_init(&config);
-    audio *audio = audio_new(dir, &config);
-    attach_audio(audio);
-    atomic_store(&acquire_count, 0);
-    atomic_store(&lease_released, 0);
-    acquired_engine[0] = 0;
-    hold_ctx ctx = {.audio = audio};
-    gate_init(&ctx.started);
-    gate_init(&ctx.drain);
-    atomic_int cancelled = 0;
-    ctx.cancelled = &cancelled;
-    pthread_t thread;
-    CHECK(pthread_create(&thread, NULL, hold_main, &ctx) == 0);
-    CHECK(gate_wait(&ctx.started, 1000));
-    atomic_store(&cancelled, 1);
-    int joined = join_ms(thread, 1000);
-    CHECK(joined == 0);
-    CHECK(ctx.rc == 1);
-    CHECK(atomic_load(&lease_released) == 0);
-    gate_set(&ctx.drain);
-    int released = 0;
-    for (int i = 0; i < 100; i++) {
-        if (atomic_load(&lease_released) == 1) { released = 1; break; }
-        sleep_ms(10);
-    }
-    CHECK(released);
-    CHECK(atomic_load(&acquire_count) == 1);
-    CHECK(strcmp(acquired_engine, "stt") == 0);
-    if (joined != 0) {
-        gate_set(&ctx.drain);
-        join_ms(thread, 1000);
-    }
-    audio_free(audio);
-    gate_destroy(&ctx.started);
-    gate_destroy(&ctx.drain);
-    rm_rf(dir);
-    free(dir);
-}
-
 static char captured_target[128];
 static char captured_path[512];
 static int resolve_saw_preferred;
@@ -791,7 +737,7 @@ static void test_capture_reports_name(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     config.preferred_microphone = "usb.microphone";
     audio *audio = audio_new(dir, &config);
     audio_set_microphone(audio, mic_status, mic_resolve, NULL);
@@ -829,8 +775,8 @@ static void test_recognition_failure_preserves_recording(void) {
     snprintf(path, sizeof path, "%s/dictation.wav", dir);
     CHECK(write_file(path, wav, wav_len) == 0);
     audio_config config;
-    audio_config_init(&config);
-    config.stt_url = "http://whisper.test/inference";
+    test_config_init(&config);
+    test_backends[0].listen_url = "http://whisper.test/inference";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     http_handle = error_http;
@@ -865,8 +811,8 @@ static void test_recognition_rejects_invalid_json(void) {
     snprintf(path, sizeof path, "%s/dictation.wav", dir);
     write_file(path, wav, wav_len);
     audio_config config;
-    audio_config_init(&config);
-    config.stt_url = "http://whisper.test/inference";
+    test_config_init(&config);
+    test_backends[0].listen_url = "http://whisper.test/inference";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     http_handle = bad_json_http;
@@ -892,8 +838,8 @@ static void test_synthesis_failure_does_not_play(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     reset_stats();
@@ -911,244 +857,12 @@ static void test_synthesis_failure_does_not_play(void) {
     free(dir);
 }
 
-static atomic_int health_checks;
-
-static int loading_then_ready_http(const audio_http_request *request, audio_http_response *response, void *user) {
-    (void)user;
-    atomic_fetch_add(&health_checks, 1);
-    (void)request;
-    if (atomic_load(&health_checks) == 1)
-        respond_text(response, 200, "{\"data\":[{\"id\":\"pi-voice\",\"loaded\":false}]}");
-    else
-        respond_text(response, 200, "{\"data\":[{\"id\":\"pi-voice\",\"loaded\":true}]}");
-    return 0;
-}
-
-static void test_tts_readiness_waits_for_model(void) {
-    test_name = "tts readiness waits for model";
-    use_key(NULL);
-    char *dir = make_tmp();
-    audio_config config;
-    audio_config_init(&config);
-    config.tts_health_url = "http://tts.test/health";
-    config.readiness_timeout = 1;
-    audio *audio = audio_new(dir, &config);
-    attach_audio(audio);
-    atomic_store(&health_checks, 0);
-    http_handle = loading_then_ready_http;
-    char err[512];
-    int rc = audio_wait_ready(audio, "tts", NULL, err, sizeof err);
-    CHECK(rc == 1);
-    CHECK(atomic_load(&health_checks) >= 2);
-    audio_free(audio);
-    rm_rf(dir);
-    free(dir);
-}
-
-static int missing_model_http(const audio_http_request *request, audio_http_response *response, void *user) {
-    (void)request; (void)user;
-    respond_text(response, 200, "{\"data\":[]}");
-    return 0;
-}
-
-static void test_missing_tts_model(void) {
-    test_name = "missing tts model";
-    use_key(NULL);
-    char *dir = make_tmp();
-    audio_config config;
-    audio_config_init(&config);
-    config.tts_health_url = "http://tts.test/health";
-    config.readiness_timeout = 1;
-    audio *audio = audio_new(dir, &config);
-    attach_audio(audio);
-    http_handle = missing_model_http;
-    char err[512];
-    int rc = audio_wait_ready(audio, "tts", NULL, err, sizeof err);
-    CHECK(rc == -1);
-    CHECK(strstr(err, "pi-voice") != NULL);
-    CHECK(strstr(err, "missing") != NULL);
-    audio_free(audio);
-    rm_rf(dir);
-    free(dir);
-}
-
 static gate slow_entered;
 static gate slow_release;
 
-static int slow_health_http(const audio_http_request *request, audio_http_response *response, void *user) {
-    (void)request; (void)user;
-    gate_set(&slow_entered);
-    gate_wait(&slow_release, 1000);
-    respond_text(response, 200, "{\"status\":\"ok\"}");
-    return 0;
-}
-
-static void test_status_does_not_wait_for_health(void) {
-    test_name = "status does not wait for health";
-    use_key(NULL);
-    char *dir = make_tmp();
-    audio_config config;
-    audio_config_init(&config);
-    config.stt_health_url = "http://stt.test/health";
-    audio *audio = audio_new(dir, &config);
-    attach_audio(audio);
-    gate_init(&slow_entered);
-    gate_init(&slow_release);
-    http_handle = slow_health_http;
-    audio_report report;
-    double start = mono_now();
-    CHECK(audio_status(audio, &report) == 0);
-    CHECK(mono_now() - start < 0.1);
-    CHECK(gate_wait(&slow_entered, 1000));
-    gate_set(&slow_release);
-    int ready = 0;
-    double deadline = mono_now() + 1;
-    while (mono_now() < deadline) {
-        audio_status(audio, &report);
-        if (strcmp(report.stt_state, "ready") == 0) { ready = 1; break; }
-        sleep_ms(10);
-    }
-    CHECK(ready);
-    gate_set(&slow_release);
-    audio_free(audio);
-    gate_destroy(&slow_entered);
-    gate_destroy(&slow_release);
-    rm_rf(dir);
-    free(dir);
-}
-
-static int startup_http(const audio_http_request *request, audio_http_response *response, void *user) {
-    (void)user;
-    if (strstr(request->url, "/health")) {
-        int n = atomic_fetch_add(&health_checks, 1) + 1;
-        if (n == 1) respond_text(response, 503, "{\"status\":\"loading\"}");
-        else respond_text(response, 200, "{\"status\":\"ok\"}");
-        return 0;
-    }
-    respond_text(response, 200, "{\"text\":\"ready words\"}");
-    return 0;
-}
-
-static void test_recognition_waits_for_startup(void) {
-    test_name = "recognition waits for startup";
-    use_key(NULL);
-    char *dir = make_tmp();
-    size_t wav_len = 0;
-    unsigned char *wav = silence_wav(&wav_len);
-    char path[512];
-    snprintf(path, sizeof path, "%s/dictation.wav", dir);
-    write_file(path, wav, wav_len);
-    audio_config config;
-    audio_config_init(&config);
-    config.stt_url = "http://stt.test/inference";
-    config.stt_health_url = "http://stt.test/health";
-    config.readiness_timeout = 1;
-    audio *audio = audio_new(dir, &config);
-    attach_audio(audio);
-    atomic_store(&health_checks, 0);
-    http_handle = startup_http;
-    char out[128] = {0}, err[512] = {0};
-    int rc = audio_transcribe(audio, path, NULL, NULL, NULL, out, sizeof out, err, sizeof err);
-    CHECK(rc == 0);
-    CHECK(strcmp(out, "ready words") == 0);
-    CHECK(atomic_load(&health_checks) >= 2);
-    audio_report report;
-    CHECK(audio_status(audio, &report) == 0);
-    CHECK(strcmp(report.stt_state, "ready") == 0);
-    audio_free(audio);
-    free(wav);
-    rm_rf(dir);
-    free(dir);
-}
-
-static int always_loading_http(const audio_http_request *request, audio_http_response *response, void *user) {
-    (void)request; (void)user;
-    respond_text(response, 503, "{\"status\":\"loading\"}");
-    return 0;
-}
-
-static void test_unavailable_model_is_bounded(void) {
-    test_name = "unavailable model is bounded";
-    use_key(NULL);
-    char *dir = make_tmp();
-    audio_config config;
-    audio_config_init(&config);
-    config.stt_health_url = "http://stt.test/health";
-    config.readiness_timeout = 0.15;
-    audio *audio = audio_new(dir, &config);
-    attach_audio(audio);
-    http_handle = always_loading_http;
-    char err[512] = {0};
-    atomic_int cancelled = 0;
-    double start = mono_now();
-    int rc = audio_wait_ready(audio, "stt", &cancelled, err, sizeof err);
-    CHECK(mono_now() - start < 0.6);
-    CHECK(rc == -1);
-    CHECK(strstr(err, "Whisper") != NULL);
-    CHECK(strstr(err, "not ready") != NULL);
-    audio_report report;
-    CHECK(audio_status(audio, &report) == 0);
-    CHECK(strcmp(report.stt_state, "error") == 0);
-    audio_free(audio);
-    rm_rf(dir);
-    free(dir);
-}
-
-typedef struct ready_ctx {
-    audio *audio;
-    atomic_int *cancelled;
-    int rc;
-    gate done;
-} ready_ctx;
-
-static void *ready_main(void *arg) {
-    ready_ctx *ctx = arg;
-    char err[256];
-    ctx->rc = audio_wait_ready(ctx->audio, "tts", ctx->cancelled, err, sizeof err);
-    gate_set(&ctx->done);
-    return NULL;
-}
-
-static int entered_loading_http(const audio_http_request *request, audio_http_response *response, void *user) {
-    (void)request;
-    (void)user;
-    gate_set(&slow_entered);
-    respond_text(response, 503, "{\"status\":\"loading\"}");
-    return 0;
-}
-
-static void test_cancel_interrupts_readiness(void) {
-    test_name = "cancel interrupts readiness";
-    use_key(NULL);
-    char *dir = make_tmp();
-    audio_config config;
-    audio_config_init(&config);
-    config.tts_health_url = "http://tts.test/health";
-    config.readiness_timeout = 2;
-    audio *audio = audio_new(dir, &config);
-    attach_audio(audio);
-    gate_init(&slow_entered);
-    http_handle = entered_loading_http;
-    atomic_int cancelled = 0;
-    ready_ctx ctx = {.audio = audio, .cancelled = &cancelled};
-    gate_init(&ctx.done);
-    pthread_t thread;
-    CHECK(pthread_create(&thread, NULL, ready_main, &ctx) == 0);
-    CHECK(gate_wait(&slow_entered, 1000));
-    atomic_store(&cancelled, 1);
-    CHECK(gate_wait(&ctx.done, 500));
-    CHECK(ctx.rc == 0);
-    join_ms(thread, 1000);
-    audio_free(audio);
-    gate_destroy(&slow_entered);
-    gate_destroy(&ctx.done);
-    rm_rf(dir);
-    free(dir);
-}
-
 static int vocab_http(const audio_http_request *request, audio_http_response *response, void *user) {
     (void)request; (void)user;
-    respond_text(response, 200, "{\"text\":\"Check Herdr and NixOS.\"}");
+    respond_text(response, 200, "{\"results\":{\"channels\":[{\"alternatives\":[{\"transcript\":\"Check Herdr and NixOS.\"}]}]}}");
     return 0;
 }
 
@@ -1162,8 +876,8 @@ static void test_recognition_sends_vocabulary(void) {
     snprintf(path, sizeof path, "%s/dictation.wav", dir);
     write_file(path, wav, wav_len);
     audio_config config;
-    audio_config_init(&config);
-    config.stt_url = "http://whisper.test/inference";
+    test_config_init(&config);
+    test_backends[0].listen_url = "http://whisper.test/inference";
     config.stt_prompt = "Herdr, NixOS, Andromeda";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
@@ -1182,9 +896,10 @@ static void test_recognition_sends_vocabulary(void) {
     free(saved);
     CHECK(request_count >= 1);
     if (request_count) {
-        CHECK(memmem(requests[0].body, requests[0].body_len, "name=\"prompt\"", 12) != NULL);
-        CHECK(memmem(requests[0].body, requests[0].body_len, "Herdr, NixOS, Andromeda", 23) != NULL);
-        CHECK(memmem(requests[0].body, requests[0].body_len, "name=\"file\"", 11) != NULL);
+        CHECK(strstr(requests[0].url, "keyterm=Herdr") != NULL);
+        CHECK(strstr(requests[0].url, "keyterm=NixOS") != NULL);
+        CHECK(strstr(requests[0].url, "keyterm=Andromeda") != NULL);
+        CHECK(requests[0].body_len == wav_len && memcmp(requests[0].body, wav, wav_len) == 0);
     }
     audio_free(audio);
     free(wav);
@@ -1214,7 +929,7 @@ static int blocking_http(const audio_http_request *request, audio_http_response 
     (void)request; (void)user;
     gate_set(&slow_entered);
     gate_wait(&slow_release, 3000);
-    respond_text(response, 200, "{\"text\":\"late words\"}");
+    respond_text(response, 200, "{\"results\":{\"channels\":[{\"alternatives\":[{\"transcript\":\"late words\"}]}]}}");
     return 0;
 }
 
@@ -1228,8 +943,8 @@ static void test_cancelled_recognition_keeps_audio(void) {
     snprintf(path, sizeof path, "%s/dictation.wav", dir);
     write_file(path, wav, wav_len);
     audio_config config;
-    audio_config_init(&config);
-    config.stt_url = "http://whisper.test/inference";
+    test_config_init(&config);
+    test_backends[0].listen_url = "http://whisper.test/inference";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     gate_init(&slow_entered);
@@ -1290,8 +1005,8 @@ static void test_cancel_before_http_keeps_gpu_serial(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     reset_stats();
@@ -1323,7 +1038,7 @@ static void test_cancel_before_http_keeps_gpu_serial(void) {
     int saw_first = 0, saw_second = 0, order = 1, seen = 0;
     char inputs[4][64];
     for (int i = 0; i < request_count && seen < 4; i++) {
-        if (!json_field((char *)requests[i].body, requests[i].body_len, "input", inputs[seen], sizeof inputs[seen]))
+        if (!json_field((char *)requests[i].body, requests[i].body_len, "text", inputs[seen], sizeof inputs[seen]))
             continue;
         if (strcmp(inputs[seen], "First.") == 0) saw_first = 1;
         if (strcmp(inputs[seen], "Second.") == 0) saw_second = 1;
@@ -1363,7 +1078,7 @@ static void test_deepgram_opt_out_and_keyterms(void) {
     snprintf(path, sizeof path, "%s/dictation.wav", dir);
     write_file(path, wav, wav_len);
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     config.stt_prompt = "NixOS, Pi";
     config.voice_preferences_path = prefs;
     audio *audio = audio_new(dir, &config);
@@ -1420,7 +1135,7 @@ static void test_catalogue_and_preferences(void) {
     char prefs[512];
     snprintf(prefs, sizeof prefs, "%s/voice-mode", dir);
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     config.voice_preferences_path = prefs;
     audio *audio = audio_new(dir, &config);
     audio_report report;
@@ -1454,8 +1169,8 @@ static void test_cloud_only_and_missing_key(void) {
     use_key("dg-test-key");
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_enabled = 0;
+    test_config_init(&config);
+    config.backend_count = 2;
     audio *cloud = audio_new(dir, &config);
     audio_report report;
     CHECK(audio_status(cloud, &report) == 0);
@@ -1469,23 +1184,21 @@ static void test_cloud_only_and_missing_key(void) {
     CHECK(audio_status(silent, &report) == 0);
     CHECK(report.speech_backend_count == 0);
     CHECK(report.voice_count == 0);
-    CHECK(report.stt_count == 2);
+    CHECK(report.stt_count == 1);
     CHECK(strcmp(report.stt_ids[0], "whisper") == 0);
-    CHECK(strcmp(report.stt_ids[1], "deepgram") == 0);
-    CHECK(strcmp(report.stt_labels[1], "Deepgram (cloud)") == 0);
     char err[256] = {0};
     CHECK(audio_set_stt_backend(silent, "deepgram", err, sizeof err) == -1);
-    CHECK(strstr(err, "Deepgram API key is not installed") != NULL);
+    CHECK(strstr(err, "credential is missing") != NULL);
     CHECK(audio_set_speech_backend(silent, "deepgram", err, sizeof err) == -1);
     audio_free(silent);
     audio_config local_config;
-    audio_config_init(&local_config);
+    test_config_init(&local_config);
     audio *local = audio_new(dir, &local_config);
     CHECK(audio_status(local, &report) == 0);
     CHECK(strcmp(report.speech_backend, "local") == 0);
     CHECK(backend_named(&report, "local"));
     CHECK(!backend_named(&report, "deepgram"));
-    CHECK(report.stt_count == 2);
+    CHECK(report.stt_count == 1);
     audio_free(local);
     rm_rf(dir);
     free(dir);
@@ -1511,7 +1224,7 @@ static void test_saved_dictation_fails_without_key(void) {
     snprintf(path, sizeof path, "%s/dictation.wav", dir);
     write_file(path, wav, wav_len);
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     config.stt_preferences_path = prefs;
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
@@ -1520,11 +1233,11 @@ static void test_saved_dictation_fails_without_key(void) {
     audio_report report;
     CHECK(audio_status(audio, &report) == 0);
     CHECK(strcmp(report.selected_stt, "deepgram") == 0);
-    CHECK(strcmp(report.stt_ids[1], "deepgram") == 0);
+    CHECK(report.stt_count == 1);
     char out[64] = {0}, err[256] = {0};
     int rc = audio_transcribe(audio, path, NULL, NULL, NULL, out, sizeof out, err, sizeof err);
     CHECK(rc == -1);
-    CHECK(strstr(err, "Deepgram API key is not installed") != NULL);
+    CHECK(strstr(err, "credential is missing") != NULL);
     CHECK(atomic_load(&http_calls) == 0);
     audio_free(audio);
     free(wav);
@@ -1546,8 +1259,8 @@ static void test_deepgram_request_skips_gpu(void) {
     use_key("dg-test-key");
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_health_url = "http://local-health.test/tts";
+    test_config_init(&config);
+
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     reset_stats();
@@ -1590,8 +1303,8 @@ static void test_playback_modes_bypass_local_readiness(void) {
     const char *modes[] = {"buffered", "streaming"};
     for (int i = 0; i < 2; i++) {
         audio_config config;
-        audio_config_init(&config);
-        config.tts_health_url = "http://local-health.test/tts";
+        test_config_init(&config);
+
         config.playback_mode = modes[i];
         audio *audio = audio_new(dir, &config);
         attach_audio(audio);
@@ -1619,41 +1332,6 @@ static void test_playback_modes_bypass_local_readiness(void) {
     use_key(NULL);
 }
 
-static int health_error_http(const audio_http_request *request, audio_http_response *response, void *user) {
-    (void)request; (void)user;
-    respond_text(response, 500, "Local server unavailable");
-    return 0;
-}
-
-static void test_cloud_status_hides_local_tts_error(void) {
-    test_name = "cloud status hides local tts error";
-    use_key("dg-test-key");
-    char *dir = make_tmp();
-    char prefs[512];
-    snprintf(prefs, sizeof prefs, "%s/voice-mode", dir);
-    audio_config config;
-    audio_config_init(&config);
-    config.tts_health_url = "http://tts.test/health";
-    config.voice_preferences_path = prefs;
-    config.readiness_timeout = 0.2;
-    audio *audio = audio_new(dir, &config);
-    attach_audio(audio);
-    http_handle = health_error_http;
-    char err[512] = {0};
-    CHECK(audio_set_speech_backend(audio, "local", err, sizeof err) == 0);
-    CHECK(audio_wait_ready(audio, "tts", NULL, err, sizeof err) == -1);
-    CHECK(audio_set_speech_backend(audio, "deepgram", err, sizeof err) == 0);
-    audio_report report;
-    CHECK(audio_status(audio, &report) == 0);
-    CHECK(report.has_tts == 0);
-    CHECK(report.has_tts_error == 0);
-    CHECK(strcmp(report.speech_backend, "deepgram") == 0);
-    audio_free(audio);
-    rm_rf(dir);
-    free(dir);
-    use_key(NULL);
-}
-
 static int private_http(const audio_http_request *request, audio_http_response *response, void *user) {
     (void)request; (void)user;
     respond_text(response, 401, "private");
@@ -1675,7 +1353,7 @@ static void test_error_hides_response_and_credentials(void) {
     char errlog[512];
     snprintf(errlog, sizeof errlog, "%s/stderr", dir);
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     clear_requests();
@@ -1686,7 +1364,7 @@ static void test_error_hides_response_and_credentials(void) {
     int rc = audio_speak(audio, "Hello.", &cancelled, err, sizeof err);
     restore_stderr(saved);
     CHECK(rc == -1);
-    CHECK(strcmp(err, "Deepgram speech failed (HTTP 401)") == 0);
+    CHECK(strcmp(err, "Deepgram request failed (HTTP 401)") == 0);
     expect_no_key_leak(err, dir, errlog);
     CHECK(strstr(err, "private") == NULL);
     audio_free(audio);
@@ -1700,7 +1378,7 @@ static void test_cancelled_deepgram_does_not_send(void) {
     use_key("dg-test-key");
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     clear_requests();
@@ -1746,10 +1424,10 @@ static void test_deepgram_wav_length_sentinel(void) {
     for (int local = 0; local < 3; local++) {
         for (sentinel_mode = 0; sentinel_mode < 3; sentinel_mode++) {
             audio_config config;
-            audio_config_init(&config);
+            test_config_init(&config);
             config.speech_backend = local ? "local" : "deepgram";
-            config.local_deepgram_api = local == 1;
-            config.tts_url = "http://local.test/speak";
+
+            test_backends[2].speak_url = "http://local.test/speak";
             audio *audio = audio_new(dir, &config);
             attach_audio(audio);
             clear_requests();
@@ -1773,12 +1451,12 @@ static void test_local_deepgram_api(void) {
     use_key("dg-test-key");
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.local_deepgram_api = 1;
+    test_config_init(&config);
+
     config.speech_backend = "local"; /* overrides cloud default, even with a key */
     config.stt_backend = "whisper";
-    config.stt_url = "http://127.0.0.1:8180/v1/listen";
-    config.tts_url = "http://127.0.0.1:8180/v1/speak";
+    test_backends[0].listen_url = "http://127.0.0.1:8180/v1/listen";
+    test_backends[2].speak_url = "http://127.0.0.1:8180/v1/speak";
     config.stt_prompt = "NixOS, Herdr";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
@@ -1789,7 +1467,7 @@ static void test_local_deepgram_api(void) {
     char err[256] = {0};
     CHECK(audio_speak(audio, "Hello William.", NULL, err, sizeof err) == 0);
     CHECK(request_count == 1);
-    CHECK(atomic_load(&acquire_count) > 0);
+    CHECK(atomic_load(&acquire_count) == 0);
     if (request_count) {
         CHECK(strstr(requests[0].url, "127.0.0.1:8180/v1/speak?") != NULL);
         CHECK(strstr(requests[0].url, "model=samantha&") != NULL);
@@ -1804,7 +1482,7 @@ static void test_local_deepgram_api(void) {
     CHECK(audio_speak(audio, long_text, NULL, err, sizeof err) == 0);
     CHECK(request_count > 0);
     for (int i = 0; i < request_count; i++)
-        CHECK(strstr(requests[i].url, "model=samantha-long&") != NULL);
+        CHECK(strstr(requests[i].url, "model=samantha&") != NULL);
     free(long_text);
     size_t wav_len;
     unsigned char *wav = silence_wav(&wav_len);
@@ -1836,8 +1514,8 @@ static void test_speech_request_selects_english(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     clear_requests();
@@ -1848,95 +1526,12 @@ static void test_speech_request_selects_english(void) {
     CHECK(audio_speak(audio, "Hello William.", &cancelled, err, sizeof err) == 0);
     CHECK(request_count == 1);
     if (request_count) {
-        char language[32] = {0}, input[64] = {0};
-        CHECK(json_field((char *)requests[0].body, requests[0].body_len, "language", language, sizeof language));
-        CHECK(json_field((char *)requests[0].body, requests[0].body_len, "input", input, sizeof input));
-        CHECK(strcmp(language, "English") == 0);
+        char input[64] = {0};
+        CHECK(field_absent((char *)requests[0].body, requests[0].body_len, "language"));
+        CHECK(json_field((char *)requests[0].body, requests[0].body_len, "text", input, sizeof input));
         CHECK(strcmp(input, "Hello William.") == 0);
     }
     audio_free(audio);
-    rm_rf(dir);
-    free(dir);
-}
-
-static audio *character_audio;
-static const char *switch_character;
-
-static int switch_voice_http(const audio_http_request *request, audio_http_response *response, void *user) {
-    (void)request; (void)user;
-    char err[128];
-    const char *other = switch_character && strcmp(switch_character, "samantha") == 0 ? "data" : "samantha";
-    audio_set_voice(character_audio, other, err, sizeof err);
-    size_t len = 0;
-    unsigned char *wav = silence_wav(&len);
-    respond_bin(response, 200, wav, len);
-    free(wav);
-    return 0;
-}
-
-static void test_samantha_switches_reference_at_50_words(void) {
-    test_name = "samantha switches reference at 50 words";
-    use_key(NULL);
-    char *dir = make_tmp();
-    audio_pair data_opts[] = {
-        {"voice_ref", "/data.wav"},
-        {"reference_text", "Data reference."},
-    };
-    audio_voice voices[] = {{"data", "Data", data_opts, 2}};
-    audio_pair long_voice[] = {
-        {"voice_ref", "/newer.wav"},
-        {"reference_text", "New reference."},
-    };
-    const char *modes[] = {"buffered", "streaming"};
-    const char *characters[] = {"samantha", "samantha", "data", "data"};
-    int counts[] = {50, 51, 1, 51};
-    const char *expected[] = {NULL, "/newer.wav", "/data.wav", "/data.wav"};
-    const char *expected_text[] = {NULL, "New reference.", "Data reference.", "Data reference."};
-    for (int mode = 0; mode < 2; mode++) {
-        for (int i = 0; i < 4; i++) {
-            audio_config config;
-            audio_config_init(&config);
-            config.tts_url = "http://tts.test/speech";
-            config.playback_mode = modes[mode];
-            config.voices = voices;
-            config.voice_count = 1;
-            config.long_voice = long_voice;
-            config.long_voice_count = 2;
-            audio *audio = audio_new(dir, &config);
-            attach_audio(audio);
-            character_audio = audio;
-            switch_character = characters[i];
-            char err[256] = {0};
-            CHECK(audio_set_voice(audio, characters[i], err, sizeof err) == 0);
-            clear_requests();
-            reset_stats();
-            http_handle = switch_voice_http;
-            char *text = repeat("word ", counts[i]);
-            atomic_int cancelled = 0;
-            int rc = audio_speak(audio, text, &cancelled, err, sizeof err);
-            CHECK(rc == 0);
-            CHECK(request_count > 0);
-            int total = 0;
-            for (int r = 0; r < request_count; r++) {
-                char input[512] = {0}, ref[64] = {0}, reference[64] = {0};
-                CHECK(json_field((char *)requests[r].body, requests[r].body_len, "input", input, sizeof input));
-                total += words_in(input);
-                int has_ref = json_field((char *)requests[r].body, requests[r].body_len, "voice_ref", ref, sizeof ref);
-                int has_text = json_field((char *)requests[r].body, requests[r].body_len, "reference_text", reference, sizeof reference);
-                if (!expected[i]) {
-                    CHECK(!has_ref);
-                    CHECK(!has_text);
-                    CHECK(field_absent((char *)requests[r].body, requests[r].body_len, "voice_ref"));
-                } else {
-                    CHECK(has_ref && strcmp(ref, expected[i]) == 0);
-                    CHECK(has_text && strcmp(reference, expected_text[i]) == 0);
-                }
-            }
-            CHECK(total == counts[i]);
-            free(text);
-            audio_free(audio);
-        }
-    }
     rm_rf(dir);
     free(dir);
 }
@@ -1947,16 +1542,12 @@ static void test_character_choice_persists(void) {
     char *dir = make_tmp();
     char prefs[512];
     snprintf(prefs, sizeof prefs, "%s/voice-mode", dir);
-    audio_pair data_opts[] = {
-        {"voice_ref", "/data.wav"},
-        {"reference_text", "Words."},
-    };
-    audio_voice voices[] = {{"data", "Data", data_opts, 2}};
+    audio_voice voices[] = {{"samantha", "Samantha", "samantha"}, {"data", "Data", "data"}};
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     config.voice_preferences_path = prefs;
-    config.voices = voices;
-    config.voice_count = 1;
+    test_backends[2].voices = voices;
+    test_backends[2].voice_count = 2;
     const char *old[] = {"auto", "current", "newer", "removed-character"};
     for (int i = 0; i < 4; i++) {
         char line[64];
@@ -2015,8 +1606,8 @@ static void test_buffered_waits_for_every_chunk(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     clear_requests();
@@ -2087,8 +1678,8 @@ static void test_streaming_prepares_next_chunk(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     config.playback_mode = "streaming";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
@@ -2159,8 +1750,8 @@ static void test_streaming_cancel_discards_prefetch(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     config.playback_mode = "streaming";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
@@ -2228,8 +1819,8 @@ static void test_streaming_failure_stops_playback(void) {
     free(second);
     for (stream_fail_mode = 0; stream_fail_mode < 2; stream_fail_mode++) {
         audio_config config;
-        audio_config_init(&config);
-        config.tts_url = "http://tts.test/speech";
+        test_config_init(&config);
+        test_backends[2].speak_url = "http://tts.test/speech";
         config.playback_mode = "streaming";
         audio *audio = audio_new(dir, &config);
         attach_audio(audio);
@@ -2274,8 +1865,8 @@ static void test_cancelling_before_first_streamed_chunk(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     config.playback_mode = "streaming";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
@@ -2309,8 +1900,8 @@ static void test_cancelling_buffered_discards_before_playback(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     reset_stats();
@@ -2349,8 +1940,8 @@ static void test_later_failure_never_plays_partial(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     reset_stats();
@@ -2391,8 +1982,8 @@ static void test_exit_during_synthesis_leaves_no_buffer(void) {
     CHECK(pid >= 0);
     if (pid == 0) {
         audio_config config;
-        audio_config_init(&config);
-        config.tts_url = "http://tts.test/speech";
+        test_config_init(&config);
+        test_backends[2].speak_url = "http://tts.test/speech";
         audio *audio = audio_new(dir, &config);
         audio_set_http(audio, exit_on_second_http, NULL);
         audio_set_popen(audio, record_popen, NULL);
@@ -2448,8 +2039,8 @@ static void test_invalid_later_wav_discards_buffer(void) {
     const char *errors[] = {"Speech audio format changed", "Incomplete speech audio"};
     for (invalid_later_mode = 0; invalid_later_mode < 2; invalid_later_mode++) {
         audio_config config;
-        audio_config_init(&config);
-        config.tts_url = "http://tts.test/speech";
+        test_config_init(&config);
+        test_backends[2].speak_url = "http://tts.test/speech";
         audio *audio = audio_new(dir, &config);
         attach_audio(audio);
         reset_stats();
@@ -2475,7 +2066,7 @@ static void test_menu_fields_available_on_status(void) {
     use_key("dg-test-key");
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     audio *audio = audio_new(dir, &config);
     audio_report report;
     CHECK(audio_status(audio, &report) == 0);
@@ -2483,8 +2074,8 @@ static void test_menu_fields_available_on_status(void) {
     CHECK(!voice_named(&report, "samantha"));
     CHECK(backend_named(&report, "deepgram"));
     CHECK(strcmp(report.speech_backend, "deepgram") == 0);
-    CHECK(strcmp(report.speech_backend_labels[0], "Local characters") == 0 ||
-        strcmp(report.speech_backend_labels[1], "Deepgram") == 0);
+    CHECK(strcmp(report.speech_backend_labels[0], "Deepgram") == 0);
+    CHECK(strcmp(report.speech_backend_labels[1], "Samantha TTS") == 0);
     int saw_deepgram = 0;
     for (size_t i = 0; i < report.speech_backend_count; i++) {
         if (strcmp(report.speech_backend_ids[i], "deepgram") == 0 &&
@@ -2501,9 +2092,9 @@ static void test_menu_fields_available_on_status(void) {
 static int utf8_body_mode;
 static int utf8_http(const audio_http_request *request, audio_http_response *response, void *user) {
     (void)request; (void)user;
-    if (utf8_body_mode == 0) respond_text(response, 200, "{\"text\":\"caf\xc3\xa9\"}");
-    else if (utf8_body_mode == 1) respond_text(response, 200, "{\"text\":\"\\uD83D\\uDE00\"}");
-    else respond_text(response, 200, "{\"text\":\"\\uD800\"}");
+    if (utf8_body_mode == 0) respond_text(response, 200, "{\"results\":{\"channels\":[{\"alternatives\":[{\"transcript\":\"caf\xc3\xa9\"}]}]}}");
+    else if (utf8_body_mode == 1) respond_text(response, 200, "{\"results\":{\"channels\":[{\"alternatives\":[{\"transcript\":\"\\uD83D\\uDE00\"}]}]}}");
+    else respond_text(response, 200, "{\"results\":{\"channels\":[{\"alternatives\":[{\"transcript\":\"\\uD800\"}]}]}}");
     return 0;
 }
 
@@ -2517,8 +2108,8 @@ static void test_json_keeps_raw_utf8_and_surrogate_pairs(void) {
     snprintf(path, sizeof path, "%s/dictation.wav", dir);
     write_file(path, wav, wav_len);
     audio_config config;
-    audio_config_init(&config);
-    config.stt_url = "http://stt.test/inference";
+    test_config_init(&config);
+    test_backends[0].listen_url = "http://stt.test/inference";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     http_handle = utf8_http;
@@ -2576,8 +2167,8 @@ static void test_wav_rejects_non_pcm_and_short_data_after_junk(void) {
     for (int mode = 0; mode < 2; mode++) {
         for (bad_wav_mode = 0; bad_wav_mode < 2; bad_wav_mode++) {
             audio_config config;
-            audio_config_init(&config);
-            config.tts_url = "http://tts.test/speech";
+            test_config_init(&config);
+            test_backends[2].speak_url = "http://tts.test/speech";
             config.playback_mode = modes[mode];
             audio *audio = audio_new(dir, &config);
             attach_audio(audio);
@@ -2625,7 +2216,7 @@ static void test_preference_close_failure_is_single(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     config.voice_preferences_path = "/dev/full";
     audio *audio = audio_new(dir, &config);
     char err[128] = {0};
@@ -2659,7 +2250,7 @@ static void test_abandoned_worker_drops_cancel_token(void) {
     use_key(NULL);
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
+    test_config_init(&config);
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     atomic_int *flag = malloc(sizeof *flag);
@@ -2670,7 +2261,7 @@ static void test_abandoned_worker_drops_cancel_token(void) {
     pthread_t setter;
     CHECK(pthread_create(&setter, NULL, store_cancel, flag) == 0);
     char err[128] = {0};
-    int rc = audio_call(audio, "stt", flag, token_op, NULL, err, sizeof err);
+    int rc = audio_call(audio, flag, token_op, NULL, err, sizeof err);
     CHECK(rc == 1);
     free(flag);
     gate_set(&token_release);
@@ -2707,8 +2298,8 @@ static void test_stop_during_player_spawn_discards(void) {
         block_until_stop = 1;
         spawn_wait_code = -1;
         audio_config config;
-        audio_config_init(&config);
-        config.tts_url = "http://tts.test/speech";
+        test_config_init(&config);
+        test_backends[2].speak_url = "http://tts.test/speech";
         config.playback_mode = modes[i];
         audio *audio = audio_new(dir, &config);
         attach_audio(audio);
@@ -2790,8 +2381,8 @@ static void test_buffered_spawn_receives_private_wav(void) {
     CHECK(write_script(script, body) == 0);
     push_path(dir);
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     config.playback_mode = "buffered";
     audio *audio = audio_new(dir, &config);
     audio_set_http(audio, large_pcm_http, NULL);
@@ -2818,8 +2409,8 @@ static void test_closed_player_pipe_does_not_raise_sigpipe(void) {
     CHECK(write_script(script, body) == 0);
     push_path(dir);
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     config.playback_mode = "streaming";
     audio *audio = audio_new(dir, &config);
     audio_set_http(audio, large_pcm_http, NULL);
@@ -2885,8 +2476,8 @@ static void test_player_pipe_is_not_inherited_by_capture(void) {
     int before[4096];
     int nbefore = snapshot_fds(before, 4096);
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = "http://tts.test/speech";
+    test_config_init(&config);
+    test_backends[2].speak_url = "http://tts.test/speech";
     config.playback_mode = "streaming";
     audio *audio = audio_new(dir, &config);
     audio_set_http(audio, large_pcm_http, NULL);
@@ -3014,8 +2605,8 @@ static void test_http_overflow_respects_tts_cap(void) {
     snprintf(url, sizeof url, "http://127.0.0.1:%u/speech", ntohs(addr.sin_port));
     char *dir = make_tmp();
     audio_config config;
-    audio_config_init(&config);
-    config.tts_url = url;
+    test_config_init(&config);
+    test_backends[2].speak_url = url;
     audio *audio = audio_new(dir, &config);
     audio_set_http(audio, NULL, NULL);
     char err[256] = {0};
@@ -3045,7 +2636,7 @@ static int owned_blocking_http(const audio_http_request *request, audio_http_res
     (void)user;
     gate_set(&owned_entered);
     gate_wait(&owned_release, 3000);
-    respond_text(response, 200, "{\"text\":\"owned words\"}");
+    respond_text(response, 200, "{\"results\":{\"channels\":[{\"alternatives\":[{\"transcript\":\"owned words\"}]}]}}");
     return 0;
 }
 
@@ -3077,8 +2668,8 @@ static void test_transcribe_owned_destroys_context_once(void) {
     snprintf(path, sizeof path, "%s/dictation.wav", dir);
     write_file(path, wav, wav_len);
     audio_config config;
-    audio_config_init(&config);
-    config.stt_url = "http://whisper.test/inference";
+    test_config_init(&config);
+    test_backends[0].listen_url = "http://whisper.test/inference";
     audio *audio = audio_new(dir, &config);
     attach_audio(audio);
     gate_init(&owned_entered);
@@ -3109,21 +2700,91 @@ static void test_transcribe_owned_destroys_context_once(void) {
     free(dir);
 }
 
+static audio *custom_client;
+static int custom_http(const audio_http_request *request, audio_http_response *response, void *user) {
+    (void)user;
+    CHECK(strncmp(request->url, "https://studio.test/", 20) == 0);
+    CHECK(request->authorization && strcmp(request->authorization, "Bearer fixture-token") == 0);
+    CHECK(strstr(request->url, "privacy=private") != NULL);
+    CHECK(strstr(request->url, "mip_opt_out") == NULL);
+    if (strcmp(request->content_type, "audio/wav") == 0) {
+        CHECK(strstr(request->url, "model=listen-v7") != NULL);
+        CHECK(request->body_len >= 44 && memcmp(request->body, "RIFF", 4) == 0);
+        return deepgram_listen_http(request, response, NULL);
+    }
+    CHECK(strstr(request->url, "model=calm-v9") != NULL);
+    CHECK(request->context_words == 100);
+    CHECK(field_absent((char *)request->body, request->body_len, "voice_ref"));
+    char err[128];
+    CHECK(audio_set_voice(custom_client, "lively", err, sizeof err) == 0);
+    return english_http(request, response, NULL);
+}
+
+static void test_arbitrary_backend_and_construction(void) {
+    test_name = "arbitrary configured backend and owned construction";
+    setenv("STUDIO_TOKEN", "fixture-token", 1);
+    char *dir = make_tmp();
+    char id[] = "studio", model[] = "calm-v9", url[] = "https://studio.test/speak";
+    audio_voice voices[] = {{"calm", "Calm", model}, {"lively", "Lively", "lively-v9"}};
+    audio_pair query[] = {{"privacy", "private"}};
+    audio_backend backend = {.id = id, .label = "Studio", .listen_url = "https://studio.test/listen", .speak_url = url,
+        .auth_env = "STUDIO_TOKEN", .auth_scheme = "Bearer", .listen_model = "listen-v7",
+        .voices = voices, .voice_count = 2, .query = query, .query_count = 1};
+    audio_config config = {.backends = &backend, .backend_count = 1, .stt_backend = "studio", .speech_backend = "studio"};
+    audio *audio = audio_new(dir, &config);
+    CHECK(audio != NULL);
+    custom_client = audio;
+    memset(id, 'x', strlen(id));
+    memset(model, 'x', strlen(model));
+    memset(url, 'x', strlen(url));
+    attach_audio(audio);
+    clear_requests();
+    reset_stats();
+    http_handle = custom_http;
+    audio_report report;
+    CHECK(audio_status(audio, &report) == 0);
+    CHECK(request_count == 0); /* Status never probes or starts engines. */
+    CHECK(strcmp(report.speech_backend, "studio") == 0);
+    CHECK(report.speech_backend_count == 1 && report.stt_count == 1);
+    CHECK(strcmp(report.voice_ids[0], "calm") == 0);
+    char err[256] = {0};
+    char *text = repeat("This is a backend-neutral sentence. ", 20);
+    CHECK(audio_speak(audio, text, NULL, err, sizeof err) == 0);
+    CHECK(request_count > 1); /* Every chunk retains the initial voice. */
+    free(text);
+    CHECK(audio_status(audio, &report) == 0);
+    CHECK(strcmp(report.selected_voice, "lively") == 0);
+    size_t wav_len;
+    unsigned char *wav = silence_wav(&wav_len);
+    char path[512];
+    snprintf(path, sizeof path, "%s/input.wav", dir);
+    write_file(path, wav, wav_len);
+    free(wav);
+    char out[128];
+    clear_requests();
+    CHECK(audio_transcribe(audio, path, NULL, NULL, NULL, out, sizeof out, err, sizeof err) == 0);
+    CHECK(strcmp(out, "hello NixOS") == 0);
+    CHECK(request_count == 1);
+    unsetenv("STUDIO_TOKEN");
+    clear_requests();
+    CHECK(audio_transcribe(audio, path, NULL, NULL, NULL, out, sizeof out, err, sizeof err) == -1);
+    CHECK(request_count == 0 && strstr(err, "credential"));
+    audio_free(audio);
+    config.backend_count = 5;
+    CHECK(audio_new(dir, &config) == NULL);
+    rm_rf(dir);
+    free(dir);
+}
+
 int test_audio(void) {
     failures = 0;
     stash_env_key();
     test_chunks();
-    test_cancelled_request_holds_engine();
+    test_arbitrary_backend_and_construction();
     test_capture_reports_name();
     test_recognition_failure_preserves_recording();
     test_recognition_rejects_invalid_json();
     test_synthesis_failure_does_not_play();
-    test_tts_readiness_waits_for_model();
-    test_missing_tts_model();
-    test_status_does_not_wait_for_health();
-    test_recognition_waits_for_startup();
-    test_unavailable_model_is_bounded();
-    test_cancel_interrupts_readiness();
     test_recognition_sends_vocabulary();
     test_cancelled_recognition_keeps_audio();
     test_cancel_before_http_keeps_gpu_serial();
@@ -3133,13 +2794,11 @@ int test_audio(void) {
     test_saved_dictation_fails_without_key();
     test_deepgram_request_skips_gpu();
     test_playback_modes_bypass_local_readiness();
-    test_cloud_status_hides_local_tts_error();
     test_error_hides_response_and_credentials();
     test_cancelled_deepgram_does_not_send();
     test_deepgram_wav_length_sentinel();
     test_local_deepgram_api();
     test_speech_request_selects_english();
-    test_samantha_switches_reference_at_50_words();
     test_character_choice_persists();
     test_buffered_waits_for_every_chunk();
     test_streaming_prepares_next_chunk();

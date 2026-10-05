@@ -18,48 +18,77 @@ for build and lifecycle contracts.
 
 ## Provider configuration
 
-`~/.config/pi-voice/config.json` selects the endpoints used by the C frontend.
+`~/.config/pi-voice/config.json` defines the backends used by the C frontend.
 Home Manager generates it from `home/user/voice.nix`; change that source rather
 than editing the generated symlink. A standalone frontend can use an alternative
-file through `PI_VOICE_CONFIG`.
+file through `PI_VOICE_CONFIG`. For example:
 
 ```json
 {
-  "local_deepgram_api": true,
-  "stt_url": "http://127.0.0.1:8180/v1/listen",
-  "stt_health_url": "http://127.0.0.1:8178/health",
-  "tts_url": "http://127.0.0.1:8180/v1/speak",
-  "tts_health_url": "http://127.0.0.1:8179/v1/models",
-  "stt_backend": "whisper",
-  "speech_backend": "local"
+  "backends": [
+    {
+      "id": "on-device",
+      "label": "Local",
+      "listen_url": "http://127.0.0.1:8180/v1/listen",
+      "speak_url": "http://127.0.0.1:8180/v1/speak",
+      "voices": [{"id": "samantha", "label": "Samantha", "model": "samantha"}]
+    },
+    {
+      "id": "cloud",
+      "label": "Deepgram",
+      "listen_url": "https://api.deepgram.com/v1/listen",
+      "speak_url": "https://api.deepgram.com/v1/speak",
+      "auth_env": "DEEPGRAM_API_KEY",
+      "auth_scheme": "Token",
+      "listen_model": "nova-3",
+      "query": {"mip_opt_out": "true"},
+      "streaming_wav": true,
+      "voices": [{"id": "thalia", "label": "Thalia", "model": "aura-2-thalia-en"}]
+    }
+  ],
+  "stt_backend": "on-device",
+  "speech_backend": "cloud"
 }
 ```
 
-The two backend fields independently select `whisper` or `deepgram` for dictation,
-and `local` or `deepgram` for speech. When present, they override saved menu choices
-at controller startup. Menu changes still work until the next restart. Omit the
-fields to retain the existing saved choices and defaults. Deepgram still requires
-its API key; requests never silently fall back to another provider.
+IDs, labels, model names and voices are configuration data, not C provider
+switches. A backend may expose listen, speak or both. Up to four backends and
+48 voices per backend are supported. `timeout_ms` defaults to 180000;
+`streaming_wav` permits validated unknown-length streaming WAV headers.
+Credentials stay in the named environment variable, never in this file.
 
-`pi-voice-api.service` runs the standalone, standard-library-only
-`home/config/voice/voice_api.py` on loopback port 8180. Its JSON configuration
-contains the existing engine URLs and a mapping of local voice model names to
-trusted reference options. The C frontend sends WAV bytes to `/v1/listen` and
-`{"text":"..."}` to `/v1/speak?model=samantha`; local character names replace
-Deepgram's Aura model names. Long Samantha replies use `samantha-long`.
-Recognition returns Deepgram's `results.channels[].alternatives[].transcript`
-shape; synthesis returns PCM16, 24 kHz WAV. The service rejects unsupported output
-formats, unknown voices, browser-origin requests and oversized bodies. It does
-not log transcripts or accept reference paths from requests.
+`stt_backend` and `speech_backend` independently select configured IDs. When
+present, they override saved menu choices at startup; menu changes work until
+the next restart. Omit them to retain saved choices. Missing credentials and
+request failures are explicit errors, never silent fallback to another backend.
+Legacy top-level endpoint fields and direct Whisper/audio.cpp protocols are
+removed. Standalone configurations must migrate to `backends`.
 
-This is a REST compatibility subset, not a replacement for Deepgram's complete
-API: there are no WebSockets, diarization or cloud voice emulation. The Python
-file is self-contained as an API adapter, not as an inference runtime. Whisper
-and audio.cpp, their models and existing on-demand systemd lifecycle remain
-required. The API itself stays lightweight and does not load models. Its
-`/health` reports API availability only; engine readiness uses the separate
-health URLs above. Setting `local_deepgram_api` to false retains the legacy
-direct-engine protocols for existing standalone configurations.
+The frontend owns recording, text cleanup/chunking, playback, UI and session
+routing. It sends WAV bytes to listen endpoints and `{"text":"..."}` to speak
+endpoints, with model and format query parameters. Recognition returns
+`results.channels[].alternatives[].transcript`; synthesis returns PCM16,
+24 kHz WAV. There are no engine probes, service commands, leases, model reference
+paths or provider-specific voice policies in C. An optional
+`X-Voice-Context-Words` header carries the complete reply's word count across
+playback chunks; only the backend interprets it for voice-reference selection.
+
+`pi-voice-api.service` runs the standard-library-only
+`home/config/voice/voice_api.py` on loopback port 8180. Its separate configuration
+contains inference URLs, systemd unit names, readiness URLs, idle timeout and
+trusted voice-reference mappings. The backend starts the necessary engine,
+waits for readiness, translates its native protocol and stops engines after
+idle work has drained. It also owns Samantha's long-reference policy. The
+frontend does not need these engine details. `/health` reports API availability,
+not model readiness. Requests reject unsupported formats, unknown voices,
+browser origins and oversized bodies without logging transcripts or accepting
+reference paths from callers.
+
+This is a REST compatibility subset, not Deepgram's complete API: there are no
+WebSockets, diarization or cloud voice emulation. Python is self-contained as the
+HTTP and lifecycle adapter, not as an inference runtime. Whisper, audio.cpp and
+their models remain external dependencies. The always-running API is lightweight;
+it does not load inference models into its own process.
 
 ## Launch and select a session
 
@@ -94,8 +123,9 @@ so the selector lists ordinary Pi and Qwen Pi sessions only. Pi and Qwen Pi
 share the same selector.
 
 Switching sessions cancels recording/playback and preserves retained text in
-memory. Exiting one session cannot stop engines another registered session is
-using. After the last session leaves, engines stop once active work has drained.
+memory. Session registration does not control engine lifetime. The backend
+keeps engines available between requests and stops them after its idle timeout,
+never while an inference request is active.
 
 | Hotkey | Action |
 | --- | --- |
@@ -304,8 +334,9 @@ A failed transcription retains one private WAV for up to two minutes after
 its first failure. Retry uses that recording and its original deadline.
 Cancel, discard, changing selected sessions or restarting the controller
 removes it. A successful transcription deletes the WAV. Model startup has a
-bounded readiness wait with loading/error feedback, so the first recording
-can wait for Whisper rather than failing immediately.
+bounded readiness wait inside the local backend, so the first recording can
+wait for Whisper rather than failing immediately. The frontend remains in its
+transcribing state until the HTTP request completes or fails.
 
 Cancel signals immediately, independently of slow terminal operations. Once
 input has reached an editor it cannot safely be recalled automatically.
@@ -402,13 +433,14 @@ manual playback.
 The existing service names remain for compatibility:
 
 - `pi-voice.service`: shared controller and hotkeys.
+- `pi-voice-api.service`: local HTTP/lifecycle adapter at `127.0.0.1:8180`.
 - `pi-voice-stt.service`: Whisper at `127.0.0.1:8178`.
 - `pi-voice-tts.service`: Qwen3 TTS at `127.0.0.1:8179`.
 
-The controller starts at login; implicit Pi use starts only the required
-backend. Explicit compatibility launchers still warm both engines. Models stop
-after 15 idle minutes measured from completed use, never during active work.
-Warm-up runs in the background. Ports must be available. The default models
+The controller and API start at login. The API starts an engine only when a
+request needs it; compatibility launchers do not warm models. Models stop after
+two idle minutes measured from completed use, never during active work. Stopping
+the API also drains requests and stops its engines. Ports must be available. The default models
 occupy about 2.93 GB in `~/.local/share/pi-voice/models`. Run
 `pi-voice-models` on a fresh host, and `pi-voice-models --check-only` to
 verify sizes and hashes. Silero VAD is also fetched with a fixed hash by Nix,
@@ -425,7 +457,7 @@ recognized text; the TTS server disables request-body logging.
 Stop the services explicitly with:
 
 ```sh
-systemctl --user stop pi-voice.service pi-voice-stt.service pi-voice-tts.service
+systemctl --user stop pi-voice.service pi-voice-api.service pi-voice-stt.service pi-voice-tts.service
 ```
 
 Inspect failures with:
@@ -443,8 +475,8 @@ On Foundation, `hmswitch` then `pi-voice-models` installs Whisper small.en only
 
 The model and `default_voice_preset` are set in `home/user/voice.nix`.
 The default preset references the committed short-reply WAV and its transcript.
-The controller supplies the newer pinned WAV and transcript for long Samantha
-replies, or the selected character reference. Model weights
+The Python backend supplies the newer pinned WAV and transcript for long
+Samantha replies, or the selected character reference. Model weights
 have fixed Hugging Face revisions, sizes and SHA-256 hashes in
 `home/config/voice/voice-model-setup`. Change the managed configuration, build
 and run `hmswitch` to change the voice. Do not overwrite a reference beneath a

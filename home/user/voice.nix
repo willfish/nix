@@ -127,6 +127,24 @@ let
     port = 8180;
     stt_url = "http://127.0.0.1:8178/inference";
     tts_url = "http://127.0.0.1:8179/v1/audio/speech";
+    systemctl = [
+      "${pkgs.systemd}/bin/systemctl"
+      "--user"
+    ];
+    readiness_timeout = 60;
+    idle_timeout = 120;
+    engines = {
+      stt = {
+        unit = "pi-voice-stt.service";
+        health_url = "http://127.0.0.1:8178/health";
+      };
+    }
+    // lib.optionalAttrs voiceTts {
+      tts = {
+        unit = "pi-voice-tts.service";
+        health_url = "http://127.0.0.1:8179/v1/models";
+      };
+    };
     voices = lib.optionalAttrs voiceTts (
       lib.mapAttrs (_: voice: voice.options) characterVoices
       // {
@@ -182,37 +200,121 @@ in
       voiceMenu
     ]
     ++ lib.optionals voiceTts [ (makeVoice "qwen-pi") ];
-    xdg.configFile."pi-voice/config.json".text = builtins.toJSON (
-      {
-        local_deepgram_api = true;
-        stt_url = "http://127.0.0.1:8180/v1/listen";
-        stt_health_url = "http://127.0.0.1:8178/health";
-        tts_url = "http://127.0.0.1:8180/v1/speak";
-        tts_health_url = "http://127.0.0.1:8179/v1/models";
-        tts_enabled = voiceTts;
-        readiness_timeout = 60;
-        stt_prompt = "NixOS, Home Manager, Herdr, Grok, Qwen, Pi, Andromeda, Foundation, Terminus, Relay, dotfiles, GitHub, MCP.";
-        preferred_microphone =
-          if hostName == "andromeda" then
-            "alsa_input.usb-Razer_Inc_Razer_Kiyo_Pro_Ultra-02.analog-stereo"
-          else
-            null;
-        auto_speak = true;
-        voice_preferences_path = "${dataDir}/voice-mode";
-        playback_mode = "streaming";
-      }
-      // lib.optionalAttrs voiceTts {
-        tts_voices = characterVoices;
-        tts_long_voice = longVoice;
-      }
-    );
+    xdg.configFile."pi-voice/config.json".text = builtins.toJSON {
+      backends = [
+        {
+          id = "whisper";
+          label = "Whisper (local)";
+          listen_url = "http://127.0.0.1:8180/v1/listen";
+          listen_model = "whisper";
+        }
+        {
+          id = "deepgram";
+          label = "Deepgram";
+          listen_url = "https://api.deepgram.com/v1/listen?smart_format=true&punctuate=true";
+          speak_url = "https://api.deepgram.com/v1/speak";
+          auth_env = "DEEPGRAM_API_KEY";
+          auth_scheme = "Token";
+          listen_model = "nova-3";
+          streaming_wav = true;
+          query.mip_opt_out = "true";
+          default_voice = "thalia";
+          voice_preferences_path = "${dataDir}/deepgram-voice";
+          voices =
+            map
+              (name: {
+                id = name;
+                label = lib.toUpper (builtins.substring 0 1 name) + builtins.substring 1 (-1) name;
+                model = "aura-2-${name}-en";
+              })
+              [
+                "amalthea"
+                "andromeda"
+                "apollo"
+                "arcas"
+                "aries"
+                "asteria"
+                "athena"
+                "atlas"
+                "aurora"
+                "callista"
+                "cora"
+                "cordelia"
+                "delia"
+                "draco"
+                "electra"
+                "harmonia"
+                "helena"
+                "hera"
+                "hermes"
+                "hyperion"
+                "iris"
+                "janus"
+                "juno"
+                "jupiter"
+                "luna"
+                "mars"
+                "minerva"
+                "neptune"
+                "odysseus"
+                "ophelia"
+                "orion"
+                "orpheus"
+                "pandora"
+                "phoebe"
+                "pluto"
+                "saturn"
+                "selene"
+                "thalia"
+                "theia"
+                "vesta"
+                "zeus"
+              ];
+        }
+      ]
+      ++ lib.optionals voiceTts [
+        {
+          id = "local";
+          label = "Local characters";
+          speak_url = "http://127.0.0.1:8180/v1/speak";
+          default_voice = "samantha";
+          voice_preferences_path = "${dataDir}/voice-mode";
+          voices = [
+            {
+              id = "samantha";
+              label = "Samantha";
+              model = "samantha";
+            }
+          ]
+          ++ lib.mapAttrsToList (name: voice: {
+            id = name;
+            inherit (voice) label;
+            model = name;
+          }) characterVoices;
+        }
+      ];
+      stt_prompt = "NixOS, Home Manager, Herdr, Grok, Qwen, Pi, Andromeda, Foundation, Terminus, Relay, dotfiles, GitHub, MCP.";
+      preferred_microphone =
+        if hostName == "andromeda" then
+          "alsa_input.usb-Razer_Inc_Razer_Kiyo_Pro_Ultra-02.analog-stereo"
+        else
+          null;
+      auto_speak = true;
+      voice_preferences_path = "${dataDir}/voice-mode";
+      playback_mode = "streaming";
+    };
     xdg.configFile."pi-voice/tts.json" = lib.mkIf voiceTts { source = ttsConfig; };
     xdg.configFile."voice-menu/fuzzel.ini".source = menuConfig;
 
     systemd.user.services.pi-voice-api = {
-      Unit.Description = "Local Deepgram-compatible voice API";
+      Unit = {
+        Description = "Local Deepgram-compatible voice API";
+        Conflicts = [ "personaplex.service" ];
+        Before = [ "personaplex.service" ];
+      };
       Service = common // {
         ExecStart = "${pkgs.python3}/bin/python3 ${../config/voice/voice_api.py} --config ${apiConfig}";
+        TimeoutStopSec = 300;
       };
     };
     systemd.user.services.pi-voice = {

@@ -272,24 +272,11 @@ static int capture_failed(controller_capture *capture, int code) {
     return (code != 0 && code != -SIGINT) || (error && error[0]);
 }
 
-static int await_lease(voice_controller *app, void *lease, op_state *cancelled) {
-    if (!lease) return !atomic_load(&cancelled->cancelled);
-    while (!atomic_load(&cancelled->cancelled)) {
-        char err[CTRL_MSG] = {0};
-        int wr = app->deps.engines.wait ? app->deps.engines.wait(lease, 100, err, sizeof err) : 0;
-        if (wr == 0) return 1;
-        if (wr == 1 && app->deps.engines.failed && app->deps.engines.failed(lease)) return 0;
-        if (wr < 0) return 0;
-    }
-    return 0;
-}
-
 static void record_run(void *arg) {
     record_job *job = arg;
     voice_controller *app = job->app;
     controller_capture *capture = NULL;
     void *owner = NULL;
-    void *lease = job->cancelled->engine_lease;
     record_recover *recovered = recover_new();
     char *spoken = strdup("");
     char held[256 * 1024];
@@ -297,10 +284,6 @@ static void record_run(void *arg) {
     int staged_any = 0;
     char err[CTRL_MSG] = {0};
     int index = 0;
-    if (!lease && app->deps.has_engines && app->deps.engines.acquire) {
-        const char *stt = app->deps.audio.stt_backend ? app->deps.audio.stt_backend(app->deps.audio.user) : "whisper";
-        if (strcmp(stt, "whisper") == 0) app->deps.engines.acquire(app->deps.engines.user, "stt", &lease, err, sizeof err);
-    }
     if (app->deps.terminal.validate_target) {
         controller_target_view view;
         controller_view(&job->target->data, &view);
@@ -395,7 +378,7 @@ static void record_run(void *arg) {
             if (job->retry || finished) break;
             continue;
         }
-        if (!await_lease(app, lease, job->cancelled)) {
+        if (atomic_load(&job->cancelled->cancelled)) {
             recover_text(app, spoken, job->token, &job->target->data, job->cancelled, job->previous, job->mode, 0, recovered);
             goto done;
         }
@@ -417,8 +400,6 @@ static void record_run(void *arg) {
         if (tr != 0) {
             pthread_mutex_lock(&app->state);
             if (!atomic_load(&job->cancelled->cancelled) && app->has_token && strcmp(job->token, app->token) == 0) {
-                app->retry_lease = lease;
-                lease = NULL;
                 free(app->retry_path);
                 app->retry_path = strdup(slice);
                 controller_snap_release(app->retry_target);
@@ -545,7 +526,6 @@ done:
     owner = NULL;
     capture = NULL;
     pthread_mutex_lock(&app->state);
-    if (lease && lease != app->retry_lease && app->deps.engines.release) app->deps.engines.release(lease);
     if (app->has_active_retry && app->active_retry_op == job->cancelled) {
         free(app->active_retry_path);
         app->active_retry_path = NULL;
@@ -702,8 +682,6 @@ int controller_retry(voice_controller *app, char *err, size_t cap) {
         free(app->retry_path);
         app->retry_path = NULL;
         app->has_retry = 0;
-        if (app->retry_lease && app->deps.engines.release) app->deps.engines.release(app->retry_lease);
-        app->retry_lease = NULL;
         pthread_mutex_unlock(&app->state);
         snprintf(err, cap, "Voice session changed");
         return CTRL_ERR;
@@ -724,12 +702,6 @@ int controller_retry(voice_controller *app, char *err, size_t cap) {
     controller_op_release(app->record_op);
     app->record_op = controller_op_new(app);
     app->record_op->recovery_revision = app->recovery_revision;
-    app->record_op->engine_lease = app->retry_lease;
-    app->retry_lease = NULL;
-    if (app->record_op->engine_lease && app->deps.engines.failed && app->deps.engines.failed(app->record_op->engine_lease)) {
-        app->deps.engines.release(app->record_op->engine_lease);
-        app->record_op->engine_lease = NULL;
-    }
     job->cancelled = controller_op_retain(app->record_op);
     app->active_retry_path = strdup(job->path);
     app->active_retry_op = controller_op_retain(app->record_op);

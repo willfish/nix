@@ -238,15 +238,6 @@ static int dump_runner(char *const *argv, double timeout, MicRunResult *out, voi
     return out->stdout_text ? 0 : -1;
 }
 
-static int noop_runner(const char *engine, const char *command, double timeout, void *ctx, char *err, size_t err_cap) {
-    (void)engine; (void)command; (void)timeout; (void)ctx; (void)err; (void)err_cap;
-    return 0;
-}
-static int noop_ready(const char *engine, double timeout, void *ctx, char *err, size_t err_cap) {
-    (void)engine; (void)timeout; (void)ctx; (void)err; (void)err_cap;
-    return 1;
-}
-
 static void test_default_capture_when_preferred_missing(void) {
     test_name = "default_capture";
     char dir[] = "/tmp/vmicXXXXXX";
@@ -254,15 +245,9 @@ static void test_default_capture_when_preferred_missing(void) {
     audio_config config;
     audio_config_init(&config);
     config.preferred_microphone = "missing-node";
-    config.tts_enabled = 0;
     audio *audio = audio_new(dir, &config);
-    engine_config engines;
-    memset(&engines, 0, sizeof engines);
-    engines.runner = noop_runner;
-    engines.readiness = noop_ready;
-    engine_manager *manager = engine_manager_create(&engines);
     char err[256];
-    voice_audio_binding *binding = voice_audio_bind_with_runner(audio, manager, 0, dump_runner, NULL, err, sizeof err);
+    voice_audio_binding *binding = voice_audio_bind_with_runner(audio, 0, dump_runner, NULL, err, sizeof err);
     CHECK(binding != NULL);
     audio_set_capture(audio, fake_capture, NULL);
     saw_capture = 0;
@@ -284,29 +269,28 @@ static void test_default_capture_when_preferred_missing(void) {
     CHECK(json && strstr(json, "\"target\":null") && strstr(json, "\"missing\":true") && strstr(json, "\"muted\":false"));
     free(json);
     voice_audio_unbind(binding);
-    engine_manager_free(manager);
     audio_free(audio);
     rmdir(dir);
 }
 
 static void test_config_and_pid_bounds(void) {
     test_name = "config_bounds";
-    const char *text = "{\"stt_url\":\"http://127.0.0.1:8178/inference\",\"tts_enabled\":false,\"auto_speak\":false}";
+    const char *text = "{\"backends\":[],\"auto_speak\":false}";
     yyjson_doc *doc = yyjson_read(text, strlen(text), 0);
     char err[128];
     voice_config *config = voice_config_parse(doc, err, sizeof err);
     CHECK(config);
-    CHECK(voice_config_audio(config)->tts_enabled == 0);
+    CHECK(voice_config_audio(config)->backend_count == 0);
     CHECK(voice_config_auto_speak(config) == 0);
     voice_config_free(config);
     yyjson_doc_free(doc);
-    text = "{\"local_deepgram_api\":true,\"stt_backend\":\"deepgram\",\"speech_backend\":\"local\"}";
+    text = "{\"backends\":[{\"id\":\"custom\",\"listen_url\":\"https://voice.test/v1/listen\",\"speak_url\":\"https://voice.test/v1/speak\",\"voices\":[{\"id\":\"calm\",\"model\":\"calm-v2\"}]}],\"stt_backend\":\"custom\",\"speech_backend\":\"custom\"}";
     doc = yyjson_read(text, strlen(text), 0);
     config = voice_config_parse(doc, err, sizeof err);
     CHECK(config);
-    CHECK(voice_config_audio(config)->local_deepgram_api == 1);
-    CHECK(strcmp(voice_config_audio(config)->stt_backend, "deepgram") == 0);
-    CHECK(strcmp(voice_config_audio(config)->speech_backend, "local") == 0);
+    CHECK(voice_config_audio(config)->backend_count == 1);
+    CHECK(strcmp(voice_config_audio(config)->stt_backend, "custom") == 0);
+    CHECK(strcmp(voice_config_audio(config)->backends[0].voices[0].model, "calm-v2") == 0);
     voice_config_free(config);
     yyjson_doc_free(doc);
     text = "{\"stt_backend\":\"unknown\"}";

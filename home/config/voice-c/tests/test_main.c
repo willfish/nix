@@ -9,7 +9,6 @@
 int test_spoken(void);
 int test_chunks(void);
 int test_attachments(void);
-int test_engines(void);
 int test_capture(void);
 int test_devices(void);
 int test_audio(void);
@@ -20,7 +19,6 @@ int test_ipc(void);
 int test_runtime_adapters(void);
 int test_harness(void);
 int test_controller(void);
-int test_main_adapters(void);
 int test_presentation(void);
 int test_menu(void);
 int test_conversation(void);
@@ -62,12 +60,12 @@ int main(int argc, char **argv) {
     const struct { const char *name; int (*run)(void); } groups[] = {
         {"concurrent-initialization", test_concurrent_initialization},
         {"spoken", test_spoken}, {"chunks", test_chunks},
-        {"attachments", test_attachments}, {"engines", test_engines},
+        {"attachments", test_attachments},
         {"capture", test_capture}, {"devices", test_devices},
         {"audio", test_audio}, {"labels", test_labels},
         {"osd", test_osd}, {"pill", test_pill}, {"ipc", test_ipc},
         {"runtime-adapters", test_runtime_adapters}, {"harness", test_harness},
-        {"controller", test_controller}, {"main-adapters", test_main_adapters},
+        {"controller", test_controller},
         {"presentation", test_presentation},
         {"menu", test_menu}, {"conversation", test_conversation},
         {"osd-main", test_osd_main},

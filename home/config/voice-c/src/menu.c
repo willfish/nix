@@ -641,7 +641,7 @@ int voice_menu_rows(const VoiceMenuStatus *status, const char *section, VoiceMen
     } else if (strcmp(section, "sessions") == 0) {
         if (session_pairs(status, view, &built, &built_count)) goto oom;
     } else if (strcmp(section, "speech") == 0) {
-        snprintf(marked, sizeof marked, "speech:%s", status->speech_backend && status->speech_backend[0] ? status->speech_backend : "local");
+        snprintf(marked, sizeof marked, "speech:%s", status->speech_backend && status->speech_backend[0] ? status->speech_backend : "none");
         if (prefixed_rows(view, "speech:", marked, &built, &built_count)) goto oom;
     } else if (strcmp(section, "dictation") == 0) {
         snprintf(marked, sizeof marked, "stt:%s", view->selected_stt);
@@ -731,8 +731,8 @@ int voice_menu_prompt(const VoiceMenuStatus *status, const char *section, char *
     if (!out) return fail(error, "Prompt needs an output");
     *out = NULL;
     if (!status) status = NULL;
-    voice = status && status->selected_voice && status->selected_voice[0] ? status->selected_voice : "samantha";
-    stt = status && status->selected_stt && status->selected_stt[0] ? status->selected_stt : "whisper";
+    voice = status && status->selected_voice && status->selected_voice[0] ? status->selected_voice : "none";
+    stt = status && status->selected_stt && status->selected_stt[0] ? status->selected_stt : "none";
     if (!section) section = "menu";
     if (strcmp(section, "menu") != 0) {
         if (strcmp(section, "voices") == 0) snprintf(line, sizeof line, "Voice (%s)", voice);

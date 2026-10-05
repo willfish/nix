@@ -2,14 +2,17 @@
 """Loopback Deepgram REST subset backed by Whisper and audio.cpp.
 
 Only prerecorded WAV recognition and linear16/WAV synthesis are supported.
-Inference engines remain separate, on-demand processes managed by the frontend.
+This service owns inference engine startup, readiness and idle shutdown.
 """
 
 import argparse
 import io
 import json
 import secrets
+import signal
+import subprocess
 import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -47,6 +50,82 @@ class Backend:
             ):
                 raise ValueError(f"{name} must be a loopback HTTP URL")
         self.lock = threading.Lock()
+        self.last_used = time.monotonic()
+        self.started = {
+            spec["unit"] for spec in config.get("engines", {}).values()
+        }
+        self.stopping = threading.Event()
+        self.sweeper = threading.Thread(target=self.idle_stop, daemon=True)
+        self.sweeper.start()
+
+    def systemctl(self, command, unit):
+        subprocess.run(
+            [*self.config.get("systemctl", ["systemctl", "--user"]),
+             command, unit],
+            check=True, timeout=30, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    def ready(self, engine):
+        spec = self.config.get("engines", {}).get(engine)
+        if not spec:
+            return  # Standalone API with externally managed inference engines.
+        unit = spec["unit"]
+        try:
+            self.systemctl("start", unit)
+            self.started.add(unit)
+            deadline = time.monotonic() + self.config.get(
+                "readiness_timeout", 60
+            )
+            while time.monotonic() < deadline:
+                try:
+                    with self.http.open(spec["health_url"], timeout=1) as reply:
+                        data = json.loads(reply.read(16384))
+                    if not isinstance(data, dict):
+                        raise ValueError("invalid health response")
+                    if engine == "stt" and data.get("status") == "ok":
+                        return
+                    if engine == "tts" and any(
+                        isinstance(item, dict)
+                        and item.get("id")
+                        == self.config.get("tts_model", "pi-voice")
+                        and item.get("loaded") is True
+                        for item in data.get("data", [])
+                    ):
+                        return
+                except (OSError, ValueError, urllib.error.URLError):
+                    pass
+                time.sleep(0.1)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise APIError(
+                503, "Could not start the local inference engine"
+            ) from exc
+        raise APIError(503, "Local inference engine is not ready")
+
+    def stop_engines(self):
+        for unit in tuple(self.started):
+            try:
+                self.systemctl("stop", unit)
+                self.started.remove(unit)
+            except (OSError, subprocess.SubprocessError):
+                pass  # Retry on the next idle sweep.
+
+    def idle_stop(self):
+        while not self.stopping.wait(1):
+            if self.lock.acquire(blocking=False):
+                try:
+                    if time.monotonic() - self.last_used >= self.config.get(
+                        "idle_timeout", 120
+                    ):
+                        self.stop_engines()
+                finally:
+                    self.lock.release()
+
+    def close(self):
+        self.stopping.set()
+        self.sweeper.join()
+        with self.lock:
+            self.stop_engines()
 
     def request(self, url, body, content_type):
         request = urllib.request.Request(
@@ -99,6 +178,7 @@ class Backend:
                 f"\r\n--{boundary}--\r\n".encode(),
             ]
         )
+        self.ready("stt")
         result = json.loads(
             self.request(
                 self.config["stt_url"],
@@ -120,7 +200,7 @@ class Backend:
             }
         ).encode()
 
-    def speak(self, body, query):
+    def speak(self, body, query, context_words=None):
         for key, expected in (
             ("encoding", "linear16"),
             ("container", "wav"),
@@ -142,7 +222,19 @@ class Backend:
         voices = self.config.get("voices", {"samantha": {}})
         if model not in voices:
             raise APIError(400, "Unknown local voice model")
-        # Reference paths come only from trusted config, never from HTTP input.
+        # Optional chunk context carries no model/reference decisions.
+        words = len(payload["text"].split())
+        if context_words is not None:
+            try:
+                count = int(context_words)
+                if not 0 <= count <= 1_000_000:
+                    raise ValueError()
+            except ValueError:
+                raise APIError(400, "Invalid reply word count") from None
+            words = max(words, count)
+        if words > 50 and model + "-long" in voices:
+            model += "-long"
+        self.ready("tts")
         request = {
             **voices[model],
             "model": self.config.get("tts_model", "pi-voice"),
@@ -226,18 +318,21 @@ class Handler(BaseHTTPRequestHandler):
             length = int(lengths[0])
             if not 0 < length <= LIMIT:
                 raise APIError(413, "Request exceeds size limit or is empty")
-            acquired = backend.lock.acquire(blocking=False)
+            acquired = backend.lock.acquire(
+                timeout=backend.config.get("queue_timeout", 5)
+            )
             if not acquired:
                 raise APIError(429, "Local inference is busy")
             body = self.rfile.read(length)
             if len(body) != length:
                 raise APIError(400, "Incomplete request body")
-            operation = (
-                backend.listen if route.path == "/v1/listen" else backend.speak
-            )
-            content_type, result = operation(
-                body, urllib.parse.parse_qs(route.query)
-            )
+            query = urllib.parse.parse_qs(route.query)
+            if route.path == "/v1/listen":
+                content_type, result = backend.listen(body, query)
+            else:
+                content_type, result = backend.speak(
+                    body, query, self.headers.get("X-Voice-Context-Words")
+                )
             self.respond(200, content_type, result)
         except APIError as exc:
             self.respond(
@@ -257,12 +352,13 @@ class Handler(BaseHTTPRequestHandler):
             self.close_connection = True
         finally:
             if acquired:
+                backend.last_used = time.monotonic()
                 backend.lock.release()
 
 
 class Server(ThreadingHTTPServer):
-    daemon_threads = True
-    block_on_close = False
+    daemon_threads = False
+    block_on_close = True
 
     def __init__(self, address, backend):
         self.backend = backend
@@ -275,10 +371,14 @@ def main():
     args = parser.parse_args()
     with open(args.config, encoding="utf-8") as source:
         config = json.load(source)
-    with Server(
-        ("127.0.0.1", config.get("port", 8180)), Backend(config)
-    ) as server:
+    backend = Backend(config)
+    with Server(("127.0.0.1", config.get("port", 8180)), backend) as server:
+        def shutdown(*_):
+            threading.Thread(target=server.shutdown, daemon=True).start()
+        signal.signal(signal.SIGTERM, shutdown)
+        signal.signal(signal.SIGINT, shutdown)
         server.serve_forever()
+    backend.close()
 
 
 if __name__ == "__main__":

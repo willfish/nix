@@ -27,65 +27,28 @@
 
 enum {
     LISTEN_MAX = 1024 * 1024,
-    SPEAK_MAX = 8 * 1024 * 1024,
-    WHISPER_MAX = 1024 * 1024,
-    TTS_MAX = 32 * 1024 * 1024,
-    HEALTH_MAX = 16384
+    TTS_MAX = 32 * 1024 * 1024
 };
 
 extern char **environ;
 
-static const char *DEEPGRAM_NAMES[] = {
-    "amalthea", "andromeda", "apollo", "arcas", "aries",
-    "asteria", "athena", "atlas", "aurora", "callista",
-    "cora", "cordelia", "delia", "draco", "electra",
-    "harmonia", "helena", "hera", "hermes", "hyperion",
-    "iris", "janus", "juno", "jupiter", "luna", "mars",
-    "minerva", "neptune", "odysseus", "ophelia", "orion",
-    "orpheus", "pandora", "phoebe", "pluto", "saturn",
-    "selene", "thalia", "theia", "vesta", "zeus"
-};
-
-typedef struct copied_voice {
-    char *id;
-    char *label;
-    audio_pair *options;
-    size_t option_count;
-} copied_voice;
-
 typedef struct voice_choice {
-    int deepgram;
-    char model[96];
-    char tts_model[128];
-    audio_pair *pairs;
-    size_t npairs;
+    const audio_backend *backend;
+    char model[128];
+    size_t context_words;
 } voice_choice;
 
 struct audio {
     char *runtime;
-    char *stt_url;
-    int local_deepgram_api;
-    char *stt_health;
-    char *tts_url;
-    char *tts_health;
+    audio_backend backends[4];
+    size_t backend_count;
+    char selected_voices[4][64];
     char *stt_prompt;
     char *stt_language;
-    char *tts_model;
     char *preferred_microphone;
-    char *voice_preferences;
-    char *deepgram_preferences;
     char *speech_preferences;
     char *stt_preferences;
     char *playback_mode;
-    copied_voice *voices;
-    size_t voice_count;
-    audio_pair *long_voice;
-    size_t long_voice_count;
-    int has_local;
-    int has_deepgram_speech;
-    double readiness_timeout;
-    char selected_voice[64];
-    char deepgram_voice[64];
     char speech_backend[32];
     char stt_backend[32];
     char stt_state[32];
@@ -94,18 +57,12 @@ struct audio {
     char tts_error[512];
     int has_stt_error;
     int has_tts_error;
-    double stt_updated;
-    double tts_updated;
-    int refreshing_stt;
-    int refreshing_tts;
     audio_http_fn http;
     void *http_user;
     audio_popen_fn popen_fn;
     void *popen_user;
     audio_run_fn run_fn;
     void *run_user;
-    audio_acquire_fn acquire;
-    void *acquire_user;
     audio_audible_fn audible;
     void *audible_user;
     audio_mic_status_fn mic_status;
@@ -141,7 +98,6 @@ typedef struct op_result {
 typedef struct job {
     audio *audio;
     pthread_mutex_t *gate;
-    const char *engine;
     atomic_int *cancelled;
     int stop_gen;
     int (*op)(void *user, op_result *result);
@@ -187,29 +143,11 @@ static char *dup_opt(const char *text) {
     return strdup(text);
 }
 
-static double mono_now(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
-}
-
 static void sleep_ms(int ms) {
     struct timespec ts;
     ts.tv_sec = ms / 1000;
     ts.tv_nsec = (long)(ms % 1000) * 1000000L;
     while (nanosleep(&ts, &ts) != 0 && errno == EINTR) {}
-}
-
-static int sleep_cancel(atomic_int *cancelled, double seconds) {
-    double left = seconds;
-    while (left > 0) {
-        if (cancelled && atomic_load(cancelled)) return 1;
-        int slice = left > 0.01 ? 10 : (int)(left * 1000);
-        if (slice < 1) slice = 1;
-        sleep_ms(slice);
-        left -= slice / 1000.0;
-    }
-    return cancelled && atomic_load(cancelled);
 }
 
 static int write_all(int fd, const void *data, size_t len) {
@@ -317,34 +255,25 @@ static char *read_pref(const char *path) {
     return strdup(buf);
 }
 
-static int has_deepgram_key(void) {
-    const char *key = getenv("DEEPGRAM_API_KEY");
+static int backend_available(const audio_backend *backend) {
+    if (!backend->auth_env) return 1;
+    const char *key = getenv(backend->auth_env);
     return key && key[0];
 }
 
-static char *copy_key(void) {
-    const char *key = getenv("DEEPGRAM_API_KEY");
-    if (!key || !key[0]) return NULL;
-    return strdup(key);
-}
-
-static const char *engine_name(const char *engine) {
-    return engine && strcmp(engine, "stt") == 0 ? "Whisper" : "Samantha TTS";
-}
-
-static int deepgram_known(const char *name) {
-    if (!name) return 0;
-    for (size_t i = 0; i < sizeof DEEPGRAM_NAMES / sizeof DEEPGRAM_NAMES[0]; i++) {
-        if (strcmp(DEEPGRAM_NAMES[i], name) == 0) return 1;
+static int backend_index(const audio *audio, const char *id, int speech) {
+    if (!id) return -1;
+    for (size_t i = 0; i < audio->backend_count; i++) {
+        const audio_backend *backend = &audio->backends[i];
+        if (strcmp(backend->id, id) == 0 && (speech ? backend->speak_url : backend->listen_url)) return (int)i;
     }
-    return 0;
+    return -1;
 }
 
-static int local_index(const audio *audio, const char *name) {
-    if (!name) return -1;
-    for (size_t i = 0; i < audio->voice_count; i++) {
-        if (strcmp(audio->voices[i].id, name) == 0) return (int)i;
-    }
+static int voice_index(const audio_backend *backend, const char *id) {
+    if (!id) return -1;
+    for (size_t i = 0; i < backend->voice_count; i++)
+        if (strcmp(backend->voices[i].id, id) == 0) return (int)i;
     return -1;
 }
 
@@ -353,9 +282,7 @@ static void set_backend(audio *audio, const char *engine, const char *state, con
     char *slot = strcmp(engine, "stt") == 0 ? audio->stt_state : audio->tts_state;
     char *err = strcmp(engine, "stt") == 0 ? audio->stt_error : audio->tts_error;
     int *has = strcmp(engine, "stt") == 0 ? &audio->has_stt_error : &audio->has_tts_error;
-    double *updated = strcmp(engine, "stt") == 0 ? &audio->stt_updated : &audio->tts_updated;
     snprintf(slot, 32, "%s", state);
-    *updated = mono_now();
     if (error && error[0]) {
         snprintf(err, 512, "%s", error);
         *has = 1;
@@ -700,7 +627,7 @@ static void wr32(unsigned char *p, uint32_t v) {
 }
 
 static int wav_parse(const unsigned char *data, size_t len, int *channels, int *width, int *rate,
-    unsigned char **frames, size_t *frame_len, int deepgram) {
+    unsigned char **frames, size_t *frame_len, int streaming_wav) {
     *frames = NULL;
     *frame_len = 0;
     if (len < 12 || memcmp(data, "RIFF", 4) != 0 || memcmp(data + 8, "WAVE", 4) != 0) return -1;
@@ -720,8 +647,8 @@ static int wav_parse(const unsigned char *data, size_t len, int *channels, int *
             bits = rd16(data + off + 14);
             got_fmt = 1;
         } else if (memcmp(id, "data", 4) == 0) {
-            /* Deepgram streams WAV with an unknown data length sentinel. */
-            int streaming = deepgram && size == UINT32_C(0x7fff0000);
+            /* Configured streaming endpoints can use an unknown-length marker. */
+            int streaming = streaming_wav && size == UINT32_C(0x7fff0000);
             if (size > have && !streaming) return -1;
             declared = size;
             payload = data + off;
@@ -824,7 +751,7 @@ static int http_curl(const audio_http_request *request, audio_http_response *res
     pthread_once(&curl_once, curl_init_once);
     CURL *curl = curl_easy_init();
     if (!curl) { response->transport_error = 1; return 0; }
-    size_t limit = request->maximum ? request->maximum : (size_t)HEALTH_MAX;
+    size_t limit = request->maximum ? request->maximum : (size_t)LISTEN_MAX;
     if (limit > SIZE_MAX - 1) limit = SIZE_MAX - 1;
     curl_buf buf = {.max = limit + 1};
     buf.data = malloc(buf.max ? buf.max : 1);
@@ -845,6 +772,11 @@ static int http_curl(const audio_http_request *request, audio_http_response *res
             headers = curl_slist_append(headers, line);
             free(line);
         }
+    }
+    if (request->context_words) {
+        char line[96];
+        snprintf(line, sizeof line, "X-Voice-Context-Words: %zu", request->context_words);
+        headers = curl_slist_append(headers, line);
     }
     curl_easy_setopt(curl, CURLOPT_URL, request->url);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
@@ -874,65 +806,6 @@ static int http_call(audio *audio, const audio_http_request *request, audio_http
     memset(response, 0, sizeof *response);
     if (audio->http) return audio->http(request, response, audio->http_user);
     return http_curl(request, response);
-}
-
-static int probe(audio *audio, const char *engine, int timeout_ms, char *err, size_t err_cap) {
-    const char *url = strcmp(engine, "stt") == 0 ? audio->stt_health : audio->tts_health;
-    if (!url) return 1;
-    audio_http_request request = {.method = "GET", .url = url, .timeout_ms = timeout_ms, .maximum = HEALTH_MAX};
-    audio_http_response response;
-    http_call(audio, &request, &response);
-    if (response.verbatim_error[0]) {
-        set_err(err, err_cap, response.verbatim_error);
-        free(response.body);
-        return -1;
-    }
-    if (response.transport_error) { free(response.body); return 0; }
-    if (response.status == 503) { free(response.body); return 0; }
-    if (response.status < 200 || response.status >= 300) {
-        snprintf(err, err_cap, "%s health endpoint returned HTTP %d; check pi-voice-%s.service",
-            engine_name(engine), response.status, engine);
-        free(response.body);
-        return -1;
-    }
-    size_t take = response.body_len > HEALTH_MAX ? HEALTH_MAX : response.body_len;
-    json_value *root = json_parse(response.body, take);
-    free(response.body);
-    if (!root || root->type != JSON_OBJECT) {
-        json_free(root);
-        snprintf(err, err_cap, "%s returned invalid health data", engine_name(engine));
-        return -1;
-    }
-    if (strcmp(engine, "stt") == 0) {
-        json_value *status = json_get(root, "status");
-        int ok = status && status->type == JSON_STRING && status->string && strcmp(status->string, "ok") == 0;
-        json_free(root);
-        return ok ? 1 : 0;
-    }
-    json_value *data = json_get(root, "data");
-    if (!data || data->type != JSON_ARRAY) {
-        json_free(root);
-        set_err(err, err_cap, "Samantha TTS returned invalid model data");
-        return -1;
-    }
-    const char *model_id = audio->tts_model ? audio->tts_model : "pi-voice";
-    int found = 0, loaded = 0;
-    for (size_t i = 0; i < data->nitems; i++) {
-        json_value *model = data->items[i];
-        if (!model || model->type != JSON_OBJECT) continue;
-        json_value *id = json_get(model, "id");
-        if (!id || id->type != JSON_STRING || !id->string || strcmp(id->string, model_id) != 0) continue;
-        found = 1;
-        json_value *flag = json_get(model, "loaded");
-        loaded = flag && flag->type == JSON_BOOL && flag->bool_value;
-        break;
-    }
-    json_free(root);
-    if (!found) {
-        snprintf(err, err_cap, "Samantha TTS model '%s' is missing from the server; check pi-voice-tts.service and model files", model_id);
-        return -1;
-    }
-    return loaded ? 1 : 0;
 }
 
 static int abandoned(audio *audio, atomic_int *cancelled, int stop_gen) {
@@ -995,33 +868,7 @@ static int lock_timeout(pthread_mutex_t *mu, int timeout_ms) {
 static void *job_main(void *arg) {
     job *job = arg;
     audio *owner = job->audio;
-    audio_lease *lease = NULL;
     int got_gate = 0;
-    if (job->engine && job->engine[0] && owner->acquire) {
-        lease = owner->acquire(job->engine, owner->acquire_user);
-        if (!lease) {
-            set_err(job->result.error, sizeof job->result.error, "engine acquire failed");
-            job->result.status = -1;
-            goto publish;
-        }
-        while (!job_stopped(job)) {
-            char wait_err[512] = {0};
-            int wr = lease->wait_ms ? lease->wait_ms(lease, 50, wait_err, sizeof wait_err) : 0;
-            if (wr == 0) break;
-            if (wr == 1) {
-                if (lease->ready_done && lease->ready_done(lease)) {
-                    set_err(job->result.error, sizeof job->result.error, "engine lease timed out");
-                    job->result.status = -1;
-                    goto publish;
-                }
-                continue;
-            }
-            set_err(job->result.error, sizeof job->result.error, wait_err[0] ? wait_err : "engine lease failed");
-            job->result.status = -1;
-            goto publish;
-        }
-        if (job_stopped(job)) goto publish;
-    }
     while (!job_stopped(job)) {
         int rc = lock_timeout(job->gate, 50);
         if (rc == 0) { got_gate = 1; break; }
@@ -1040,7 +887,6 @@ static void *job_main(void *arg) {
     got_gate = 0;
 publish:
     if (got_gate) pthread_mutex_unlock(job->gate);
-    if (lease && lease->release) lease->release(lease);
     if (job->free_user) job->free_user(job->user);
     job->user = NULL;
     if (job->result.status == 0 && job->on_drained && job->result.text)
@@ -1063,7 +909,7 @@ publish:
     return NULL;
 }
 
-static int run_cancellable(audio *audio, pthread_mutex_t *gate, const char *engine, atomic_int *cancelled,
+static int run_cancellable(audio *audio, pthread_mutex_t *gate, atomic_int *cancelled,
     int (*op)(void *user, op_result *result), void *user, void (*free_user)(void *user),
     audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *), void *destroy_arg,
     op_result *result, char *err, size_t err_cap) {
@@ -1076,7 +922,6 @@ static int run_cancellable(audio *audio, pthread_mutex_t *gate, const char *engi
     }
     job->audio = audio;
     job->gate = gate;
-    job->engine = engine;
     job->cancelled = cancelled;
     job->stop_gen = atomic_load(&audio->stop_gen);
     job->op = op;
@@ -1128,46 +973,8 @@ static int run_cancellable(audio *audio, pthread_mutex_t *gate, const char *engi
     return 0;
 }
 
-typedef struct refresh_arg { audio *audio; char *engine; } refresh_arg;
-
-static void *refresh_main(void *arg) {
-    refresh_arg *refresh = arg;
-    audio *audio = refresh->audio;
-    char err[512];
-    int ready = probe(audio, refresh->engine, 250, err, sizeof err);
-    if (ready < 0) set_backend(audio, refresh->engine, "error", err);
-    else set_backend(audio, refresh->engine, ready ? "ready" : "loading", NULL);
-    pthread_mutex_lock(&audio->backend_mu);
-    if (strcmp(refresh->engine, "stt") == 0) audio->refreshing_stt = 0;
-    else audio->refreshing_tts = 0;
-    pthread_mutex_unlock(&audio->backend_mu);
-    free(refresh->engine);
-    free(refresh);
-    live_done(audio);
-    return NULL;
-}
-
-static void maybe_refresh(audio *audio, const char *engine) {
-    const char *url = strcmp(engine, "stt") == 0 ? audio->stt_health : audio->tts_health;
-    int *flag = strcmp(engine, "stt") == 0 ? &audio->refreshing_stt : &audio->refreshing_tts;
-    double updated = strcmp(engine, "stt") == 0 ? audio->stt_updated : audio->tts_updated;
-    if (!url || *flag || mono_now() - updated <= 2) return;
-    refresh_arg *arg = calloc(1, sizeof *arg);
-    if (!arg) return;
-    arg->audio = audio;
-    arg->engine = strdup(engine);
-    if (!arg->engine) { free(arg); return; }
-    *flag = 1;
-    if (spawn_detached(audio, refresh_main, arg) != 0) {
-        *flag = 0;
-        free(arg->engine);
-        free(arg);
-    }
-}
-
 void audio_config_init(audio_config *config) {
     memset(config, 0, sizeof *config);
-    config->tts_enabled = 1;
 }
 
 static audio_pair *copy_pairs(const audio_pair *pairs, size_t count) {
@@ -1177,7 +984,14 @@ static audio_pair *copy_pairs(const audio_pair *pairs, size_t count) {
     for (size_t i = 0; i < count; i++) {
         out[i].key = strdup(pairs[i].key ? pairs[i].key : "");
         out[i].value = strdup(pairs[i].value ? pairs[i].value : "");
-        if (!out[i].key || !out[i].value) return out;
+        if (!out[i].key || !out[i].value) {
+            for (size_t j = 0; j <= i; j++) {
+                free((void *)out[j].key);
+                free((void *)out[j].value);
+            }
+            free(out);
+            return NULL;
+        }
     }
     return out;
 }
@@ -1200,70 +1014,15 @@ audio *audio_new(const char *runtime_dir, const audio_config *config) {
     audio *audio = calloc(1, sizeof *audio);
     if (!audio) return NULL;
     audio->runtime = strdup(runtime_dir ? runtime_dir : "/tmp");
-    audio->stt_url = dup_opt(config->stt_url);
-    audio->local_deepgram_api = config->local_deepgram_api;
-    audio->stt_health = dup_opt(config->stt_health_url);
-    audio->tts_url = dup_opt(config->tts_url);
-    audio->tts_health = dup_opt(config->tts_health_url);
     audio->stt_prompt = dup_opt(config->stt_prompt);
-    audio->stt_language = strdup(config->stt_language && config->stt_language[0] ? config->stt_language : "en");
-    audio->tts_model = strdup(config->tts_model && config->tts_model[0] ? config->tts_model : "pi-voice");
+    audio->stt_language = strdup(config->stt_language ? config->stt_language : "en");
     audio->preferred_microphone = dup_opt(config->preferred_microphone);
-    audio->voice_preferences = dup_opt(config->voice_preferences_path);
-    audio->playback_mode = strdup(config->playback_mode && config->playback_mode[0] ? config->playback_mode : "buffered");
-    audio->readiness_timeout = config->readiness_timeout > 0 ? config->readiness_timeout : 60;
-    audio->has_local = config->tts_enabled ? 1 : 0;
-    audio->has_deepgram_speech = has_deepgram_key();
-    snprintf(audio->selected_voice, sizeof audio->selected_voice, "samantha");
-    snprintf(audio->deepgram_voice, sizeof audio->deepgram_voice, "thalia");
-    snprintf(audio->speech_backend, sizeof audio->speech_backend, "%s", audio->has_deepgram_speech ? "deepgram" : "local");
-    snprintf(audio->stt_backend, sizeof audio->stt_backend, "whisper");
+    audio->playback_mode = strdup(config->playback_mode ? config->playback_mode : "buffered");
+    audio->speech_preferences = sibling_name(config->voice_preferences_path, "speech-backend");
+    audio->stt_preferences = config->stt_preferences_path ? strdup(config->stt_preferences_path)
+        : sibling_name(config->voice_preferences_path, "stt-backend");
     snprintf(audio->stt_state, sizeof audio->stt_state, "unknown");
     snprintf(audio->tts_state, sizeof audio->tts_state, "unknown");
-    if (audio->voice_preferences) {
-        audio->deepgram_preferences = sibling_name(audio->voice_preferences, "deepgram-voice");
-        audio->speech_preferences = sibling_name(audio->voice_preferences, "speech-backend");
-    }
-    audio->stt_preferences = dup_opt(config->stt_preferences_path);
-    if (!audio->stt_preferences && audio->voice_preferences)
-        audio->stt_preferences = sibling_name(audio->voice_preferences, "stt-backend");
-    size_t extras = audio->has_local ? config->voice_count : 0;
-    audio->voice_count = audio->has_local ? extras + 1 : 0;
-    if (audio->voice_count) {
-        audio->voices = calloc(audio->voice_count, sizeof *audio->voices);
-        audio->voices[0].id = strdup("samantha");
-        audio->voices[0].label = strdup("Samantha");
-        for (size_t i = 0; i < extras; i++) {
-            audio->voices[i + 1].id = strdup(config->voices[i].id ? config->voices[i].id : "");
-            audio->voices[i + 1].label = strdup(config->voices[i].label ? config->voices[i].label : audio->voices[i + 1].id);
-            audio->voices[i + 1].options = copy_pairs(config->voices[i].options, config->voices[i].option_count);
-            audio->voices[i + 1].option_count = config->voices[i].option_count;
-        }
-    }
-    if (config->long_voice_count) {
-        audio->long_voice = copy_pairs(config->long_voice, config->long_voice_count);
-        audio->long_voice_count = config->long_voice_count;
-    }
-    char *saved = read_pref(audio->voice_preferences);
-    if (saved && local_index(audio, saved) >= 0)
-        snprintf(audio->selected_voice, sizeof audio->selected_voice, "%s", saved);
-    free(saved);
-    saved = read_pref(audio->deepgram_preferences);
-    if (saved && deepgram_known(saved))
-        snprintf(audio->deepgram_voice, sizeof audio->deepgram_voice, "%s", saved);
-    free(saved);
-    saved = read_pref(audio->speech_preferences);
-    if (saved && ((strcmp(saved, "local") == 0 && audio->has_local) || (strcmp(saved, "deepgram") == 0 && audio->has_deepgram_speech)))
-        snprintf(audio->speech_backend, sizeof audio->speech_backend, "%s", saved);
-    free(saved);
-    saved = read_pref(audio->stt_preferences);
-    if (saved && (strcmp(saved, "whisper") == 0 || strcmp(saved, "deepgram") == 0))
-        snprintf(audio->stt_backend, sizeof audio->stt_backend, "%s", saved);
-    free(saved);
-    if (config->stt_backend)
-        snprintf(audio->stt_backend, sizeof audio->stt_backend, "%s", config->stt_backend);
-    if (config->speech_backend)
-        snprintf(audio->speech_backend, sizeof audio->speech_backend, "%s", config->speech_backend);
     pthread_mutex_init(&audio->mu, NULL);
     pthread_mutex_init(&audio->backend_mu, NULL);
     pthread_mutex_init(&audio->synthesis_mu, NULL);
@@ -1271,7 +1030,81 @@ audio *audio_new(const char *runtime_dir, const audio_config *config) {
     pthread_mutex_init(&audio->call_mu, NULL);
     pthread_mutex_init(&audio->live_mu, NULL);
     pthread_cond_init(&audio->live_cv, NULL);
+    if (config->backend_count > 4 || (config->backend_count && !config->backends)) goto invalid;
+    for (size_t i = 0; i < config->backend_count; i++) {
+        const audio_backend *source = &config->backends[i];
+        audio_backend *target = &audio->backends[i];
+        audio->backend_count++;
+        if (!source->id || !source->id[0] || strlen(source->id) > 31
+            || (!source->listen_url && !source->speak_url)
+            || source->voice_count > 48 || source->query_count > 16
+            || (source->voice_count && !source->voices) || (source->query_count && !source->query)
+            || (source->speak_url && !source->voice_count)) goto invalid;
+        target->id = strdup(source->id);
+        target->label = strdup(source->label ? source->label : source->id);
+        target->listen_url = dup_opt(source->listen_url);
+        target->speak_url = dup_opt(source->speak_url);
+        target->auth_env = dup_opt(source->auth_env);
+        target->auth_scheme = strdup(source->auth_scheme ? source->auth_scheme : "Token");
+        target->listen_model = dup_opt(source->listen_model);
+        target->default_voice = dup_opt(source->default_voice);
+        target->voice_preferences_path = dup_opt(source->voice_preferences_path);
+        target->timeout_ms = source->timeout_ms > 0 ? source->timeout_ms : 180000;
+        target->streaming_wav = source->streaming_wav;
+        target->query = copy_pairs(source->query, source->query_count);
+        target->query_count = source->query_count;
+        audio_voice *voices = calloc(source->voice_count ? source->voice_count : 1, sizeof *voices);
+        target->voices = voices;
+        if (!target->id || !target->label || !target->auth_scheme || !voices
+            || (source->listen_url && !target->listen_url) || (source->speak_url && !target->speak_url)
+            || (source->auth_env && !target->auth_env) || (source->listen_model && !target->listen_model)
+            || (source->default_voice && !target->default_voice)
+            || (source->voice_preferences_path && !target->voice_preferences_path)
+            || (source->query_count && !target->query)) goto invalid;
+        for (size_t v = 0; v < source->voice_count; v++) {
+            if (!source->voices[v].id || !source->voices[v].id[0] || strlen(source->voices[v].id) > 31
+                || !source->voices[v].model || !source->voices[v].model[0] || strlen(source->voices[v].model) > 127) goto invalid;
+            voices[v].id = strdup(source->voices[v].id);
+            voices[v].label = strdup(source->voices[v].label ? source->voices[v].label : source->voices[v].id);
+            voices[v].model = strdup(source->voices[v].model);
+            target->voice_count++;
+            if (!voices[v].id || !voices[v].label || !voices[v].model) goto invalid;
+        }
+        if (target->voice_count) {
+            const char *initial = voice_index(target, target->default_voice) >= 0 ? target->default_voice : voices[0].id;
+            snprintf(audio->selected_voices[i], sizeof audio->selected_voices[i], "%s", initial);
+            char *saved = read_pref(target->voice_preferences_path);
+            if (voice_index(target, saved) >= 0)
+                snprintf(audio->selected_voices[i], sizeof audio->selected_voices[i], "%s", saved);
+            free(saved);
+        }
+        if (backend_available(target)) {
+            if (!audio->speech_backend[0] && target->speak_url)
+                snprintf(audio->speech_backend, sizeof audio->speech_backend, "%s", target->id);
+            if (!audio->stt_backend[0] && target->listen_url)
+                snprintf(audio->stt_backend, sizeof audio->stt_backend, "%s", target->id);
+        }
+    }
+    char *saved = read_pref(audio->speech_preferences);
+    if (backend_index(audio, saved, 1) >= 0)
+        snprintf(audio->speech_backend, sizeof audio->speech_backend, "%s", saved);
+    free(saved);
+    saved = read_pref(audio->stt_preferences);
+    if (backend_index(audio, saved, 0) >= 0)
+        snprintf(audio->stt_backend, sizeof audio->stt_backend, "%s", saved);
+    free(saved);
+    if (config->stt_backend) {
+        if (backend_index(audio, config->stt_backend, 0) < 0) goto invalid;
+        snprintf(audio->stt_backend, sizeof audio->stt_backend, "%s", config->stt_backend);
+    }
+    if (config->speech_backend) {
+        if (backend_index(audio, config->speech_backend, 1) < 0) goto invalid;
+        snprintf(audio->speech_backend, sizeof audio->speech_backend, "%s", config->speech_backend);
+    }
     return audio;
+invalid:
+    audio_free(audio);
+    return NULL;
 }
 
 void audio_free(audio *audio) {
@@ -1283,26 +1116,31 @@ void audio_free(audio *audio) {
         audio->player->terminate(audio->player);
     if (audio->player && audio->player->destroy) audio->player->destroy(audio->player);
     free(audio->runtime);
-    free(audio->stt_url);
-    free(audio->stt_health);
-    free(audio->tts_url);
-    free(audio->tts_health);
     free(audio->stt_prompt);
     free(audio->stt_language);
-    free(audio->tts_model);
     free(audio->preferred_microphone);
-    free(audio->voice_preferences);
-    free(audio->deepgram_preferences);
     free(audio->speech_preferences);
     free(audio->stt_preferences);
     free(audio->playback_mode);
-    for (size_t i = 0; i < audio->voice_count; i++) {
-        free(audio->voices[i].id);
-        free(audio->voices[i].label);
-        free_pairs(audio->voices[i].options, audio->voices[i].option_count);
+    for (size_t i = 0; i < audio->backend_count; i++) {
+        audio_backend *b = &audio->backends[i];
+        free((void *)b->id);
+        free((void *)b->label);
+        free((void *)b->listen_url);
+        free((void *)b->speak_url);
+        free((void *)b->auth_env);
+        free((void *)b->auth_scheme);
+        free((void *)b->listen_model);
+        free((void *)b->default_voice);
+        free((void *)b->voice_preferences_path);
+        free_pairs((audio_pair *)b->query, b->query_count);
+        for (size_t v = 0; v < b->voice_count; v++) {
+            free((void *)b->voices[v].id);
+            free((void *)b->voices[v].label);
+            free((void *)b->voices[v].model);
+        }
+        free((void *)b->voices);
     }
-    free(audio->voices);
-    free_pairs(audio->long_voice, audio->long_voice_count);
     pthread_mutex_destroy(&audio->mu);
     pthread_mutex_destroy(&audio->backend_mu);
     pthread_mutex_destroy(&audio->synthesis_mu);
@@ -1316,7 +1154,6 @@ void audio_free(audio *audio) {
 void audio_set_http(audio *audio, audio_http_fn fn, void *user) { audio->http = fn; audio->http_user = user; }
 void audio_set_popen(audio *audio, audio_popen_fn fn, void *user) { audio->popen_fn = fn; audio->popen_user = user; }
 void audio_set_run(audio *audio, audio_run_fn fn, void *user) { audio->run_fn = fn; audio->run_user = user; }
-void audio_set_engines(audio *audio, audio_acquire_fn fn, void *user) { audio->acquire = fn; audio->acquire_user = user; }
 void audio_set_audible(audio *audio, audio_audible_fn fn, void *user) { audio->audible = fn; audio->audible_user = user; }
 void audio_set_microphone(audio *audio, audio_mic_status_fn status, audio_mic_resolve_fn resolve, void *user) {
     audio->mic_status = status; audio->mic_resolve = resolve; audio->mic_user = user;
@@ -1336,84 +1173,46 @@ void audio_set_playback_mode(audio *audio, const char *mode) {
     pthread_mutex_unlock(&audio->mu);
 }
 
-static void unknown_voice(audio *audio, int deepgram, char *err, size_t cap) {
-    if (!err || !cap) return;
-    size_t used = (size_t)snprintf(err, cap, "Unknown voice; choose ");
-    if (deepgram) {
-        for (size_t i = 0; i < sizeof DEEPGRAM_NAMES / sizeof DEEPGRAM_NAMES[0] && used < cap; i++)
-            used += (size_t)snprintf(err + used, cap - used, "%s%s", i ? ", " : "", DEEPGRAM_NAMES[i]);
-    } else {
-        for (size_t i = 0; i < audio->voice_count && used < cap; i++)
-            used += (size_t)snprintf(err + used, cap - used, "%s%s", i ? ", " : "", audio->voices[i].id);
-    }
-}
-
-int audio_set_speech_backend(audio *audio, const char *backend, char *err, size_t err_cap) {
-    if (!backend || (strcmp(backend, "local") != 0 && strcmp(backend, "deepgram") != 0)
-        || (strcmp(backend, "local") == 0 && !audio->has_local)
-        || (strcmp(backend, "deepgram") == 0 && !audio->has_deepgram_speech)) {
-        set_err(err, err_cap, "That speech backend is not available");
+static int select_backend(audio *audio, const char *id, int speech, char *err, size_t cap) {
+    int index = backend_index(audio, id, speech);
+    if (index < 0 || !backend_available(&audio->backends[index])) {
+        set_err(err, cap, "That backend is unavailable or its credential is missing");
         return -1;
     }
     pthread_mutex_lock(&audio->mu);
-    if (save_pref(audio->speech_preferences, backend) != 0) {
+    if (save_pref(speech ? audio->speech_preferences : audio->stt_preferences, id) != 0) {
         pthread_mutex_unlock(&audio->mu);
-        set_err(err, err_cap, "Could not save the speech backend");
+        set_err(err, cap, "Could not save the backend choice");
         return -1;
     }
-    snprintf(audio->speech_backend, sizeof audio->speech_backend, "%s", backend);
+    snprintf(speech ? audio->speech_backend : audio->stt_backend, 32, "%s", id);
     pthread_mutex_unlock(&audio->mu);
+    set_backend(audio, speech ? "tts" : "stt", "unknown", NULL);
     return 0;
+}
+
+int audio_set_speech_backend(audio *audio, const char *backend, char *err, size_t err_cap) {
+    return select_backend(audio, backend, 1, err, err_cap);
+}
+
+int audio_set_stt_backend(audio *audio, const char *backend, char *err, size_t err_cap) {
+    return select_backend(audio, backend, 0, err, err_cap);
 }
 
 int audio_set_voice(audio *audio, const char *character, char *err, size_t err_cap) {
     pthread_mutex_lock(&audio->mu);
-    int deepgram = strcmp(audio->speech_backend, "deepgram") == 0;
-    if (deepgram) {
-        if (!deepgram_known(character)) {
-            unknown_voice(audio, 1, err, err_cap);
-            pthread_mutex_unlock(&audio->mu);
-            return -1;
-        }
-        if (save_pref(audio->deepgram_preferences, character) != 0) {
-            pthread_mutex_unlock(&audio->mu);
-            set_err(err, err_cap, "Could not save the voice");
-            return -1;
-        }
-        snprintf(audio->deepgram_voice, sizeof audio->deepgram_voice, "%s", character);
-    } else {
-        if (local_index(audio, character) < 0) {
-            unknown_voice(audio, 0, err, err_cap);
-            pthread_mutex_unlock(&audio->mu);
-            return -1;
-        }
-        if (save_pref(audio->voice_preferences, character) != 0) {
-            pthread_mutex_unlock(&audio->mu);
-            set_err(err, err_cap, "Could not save the voice");
-            return -1;
-        }
-        snprintf(audio->selected_voice, sizeof audio->selected_voice, "%s", character);
-    }
-    pthread_mutex_unlock(&audio->mu);
-    return 0;
-}
-
-int audio_set_stt_backend(audio *audio, const char *backend, char *err, size_t err_cap) {
-    if (!backend || (strcmp(backend, "whisper") != 0 && strcmp(backend, "deepgram") != 0)) {
-        set_err(err, err_cap, "Unknown dictation backend");
-        return -1;
-    }
-    if (strcmp(backend, "deepgram") == 0 && !has_deepgram_key()) {
-        set_err(err, err_cap, "Deepgram API key is not installed; stay on Whisper");
-        return -1;
-    }
-    pthread_mutex_lock(&audio->mu);
-    if (save_pref(audio->stt_preferences, backend) != 0) {
+    int index = backend_index(audio, audio->speech_backend, 1);
+    if (index < 0 || voice_index(&audio->backends[index], character) < 0) {
+        set_err(err, err_cap, "Unknown voice for the selected backend");
         pthread_mutex_unlock(&audio->mu);
-        set_err(err, err_cap, "Could not save the dictation backend");
         return -1;
     }
-    snprintf(audio->stt_backend, sizeof audio->stt_backend, "%s", backend);
+    if (save_pref(audio->backends[index].voice_preferences_path, character) != 0) {
+        set_err(err, err_cap, "Could not save the voice");
+        pthread_mutex_unlock(&audio->mu);
+        return -1;
+    }
+    snprintf(audio->selected_voices[index], sizeof audio->selected_voices[index], "%s", character);
     pthread_mutex_unlock(&audio->mu);
     return 0;
 }
@@ -1423,34 +1222,31 @@ int audio_status(audio *audio, audio_report *status) {
     pthread_mutex_lock(&audio->mu);
     snprintf(status->speech_backend, sizeof status->speech_backend, "%s", audio->speech_backend);
     snprintf(status->selected_stt, sizeof status->selected_stt, "%s", audio->stt_backend);
-    int deepgram = strcmp(audio->speech_backend, "deepgram") == 0;
-    if (deepgram) {
-        snprintf(status->selected_voice, sizeof status->selected_voice, "%s", audio->deepgram_voice);
-        status->voice_count = sizeof DEEPGRAM_NAMES / sizeof DEEPGRAM_NAMES[0];
-        for (size_t i = 0; i < status->voice_count && i < 48; i++) {
-            snprintf(status->voice_ids[i], sizeof status->voice_ids[i], "%s", DEEPGRAM_NAMES[i]);
-            snprintf(status->voice_labels[i], sizeof status->voice_labels[i], "%c%s",
-                toupper((unsigned char)DEEPGRAM_NAMES[i][0]), DEEPGRAM_NAMES[i] + 1);
-        }
-    } else {
-        snprintf(status->selected_voice, sizeof status->selected_voice, "%s", audio->selected_voice);
-        status->voice_count = audio->voice_count < 48 ? audio->voice_count : 48;
-        for (size_t i = 0; i < status->voice_count; i++) {
-            snprintf(status->voice_ids[i], sizeof status->voice_ids[i], "%s", audio->voices[i].id);
-            snprintf(status->voice_labels[i], sizeof status->voice_labels[i], "%s", audio->voices[i].label);
+    int selected = backend_index(audio, audio->speech_backend, 1);
+    if (selected >= 0) {
+        const audio_backend *backend = &audio->backends[selected];
+        snprintf(status->selected_voice, sizeof status->selected_voice, "%s", audio->selected_voices[selected]);
+        status->voice_count = backend->voice_count;
+        for (size_t i = 0; i < backend->voice_count; i++) {
+            snprintf(status->voice_ids[i], sizeof status->voice_ids[i], "%s", backend->voices[i].id);
+            snprintf(status->voice_labels[i], sizeof status->voice_labels[i], "%s", backend->voices[i].label);
         }
     }
-    if (audio->has_local) {
-        snprintf(status->speech_backend_ids[status->speech_backend_count], 32, "local");
-        snprintf(status->speech_backend_labels[status->speech_backend_count], 64, "Local characters");
-        status->speech_backend_count++;
+    for (size_t i = 0; i < audio->backend_count; i++) {
+        const audio_backend *backend = &audio->backends[i];
+        if (!backend_available(backend)) continue;
+        if (backend->speak_url) {
+            size_t n = status->speech_backend_count++;
+            snprintf(status->speech_backend_ids[n], 32, "%s", backend->id);
+            snprintf(status->speech_backend_labels[n], 64, "%s", backend->label);
+        }
+        if (backend->listen_url) {
+            size_t n = status->stt_count++;
+            snprintf(status->stt_ids[n], 32, "%s", backend->id);
+            snprintf(status->stt_labels[n], 64, "%s", backend->label);
+        }
     }
-    if (audio->has_deepgram_speech) {
-        snprintf(status->speech_backend_ids[status->speech_backend_count], 32, "deepgram");
-        snprintf(status->speech_backend_labels[status->speech_backend_count], 64, "Deepgram");
-        status->speech_backend_count++;
-    }
-    int hide_tts = deepgram || !audio->has_local;
+    int hide_tts = selected < 0;
     pthread_mutex_unlock(&audio->mu);
     pthread_mutex_lock(&audio->backend_mu);
     status->has_stt = 1;
@@ -1463,14 +1259,7 @@ int audio_status(audio *audio, audio_report *status) {
         status->has_tts_error = audio->has_tts_error;
         if (audio->has_tts_error) snprintf(status->tts_error, sizeof status->tts_error, "%s", audio->tts_error);
     }
-    if (status->has_stt) maybe_refresh(audio, "stt");
-    if (status->has_tts) maybe_refresh(audio, "tts");
     pthread_mutex_unlock(&audio->backend_mu);
-    snprintf(status->stt_ids[0], 32, "whisper");
-    snprintf(status->stt_labels[0], 64, "Whisper (local GPU)");
-    snprintf(status->stt_ids[1], 32, "deepgram");
-    snprintf(status->stt_labels[1], 64, "Deepgram (cloud)");
-    status->stt_count = 2;
     if (audio->mic_details) {
         audio_mic_details details;
         memset(&details, 0, sizeof details);
@@ -1527,50 +1316,17 @@ int audio_playing(audio *audio) {
     return playing;
 }
 
-int audio_wait_ready(audio *audio, const char *engine, atomic_int *cancelled, char *err, size_t err_cap) {
-    const char *url = strcmp(engine, "stt") == 0 ? audio->stt_health : audio->tts_health;
-    if (!url) return cancelled && atomic_load(cancelled) ? 0 : 1;
-    double budget = audio->readiness_timeout > 0 ? audio->readiness_timeout : 60;
-    double start = mono_now();
-    set_backend(audio, engine, "loading", NULL);
-    for (;;) {
-        if (cancelled && atomic_load(cancelled)) return 0;
-        double remaining = budget - (mono_now() - start);
-        if (remaining <= 0) {
-            snprintf(err, err_cap, "%s model is not ready; check pi-voice-%s.service and model files",
-                engine_name(engine), engine);
-            set_backend(audio, engine, "error", err);
-            return -1;
-        }
-        int probe_ms = remaining < 0.25 ? (int)(remaining * 1000) : 250;
-        if (probe_ms < 1) probe_ms = 1;
-        char perr[512] = {0};
-        int ready = probe(audio, engine, probe_ms, perr, sizeof perr);
-        if (ready < 0) {
-            set_backend(audio, engine, "error", perr);
-            set_err(err, err_cap, perr);
-            return -1;
-        }
-        if (ready) {
-            set_backend(audio, engine, "ready", NULL);
-            return cancelled && atomic_load(cancelled) ? 0 : 1;
-        }
-        if (sleep_cancel(cancelled, remaining < 0.1 ? remaining : 0.1)) return 0;
-    }
-}
-
-static int parse_wav_result(const unsigned char *data, size_t len, int deepgram, op_result *result) {
+static int parse_wav_result(const unsigned char *data, size_t len, int streaming_wav, op_result *result) {
     int channels = 0, width = 0, rate = 0;
     unsigned char *frames = NULL;
     size_t frame_len = 0;
-    if (wav_parse(data, len, &channels, &width, &rate, &frames, &frame_len, deepgram) != 0 || !frames || frame_len == 0
+    if (wav_parse(data, len, &channels, &width, &rate, &frames, &frame_len, streaming_wav) != 0 || !frames || frame_len == 0
         || width <= 0 || channels <= 0 || frame_len % (size_t)(channels * width) != 0) {
         free(frames);
-        set_err(result->error, sizeof result->error,
-            deepgram ? "Deepgram returned incomplete speech audio" : "Incomplete speech audio");
+        set_err(result->error, sizeof result->error, "Incomplete speech audio");
         return -1;
     }
-    if (!deepgram) {
+    if (!streaming_wav) {
         size_t declared = 0;
         if (len >= 44 && memcmp(data + 36, "data", 4) == 0) declared = rd32(data + 40);
         else declared = frame_len;
@@ -1597,9 +1353,9 @@ typedef struct http_op {
     size_t body_len;
     int timeout_ms;
     size_t maximum;
-    int deepgram_speak;
-    int deepgram_listen;
-    char *engine;
+    int listen;
+    size_t context_words;
+    const audio_backend *backend;
 } http_op;
 
 static void free_http_op(void *user) {
@@ -1609,7 +1365,6 @@ static void free_http_op(void *user) {
     free(op->content_type);
     free(op->authorization);
     free(op->body);
-    free(op->engine);
     free(op);
 }
 
@@ -1618,7 +1373,7 @@ static int http_op_run_inner(void *user, op_result *result) {
     audio_http_request request = {
         .method = "POST", .url = op->url, .content_type = op->content_type,
         .authorization = op->authorization, .body = op->body, .body_len = op->body_len,
-        .timeout_ms = op->timeout_ms, .maximum = op->maximum
+        .timeout_ms = op->timeout_ms, .maximum = op->maximum, .context_words = op->context_words
     };
     audio_http_response response;
     http_call(op->audio, &request, &response);
@@ -1627,102 +1382,41 @@ static int http_op_run_inner(void *user, op_result *result) {
         free(response.body);
         return -1;
     }
-    if (op->deepgram_speak || op->deepgram_listen) {
-        const char *what = op->engine ? engine_name(op->engine) : (op->deepgram_speak ? "Deepgram speech" : "Deepgram");
-        if (response.transport_error || response.status == 0) {
-            snprintf(result->error, sizeof result->error, "%s connection failed", what);
-            free(response.body);
-            return -1;
-        }
-        if (response.status >= 400) {
-            snprintf(result->error, sizeof result->error, "%s %s (HTTP %d)",
-                what, op->deepgram_speak ? "failed" : "request failed", response.status);
-            free(response.body);
-            return -1;
-        }
-        if (response.body_len > op->maximum) {
-            set_err(result->error, sizeof result->error,
-                op->deepgram_speak ? "Deepgram speech response is too large" : "Deepgram response exceeds the size limit");
-            free(response.body);
-            return -1;
-        }
-        if (op->deepgram_listen) {
-            json_value *root = json_parse(response.body, response.body_len);
-            free(response.body);
-            if (!root) {
-                set_err(result->error, sizeof result->error, "Deepgram returned invalid JSON");
-                return -1;
-            }
-            int rc = 0;
-            if (!root || root->type != JSON_OBJECT) {
-                set_err(result->error, sizeof result->error, "Deepgram returned invalid JSON");
-                rc = -1;
-            } else {
-                json_value *text = json_get(root, "text");
-                if (text && text->type == JSON_STRING && text->string && strspn(text->string, " \t\r\n") != strlen(text->string))
-                    result->text = strdup(text->string);
-                else {
-                    json_value *results = json_get(root, "results");
-                    json_value *channels = results ? json_get(results, "channels") : NULL;
-                    json_value *alt = NULL;
-                    if (channels && channels->type == JSON_ARRAY && channels->nitems && channels->items[0]->type == JSON_OBJECT) {
-                        json_value *alts = json_get(channels->items[0], "alternatives");
-                        if (alts && alts->type == JSON_ARRAY && alts->nitems && alts->items[0]->type == JSON_OBJECT)
-                            alt = json_get(alts->items[0], "transcript");
-                    }
-                    if (!alt || alt->type != JSON_STRING) {
-                        set_err(result->error, sizeof result->error, "Deepgram returned no transcription text");
-                        rc = -1;
-                    } else result->text = strdup(alt->string ? alt->string : "");
-                }
-            }
-            json_free(root);
-            if (rc == 0 && !result->text) { set_err(result->error, sizeof result->error, "Out of memory"); return -1; }
-            return rc;
-        }
-        int rc = parse_wav_result(response.body, response.body_len, op->engine == NULL, result);
-        free(response.body);
-        return rc;
-    }
     if (response.transport_error || response.status == 0) {
-        snprintf(result->error, sizeof result->error, "%s connection failed; check pi-voice-%s.service",
-            engine_name(op->engine), op->engine);
-        set_backend(op->audio, op->engine, "error", result->error);
+        snprintf(result->error, sizeof result->error, "%s connection failed", op->backend->label);
         free(response.body);
         return -1;
     }
-    if (response.status >= 400) {
-        snprintf(result->error, sizeof result->error, "%s request failed (HTTP %d); check pi-voice-%s.service",
-            engine_name(op->engine), response.status, op->engine);
-        set_backend(op->audio, op->engine, "error", result->error);
+    if (response.status < 200 || response.status >= 300) {
+        snprintf(result->error, sizeof result->error, "%s request failed (HTTP %d)", op->backend->label, response.status);
         free(response.body);
         return -1;
     }
     if (response.body_len > op->maximum) {
-        snprintf(result->error, sizeof result->error, "%s response exceeds the size limit", engine_name(op->engine));
-        set_backend(op->audio, op->engine, "error", result->error);
+        set_err(result->error, sizeof result->error, "Backend response exceeds the size limit");
         free(response.body);
         return -1;
     }
-    set_backend(op->audio, op->engine, "ready", NULL);
-    if (strcmp(op->engine, "stt") == 0) {
+    if (op->listen) {
         json_value *root = json_parse(response.body, response.body_len);
         free(response.body);
-        if (!root) {
-            set_err(result->error, sizeof result->error, "Whisper returned invalid JSON");
-            return -1;
+        json_value *results = root ? json_get(root, "results") : NULL;
+        json_value *channels = results ? json_get(results, "channels") : NULL;
+        json_value *text = NULL;
+        if (channels && channels->type == JSON_ARRAY && channels->nitems) {
+            json_value *alternatives = json_get(channels->items[0], "alternatives");
+            if (alternatives && alternatives->type == JSON_ARRAY && alternatives->nitems)
+                text = json_get(alternatives->items[0], "transcript");
         }
-        json_value *text = root->type == JSON_OBJECT ? json_get(root, "text") : NULL;
-        if (!text || text->type != JSON_STRING) {
-            json_free(root);
-            set_err(result->error, sizeof result->error, "Whisper returned no transcription text");
-            return -1;
-        }
-        result->text = strdup(text->string ? text->string : "");
+        if (text && text->type == JSON_STRING) result->text = strdup(text->string);
         json_free(root);
-        return result->text ? 0 : -1;
+        if (!result->text) {
+            snprintf(result->error, sizeof result->error, "%s returned invalid JSON transcription", op->backend->label);
+            return -1;
+        }
+        return 0;
     }
-    int rc = parse_wav_result(response.body, response.body_len, 0, result);
+    int rc = parse_wav_result(response.body, response.body_len, op->backend->streaming_wav, result);
     free(response.body);
     return rc;
 }
@@ -1730,8 +1424,7 @@ static int http_op_run_inner(void *user, op_result *result) {
 static int http_op_run(void *user, op_result *result) {
     http_op *op = user;
     int rc = http_op_run_inner(user, result);
-    if (op->engine)
-        set_backend(op->audio, op->engine, rc ? "error" : "ready", rc ? result->error : NULL);
+    set_backend(op->audio, op->listen ? "stt" : "tts", rc ? "error" : "ready", rc ? result->error : NULL);
     return rc;
 }
 
@@ -1739,35 +1432,56 @@ static void destroy_unused(void (*destroy_ctx)(void *), void *drain_user) {
     if (destroy_ctx) destroy_ctx(drain_user);
 }
 
-static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cancelled,
+static http_op *new_request(audio *audio, const audio_backend *backend, int listen, char *err, size_t cap) {
+    if (!backend || !backend_available(backend)) {
+        set_err(err, cap, "Backend is unavailable or its credential is missing");
+        return NULL;
+    }
+    http_op *op = calloc(1, sizeof *op);
+    if (!op) return NULL;
+    op->audio = audio;
+    op->backend = backend;
+    op->listen = listen;
+    op->url = dup_opt(listen ? backend->listen_url : backend->speak_url);
+    op->content_type = strdup(listen ? "audio/wav" : "application/json");
+    op->timeout_ms = backend->timeout_ms;
+    op->maximum = listen ? LISTEN_MAX : TTS_MAX;
+    if (!op->url || !op->content_type) goto fail;
+    if (backend->auth_env) {
+        const char *key = getenv(backend->auth_env);
+        if (!key || strpbrk(key, "\r\n")) goto fail;
+        if (asprintf(&op->authorization, "%s %s", backend->auth_scheme, key) < 0) goto fail;
+    }
+    for (size_t i = 0; i < backend->query_count; i++)
+        if (query_append(&op->url, backend->query[i].key, backend->query[i].value)) goto fail;
+    set_backend(audio, listen ? "stt" : "tts", "loading", NULL);
+    return op;
+fail:
+    free_http_op(op);
+    set_err(err, cap, "Could not construct the backend request");
+    return NULL;
+}
+
+static int transcribe_request(audio *audio, const char *path, atomic_int *cancelled,
     audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *),
     char *out, size_t out_cap, char *err, size_t err_cap) {
-    int local = strcmp(audio->stt_backend, "deepgram") != 0;
-    char *key = local ? NULL : copy_key();
-    if (!local && !key) {
+    pthread_mutex_lock(&audio->mu);
+    int index = backend_index(audio, audio->stt_backend, 0);
+    const audio_backend *backend = index >= 0 ? &audio->backends[index] : NULL;
+    pthread_mutex_unlock(&audio->mu);
+    http_op *op = new_request(audio, backend, 1, err, err_cap);
+    if (!op) {
         destroy_unused(destroy_ctx, drain_user);
-        set_err(err, err_cap, "Deepgram API key is not installed; stay on Whisper");
         return -1;
     }
-    unsigned char *payload = NULL;
-    size_t payload_len = 0;
-    if (read_file(path, &payload, &payload_len) != 0) {
-        free(key);
+    if (read_file(path, &op->body, &op->body_len) != 0) {
+        free_http_op(op);
         destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Could not read dictation audio");
         return -1;
     }
-    if (local && !audio->stt_url) {
-        free(payload);
-        destroy_unused(destroy_ctx, drain_user);
-        set_err(err, err_cap, "Local recognition URL is not configured");
-        return -1;
-    }
-    char *url = strdup(local ? audio->stt_url : "https://api.deepgram.com/v1/listen");
-    query_append(&url, "model", local ? "whisper" : "nova-3");
-    query_append(&url, "smart_format", "true");
-    query_append(&url, "punctuate", "true");
-    query_append(&url, "mip_opt_out", "true");
+    char *url = op->url;
+    if (backend->listen_model) query_append(&url, "model", backend->listen_model);
     query_append(&url, "language", audio->stt_language);
     if (audio->stt_prompt) {
         char *copy = strdup(audio->stt_prompt);
@@ -1784,140 +1498,11 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
         if (copy) { strip(start); if (start[0]) query_append(&url, "keyterm", start); }
         free(copy);
     }
-    http_op *op = calloc(1, sizeof *op);
-    if (!op) {
-        free(url); free(payload); free(key);
-        destroy_unused(destroy_ctx, drain_user);
-        set_err(err, err_cap, "Out of memory");
-        return -1;
-    }
-    op->audio = audio;
     op->url = url;
-    op->content_type = strdup("audio/wav");
-    op->authorization = key ? malloc(strlen(key) + 8) : NULL;
-    op->body = payload;
-    if (!op->url || !op->content_type || (key && !op->authorization)) {
-        free(key); free_http_op(op);
-        destroy_unused(destroy_ctx, drain_user);
-        set_err(err, err_cap, "Out of memory");
-        return -1;
-    }
-    if (key) sprintf(op->authorization, "Token %s", key);
-    free(key);
-    op->body_len = payload_len;
-    op->timeout_ms = 90000;
-    op->maximum = LISTEN_MAX;
-    op->deepgram_listen = 1;
-    if (local) op->engine = strdup("stt");
     op_result result = {0};
-    int rc = run_cancellable(audio, &audio->recognition_mu, local ? "stt" : NULL, cancelled, http_op_run, op, free_http_op,
+    int rc = run_cancellable(audio, &audio->recognition_mu, cancelled, http_op_run, op, free_http_op,
         on_drained, drain_user, destroy_ctx, drain_user, &result, err, err_cap);
     if (rc != 0) return rc < 0 ? -1 : 0;
-    if (!out || strlen(result.text) + 1 > out_cap) {
-        free_result(&result);
-        set_err(err, err_cap, "transcription exceeds the buffer");
-        return -1;
-    }
-    memcpy(out, result.text, strlen(result.text) + 1);
-    free_result(&result);
-    return 0;
-}
-
-static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancelled,
-    audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *),
-    char *out, size_t out_cap, char *err, size_t err_cap) {
-    if (!audio->stt_url) {
-        destroy_unused(destroy_ctx, drain_user);
-        set_err(err, err_cap, "Whisper request failed (HTTP 0); check pi-voice-stt.service");
-        return -1;
-    }
-    unsigned char *file = NULL;
-    size_t file_len = 0;
-    if (read_file(path, &file, &file_len) != 0) {
-        destroy_unused(destroy_ctx, drain_user);
-        set_err(err, err_cap, "Could not read dictation audio");
-        return -1;
-    }
-    unsigned char random[16];
-    FILE *entropy = fopen("/dev/urandom", "rb");
-    if (!entropy || fread(random, 1, sizeof random, entropy) != sizeof random) {
-        for (size_t i = 0; i < sizeof random; i++) random[i] = (unsigned char)(mono_now() * 1000 + i);
-    }
-    if (entropy) fclose(entropy);
-    char boundary[33];
-    for (int i = 0; i < 16; i++) sprintf(boundary + i * 2, "%02x", random[i]);
-    char *fields = NULL;
-    size_t flen = 0, fcap = 0;
-    const char *names[] = {"response_format", "language", "temperature"};
-    const char *values[] = {"json", audio->stt_language ? audio->stt_language : "en", "0"};
-    for (int i = 0; i < 3; i++) {
-        char header[256];
-        snprintf(header, sizeof header, "--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n",
-            boundary, names[i], values[i]);
-        append_str(&fields, &flen, &fcap, header);
-    }
-    if (audio->stt_prompt) {
-        char *header = malloc(strlen(boundary) + strlen(audio->stt_prompt) + 80);
-        if (!header) {
-            free(fields);
-            free(file);
-            destroy_unused(destroy_ctx, drain_user);
-            set_err(err, err_cap, "Out of memory");
-            return -1;
-        }
-        sprintf(header, "--%s\r\nContent-Disposition: form-data; name=\"prompt\"\r\n\r\n%s\r\n", boundary, audio->stt_prompt);
-        append_str(&fields, &flen, &fcap, header);
-        free(header);
-    }
-    char file_header[256];
-    snprintf(file_header, sizeof file_header,
-        "--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"dictation.wav\"\r\nContent-Type: audio/wav\r\n\r\n",
-        boundary);
-    append_str(&fields, &flen, &fcap, file_header);
-    char tail[80];
-    snprintf(tail, sizeof tail, "\r\n--%s--\r\n", boundary);
-    size_t total = flen + file_len + strlen(tail);
-    unsigned char *body = malloc(total ? total : 1);
-    http_op *op = calloc(1, sizeof *op);
-    if (!body || !op) {
-        free(body);
-        free(op);
-        free(fields);
-        free(file);
-        destroy_unused(destroy_ctx, drain_user);
-        set_err(err, err_cap, "Out of memory");
-        return -1;
-    }
-    if (fields && flen) memcpy(body, fields, flen);
-    if (file && file_len) memcpy(body + flen, file, file_len);
-    memcpy(body + flen + file_len, tail, strlen(tail));
-    free(fields);
-    free(file);
-    op->audio = audio;
-    op->url = strdup(audio->stt_url);
-    op->content_type = malloc(strlen(boundary) + 48);
-    if (!op->url || !op->content_type) {
-        free(body);
-        free(op->url);
-        free(op->content_type);
-        free(op);
-        destroy_unused(destroy_ctx, drain_user);
-        set_err(err, err_cap, "Out of memory");
-        return -1;
-    }
-    sprintf(op->content_type, "multipart/form-data; boundary=%s", boundary);
-    op->body = body;
-    op->body_len = total;
-    op->timeout_ms = 90000;
-    op->maximum = WHISPER_MAX;
-    op->engine = strdup("stt");
-    op_result result = {0};
-    int rc = run_cancellable(audio, &audio->recognition_mu, "stt", cancelled, http_op_run, op, free_http_op,
-        on_drained, drain_user, destroy_ctx, drain_user, &result, err, err_cap);
-    if (rc != 0) {
-        if (rc > 0 && out && out_cap) out[0] = 0;
-        return rc < 0 ? -1 : 0;
-    }
     if (!out || strlen(result.text) + 1 > out_cap) {
         free_result(&result);
         set_err(err, err_cap, "transcription exceeds the buffer");
@@ -1937,16 +1522,11 @@ static int transcribe_dispatch(audio *audio, const char *path, atomic_int *cance
         set_err(err, err_cap, "transcription is unavailable");
         return -1;
     }
-    if (strcmp(audio->stt_backend, "deepgram") == 0)
-        return transcribe_deepgram(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
-    int ready = audio_wait_ready(audio, "stt", cancelled, err, err_cap);
-    if (ready <= 0) {
+    if (cancelled && atomic_load(cancelled)) {
         destroy_unused(destroy_ctx, drain_user);
-        return ready < 0 ? -1 : 0;
+        return 0;
     }
-    if (audio->local_deepgram_api)
-        return transcribe_deepgram(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
-    return transcribe_whisper(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
+    return transcribe_request(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
 }
 
 int audio_transcribe(audio *audio, const char *path, atomic_int *cancelled,
@@ -1967,125 +1547,50 @@ void audio_drain(audio *audio) {
     pthread_mutex_unlock(&audio->live_mu);
 }
 
-static int word_count(const char *text) {
-    int words = 0, in = 0;
-    for (const unsigned char *p = (const unsigned char *)(text ? text : ""); *p; p++) {
-        if (isspace(*p)) in = 0;
-        else if (!in) { in = 1; words++; }
-    }
-    return words;
-}
-
-static void free_choice(voice_choice *choice) { free_pairs(choice->pairs, choice->npairs); }
+static void free_choice(voice_choice *choice) { (void)choice; }
 
 static int choose_voice(audio *audio, const char *text, voice_choice *choice, char *err, size_t err_cap) {
     memset(choice, 0, sizeof *choice);
-    pthread_mutex_lock(&audio->mu);
-    if (strcmp(audio->speech_backend, "deepgram") == 0) {
-        choice->deepgram = 1;
-        snprintf(choice->model, sizeof choice->model, "aura-2-%s-en", audio->deepgram_voice);
-        pthread_mutex_unlock(&audio->mu);
-        return 0;
+    int in_word = 0;
+    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
+        if (isspace(*p)) in_word = 0;
+        else if (!in_word) { in_word = 1; choice->context_words++; }
     }
-    int index = local_index(audio, audio->selected_voice);
-    if (index < 0) {
+    pthread_mutex_lock(&audio->mu);
+    int index = backend_index(audio, audio->speech_backend, 1);
+    int voice = index >= 0 ? voice_index(&audio->backends[index], audio->selected_voices[index]) : -1;
+    if (voice < 0) {
         pthread_mutex_unlock(&audio->mu);
-        set_err(err, err_cap, "That speech backend is not available");
+        set_err(err, err_cap, "That speech backend or voice is not configured");
         return -1;
     }
-    snprintf(choice->model, sizeof choice->model, "%s%s", audio->selected_voice,
-        strcmp(audio->selected_voice, "samantha") == 0 && word_count(text) > 50 ? "-long" : "");
-    snprintf(choice->tts_model, sizeof choice->tts_model, "%s", audio->tts_model ? audio->tts_model : "pi-voice");
-    if (strcmp(audio->selected_voice, "samantha") == 0 && word_count(text) > 50) {
-        choice->pairs = copy_pairs(audio->long_voice, audio->long_voice_count);
-        choice->npairs = audio->long_voice_count;
-    } else {
-        choice->pairs = copy_pairs(audio->voices[index].options, audio->voices[index].option_count);
-        choice->npairs = audio->voices[index].option_count;
-    }
+    choice->backend = &audio->backends[index];
+    snprintf(choice->model, sizeof choice->model, "%s", choice->backend->voices[voice].model);
     pthread_mutex_unlock(&audio->mu);
     return 0;
 }
 
-static int build_tts_body(const voice_choice *choice, const char *chunk, unsigned char **body, size_t *len) {
-    char *buf = NULL;
-    size_t n = 0, cap = 0;
-    if (append_str(&buf, &n, &cap, "{\"model\":") || append_json_string(&buf, &n, &cap, choice->tts_model)
-        || append_str(&buf, &n, &cap, ",\"input\":") || append_json_string(&buf, &n, &cap, chunk)
-        || append_str(&buf, &n, &cap, ",\"language\":") || append_json_string(&buf, &n, &cap, "English"))
-        return -1;
-    for (size_t i = 0; i < choice->npairs; i++) {
-        if (append_str(&buf, &n, &cap, ",") || append_json_string(&buf, &n, &cap, choice->pairs[i].key)
-            || append_str(&buf, &n, &cap, ":") || append_json_string(&buf, &n, &cap, choice->pairs[i].value))
-            return -1;
-    }
-    if (append_str(&buf, &n, &cap, "}")) return -1;
-    *body = (unsigned char *)buf;
-    *len = n;
-    return 0;
-}
-
 static int synthesize(audio *audio, const char *chunk, const voice_choice *choice, atomic_int *cancelled, op_result *result, char *err, size_t err_cap) {
-    http_op *op = calloc(1, sizeof *op);
-    if (!op) { set_err(err, err_cap, "Out of memory"); return -1; }
-    op->audio = audio;
-    if (choice->deepgram || audio->local_deepgram_api) {
-        char *key = choice->deepgram ? copy_key() : NULL;
-        if (choice->deepgram && !key) {
-            free(op);
-            set_err(err, err_cap, "Deepgram API key is not installed; use local speech");
-            return -1;
-        }
-        if (!choice->deepgram && !audio->tts_url) {
-            free(op);
-            set_err(err, err_cap, "Local speech URL is not configured");
-            return -1;
-        }
-        op->url = strdup(choice->deepgram ? "https://api.deepgram.com/v1/speak" : audio->tts_url);
-        query_append(&op->url, "model", choice->model);
-        query_append(&op->url, "encoding", "linear16");
-        query_append(&op->url, "container", "wav");
-        query_append(&op->url, "sample_rate", "24000");
-        query_append(&op->url, "mip_opt_out", "true");
-        op->content_type = strdup("application/json");
-        op->authorization = key ? malloc(strlen(key) + 8) : NULL;
-        if (!op->url || !op->content_type || (key && !op->authorization)) {
-            free(key); free_http_op(op);
-            set_err(err, err_cap, "Out of memory");
-            return -1;
-        }
-        if (key) sprintf(op->authorization, "Token %s", key);
-        free(key);
-        char *text = NULL;
-        size_t n = 0, cap = 0;
-        append_str(&text, &n, &cap, "{\"text\":");
-        append_json_string(&text, &n, &cap, chunk);
-        append_str(&text, &n, &cap, "}");
-        op->body = (unsigned char *)text;
-        op->body_len = n;
-        op->timeout_ms = 60000;
-        op->maximum = choice->deepgram ? SPEAK_MAX : TTS_MAX;
-        op->deepgram_speak = 1;
-        if (!choice->deepgram) op->engine = strdup("tts");
-        return run_cancellable(audio, &audio->synthesis_mu, choice->deepgram ? NULL : "tts", cancelled, http_op_run, op, free_http_op,
-            NULL, NULL, NULL, NULL, result, err, err_cap);
-    }
-    if (!audio->tts_url) {
-        free(op);
-        set_err(err, err_cap, "Samantha TTS request failed (HTTP 0); check pi-voice-tts.service");
-        return -1;
-    }
-    op->url = strdup(audio->tts_url);
-    op->content_type = strdup("application/json");
-    op->engine = strdup("tts");
-    op->timeout_ms = 90000;
-    op->maximum = TTS_MAX;
-    if (build_tts_body(choice, chunk, &op->body, &op->body_len) != 0) {
+    http_op *op = new_request(audio, choice->backend, 0, err, err_cap);
+    if (!op) return -1;
+    op->context_words = choice->context_words;
+    char *text = NULL;
+    size_t n = 0, cap = 0;
+    if (query_append(&op->url, "model", choice->model)
+        || query_append(&op->url, "encoding", "linear16")
+        || query_append(&op->url, "container", "wav")
+        || query_append(&op->url, "sample_rate", "24000")
+        || append_str(&text, &n, &cap, "{\"text\":")
+        || append_json_string(&text, &n, &cap, chunk)
+        || append_str(&text, &n, &cap, "}")) {
+        free(text);
         free_http_op(op);
-        set_err(err, err_cap, "Out of memory");
+        set_err(err, err_cap, "Could not construct the speech request");
         return -1;
     }
-    return run_cancellable(audio, &audio->synthesis_mu, "tts", cancelled, http_op_run, op, free_http_op,
+    op->body = (unsigned char *)text;
+    op->body_len = n;
+    return run_cancellable(audio, &audio->synthesis_mu, cancelled, http_op_run, op, free_http_op,
         NULL, NULL, NULL, NULL, result, err, err_cap);
 }
 
@@ -2476,14 +1981,6 @@ int audio_speak(audio *audio, const char *text, atomic_int *cancelled, char *err
         free_choice(&choice);
         return 0;
     }
-    if (!choice.deepgram) {
-        int ready = audio_wait_ready(audio, "tts", cancelled, err, err_cap);
-        if (ready <= 0) {
-            free_chunks(chunks, count);
-            free_choice(&choice);
-            return ready < 0 ? -1 : 0;
-        }
-    }
     char mode[32];
     pthread_mutex_lock(&audio->mu);
     snprintf(mode, sizeof mode, "%s", audio->playback_mode ? audio->playback_mode : "buffered");
@@ -2581,14 +2078,14 @@ static int call_op_run(void *user, op_result *result) {
 }
 static void free_call_op(void *user) { free(user); }
 
-int audio_call(audio *audio, const char *engine, atomic_int *cancelled,
+int audio_call(audio *audio, atomic_int *cancelled,
     int (*op)(void *user, char *err, size_t err_cap), void *user, char *err, size_t err_cap) {
     call_op *call = calloc(1, sizeof *call);
     if (!call) { set_err(err, err_cap, "Out of memory"); return -1; }
     call->op = op;
     call->user = user;
     op_result result = {0};
-    int rc = run_cancellable(audio, &audio->call_mu, engine, cancelled, call_op_run, call, free_call_op,
+    int rc = run_cancellable(audio, &audio->call_mu, cancelled, call_op_run, call, free_call_op,
         NULL, NULL, NULL, NULL, &result, err, err_cap);
     free_result(&result);
     return rc;

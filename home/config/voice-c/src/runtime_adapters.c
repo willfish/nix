@@ -45,34 +45,16 @@ struct voice_terminal {
 struct voice_config {
     audio_config audio;
     int auto_speak;
-    char *stt_url;
-    char *stt_health_url;
-    char *tts_url;
-    char *tts_health_url;
-    char *stt_prompt;
-    char *stt_language;
-    char *tts_model;
-    char *preferred_microphone;
-    char *voice_preferences_path;
-    char *stt_preferences_path;
-    char *playback_mode;
-    audio_voice *voices;
-    audio_pair *long_voice;
+    audio_backend backends[4];
     char **strings;
     size_t nstrings;
 };
 
 struct voice_audio_binding {
     audio *audio;
-    engine_manager *engines;
     MicrophoneMonitor *mic;
     int no_services;
 };
-
-typedef struct bound_lease {
-    audio_lease api;
-    engine_lease *lease;
-} bound_lease;
 
 static void set_err(char *err, size_t cap, const char *msg) {
     if (!err || !cap) return;
@@ -341,72 +323,23 @@ static int run_hooked(const ipc_process_request *request, ipc_process_result *re
     return ipc_process_run(request, result, err, err_cap);
 }
 
-static int systemctl_exec(const char *const *argv, int argc, double timeout, void *ctx, char *stdout_buf, size_t cap) {
-    ipc_process_request request;
-    memset(&request, 0, sizeof request);
-    request.argv = argv;
-    request.argc = argc;
-    request.capture_stdout = stdout_buf != NULL;
-    request.deadline_ms = timeout > 0 ? (int)(timeout * 1000.0) : 1000;
-    if (request.deadline_ms < 1) request.deadline_ms = 1;
-    if (request.deadline_ms > 120000) request.deadline_ms = 120000;
-    request.stdout_max = cap ? cap : 256;
-    ipc_process_result result;
-    memset(&result, 0, sizeof result);
-    char err[128];
-    int rc = run_hooked(&request, &result, ctx, err, sizeof err);
-    int failed = rc != IPC_OK || result.exit_code != 0;
-    if (!failed && stdout_buf && cap) {
-        size_t n = result.stdout_len;
-        if (n >= cap) n = cap - 1;
-        if (result.stdout_bytes && n) memcpy(stdout_buf, result.stdout_bytes, n);
-        stdout_buf[n] = '\0';
-    }
-    ipc_process_result_free(&result);
-    return failed ? -1 : 0;
-}
-
-int voice_systemctl_runner(
-    const char *engine, const char *command, double timeout, void *ctx, char *err, size_t err_cap
-) {
-    if (!command || !command[0] ||
-        (strcmp(command, "start") != 0 && strcmp(command, "stop") != 0 && strcmp(command, "restart") != 0)) {
-        set_err(err, err_cap, "invalid systemctl command");
-        return ENGINE_INVALID;
-    }
-    char unit[64];
-    if (!engine || (strcmp(engine, "stt") != 0 && strcmp(engine, "tts") != 0)) return ENGINE_INVALID;
-    snprintf(unit, sizeof unit, "pi-voice-%s.service", engine);
-    const char *argv[] = {"systemctl", "--user", command, unit};
-    if (systemctl_exec(argv, 4, timeout, ctx, NULL, 0) != 0) {
-        set_err(err, err_cap, "systemctl command failed");
-        return ENGINE_ERR;
-    }
-    return ENGINE_OK;
-}
-
-int voice_systemctl_activity(
-    const char *engine, double timeout, void *ctx, int *active, char *err, size_t err_cap
-) {
-    if (active) *active = 0;
-    if (!active) return ENGINE_ERR;
-    char unit[64];
-    if (!engine || (strcmp(engine, "stt") != 0 && strcmp(engine, "tts") != 0)) return ENGINE_INVALID;
-    snprintf(unit, sizeof unit, "pi-voice-%s.service", engine);
-    const char *argv[] = {"systemctl", "--user", "show", "--property=ActiveState", "--value", unit};
-    char text[128];
-    text[0] = '\0';
-    if (systemctl_exec(argv, 6, timeout, ctx, text, sizeof text) != 0) {
-        set_err(err, err_cap, "activity query failed");
-        return ENGINE_ERR;
-    }
-    return engine_active_from_text(engine, text, active, err, err_cap);
-}
-
 static const char *opt_str(yyjson_val *obj, const char *key) {
     yyjson_val *val = yyjson_obj_get(obj, key);
     if (!val || yyjson_is_null(val)) return NULL;
     return yyjson_is_str(val) ? yyjson_get_str(val) : NULL;
+}
+
+static int config_identifier(const char *text, size_t max) {
+    if (!text || !text[0] || strlen(text) > max) return 0;
+    for (const unsigned char *p = (const unsigned char *)text; *p; p++)
+        if (!isalnum(*p) && *p != '_' && *p != '-') return 0;
+    return 1;
+}
+
+static int config_url(const char *text) {
+    if (!text) return 1;
+    if (strpbrk(text, "\r\n") || strchr(text, '@')) return 0;
+    return strncmp(text, "https://", 8) == 0 || strncmp(text, "http://127.0.0.1:", 17) == 0;
 }
 
 voice_config *voice_config_parse(const yyjson_doc *doc, char *err, size_t err_cap) {
@@ -421,129 +354,95 @@ voice_config *voice_config_parse(const yyjson_doc *doc, char *err, size_t err_ca
     config->auto_speak = 1;
     yyjson_val *speak = yyjson_obj_get(root, "auto_speak");
     if (speak && yyjson_is_bool(speak)) config->auto_speak = yyjson_get_bool(speak);
-    yyjson_val *enabled = yyjson_obj_get(root, "tts_enabled");
-    config->audio.tts_enabled = !enabled || !yyjson_is_bool(enabled) || yyjson_get_bool(enabled);
-    yyjson_val *timeout = yyjson_obj_get(root, "readiness_timeout");
-    if (timeout && yyjson_is_num(timeout)) config->audio.readiness_timeout = yyjson_get_num(timeout);
-    yyjson_val *api = yyjson_obj_get(root, "local_deepgram_api");
-    config->audio.local_deepgram_api = yyjson_is_true(api);
     config->audio.stt_backend = own_string(config, opt_str(root, "stt_backend"));
     config->audio.speech_backend = own_string(config, opt_str(root, "speech_backend"));
-    if ((config->audio.stt_backend && strcmp(config->audio.stt_backend, "whisper") && strcmp(config->audio.stt_backend, "deepgram")) ||
-        (config->audio.speech_backend && strcmp(config->audio.speech_backend, "local") && strcmp(config->audio.speech_backend, "deepgram"))) {
-        voice_config_free(config);
-        set_err(err, err_cap, "invalid configured voice backend");
-        return NULL;
-    }
-    config->stt_url = own_string(config, opt_str(root, "stt_url"));
-    config->stt_health_url = own_string(config, opt_str(root, "stt_health_url"));
-    config->tts_url = own_string(config, opt_str(root, "tts_url"));
-    config->tts_health_url = own_string(config, opt_str(root, "tts_health_url"));
-    config->stt_prompt = own_string(config, opt_str(root, "stt_prompt"));
-    config->stt_language = own_string(config, opt_str(root, "stt_language"));
-    config->tts_model = own_string(config, opt_str(root, "tts_model"));
-    config->preferred_microphone = own_string(config, opt_str(root, "preferred_microphone"));
-    config->voice_preferences_path = own_string(config, opt_str(root, "voice_preferences_path"));
-    config->stt_preferences_path = own_string(config, opt_str(root, "stt_preferences_path"));
-    config->playback_mode = own_string(config, opt_str(root, "playback_mode"));
-    config->audio.stt_url = config->stt_url;
-    config->audio.stt_health_url = config->stt_health_url;
-    config->audio.tts_url = config->tts_url;
-    config->audio.tts_health_url = config->tts_health_url;
-    config->audio.stt_prompt = config->stt_prompt;
-    config->audio.stt_language = config->stt_language;
-    config->audio.tts_model = config->tts_model;
-    config->audio.preferred_microphone = config->preferred_microphone;
-    config->audio.voice_preferences_path = config->voice_preferences_path;
-    config->audio.stt_preferences_path = config->stt_preferences_path;
-    config->audio.playback_mode = config->playback_mode;
-
-    yyjson_val *voices = yyjson_obj_get(root, "tts_voices");
-    if (voices && yyjson_is_obj(voices)) {
-        size_t count = yyjson_obj_size(voices);
-        if (count > 47) {
-            voice_config_free(config);
-            set_err(err, err_cap, "too many TTS voices");
-            return NULL;
+    config->audio.stt_prompt = own_string(config, opt_str(root, "stt_prompt"));
+    config->audio.stt_language = own_string(config, opt_str(root, "stt_language"));
+    config->audio.preferred_microphone = own_string(config, opt_str(root, "preferred_microphone"));
+    config->audio.voice_preferences_path = own_string(config, opt_str(root, "voice_preferences_path"));
+    config->audio.stt_preferences_path = own_string(config, opt_str(root, "stt_preferences_path"));
+    config->audio.playback_mode = own_string(config, opt_str(root, "playback_mode"));
+    config->audio.backends = config->backends;
+    yyjson_val *backends = yyjson_obj_get(root, "backends");
+    if ((backends && !yyjson_is_arr(backends)) || yyjson_arr_size(backends) > 4) goto invalid;
+    if (yyjson_obj_get(root, "stt_url") || yyjson_obj_get(root, "tts_url") || yyjson_obj_get(root, "local_deepgram_api")) goto invalid;
+    size_t i, n;
+    yyjson_val *item;
+    yyjson_arr_foreach(backends, i, n, item) {
+        audio_backend *b = &config->backends[config->audio.backend_count++];
+        if (!yyjson_is_obj(item)) goto invalid;
+        b->id = own_string(config, opt_str(item, "id"));
+        b->label = own_string(config, opt_str(item, "label"));
+        b->listen_url = own_string(config, opt_str(item, "listen_url"));
+        b->speak_url = own_string(config, opt_str(item, "speak_url"));
+        b->auth_env = own_string(config, opt_str(item, "auth_env"));
+        b->auth_scheme = own_string(config, opt_str(item, "auth_scheme"));
+        b->listen_model = own_string(config, opt_str(item, "listen_model"));
+        b->default_voice = own_string(config, opt_str(item, "default_voice"));
+        b->voice_preferences_path = own_string(config, opt_str(item, "voice_preferences_path"));
+        b->streaming_wav = yyjson_is_true(yyjson_obj_get(item, "streaming_wav"));
+        yyjson_val *timeout = yyjson_obj_get(item, "timeout_ms");
+        b->timeout_ms = timeout ? (int)yyjson_get_int(timeout) : 180000;
+        if (!config_identifier(b->id, 31) || (!b->listen_url && !b->speak_url)
+            || !config_url(b->listen_url) || !config_url(b->speak_url)
+            || (b->auth_env && !config_identifier(b->auth_env, 127))
+            || (b->auth_scheme && !config_identifier(b->auth_scheme, 31))
+            || b->timeout_ms < 1000 || b->timeout_ms > 300000) goto invalid;
+        for (size_t j = 0; j < i; j++) if (strcmp(config->backends[j].id, b->id) == 0) goto invalid;
+        if (!b->label) b->label = b->id;
+        yyjson_val *voices = yyjson_obj_get(item, "voices");
+        if ((voices && !yyjson_is_arr(voices)) || yyjson_arr_size(voices) > 48) goto invalid;
+        audio_voice *v = calloc(yyjson_arr_size(voices) + 1, sizeof *v);
+        if (!v) goto invalid;
+        b->voices = v;
+        size_t j, count;
+        yyjson_val *voice;
+        yyjson_arr_foreach(voices, j, count, voice) {
+            v[j].id = own_string(config, opt_str(voice, "id"));
+            v[j].label = own_string(config, opt_str(voice, "label"));
+            v[j].model = own_string(config, opt_str(voice, "model"));
+            if (!config_identifier(v[j].id, 31) || !v[j].model || !v[j].model[0] || strlen(v[j].model) > 127) goto invalid;
+            for (size_t k = 0; k < j; k++) if (strcmp(v[k].id, v[j].id) == 0) goto invalid;
+            if (!v[j].label) v[j].label = v[j].id;
+            b->voice_count++;
         }
-        config->voices = calloc(count ? count : 1, sizeof *config->voices);
-        if (!config->voices) {
-            voice_config_free(config);
-            return NULL;
-        }
-        size_t index = 0;
-        yyjson_obj_iter iter;
-        yyjson_obj_iter_init(voices, &iter);
-        yyjson_val *key, *val;
+        if (b->speak_url && !b->voice_count) goto invalid;
+        yyjson_val *query = yyjson_obj_get(item, "query");
+        if ((query && !yyjson_is_obj(query)) || yyjson_obj_size(query) > 16) goto invalid;
+        audio_pair *pairs = calloc(yyjson_obj_size(query) + 1, sizeof *pairs);
+        if (!pairs) goto invalid;
+        b->query = pairs;
+        yyjson_obj_iter iter = yyjson_obj_iter_with(query);
+        yyjson_val *key;
         while ((key = yyjson_obj_iter_next(&iter))) {
-            val = yyjson_obj_iter_get_val(key);
-            if (!yyjson_is_obj(val)) continue;
-            audio_voice *voice = &config->voices[index++];
-            voice->id = own_string(config, yyjson_get_str(key));
-            voice->label = own_string(config, opt_str(val, "label"));
-            if (!voice->label) voice->label = voice->id;
-            yyjson_val *options = yyjson_obj_get(val, "options");
-            if (options && yyjson_is_obj(options)) {
-                size_t n = yyjson_obj_size(options);
-                if (n > 16) {
-                    voice_config_free(config);
-                    set_err(err, err_cap, "too many voice options");
-                    return NULL;
-                }
-                typedef struct mutable_pair { char *key; char *value; } mutable_pair;
-                mutable_pair *pairs = calloc(n ? n : 1, sizeof *pairs);
-                voice->options = (const audio_pair *)pairs;
-                voice->option_count = 0;
-                yyjson_obj_iter opt;
-                yyjson_obj_iter_init(options, &opt);
-                yyjson_val *okey, *oval;
-                while ((okey = yyjson_obj_iter_next(&opt))) {
-                    oval = yyjson_obj_iter_get_val(okey);
-                    if (!yyjson_is_str(oval)) continue;
-                    pairs[voice->option_count].key = own_string(config, yyjson_get_str(okey));
-                    pairs[voice->option_count].value = own_string(config, yyjson_get_str(oval));
-                    voice->option_count++;
-                }
-            }
+            yyjson_val *value = yyjson_obj_iter_get_val(key);
+            if (!yyjson_is_str(value)) goto invalid;
+            pairs[b->query_count].key = own_string(config, yyjson_get_str(key));
+            pairs[b->query_count++].value = own_string(config, yyjson_get_str(value));
         }
-        config->audio.voices = config->voices;
-        config->audio.voice_count = index;
     }
-    yyjson_val *long_voice = yyjson_obj_get(root, "tts_long_voice");
-    if (long_voice && yyjson_is_obj(long_voice)) {
-        size_t n = yyjson_obj_size(long_voice);
-        if (n > 16) {
-            voice_config_free(config);
-            set_err(err, err_cap, "too many long-voice options");
-            return NULL;
+    for (int speech = 0; speech < 2; speech++) {
+        const char *selected = speech ? config->audio.speech_backend : config->audio.stt_backend;
+        int found = !selected;
+        for (size_t j = 0; j < config->audio.backend_count; j++) {
+            const audio_backend *b = &config->backends[j];
+            if (selected && strcmp(b->id, selected) == 0 && (speech ? b->speak_url : b->listen_url)) found = 1;
         }
-        typedef struct mutable_pair { char *key; char *value; } mutable_pair;
-        mutable_pair *pairs = calloc(n ? n : 1, sizeof *pairs);
-        config->long_voice = (audio_pair *)pairs;
-        size_t index = 0;
-        yyjson_obj_iter iter;
-        yyjson_obj_iter_init(long_voice, &iter);
-        yyjson_val *key, *val;
-        while ((key = yyjson_obj_iter_next(&iter))) {
-            val = yyjson_obj_iter_get_val(key);
-            if (!yyjson_is_str(val)) continue;
-            pairs[index].key = own_string(config, yyjson_get_str(key));
-            pairs[index].value = own_string(config, yyjson_get_str(val));
-            index++;
-        }
-        config->audio.long_voice = config->long_voice;
-        config->audio.long_voice_count = index;
+        if (!found) goto invalid;
     }
     return config;
+invalid:
+    voice_config_free(config);
+    set_err(err, err_cap, "invalid backend configuration; use the backends array with HTTP endpoints and voices");
+    return NULL;
 }
 
 void voice_config_free(voice_config *config) {
     if (!config) return;
-    if (config->voices) {
-        for (size_t i = 0; i < config->audio.voice_count; i++) free((void *)config->voices[i].options);
+    for (size_t i = 0; i < config->audio.backend_count; i++) {
+        free((void *)config->backends[i].voices);
+        free((void *)config->backends[i].query);
     }
-    free(config->voices);
-    free((void *)config->long_voice);
     for (size_t i = 0; i < config->nstrings; i++) free(config->strings[i]);
     free(config->strings);
     free(config);
@@ -555,44 +454,6 @@ const audio_config *voice_config_audio(const voice_config *config) {
 
 int voice_config_auto_speak(const voice_config *config) {
     return config && config->auto_speak;
-}
-
-static int bound_wait(audio_lease *lease, int timeout_ms, char *err, size_t err_cap) {
-    bound_lease *bound = (bound_lease *)lease;
-    int status = engine_lease_wait(bound->lease, timeout_ms, err, err_cap);
-    if (status == ENGINE_WAIT_OK) return 0;
-    if (status == ENGINE_WAIT_UNREADY) return 1;
-    return -1;
-}
-
-static int bound_done(audio_lease *lease) {
-    bound_lease *bound = (bound_lease *)lease;
-    return engine_lease_done(bound->lease);
-}
-
-static void bound_release(audio_lease *lease) {
-    bound_lease *bound = (bound_lease *)lease;
-    engine_lease_release(bound->lease);
-    engine_lease_unref(bound->lease);
-    free(bound);
-}
-
-static audio_lease *bind_acquire(const char *engine, void *user) {
-    voice_audio_binding *binding = user;
-    engine_lease *lease = NULL;
-    if (engine_manager_acquire(binding->engines, engine, &lease) != ENGINE_OK || !lease) return NULL;
-    bound_lease *bound = calloc(1, sizeof *bound);
-    if (!bound) {
-        engine_lease_release(lease);
-        engine_lease_unref(lease);
-        return NULL;
-    }
-    bound->lease = lease;
-    bound->api.wait_ms = bound_wait;
-    bound->api.ready_done = bound_done;
-    bound->api.release = bound_release;
-    bound->api.user = bound;
-    return &bound->api;
 }
 
 static int fixture_mic(char *const *argv, double timeout, MicRunResult *out, void *user) {
@@ -671,17 +532,16 @@ static void *capture_cb(const char *path, const char *target, void *user) {
 }
 
 voice_audio_binding *voice_audio_bind_with_runner(
-    audio *audio, engine_manager *engines, int no_services,
+    audio *audio, int no_services,
     MicRunner runner, void *runner_user, char *err, size_t err_cap
 ) {
-    if (!audio || !engines) {
-        set_err(err, err_cap, "audio binding is missing an engine manager");
+    if (!audio) {
+        set_err(err, err_cap, "audio binding is missing its audio client");
         return NULL;
     }
     voice_audio_binding *binding = calloc(1, sizeof *binding);
     if (!binding) return NULL;
     binding->audio = audio;
-    binding->engines = engines;
     binding->no_services = no_services;
     if (!runner) runner = no_services ? fixture_mic : mic_runner_pw_dump;
     binding->mic = mic_monitor_new(audio_preferred_microphone(audio), runner, runner_user);
@@ -690,21 +550,19 @@ voice_audio_binding *voice_audio_bind_with_runner(
         set_err(err, err_cap, "could not watch the microphone");
         return NULL;
     }
-    audio_set_engines(audio, bind_acquire, binding);
     audio_set_microphone(audio, mic_status_cb, mic_resolve_cb, binding);
     audio_set_microphone_details(audio, mic_details_cb, binding);
     audio_set_capture(audio, capture_cb, binding);
     return binding;
 }
 
-voice_audio_binding *voice_audio_bind(audio *audio, engine_manager *engines, int no_services, char *err, size_t err_cap) {
-    return voice_audio_bind_with_runner(audio, engines, no_services, NULL, NULL, err, err_cap);
+voice_audio_binding *voice_audio_bind(audio *audio, int no_services, char *err, size_t err_cap) {
+    return voice_audio_bind_with_runner(audio, no_services, NULL, NULL, err, err_cap);
 }
 
 void voice_audio_unbind(voice_audio_binding *binding) {
     if (!binding) return;
     if (binding->audio) {
-        audio_set_engines(binding->audio, NULL, NULL);
         audio_set_microphone(binding->audio, NULL, NULL, NULL);
         audio_set_microphone_details(binding->audio, NULL, NULL);
         audio_set_capture(binding->audio, NULL, NULL);

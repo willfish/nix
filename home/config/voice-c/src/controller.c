@@ -259,12 +259,7 @@ static void session_clear(session_entry *entry) {
     snprintf(entry->agent_state, sizeof entry->agent_state, "unknown");
 }
 
-void controller_population(voice_controller *app) {
-    if (!app->deps.has_engines || !app->deps.engines.set_population) return;
-    int n = 0;
-    for (int i = 0; i < CTRL_MAX_SESSIONS; i++) if (app->sessions[i].used) n++;
-    app->deps.engines.set_population(app->deps.engines.user, n, app->pending_admissions);
-}
+void controller_population(voice_controller *app) { (void)app; }
 
 void controller_remember(voice_controller *app) {
     session_entry *entry = controller_find(app, app->token);
@@ -475,8 +470,6 @@ void controller_expire_retry(voice_controller *app, int force) {
         free(app->retry_previous);
         app->retry_previous = NULL;
         app->has_retry = 0;
-        if (app->retry_lease && app->deps.engines.release) app->deps.engines.release(app->retry_lease);
-        app->retry_lease = NULL;
     }
 }
 
@@ -650,12 +643,6 @@ char *controller_dispatch(voice_controller *app, const char *request_json) {
             yyjson_doc_free(doc);
             return fail(app, "Speech is not available on this machine");
         }
-        if (app->deps.has_engines && app->deps.engines.has_tts && app->deps.engines.has_tts(app->deps.engines.user)) {
-            const char *backend = app->deps.audio.speech_backend ? app->deps.audio.speech_backend(app->deps.audio.user) : "local";
-            if (enabled && strcmp(backend, "local") == 0 && app->deps.engines.ensure_resident)
-                app->deps.engines.ensure_resident(app->deps.engines.user, "tts");
-            else if (app->deps.engines.retire) app->deps.engines.retire(app->deps.engines.user, "tts");
-        }
         yyjson_doc_free(doc);
         return dispatch_status(app);
     }
@@ -680,14 +667,6 @@ char *controller_dispatch(voice_controller *app, const char *request_json) {
         app->show_team = !app->show_team;
         controller_save_selection(app);
         pthread_mutex_unlock(&app->state);
-        yyjson_doc_free(doc);
-        return dispatch_status(app);
-    }
-    if (strcmp(action, "warm") == 0) {
-        pthread_mutex_lock(&app->state);
-        controller_population(app);
-        pthread_mutex_unlock(&app->state);
-        if (app->deps.has_engines && app->deps.engines.warm) app->deps.engines.warm(app->deps.engines.user);
         yyjson_doc_free(doc);
         return dispatch_status(app);
     }
@@ -766,12 +745,6 @@ char *controller_dispatch(voice_controller *app, const char *request_json) {
         if (!enabled) {
             if (app->speak_op) atomic_store(&app->speak_op->cancelled, 1);
             if (app->deps.audio.stop) app->deps.audio.stop(app->deps.audio.user);
-        }
-        if (app->deps.has_engines && app->deps.engines.has_tts && app->deps.engines.has_tts(app->deps.engines.user)) {
-            const char *backend = app->deps.audio.speech_backend ? app->deps.audio.speech_backend(app->deps.audio.user) : "local";
-            if (enabled && strcmp(backend, "local") == 0 && app->deps.engines.ensure_resident)
-                app->deps.engines.ensure_resident(app->deps.engines.user, "tts");
-            else if (app->deps.engines.retire) app->deps.engines.retire(app->deps.engines.user, "tts");
         }
         yyjson_doc_free(doc);
         return dispatch_status(app);
@@ -880,7 +853,6 @@ void controller_shutdown(voice_controller *app) {
     atomic_store(&app->attachments_closed, 1);
     controller_stop(app, 1, 0);
     pool_shutdown(app);
-    if (app->deps.has_engines && app->deps.engines.close) app->deps.engines.close(app->deps.engines.user);
     if (app->deps.has_catalogue && app->deps.catalogue.close) app->deps.catalogue.close(app->deps.catalogue.user);
 }
 

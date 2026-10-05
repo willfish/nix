@@ -3,7 +3,6 @@
 
 #include "audio.h"
 #include "devices.h"
-#include "engines.h"
 #include "ipc.h"
 
 #include <stdatomic.h>
@@ -86,31 +85,20 @@ int voice_incarnation_matches(const voice_incarnation *expected, const voice_inc
  */
 int voice_runtime_dir_resolve(char *out, size_t cap, char *err, size_t err_cap);
 
-/* engine_runner_fn / engine_activity_fn. ctx NULL runs systemctl --user.
- * Otherwise ctx is voice_process_hook*. Never uses a shell.
- */
-int voice_systemctl_runner(
-    const char *engine, const char *command, double timeout, void *ctx,
-    char *err, size_t err_cap);
-int voice_systemctl_activity(
-    const char *engine, double timeout, void *ctx, int *active,
-    char *err, size_t err_cap);
-
 /* Owns every string and voice table referenced by voice_config_audio. */
 voice_config *voice_config_parse(const yyjson_doc *doc, char *err, size_t err_cap);
 void voice_config_free(voice_config *config);
 const audio_config *voice_config_audio(const voice_config *config);
 int voice_config_auto_speak(const voice_config *config);
 
-/* Wires engine acquire, microphone status/resolve, and capture.
- * no_services uses an in-process microphone runner and does not spawn pw-dump.
- * Unbind only after audio_drain. The binding does not own audio or engines.
+/* Wires microphone status/resolve and capture. Unbind after audio_drain.
+ * no_services uses an in-process microphone runner instead of pw-dump.
  */
 voice_audio_binding *voice_audio_bind(
-    audio *audio, engine_manager *engines, int no_services, char *err, size_t err_cap);
+    audio *audio, int no_services, char *err, size_t err_cap);
 /* runner NULL selects the bounded pw-dump runner, or an in-process empty dump when no_services. */
 voice_audio_binding *voice_audio_bind_with_runner(
-    audio *audio, engine_manager *engines, int no_services,
+    audio *audio, int no_services,
     MicRunner runner, void *runner_user, char *err, size_t err_cap);
 void voice_audio_unbind(voice_audio_binding *binding);
 
