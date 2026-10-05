@@ -70,8 +70,60 @@ let
       bg = if gap fg bg >= minHighlightGap then bg else nudged;
     };
 in
-{
+rec {
   inherit selectionPair;
+
+  # Delta diff block backgrounds derived from the palette. The syntax theme
+  # carries token colours; these keep the green/red signal but stay close to
+  # the page so text keeps contrast in both modes. mix() is 35% toward the
+  # role colour, which reads as a tint on light paper and a muted block on
+  # dark paper, so one ratio serves both modes.
+  deltaTheme =
+    p:
+    let
+      minus = mix p.base00 p.base08;
+      plus = mix p.base00 p.base0B;
+      block = {
+        minusBackground = minus;
+        minusEmphBackground = mix minus p.base08;
+        plusBackground = plus;
+        plusEmphBackground = mix plus p.base0B;
+        # Line numbers carry the unblended role colour for a clear signal.
+        lineNumberMinus = p.base08;
+        lineNumberPlus = p.base0B;
+      };
+    in
+    {
+      light = block;
+      dark = block;
+    };
+
+  # Both modes, so fish can switch with DELTA_FEATURES without rewriting gitconfig.
+  deltaFragment =
+    theme:
+    lib.concatMapStringsSep "\n"
+      (
+        mode:
+        let
+          block = (deltaTheme theme.${mode}).light;
+        in
+        ''
+          [delta "host-${mode}"]
+          	navigate = true
+          	minus-style = "syntax #${block.minusBackground}"
+          	minus-emph-style = "syntax bold #${block.minusEmphBackground}"
+          	minus-non-emph-style = "syntax #${block.minusBackground}"
+          	plus-style = "syntax #${block.plusBackground}"
+          	plus-emph-style = "syntax bold #${block.plusEmphBackground}"
+          	plus-non-emph-style = "syntax #${block.plusBackground}"
+          	line-numbers-minus-style = "#${block.lineNumberMinus}"
+          	line-numbers-plus-style = "#${block.lineNumberPlus}"
+        ''
+      )
+      [
+        "light"
+        "dark"
+      ];
 
   herdr =
     p:
@@ -199,6 +251,71 @@ in
         ]
       )}
     '';
+
+  # A bat/delta syntax theme (TextMate plist) from any palette. Delta reads
+  # it through bat's cache, so token colours match every rendered surface and
+  # only light/dark swapping stays external.
+  tmTheme =
+    name: p:
+    let
+      c = hex p;
+      token = scope: colour: ''
+        <dict>
+          <key>name</key><string>${scope}</string>
+          <key>scope</key><string>${scope}</string>
+          <key>settings</key>
+          <dict>
+            <key>foreground</key><string>${colour}</string>
+          </dict>
+        </dict>'';
+      # Delta reads token colours from these TextMate scopes through bat.
+      # Roles mirror render.pi's syntax* mappings so every surface agrees.
+      tokens = [
+        (token "comment" c.base04)
+        (token "string" c.base0B)
+        (token "string constant.character.escape" c.base0C)
+        (token "constant.numeric" c.base09)
+        (token "constant.language" c.base0E)
+        (token "constant.character" c.base09)
+        (token "keyword" c.base0E)
+        (token "keyword.operator" c.base0C)
+        (token "keyword.other.special-method" c.base0D)
+        (token "entity.name.function" c.base0D)
+        (token "entity.name" c.base0D)
+        (token "entity.name.type" c.base0A)
+        (token "entity.other.attribute-name" c.base09)
+        (token "entity.name.tag" c.base0E)
+        (token "variable" c.base05)
+        (token "variable.language" c.base08)
+        (token "variable.parameter" c.base09)
+        (token "support.function" c.base0D)
+        (token "support.type" c.base0A)
+        (token "support.constant" c.base09)
+        (token "punctuation" c.base04)
+        (token "punctuation.definition.string" c.base0B)
+      ];
+    in
+    ''
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>name</key><string>${name}</string>
+        <key>settings</key>
+        <array>
+          <dict>
+            <key>settings</key>
+            <dict>
+              <key>background</key><string>${c.base00}</string>
+              <key>foreground</key><string>${c.base05}</string>
+              <key>caret</key><string>${c.base0D}</string>
+              <key>selection</key><string>${c.base02}</string>
+              <key>lineHighlight</key><string>${c.base01}</string>
+            </dict>
+          </dict>${lib.concatStringsSep "" tokens}
+        </array>
+      </dict>
+      </plist>'';
 
   pi =
     name: p:

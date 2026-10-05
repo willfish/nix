@@ -90,6 +90,12 @@ let
         "herdr.toml" = toString herdr;
         "host-palettes.json" = toString (pkgs.writeText "${host}-nvim.json" (builtins.toJSON nvim));
         "btop.theme" = toString (btopTheme theme.herdr.name theme.${theme.nativeMode or "dark"});
+        "delta" = toString (pkgs.writeText "${host}-delta" (render.deltaFragment theme));
+        "bat-${theme.nativeMode or "dark"}" = toString (
+          pkgs.writeText "${host}-bat-native.tmTheme" (
+            render.tmTheme "host-${theme.nativeMode or "dark"}" theme.${theme.nativeMode or "dark"}
+          )
+        );
       }
       // lib.listToAttrs (
         lib.concatMap
@@ -102,6 +108,14 @@ let
               name = "host-${mode}.json";
               value = toString (
                 pkgs.writeText "${host}-pi-${mode}.json" (builtins.toJSON (render.pi "host-${mode}" theme.${mode}))
+              );
+            }
+            {
+              # bat/delta reads the active syntax theme from BAT_THEME. Ships
+              # both modes so light/dark swaps never need a rebuild.
+              name = "bat-${mode}";
+              value = toString (
+                pkgs.writeText "${host}-bat-${mode}.tmTheme" (render.tmTheme "host-${mode}" theme.${mode})
               );
             }
           ])

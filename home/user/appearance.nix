@@ -26,6 +26,13 @@ let
   render = import ./themes/render.nix { inherit lib; };
   btopTheme = import ./themes/btop.nix { inherit lib pkgs; };
   btopFile = btopTheme theme.herdr.name theme.${theme.nativeMode or "dark"};
+  batThemes = lib.genAttrs [ "light" "dark" ] (mode: render.tmTheme "host-${mode}" theme.${mode});
+  batFile =
+    mode:
+    if isGraphicalLinux then
+      runtime.file "bat-${mode}"
+    else
+      pkgs.writeText "host-bat-${mode}.tmTheme" batThemes.${mode};
   piThemes = lib.genAttrs [ "light" "dark" ] (
     mode: pkgs.writeText "host-${mode}.json" (builtins.toJSON (render.pi "host-${mode}" theme.${mode}))
   );
@@ -124,9 +131,20 @@ in
           };
         };
     ".config/nvim/lua/host-theme.lua".source = ../config/nvim/host-theme.lua;
+    # Included by git. Theme-menu rewrites the target when the palette changes.
+    ".config/git/delta-host".source =
+      if isGraphicalLinux then
+        runtime.file "delta"
+      else
+        pkgs.writeText "delta-host" (render.deltaFragment theme);
   };
 
   xdg.configFile = {
+    # bat/delta pick these up through bat's theme cache; both modes are
+    # installed so a light/dark swap is a BAT_THEME change, not a rebuild.
+    "bat/themes/host-dark.tmTheme".source = batFile "dark";
+    "bat/themes/host-light.tmTheme".source = batFile "light";
+
     "btop/btop.conf".force = config.dotfiles.privateEnabled;
     "btop/themes/host.theme" = {
       force = config.dotfiles.privateEnabled;
@@ -166,6 +184,11 @@ in
   home.sessionVariables.HYPRCURSOR_SIZE = lib.mkIf isGraphicalLinux (toString pointer.size);
 
   home.activation = {
+    # bat (and delta through it) only see newly installed .tmTheme files after
+    # a cache rebuild, so register both host themes on every activation.
+    rebuildBatCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      run ${pkgs.bat}/bin/bat cache --build
+    '';
     applySelectedPalette = lib.mkIf isGraphicalLinux (
       lib.hm.dag.entryAfter [ "linkGeneration" ] ''
         run ${runtime.package}/bin/theme-menu --reapply

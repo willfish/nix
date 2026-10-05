@@ -304,14 +304,9 @@ in
         renames = true;
       };
 
-      delta = {
-        navigate = true;
-        features = "line-numbers decorations";
-        # Named ANSI colours follow Ghostty. Do not pin light or theme:
-        # delta ignores terminal detection when either is set.
-        "plus-style" = "syntax green";
-        "minus-style" = "syntax red";
-      };
+      # Palette styles live in ~/.config/git/delta-host, rewritten with the
+      # active theme. Any option in [delta] makes delta ignore features.
+      include.path = "~/.config/git/delta-host";
 
       alias = {
         add = "add -p";

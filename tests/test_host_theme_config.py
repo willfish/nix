@@ -95,13 +95,22 @@ class HostThemeConfigTest(unittest.TestCase):
     def test_delta_follows_terminal_palette(self):
         for name, profile in self.profiles.items():
             with self.subTest(profile=name):
-                delta = profile["delta"]
-                self.assertTrue(delta["navigate"])
-                self.assertEqual(delta["features"], "line-numbers decorations")
-                self.assertNotIn("light", delta)
-                self.assertNotIn("theme", delta)
-                self.assertEqual(delta["plus-style"], "syntax green")
-                self.assertEqual(delta["minus-style"], "syntax red")
+                # A populated [delta] section makes delta ignore features.
+                self.assertNotIn("delta", profile["gitSettings"])
+                self.assertEqual(
+                    profile["gitSettings"]["include"]["path"],
+                    "~/.config/git/delta-host",
+                )
+                self.assertTrue(profile["hasDeltaHost"])
+                fragment = profile["deltaFragment"]
+                self.assertIn('[delta "host-dark"]', fragment)
+                self.assertIn('[delta "host-light"]', fragment)
+                self.assertIn("navigate = true", fragment)
+                self.assertIn("syntax #", fragment)
+                self.assertNotIn("syntax green", fragment)
+                self.assertNotIn("syntax red", fragment)
+                self.assertNotIn("light = true", fragment)
+                self.assertNotIn("dark = true", fragment)
 
     def test_headless_mac_omits_ghostty_but_preserves_linux_palettes(self):
         for name, profile in self.profiles.items():

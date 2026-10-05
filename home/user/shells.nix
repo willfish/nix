@@ -291,6 +291,21 @@ in
           ''
       )
       + ''
+        # Delta and bat highlight with a syntax theme generated from the host
+        # palette. The theme files come in light and dark variants; pick the
+        # suffix from the theme-menu mode authority when it exists.
+        set -l host_mode dark
+        if test -f "$HOME/.local/state/theme-menu/mode"
+          set -l menu_mode (string trim < "$HOME/.local/state/theme-menu/mode")
+          if contains -- "$menu_mode" light dark
+            set host_mode "$menu_mode"
+          end
+        end
+        set -gx BAT_THEME "host-$host_mode"
+        # Without a + prefix this replaces the config feature list. The
+        # matching host-* feature holds navigate and the palette styles.
+        set -gx DELTA_FEATURES "line-numbers decorations host-$host_mode"
+
         set -gx AWS_DEFAULT_REGION eu-west-2
         set -gx AWS_REGION eu-west-2
         set -gx MUX_BACKEND herdr

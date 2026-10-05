@@ -53,7 +53,11 @@ let
       dconfSettings = builtins.attrNames c.dconf.settings;
       stylixAutoEnable = c.stylix.autoEnable;
       fishFixed = c.stylix.targets.fish.enable;
-      delta = c.programs.git.settings.delta or { };
+      gitSettings = c.programs.git.settings;
+      hasDeltaHost = files ? ".config/git/delta-host";
+      deltaFragment =
+        (import ../home/user/themes/render.nix { inherit (flake.inputs.nixpkgs) lib; }).deltaFragment
+          palettes.${expectedTheme};
       activeFuzzel = "${c.xdg.stateHome}/theme-menu/active/fuzzel.ini";
       fuzzelIni = textOf fuzzel;
       hyprlandFuzzel = textOf hyprlandFuzzel;

@@ -26,6 +26,8 @@ in
     NH_HOME_FLAKE = config.dotfiles.sourceDirectory;
     NIXPKGS_ALLOW_UNFREE = 1;
     PAGER = "less --raw-control-chars -F -X";
+    # Host bat/delta syntax theme; fish swaps the mode suffix at startup.
+    BAT_THEME = "host-dark";
     RUBYOPT = "--enable-yjit";
     VISUAL = "nvim";
     fish_greeting = "";
