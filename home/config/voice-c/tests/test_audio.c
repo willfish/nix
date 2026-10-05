@@ -1727,6 +1727,110 @@ static int english_http(const audio_http_request *request, audio_http_response *
     return 0;
 }
 
+static int sentinel_mode;
+static int sentinel_http(const audio_http_request *request, audio_http_response *response, void *user) {
+    (void)request; (void)user;
+    size_t len;
+    unsigned char *wav = silence_wav(&len);
+    uint32_t declared = sentinel_mode == 2 ? (uint32_t)len : UINT32_C(0x7fff0000);
+    for (int i = 0; i < 4; i++) wav[40 + i] = (unsigned char)(declared >> (8 * i));
+    respond_bin(response, 200, wav, sentinel_mode == 1 ? len - 1 : len);
+    free(wav);
+    return 0;
+}
+
+static void test_deepgram_wav_length_sentinel(void) {
+    test_name = "Deepgram WAV sentinel is cloud-only and sample-aligned";
+    use_key("dg-test-key");
+    char *dir = make_tmp();
+    for (int local = 0; local < 3; local++) {
+        for (sentinel_mode = 0; sentinel_mode < 3; sentinel_mode++) {
+            audio_config config;
+            audio_config_init(&config);
+            config.speech_backend = local ? "local" : "deepgram";
+            config.local_deepgram_api = local == 1;
+            config.tts_url = "http://local.test/speak";
+            audio *audio = audio_new(dir, &config);
+            attach_audio(audio);
+            clear_requests();
+            reset_stats();
+            http_handle = sentinel_http;
+            char err[256] = {0};
+            int rc = audio_speak(audio, "Hello.", NULL, err, sizeof err);
+            int valid = local == 0 && sentinel_mode == 0;
+            CHECK(valid ? rc == 0 : rc == -1);
+            CHECK(stats.opened == (valid ? 1 : 0));
+            audio_free(audio);
+        }
+    }
+    rm_rf(dir);
+    free(dir);
+    use_key(NULL);
+}
+
+static void test_local_deepgram_api(void) {
+    test_name = "local Deepgram-compatible API and configured provider";
+    use_key("dg-test-key");
+    char *dir = make_tmp();
+    audio_config config;
+    audio_config_init(&config);
+    config.local_deepgram_api = 1;
+    config.speech_backend = "local"; /* overrides cloud default, even with a key */
+    config.stt_backend = "whisper";
+    config.stt_url = "http://127.0.0.1:8180/v1/listen";
+    config.tts_url = "http://127.0.0.1:8180/v1/speak";
+    config.stt_prompt = "NixOS, Herdr";
+    audio *audio = audio_new(dir, &config);
+    attach_audio(audio);
+    clear_requests();
+    reset_stats();
+    atomic_store(&acquire_count, 0);
+    http_handle = english_http;
+    char err[256] = {0};
+    CHECK(audio_speak(audio, "Hello William.", NULL, err, sizeof err) == 0);
+    CHECK(request_count == 1);
+    CHECK(atomic_load(&acquire_count) > 0);
+    if (request_count) {
+        CHECK(strstr(requests[0].url, "127.0.0.1:8180/v1/speak?") != NULL);
+        CHECK(strstr(requests[0].url, "model=samantha&") != NULL);
+        CHECK(!requests[0].auth_matches);
+        char text[64] = {0};
+        CHECK(json_field((char *)requests[0].body, requests[0].body_len, "text", text, sizeof text));
+        CHECK(strcmp(text, "Hello William.") == 0);
+        CHECK(field_absent((char *)requests[0].body, requests[0].body_len, "voice_ref"));
+    }
+    clear_requests();
+    char *long_text = repeat("word ", 51);
+    CHECK(audio_speak(audio, long_text, NULL, err, sizeof err) == 0);
+    CHECK(request_count > 0);
+    for (int i = 0; i < request_count; i++)
+        CHECK(strstr(requests[i].url, "model=samantha-long&") != NULL);
+    free(long_text);
+    size_t wav_len;
+    unsigned char *wav = silence_wav(&wav_len);
+    char path[512];
+    snprintf(path, sizeof path, "%s/dictation.wav", dir);
+    write_file(path, wav, wav_len);
+    clear_requests();
+    http_handle = deepgram_listen_http;
+    char out[128];
+    CHECK(audio_transcribe(audio, path, NULL, NULL, NULL, out, sizeof out, err, sizeof err) == 0);
+    CHECK(strcmp(out, "hello NixOS") == 0);
+    CHECK(request_count == 1);
+    if (request_count) {
+        CHECK(strstr(requests[0].url, "127.0.0.1:8180/v1/listen?") != NULL);
+        CHECK(strstr(requests[0].url, "keyterm=Herdr") != NULL);
+        CHECK(!requests[0].auth_matches);
+        CHECK(requests[0].body_len == wav_len);
+        CHECK(memcmp(requests[0].body, wav, wav_len) == 0);
+    }
+    audio_free(audio);
+    free(wav);
+    rm_rf(dir);
+    free(dir);
+    use_key(NULL);
+}
+
 static void test_speech_request_selects_english(void) {
     test_name = "speech request selects english";
     use_key(NULL);
@@ -3032,6 +3136,8 @@ int test_audio(void) {
     test_cloud_status_hides_local_tts_error();
     test_error_hides_response_and_credentials();
     test_cancelled_deepgram_does_not_send();
+    test_deepgram_wav_length_sentinel();
+    test_local_deepgram_api();
     test_speech_request_selects_english();
     test_samantha_switches_reference_at_50_words();
     test_character_choice_persists();

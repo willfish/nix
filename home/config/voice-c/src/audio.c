@@ -64,6 +64,7 @@ typedef struct voice_choice {
 struct audio {
     char *runtime;
     char *stt_url;
+    int local_deepgram_api;
     char *stt_health;
     char *tts_url;
     char *tts_health;
@@ -699,7 +700,7 @@ static void wr32(unsigned char *p, uint32_t v) {
 }
 
 static int wav_parse(const unsigned char *data, size_t len, int *channels, int *width, int *rate,
-    unsigned char **frames, size_t *frame_len) {
+    unsigned char **frames, size_t *frame_len, int deepgram) {
     *frames = NULL;
     *frame_len = 0;
     if (len < 12 || memcmp(data, "RIFF", 4) != 0 || memcmp(data + 8, "WAVE", 4) != 0) return -1;
@@ -719,10 +720,12 @@ static int wav_parse(const unsigned char *data, size_t len, int *channels, int *
             bits = rd16(data + off + 14);
             got_fmt = 1;
         } else if (memcmp(id, "data", 4) == 0) {
-            if (size > have) return -1;
+            /* Deepgram streams WAV with an unknown data length sentinel. */
+            int streaming = deepgram && size == UINT32_C(0x7fff0000);
+            if (size > have && !streaming) return -1;
             declared = size;
             payload = data + off;
-            available = size;
+            available = streaming ? have : size;
         }
         if (off + size > len) break;
         off += size + (size & 1);
@@ -1198,6 +1201,7 @@ audio *audio_new(const char *runtime_dir, const audio_config *config) {
     if (!audio) return NULL;
     audio->runtime = strdup(runtime_dir ? runtime_dir : "/tmp");
     audio->stt_url = dup_opt(config->stt_url);
+    audio->local_deepgram_api = config->local_deepgram_api;
     audio->stt_health = dup_opt(config->stt_health_url);
     audio->tts_url = dup_opt(config->tts_url);
     audio->tts_health = dup_opt(config->tts_health_url);
@@ -1256,6 +1260,10 @@ audio *audio_new(const char *runtime_dir, const audio_config *config) {
     if (saved && (strcmp(saved, "whisper") == 0 || strcmp(saved, "deepgram") == 0))
         snprintf(audio->stt_backend, sizeof audio->stt_backend, "%s", saved);
     free(saved);
+    if (config->stt_backend)
+        snprintf(audio->stt_backend, sizeof audio->stt_backend, "%s", config->stt_backend);
+    if (config->speech_backend)
+        snprintf(audio->speech_backend, sizeof audio->speech_backend, "%s", config->speech_backend);
     pthread_mutex_init(&audio->mu, NULL);
     pthread_mutex_init(&audio->backend_mu, NULL);
     pthread_mutex_init(&audio->synthesis_mu, NULL);
@@ -1555,7 +1563,7 @@ static int parse_wav_result(const unsigned char *data, size_t len, int deepgram,
     int channels = 0, width = 0, rate = 0;
     unsigned char *frames = NULL;
     size_t frame_len = 0;
-    if (wav_parse(data, len, &channels, &width, &rate, &frames, &frame_len) != 0 || !frames || frame_len == 0
+    if (wav_parse(data, len, &channels, &width, &rate, &frames, &frame_len, deepgram) != 0 || !frames || frame_len == 0
         || width <= 0 || channels <= 0 || frame_len % (size_t)(channels * width) != 0) {
         free(frames);
         set_err(result->error, sizeof result->error,
@@ -1605,7 +1613,7 @@ static void free_http_op(void *user) {
     free(op);
 }
 
-static int http_op_run(void *user, op_result *result) {
+static int http_op_run_inner(void *user, op_result *result) {
     http_op *op = user;
     audio_http_request request = {
         .method = "POST", .url = op->url, .content_type = op->content_type,
@@ -1620,7 +1628,7 @@ static int http_op_run(void *user, op_result *result) {
         return -1;
     }
     if (op->deepgram_speak || op->deepgram_listen) {
-        const char *what = op->deepgram_speak ? "Deepgram speech" : "Deepgram";
+        const char *what = op->engine ? engine_name(op->engine) : (op->deepgram_speak ? "Deepgram speech" : "Deepgram");
         if (response.transport_error || response.status == 0) {
             snprintf(result->error, sizeof result->error, "%s connection failed", what);
             free(response.body);
@@ -1672,7 +1680,7 @@ static int http_op_run(void *user, op_result *result) {
             if (rc == 0 && !result->text) { set_err(result->error, sizeof result->error, "Out of memory"); return -1; }
             return rc;
         }
-        int rc = parse_wav_result(response.body, response.body_len, 1, result);
+        int rc = parse_wav_result(response.body, response.body_len, op->engine == NULL, result);
         free(response.body);
         return rc;
     }
@@ -1719,6 +1727,14 @@ static int http_op_run(void *user, op_result *result) {
     return rc;
 }
 
+static int http_op_run(void *user, op_result *result) {
+    http_op *op = user;
+    int rc = http_op_run_inner(user, result);
+    if (op->engine)
+        set_backend(op->audio, op->engine, rc ? "error" : "ready", rc ? result->error : NULL);
+    return rc;
+}
+
 static void destroy_unused(void (*destroy_ctx)(void *), void *drain_user) {
     if (destroy_ctx) destroy_ctx(drain_user);
 }
@@ -1726,8 +1742,9 @@ static void destroy_unused(void (*destroy_ctx)(void *), void *drain_user) {
 static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cancelled,
     audio_drained_fn on_drained, void *drain_user, void (*destroy_ctx)(void *),
     char *out, size_t out_cap, char *err, size_t err_cap) {
-    char *key = copy_key();
-    if (!key) {
+    int local = strcmp(audio->stt_backend, "deepgram") != 0;
+    char *key = local ? NULL : copy_key();
+    if (!local && !key) {
         destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Deepgram API key is not installed; stay on Whisper");
         return -1;
@@ -1740,7 +1757,18 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
         set_err(err, err_cap, "Could not read dictation audio");
         return -1;
     }
-    char *url = strdup("https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&mip_opt_out=true");
+    if (local && !audio->stt_url) {
+        free(payload);
+        destroy_unused(destroy_ctx, drain_user);
+        set_err(err, err_cap, "Local recognition URL is not configured");
+        return -1;
+    }
+    char *url = strdup(local ? audio->stt_url : "https://api.deepgram.com/v1/listen");
+    query_append(&url, "model", local ? "whisper" : "nova-3");
+    query_append(&url, "smart_format", "true");
+    query_append(&url, "punctuate", "true");
+    query_append(&url, "mip_opt_out", "true");
+    query_append(&url, "language", audio->stt_language);
     if (audio->stt_prompt) {
         char *copy = strdup(audio->stt_prompt);
         char *start = copy;
@@ -1766,22 +1794,23 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
     op->audio = audio;
     op->url = url;
     op->content_type = strdup("audio/wav");
-    op->authorization = malloc(strlen(key) + 8);
+    op->authorization = key ? malloc(strlen(key) + 8) : NULL;
     op->body = payload;
-    if (!op->url || !op->content_type || !op->authorization) {
+    if (!op->url || !op->content_type || (key && !op->authorization)) {
         free(key); free_http_op(op);
         destroy_unused(destroy_ctx, drain_user);
         set_err(err, err_cap, "Out of memory");
         return -1;
     }
-    sprintf(op->authorization, "Token %s", key);
+    if (key) sprintf(op->authorization, "Token %s", key);
     free(key);
     op->body_len = payload_len;
     op->timeout_ms = 90000;
     op->maximum = LISTEN_MAX;
     op->deepgram_listen = 1;
+    if (local) op->engine = strdup("stt");
     op_result result = {0};
-    int rc = run_cancellable(audio, &audio->recognition_mu, NULL, cancelled, http_op_run, op, free_http_op,
+    int rc = run_cancellable(audio, &audio->recognition_mu, local ? "stt" : NULL, cancelled, http_op_run, op, free_http_op,
         on_drained, drain_user, destroy_ctx, drain_user, &result, err, err_cap);
     if (rc != 0) return rc < 0 ? -1 : 0;
     if (!out || strlen(result.text) + 1 > out_cap) {
@@ -1915,6 +1944,8 @@ static int transcribe_dispatch(audio *audio, const char *path, atomic_int *cance
         destroy_unused(destroy_ctx, drain_user);
         return ready < 0 ? -1 : 0;
     }
+    if (audio->local_deepgram_api)
+        return transcribe_deepgram(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
     return transcribe_whisper(audio, path, cancelled, on_drained, drain_user, destroy_ctx, out, out_cap, err, err_cap);
 }
 
@@ -1962,6 +1993,8 @@ static int choose_voice(audio *audio, const char *text, voice_choice *choice, ch
         set_err(err, err_cap, "That speech backend is not available");
         return -1;
     }
+    snprintf(choice->model, sizeof choice->model, "%s%s", audio->selected_voice,
+        strcmp(audio->selected_voice, "samantha") == 0 && word_count(text) > 50 ? "-long" : "");
     snprintf(choice->tts_model, sizeof choice->tts_model, "%s", audio->tts_model ? audio->tts_model : "pi-voice");
     if (strcmp(audio->selected_voice, "samantha") == 0 && word_count(text) > 50) {
         choice->pairs = copy_pairs(audio->long_voice, audio->long_voice_count);
@@ -1996,27 +2029,32 @@ static int synthesize(audio *audio, const char *chunk, const voice_choice *choic
     http_op *op = calloc(1, sizeof *op);
     if (!op) { set_err(err, err_cap, "Out of memory"); return -1; }
     op->audio = audio;
-    if (choice->deepgram) {
-        char *key = copy_key();
-        if (!key) {
+    if (choice->deepgram || audio->local_deepgram_api) {
+        char *key = choice->deepgram ? copy_key() : NULL;
+        if (choice->deepgram && !key) {
             free(op);
             set_err(err, err_cap, "Deepgram API key is not installed; use local speech");
             return -1;
         }
-        op->url = strdup("https://api.deepgram.com/v1/speak");
+        if (!choice->deepgram && !audio->tts_url) {
+            free(op);
+            set_err(err, err_cap, "Local speech URL is not configured");
+            return -1;
+        }
+        op->url = strdup(choice->deepgram ? "https://api.deepgram.com/v1/speak" : audio->tts_url);
         query_append(&op->url, "model", choice->model);
         query_append(&op->url, "encoding", "linear16");
         query_append(&op->url, "container", "wav");
         query_append(&op->url, "sample_rate", "24000");
         query_append(&op->url, "mip_opt_out", "true");
         op->content_type = strdup("application/json");
-        op->authorization = malloc(strlen(key) + 8);
-        if (!op->url || !op->content_type || !op->authorization) {
+        op->authorization = key ? malloc(strlen(key) + 8) : NULL;
+        if (!op->url || !op->content_type || (key && !op->authorization)) {
             free(key); free_http_op(op);
             set_err(err, err_cap, "Out of memory");
             return -1;
         }
-        sprintf(op->authorization, "Token %s", key);
+        if (key) sprintf(op->authorization, "Token %s", key);
         free(key);
         char *text = NULL;
         size_t n = 0, cap = 0;
@@ -2026,9 +2064,10 @@ static int synthesize(audio *audio, const char *chunk, const voice_choice *choic
         op->body = (unsigned char *)text;
         op->body_len = n;
         op->timeout_ms = 60000;
-        op->maximum = SPEAK_MAX;
+        op->maximum = choice->deepgram ? SPEAK_MAX : TTS_MAX;
         op->deepgram_speak = 1;
-        return run_cancellable(audio, &audio->synthesis_mu, NULL, cancelled, http_op_run, op, free_http_op,
+        if (!choice->deepgram) op->engine = strdup("tts");
+        return run_cancellable(audio, &audio->synthesis_mu, choice->deepgram ? NULL : "tts", cancelled, http_op_run, op, free_http_op,
             NULL, NULL, NULL, NULL, result, err, err_cap);
     }
     if (!audio->tts_url) {

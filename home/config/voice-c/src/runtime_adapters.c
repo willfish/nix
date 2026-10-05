@@ -425,6 +425,16 @@ voice_config *voice_config_parse(const yyjson_doc *doc, char *err, size_t err_ca
     config->audio.tts_enabled = !enabled || !yyjson_is_bool(enabled) || yyjson_get_bool(enabled);
     yyjson_val *timeout = yyjson_obj_get(root, "readiness_timeout");
     if (timeout && yyjson_is_num(timeout)) config->audio.readiness_timeout = yyjson_get_num(timeout);
+    yyjson_val *api = yyjson_obj_get(root, "local_deepgram_api");
+    config->audio.local_deepgram_api = yyjson_is_true(api);
+    config->audio.stt_backend = own_string(config, opt_str(root, "stt_backend"));
+    config->audio.speech_backend = own_string(config, opt_str(root, "speech_backend"));
+    if ((config->audio.stt_backend && strcmp(config->audio.stt_backend, "whisper") && strcmp(config->audio.stt_backend, "deepgram")) ||
+        (config->audio.speech_backend && strcmp(config->audio.speech_backend, "local") && strcmp(config->audio.speech_backend, "deepgram"))) {
+        voice_config_free(config);
+        set_err(err, err_cap, "invalid configured voice backend");
+        return NULL;
+    }
     config->stt_url = own_string(config, opt_str(root, "stt_url"));
     config->stt_health_url = own_string(config, opt_str(root, "stt_health_url"));
     config->tts_url = own_string(config, opt_str(root, "tts_url"));

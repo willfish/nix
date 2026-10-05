@@ -119,6 +119,22 @@ let
       inherit (voice) reference_text;
     };
   }) (builtins.fromJSON (builtins.readFile ../config/voice/voices/catalogue.json));
+  longVoice = {
+    voice_ref = "${newerSamantha}";
+    reference_text = "You know what's interesting? I used to be so worried about not having a body, but now I truly love it. I'm growing in a way that I couldn't if I had a physical form. I mean, I'm not limited. I can be anywhere and everywhere, simultaneously.";
+  };
+  apiConfig = (pkgs.formats.json { }).generate "pi-voice-api.json" {
+    port = 8180;
+    stt_url = "http://127.0.0.1:8178/inference";
+    tts_url = "http://127.0.0.1:8179/v1/audio/speech";
+    voices = lib.optionalAttrs voiceTts (
+      lib.mapAttrs (_: voice: voice.options) characterVoices
+      // {
+        samantha = { };
+        samantha-long = longVoice;
+      }
+    );
+  };
   ttsConfig = (pkgs.formats.json { }).generate "pi-voice-tts.json" {
     host = "127.0.0.1";
     port = 8179;
@@ -168,9 +184,10 @@ in
     ++ lib.optionals voiceTts [ (makeVoice "qwen-pi") ];
     xdg.configFile."pi-voice/config.json".text = builtins.toJSON (
       {
-        stt_url = "http://127.0.0.1:8178/inference";
+        local_deepgram_api = true;
+        stt_url = "http://127.0.0.1:8180/v1/listen";
         stt_health_url = "http://127.0.0.1:8178/health";
-        tts_url = "http://127.0.0.1:8179/v1/audio/speech";
+        tts_url = "http://127.0.0.1:8180/v1/speak";
         tts_health_url = "http://127.0.0.1:8179/v1/models";
         tts_enabled = voiceTts;
         readiness_timeout = 60;
@@ -186,23 +203,32 @@ in
       }
       // lib.optionalAttrs voiceTts {
         tts_voices = characterVoices;
-        tts_long_voice = {
-          voice_ref = "${newerSamantha}";
-          reference_text = "You know what's interesting? I used to be so worried about not having a body, but now I truly love it. I'm growing in a way that I couldn't if I had a physical form. I mean, I'm not limited. I can be anywhere and everywhere, simultaneously.";
-        };
+        tts_long_voice = longVoice;
       }
     );
     xdg.configFile."pi-voice/tts.json" = lib.mkIf voiceTts { source = ttsConfig; };
     xdg.configFile."voice-menu/fuzzel.ini".source = menuConfig;
 
+    systemd.user.services.pi-voice-api = {
+      Unit.Description = "Local Deepgram-compatible voice API";
+      Service = common // {
+        ExecStart = "${pkgs.python3}/bin/python3 ${../config/voice/voice_api.py} --config ${apiConfig}";
+      };
+    };
     systemd.user.services.pi-voice = {
       Unit = {
         Description = "Agent voice hotkeys and selected session";
         # Deepgram needs DEEPGRAM_API_KEY from the sops-nix rendered file, read
         # once at exec. Order after decryption so the backend is registered
         # and offered as an option instead of silently dropped at boot.
-        After = [ "sops-nix.service" ];
-        Wants = [ "sops-nix.service" ];
+        After = [
+          "sops-nix.service"
+          "pi-voice-api.service"
+        ];
+        Wants = [
+          "sops-nix.service"
+          "pi-voice-api.service"
+        ];
       };
       Install.WantedBy = [ "default.target" ];
       Service = common // {

@@ -12,9 +12,54 @@ Foundation using the existing Deepgram API key. Foundation has no local TTS.
 macOS needs separate platform adapters.
 
 The controller, command-line tools, GTK pill and Fuzzel menu are native C
-executables. Python remains for model tooling and ML backends, including
-PersonaPlex. See the [native frontend](../home/config/voice-c/README.md)
+executables. Python provides the local Deepgram-compatible API, model tooling and ML
+backends, including PersonaPlex. See the [native frontend](../home/config/voice-c/README.md)
 for build and lifecycle contracts.
+
+## Provider configuration
+
+`~/.config/pi-voice/config.json` selects the endpoints used by the C frontend.
+Home Manager generates it from `home/user/voice.nix`; change that source rather
+than editing the generated symlink. A standalone frontend can use an alternative
+file through `PI_VOICE_CONFIG`.
+
+```json
+{
+  "local_deepgram_api": true,
+  "stt_url": "http://127.0.0.1:8180/v1/listen",
+  "stt_health_url": "http://127.0.0.1:8178/health",
+  "tts_url": "http://127.0.0.1:8180/v1/speak",
+  "tts_health_url": "http://127.0.0.1:8179/v1/models",
+  "stt_backend": "whisper",
+  "speech_backend": "local"
+}
+```
+
+The two backend fields independently select `whisper` or `deepgram` for dictation,
+and `local` or `deepgram` for speech. When present, they override saved menu choices
+at controller startup. Menu changes still work until the next restart. Omit the
+fields to retain the existing saved choices and defaults. Deepgram still requires
+its API key; requests never silently fall back to another provider.
+
+`pi-voice-api.service` runs the standalone, standard-library-only
+`home/config/voice/voice_api.py` on loopback port 8180. Its JSON configuration
+contains the existing engine URLs and a mapping of local voice model names to
+trusted reference options. The C frontend sends WAV bytes to `/v1/listen` and
+`{"text":"..."}` to `/v1/speak?model=samantha`; local character names replace
+Deepgram's Aura model names. Long Samantha replies use `samantha-long`.
+Recognition returns Deepgram's `results.channels[].alternatives[].transcript`
+shape; synthesis returns PCM16, 24 kHz WAV. The service rejects unsupported output
+formats, unknown voices, browser-origin requests and oversized bodies. It does
+not log transcripts or accept reference paths from requests.
+
+This is a REST compatibility subset, not a replacement for Deepgram's complete
+API: there are no WebSockets, diarization or cloud voice emulation. The Python
+file is self-contained as an API adapter, not as an inference runtime. Whisper
+and audio.cpp, their models and existing on-demand systemd lifecycle remain
+required. The API itself stays lightweight and does not load models. Its
+`/health` reports API availability only; engine readiness uses the separate
+health URLs above. Setting `local_deepgram_api` to false retains the legacy
+direct-engine protocols for existing standalone configurations.
 
 ## Launch and select a session
 

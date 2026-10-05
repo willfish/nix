@@ -22,6 +22,9 @@ typedef struct audio_voice {
 
 typedef struct audio_config {
     const char *stt_url;
+    int local_deepgram_api; /* local endpoints use the Deepgram REST subset */
+    const char *stt_backend; /* explicit startup choice overrides saved preference */
+    const char *speech_backend;
     const char *stt_health_url;
     const char *tts_url;
     const char *tts_health_url;
