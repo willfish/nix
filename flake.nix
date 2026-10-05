@@ -633,6 +633,7 @@
             voice-models = import ./home/user/voice-models-package.nix { inherit pkgs; };
             personaplex-tools = import ./home/user/personaplex-tools-package.nix { inherit pkgs; };
             theme-menu = import ./home/user/theme-menu-package.nix { inherit pkgs; };
+            launcher-projects = import ./home/user/launcher-projects-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)

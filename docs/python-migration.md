@@ -50,7 +50,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Voice model setup: C `home/config/voice-models`.
 - [x] PersonaPlex model/patch helpers: C `home/config/personaplex-tools`.
 - [x] Theme menu: C `home/config/theme-menu`.
-- [ ] Launcher projects, daily and agenda helpers in `home/config/launcher`.
+- [x] Launcher project discovery/opening: C `home/config/launcher-projects`.
+- [ ] Launcher daily and agenda helpers in `home/config/launcher`.
 - [ ] Herdr notification focus and omapager preparation/icon/patch helpers.
 - [ ] Greeter selection and embedded NetworkManager/panel Python helpers.
 

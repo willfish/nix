@@ -24,16 +24,16 @@ let
         patches = (old.patches or [ ]) ++ [ ../config/launcher/no-app-arguments.patch ];
         doCheck = false;
       });
+  projectsPackage = import ./launcher-projects-package.nix { inherit pkgs; };
   projects = pkgs.writeShellApplication {
     name = "launcher-projects";
     runtimeInputs = [
-      pkgs.python3
       pkgs.ghostty
       pkgs.neovim
       pkgs.xdg-utils
       pkgs.systemd
     ];
-    text = ''exec python3 ${../config/launcher/projects.py} "$@"'';
+    text = ''exec ${projectsPackage}/bin/launcher-projects "$@"'';
   };
   launcher = pkgs.writeShellApplication {
     name = "hypr-launcher";
