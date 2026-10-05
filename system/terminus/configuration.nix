@@ -6,6 +6,45 @@
   ...
 }:
 
+let
+  # Forced command for the dedicated cache-push key: import store paths and
+  # GC-root them, nothing else. Every path argument is strictly validated
+  # before use; the key gets no shell, pty, or forwarding.
+  cachePushRestrict = pkgs.writeShellScript "cache-push-restrict" ''
+    set -eu
+
+    nix_store="${config.nix.package}/bin/nix-store"
+    roots=/nix/var/nix/gcroots/cache
+
+    valid_path() {
+      printf '%s' "$1" | ${pkgs.gnugrep}/bin/grep -qE '^/nix/store/[0-9a-z]{32}-[A-Za-z0-9+._?=-]+$'
+    }
+
+    case "''${SSH_ORIGINAL_COMMAND:-}" in
+      missing)
+        while IFS= read -r path; do
+          valid_path "$path" || exit 64
+          [ -e "$path" ] || printf '%s\n' "$path"
+        done
+        ;;
+      import)
+        exec "$nix_store" --import
+        ;;
+      root\ *)
+        for path in ''${SSH_ORIGINAL_COMMAND#root }; do
+          valid_path "$path" || exit 64
+          link="$roots/$(basename "$path")"
+          rm -f "$link"
+          "$nix_store" --add-root "$link" --realise "$path" >/dev/null
+        done
+        ;;
+      *)
+        echo "cache-push-restrict: unsupported command" >&2
+        exit 64
+        ;;
+    esac
+  '';
+in
 {
   system.stateVersion = "26.05";
   imports = [
@@ -37,7 +76,8 @@
 
   # Binary cache of this host's store. The firewall stays closed on the LAN;
   # tailscale0 is a trusted interface, so only tailnet clients can reach it.
-  # Priority 30 beats cache.nixos.org (40). scripts/cache-push populates it.
+  # Priority 30 beats cache.nixos.org (40). Populated by the post-build-hook
+  # on every NixOS host and by scripts/cache-push for one-off pushes.
   services.harmonia.cache = {
     enable = true;
     signKeyPaths = [ config.sops.secrets.TERMINUS_CACHE_SIGNING_KEY.path ];
@@ -51,6 +91,12 @@
 
   # cache-push runs as william over SSH; let that user manage cache GC roots.
   systemd.tmpfiles.rules = [ "d /nix/var/nix/gcroots/cache 0755 william users - -" ];
+
+  # Dedicated identity for the post-build-hook pushers on every NixOS host.
+  # Revoke by removing this line; rotate by replacing the key in nix-config.
+  users.users.william.openssh.authorizedKeys.keys = [
+    ''command="${cachePushRestrict}",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDgacCbWe6IiJBlMnORsFeFwVGSiuUB5B0qyRhVvIRKF cache-push''
+  ];
 
   # cache-push roots pushed closures under gcroots/cache; expire those links
   # ahead of the weekly 7-day store GC so the cache cannot grow unbounded.

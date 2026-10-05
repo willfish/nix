@@ -279,19 +279,30 @@ switch; an unreachable terminus just logs a warning and falls back to the
 remaining caches.
 
 The cache serves only what is in Terminus's store, and the weekly 7-day GC
-deletes anything unreferenced. Populate it with:
+deletes anything unreferenced. Population is automatic: every NixOS host runs
+a nix `post-build-hook` that pushes each locally built output's closure after
+every build. Substituted paths are not re-pushed (their origin caches already
+serve them); only local builds are. The hook exits quietly when Terminus is
+unreachable, so offline builds are unaffected.
 
-```bash
-scripts/cache-push /nix/store/...
-```
+The hook authenticates as william with a dedicated SSH key
+(`TERMINUS_CACHE_PUSH_KEY` in the private nix-config, root-only on every NixOS
+host). Its forced command on Terminus accepts exactly three operations — list
+missing paths, import an export stream, GC-root a path — and cannot open a
+shell. Revoke pushing by removing the `authorizedKeys` entry in
+`system/terminus/configuration.nix`; rotate by replacing the key pair and the
+sops value. Imported paths skip Terminus's `require-sigs` check via the legacy
+import protocol; harmonia re-signs them when serving.
 
-`cache-push` signs the given paths with the cache signing key (decrypted from
-the private nix-config checkout; Terminus enforces `require-sigs`), copies each
-closure over ssh-ng (william is a trusted user on Terminus), and registers a GC
-root under `/nix/var/nix/gcroots/cache`. A daily timer expires roots older
-than 14 days, so treat the cache as a transit cache for recent builds, not an
-archive. Re-push to refresh expiry. Host closures deployed from Terminus are
-already rooted by their system profiles and need no push.
+Pushed outputs are rooted under `/nix/var/nix/gcroots/cache`. A daily timer
+expires roots older than 14 days, so treat the cache as a transit cache for
+recent builds, not an archive. Re-push to refresh expiry. Host closures
+deployed from Terminus are already rooted by their system profiles and need no
+push. For manual one-off pushes (for example staging a host closure before
+activation), `scripts/cache-push /nix/store/...` signs the given paths with the
+cache signing key from the private nix-config checkout, copies each closure
+over ssh-ng (william is a trusted user on Terminus), and registers the same
+14-day roots.
 
 Paths are signed on the fly with `TERMINUS_CACHE_SIGNING_KEY` (sops secret in
 the private nix-config, Terminus-only); consumers trust the matching

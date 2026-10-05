@@ -1,4 +1,51 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
+
+let
+  # Pushes every locally built output's closure to the terminus binary cache.
+  # Runs as root from nix-daemon after each build; must never fail a build.
+  # The push key's forced command on terminus only accepts cache imports.
+  postBuildHook = pkgs.writeShellScript "nix-post-build-cache-push" ''
+    set -u
+
+    [ -n "''${OUT_PATHS:-}" ] || exit 0
+    [ "$(cat /proc/sys/kernel/hostname)" != "terminus" ] || exit 0
+
+    key=/run/secrets/TERMINUS_CACHE_PUSH_KEY
+    [ -r "$key" ] || exit 0
+
+    target=""
+    for candidate in terminus.local terminus; do
+      if ${pkgs.netcat-openbsd}/bin/nc -z -w 2 "$candidate" 22 </dev/null >/dev/null 2>&1; then
+        target="$candidate"
+        break
+      fi
+    done
+    [ -n "$target" ] || exit 0
+
+    ssh_cmd=(
+      ${pkgs.openssh}/bin/ssh
+      -i "$key"
+      -o IdentitiesOnly=yes
+      -o BatchMode=yes
+      -o ConnectTimeout=3
+      -o StrictHostKeyChecking=yes
+      -o UserKnownHostsFile=/etc/ssh/ssh_known_hosts
+    )
+
+    work="$(mktemp -d)"
+    trap 'rm -rf "$work"' EXIT
+
+    read -ra outputs <<< "$OUT_PATHS"
+    ${config.nix.package}/bin/nix-store -qR "''${outputs[@]}" > "$work/closure" || exit 0
+    "''${ssh_cmd[@]}" "william@$target" missing < "$work/closure" > "$work/delta" || exit 0
+    if [ -s "$work/delta" ]; then
+      # shellcheck disable=SC2046 # store paths contain no whitespace
+      ${config.nix.package}/bin/nix-store --export $(cat "$work/delta") | "''${ssh_cmd[@]}" "william@$target" import || exit 0
+    fi
+    "''${ssh_cmd[@]}" "william@$target" root "''${outputs[@]}" || true
+    exit 0
+  '';
+in
 {
   imports = [ ./tailscale.nix ];
 
@@ -54,6 +101,13 @@
     package = pkgs.fish;
   };
 
+  # Pinned so the post-build-hook can push without interactive host-key prompts.
+  programs.ssh.knownHosts = {
+    terminus.publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkRiuJILkDT0xvE1YcVehmGrvtDTyThKQSf9Zm56Eix";
+    "terminus.local".publicKey =
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkRiuJILkDT0xvE1YcVehmGrvtDTyThKQSf9Zm56Eix";
+  };
+
   services.openssh = {
     enable = true;
     settings.PasswordAuthentication = false;
@@ -92,6 +146,7 @@
         "flakes"
       ];
       auto-optimise-store = true;
+      post-build-hook = "${postBuildHook}";
     };
 
     gc = {
