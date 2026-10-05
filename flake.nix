@@ -651,6 +651,7 @@
           };
 
           checks = {
+            agent-usage = import ./home/user/agent-usage-package.nix { inherit pkgs; };
             assistant-tools = import ./home/user/assistant-tools-package.nix { inherit pkgs; };
             tailscale-proxy = import ./home/user/tailscale-proxy-package.nix { inherit pkgs; };
             voice-api = import ./home/user/voice-api-package.nix { inherit pkgs; };

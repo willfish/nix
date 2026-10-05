@@ -41,8 +41,8 @@ Rust dependencies and existing C libraries where practical.
 
 ### Desktop helpers
 
-- [ ] Agent usage/status family: `home/config/hyprland/agents`, including
-  extensionless Python commands and their shared authentication/usage code.
+- [x] Agent usage/status family: C `home/config/agent-usage`, including
+  the three collectors, status command and shared authentication/usage code.
 - [ ] arXiv status: `home/config/hyprland/arxiv/status.py`.
 - [ ] GitHub notifications: `home/config/hyprland/omapager/github_watch.py`.
 - [ ] Wallpaper cycling: `home/config/hyprland/wallpaper_cycle.py`.

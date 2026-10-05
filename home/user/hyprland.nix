@@ -20,11 +20,7 @@
       settings = import ../config/hyprland/settings.nix;
       omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
       ttfx = pkgs.callPackage ./ttfx.nix { };
-      agentStatus = pkgs.writeShellApplication {
-        name = "hypr-agent-status";
-        runtimeInputs = [ pkgs.python3 ];
-        text = "exec python3 ${../config/hyprland/agents}/status.py";
-      };
+      agentStatus = import ./agent-usage-package.nix { inherit pkgs; };
       arxivStatus = pkgs.writeShellApplication {
         name = "hypr-arxiv-status";
         runtimeInputs = [ pkgs.python3 ];

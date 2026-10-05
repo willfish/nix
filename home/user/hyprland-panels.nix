@@ -473,7 +473,7 @@ let
   agentUpdate = pkgs.writeShellScript "omarchy-agent-usage-update" ''
     here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
     export OMARCHY_PATH=$(CDPATH= cd -- "$here/.." && pwd)
-    export PATH="${pkgs.jq}/bin:${pkgs.python3}/bin:${pkgs.bash}/bin:$PATH"
+    export PATH="${pkgs.jq}/bin:${pkgs.bash}/bin:$PATH"
     usage="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage"
     mkdir -p "$usage"
     chmod 700 "$usage" || true
@@ -482,26 +482,17 @@ let
     chmod 600 "$usage"/*.json 2>/dev/null || true
     exit $status
   '';
+  agentUsage = import ./agent-usage-package.nix { inherit pkgs; };
   agentCollectors =
-    pkgs.runCommand "omarchy-agent-collectors"
-      {
-        nativeBuildInputs = [
-          pkgs.python3
-          pkgs.bash
-        ];
-      }
+    pkgs.runCommand "omarchy-agent-collectors" { nativeBuildInputs = [ pkgs.bash ]; }
       ''
         mkdir -p "$out/bin" "$out/libexec"
-        cp ${agents}/usage_lib.py ${agents}/pi_auth.py "$out/bin/"
         for name in codex grok opencode; do
-          install -m755 ${agents}/omarchy-agent-usage-"$name" "$out/bin/omarchy-agent-usage-$name"
+          ln -s ${agentUsage}/bin/omarchy-agent-usage-"$name" "$out/bin/omarchy-agent-usage-$name"
         done
         install -m755 ${source}/bin/omarchy-agent-usage-update "$out/libexec/omarchy-agent-usage-update"
         install -m755 ${agentUpdate} "$out/bin/omarchy-agent-usage-update"
-        patchShebangs "$out/bin/omarchy-agent-usage-codex" \
-          "$out/bin/omarchy-agent-usage-grok" \
-          "$out/bin/omarchy-agent-usage-opencode" \
-          "$out/libexec/omarchy-agent-usage-update"
+        patchShebangs "$out/libexec/omarchy-agent-usage-update"
       '';
   runtime = with pkgs; [
     bash
