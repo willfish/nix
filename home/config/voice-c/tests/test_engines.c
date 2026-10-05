@@ -1040,6 +1040,86 @@ static void test_close_cancels_leases_without_stopping_units(void) {
     teardown(&h);
 }
 
+static long vm_size_kb(void) {
+    FILE *file = fopen("/proc/self/status", "r");
+    char line[256];
+    long size = -1;
+    if (!file) return -1;
+    while (fgets(line, sizeof line, file)) {
+        if (sscanf(line, "VmSize: %ld", &size) == 1) break;
+    }
+    fclose(file);
+    return size;
+}
+
+static int reap_runner(
+    const char *engine, const char *command, double timeout, void *ctx,
+    char *err, size_t err_cap
+) {
+    (void)engine;
+    (void)command;
+    (void)timeout;
+    (void)ctx;
+    (void)err;
+    (void)err_cap;
+    return 0;
+}
+
+static int reap_ready(const char *engine, double timeout, void *ctx, char *err, size_t err_cap) {
+    (void)engine;
+    (void)timeout;
+    (void)ctx;
+    (void)err;
+    (void)err_cap;
+    return 1;
+}
+
+static void test_default_timers_do_not_accumulate(void) {
+    test_name = "default_timer_reap";
+    engine_config cfg;
+    memset(&cfg, 0, sizeof cfg);
+    cfg.runner = reap_runner;
+    cfg.readiness = reap_ready;
+    cfg.idle_timeout = 3600;
+    const char *names[] = {"stt"};
+    cfg.engines = names;
+    cfg.engine_count = 1;
+    engine_manager *manager = engine_manager_create(&cfg);
+    CHECK(manager != NULL);
+    if (!manager) return;
+    engine_lease *warm = NULL;
+    char err[128];
+    CHECK(engine_manager_acquire(manager, "stt", &warm) == ENGINE_OK);
+    CHECK(engine_lease_wait(warm, 2000, err, sizeof err) == ENGINE_WAIT_OK);
+    engine_lease_release(warm);
+    CHECK(engine_lease_released(warm));
+    long before = vm_size_kb();
+    for (int i = 0; i < 12; i++) {
+        engine_lease *lease = NULL;
+        CHECK(engine_manager_acquire(manager, "stt", &lease) == ENGINE_OK);
+        CHECK(engine_lease_wait(lease, 2000, err, sizeof err) == ENGINE_WAIT_OK);
+        engine_lease_release(lease);
+        CHECK(engine_lease_released(lease));
+    }
+    long after = vm_size_kb();
+    /* Cancellation is nonblocking: let callbacks exit, then trigger reaping.
+       Measuring immediately after a burst counts still-running threads as leaks.
+       The allowance includes libc's stack cache and sanitizer metadata. */
+    for (int retry = 0; after > before + 49152 && retry < 200; retry++) {
+        struct timespec pause = {.tv_nsec = 10000000};
+        nanosleep(&pause, NULL);
+        engine_lease *lease = NULL;
+        CHECK(engine_manager_acquire(manager, "stt", &lease) == ENGINE_OK);
+        CHECK(engine_lease_wait(lease, 2000, err, sizeof err) == ENGINE_WAIT_OK);
+        engine_lease_release(lease);
+        after = vm_size_kb();
+    }
+    CHECK(before > 0 && after > 0);
+    if (after > before + 49152) fprintf(stderr, "timer VmSize: %ld -> %ld KiB\n", before, after);
+    CHECK(after <= before + 49152);
+    engine_manager_free(manager);
+}
+
 static void test_negative_population_is_rejected(void) {
     test_name = "negative_population";
     harness h;
@@ -1076,6 +1156,7 @@ int test_engines(void) {
     test_stop_error_keeps_retryable_state();
     test_warm_all_releases_on_readiness();
     test_close_cancels_leases_without_stopping_units();
+    test_default_timers_do_not_accumulate();
     test_negative_population_is_rejected();
     return failures;
 }

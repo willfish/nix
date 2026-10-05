@@ -1,8 +1,7 @@
-#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 #include "audio.h"
+#include "chunks.h"
 
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2.h>
 #include <curl/curl.h>
 
 #include <ctype.h>
@@ -30,9 +29,7 @@ enum {
     SPEAK_MAX = 8 * 1024 * 1024,
     WHISPER_MAX = 1024 * 1024,
     TTS_MAX = 32 * 1024 * 1024,
-    HEALTH_MAX = 16384,
-    CHUNK_FIRST = 120,
-    CHUNK_MAX = 260
+    HEALTH_MAX = 16384
 };
 
 extern char **environ;
@@ -277,8 +274,13 @@ static int save_pref(const char *path, const char *value) {
     if (!tmp) return -1;
     FILE *file = fopen(tmp, "w");
     if (!file) { free(tmp); return -1; }
-    if (fprintf(file, "%s\n", value) < 0 || fclose(file) != 0) {
+    if (fprintf(file, "%s\n", value) < 0) {
         fclose(file);
+        unlink(tmp);
+        free(tmp);
+        return -1;
+    }
+    if (fclose(file) != 0) {
         unlink(tmp);
         free(tmp);
         return -1;
@@ -386,10 +388,17 @@ static int utf8_append(char **out, size_t *n, size_t *cap, unsigned code) {
         bytes[1] = (unsigned char)(0x80 | (code & 0x3F));
         len = 2;
     } else if (code < 0x10000) {
+        if (code >= 0xD800 && code <= 0xDFFF) return -1;
         bytes[0] = (unsigned char)(0xE0 | (code >> 12));
         bytes[1] = (unsigned char)(0x80 | ((code >> 6) & 0x3F));
         bytes[2] = (unsigned char)(0x80 | (code & 0x3F));
         len = 3;
+    } else if (code <= 0x10FFFF) {
+        bytes[0] = (unsigned char)(0xF0 | (code >> 18));
+        bytes[1] = (unsigned char)(0x80 | ((code >> 12) & 0x3F));
+        bytes[2] = (unsigned char)(0x80 | ((code >> 6) & 0x3F));
+        bytes[3] = (unsigned char)(0x80 | (code & 0x3F));
+        len = 4;
     } else return -1;
     if (*n + (size_t)len + 1 > *cap) {
         size_t next = *cap ? *cap * 2 : 32;
@@ -407,6 +416,40 @@ static int utf8_append(char **out, size_t *n, size_t *cap, unsigned code) {
 
 static json_value *parse_value(const char **cursor, const char *end, int depth);
 
+static int hex_digit(char h) {
+    if (h >= '0' && h <= '9') return h - '0';
+    if (h >= 'a' && h <= 'f') return h - 'a' + 10;
+    if (h >= 'A' && h <= 'F') return h - 'A' + 10;
+    return -1;
+}
+
+static int parse_hex4(const char **cursor, const char *end, unsigned *code) {
+    if (end - *cursor < 4) return -1;
+    unsigned value = 0;
+    for (int i = 0; i < 4; i++) {
+        int digit = hex_digit((*cursor)[i]);
+        if (digit < 0) return -1;
+        value = (value << 4) | (unsigned)digit;
+    }
+    *cursor += 4;
+    *code = value;
+    return 0;
+}
+
+static int append_raw_byte(char **out, size_t *n, size_t *cap, unsigned char byte) {
+    if (*n + 2 > *cap) {
+        size_t next = *cap ? *cap * 2 : 32;
+        while (next < *n + 2) next *= 2;
+        char *grown = realloc(*out, next);
+        if (!grown) return -1;
+        *out = grown;
+        *cap = next;
+    }
+    (*out)[(*n)++] = (char)byte;
+    (*out)[*n] = 0;
+    return 0;
+}
+
 static json_value *parse_string(const char **cursor, const char *end) {
     const char *p = *cursor;
     if (p >= end || *p != '"') return NULL;
@@ -419,15 +462,20 @@ static json_value *parse_string(const char **cursor, const char *end) {
             if (p >= end) { free(out); return NULL; }
             char esc = *p++;
             if (esc == 'u') {
-                if (p + 4 > end) { free(out); return NULL; }
                 unsigned code = 0;
-                for (int i = 0; i < 4; i++) {
-                    char h = *p++;
-                    code <<= 4;
-                    if (h >= '0' && h <= '9') code += (unsigned)(h - '0');
-                    else if (h >= 'a' && h <= 'f') code += (unsigned)(h - 'a' + 10);
-                    else if (h >= 'A' && h <= 'F') code += (unsigned)(h - 'A' + 10);
-                    else { free(out); return NULL; }
+                if (parse_hex4(&p, end, &code) != 0) { free(out); return NULL; }
+                if (code >= 0xD800 && code <= 0xDBFF) {
+                    if (end - p < 6 || p[0] != '\\' || p[1] != 'u') { free(out); return NULL; }
+                    p += 2;
+                    unsigned low = 0;
+                    if (parse_hex4(&p, end, &low) != 0 || low < 0xDC00 || low > 0xDFFF) {
+                        free(out);
+                        return NULL;
+                    }
+                    code = 0x10000u + (((code - 0xD800u) << 10) | (low - 0xDC00u));
+                } else if (code >= 0xDC00 && code <= 0xDFFF) {
+                    free(out);
+                    return NULL;
                 }
                 if (utf8_append(&out, &n, &cap, code) != 0) { free(out); return NULL; }
                 continue;
@@ -440,7 +488,7 @@ static json_value *parse_string(const char **cursor, const char *end) {
             else if (esc == 't') c = '\t';
             else { free(out); return NULL; }
         }
-        if (utf8_append(&out, &n, &cap, c) != 0) { free(out); return NULL; }
+        if (append_raw_byte(&out, &n, &cap, c) != 0) { free(out); return NULL; }
     }
     if (p >= end || *p != '"') { free(out); return NULL; }
     if (!out && utf8_append(&out, &n, &cap, 0) != 0) return NULL;
@@ -654,14 +702,16 @@ static int wav_parse(const unsigned char *data, size_t len, int *channels, int *
         off += 8;
         size_t have = off < len ? len - off : 0;
         if (memcmp(id, "fmt ", 4) == 0 && have >= 16 && size >= 16) {
+            if (rd16(data + off) != 1) return -1;
             ch = rd16(data + off + 2);
             sample_rate = (int)rd32(data + off + 4);
             bits = rd16(data + off + 14);
             got_fmt = 1;
         } else if (memcmp(id, "data", 4) == 0) {
+            if (size > have) return -1;
             declared = size;
             payload = data + off;
-            available = have < size ? have : size;
+            available = size;
         }
         if (off + size > len) break;
         off += size + (size & 1);
@@ -708,114 +758,23 @@ static int unnamed_fd(const char *runtime) {
     return fd;
 }
 
-static pcre2_code *sentence_re;
-static pcre2_code *clause_re;
-
-static void ensure_chunk_re(void) {
-    if (sentence_re || clause_re) return;
-    int error = 0;
-    PCRE2_SIZE offset = 0;
-    sentence_re = pcre2_compile((PCRE2_SPTR)"[.!?][\"')\\]]*(?=\\s|$)", PCRE2_ZERO_TERMINATED, 0, &error, &offset, NULL);
-    clause_re = pcre2_compile((PCRE2_SPTR)"[,;:][\"')\\]]*(?=\\s|$)", PCRE2_ZERO_TERMINATED, 0, &error, &offset, NULL);
-}
-
-static char *normalize(const char *src) {
-    size_t cap = strlen(src) + 1;
-    if (cap > 1024 * 1024) return NULL;
-    char *dst = malloc(cap);
-    if (!dst) return NULL;
-    size_t n = 0;
-    int space = 1;
-    for (const unsigned char *p = (const unsigned char *)src; *p; p++) {
-        if (isspace(*p)) {
-            if (!space) dst[n++] = ' ';
-            space = 1;
-        } else {
-            dst[n++] = (char)*p;
-            space = 0;
-        }
-    }
-    if (n && dst[n - 1] == ' ') n--;
-    dst[n] = 0;
-    return dst;
-}
-
-static int last_boundary(pcre2_code *code, const char *window, size_t window_len, size_t limit, size_t *end) {
-    if (!code) return 0;
-    pcre2_match_data *data = pcre2_match_data_create(4, NULL);
-    if (!data) return 0;
-    PCRE2_SIZE start = 0;
-    size_t shorter = 0, first = 0;
-    int found = 0, have_shorter = 0;
-    while (start <= window_len) {
-        int rc = pcre2_match(code, (PCRE2_SPTR)window, window_len, start, 0, data, NULL);
-        if (rc < 0) break;
-        PCRE2_SIZE *ov = pcre2_get_ovector_pointer(data);
-        if (ov[1] <= CHUNK_MAX) {
-            if (!found) first = ov[1];
-            found = 1;
-            if (ov[1] <= limit) { shorter = ov[1]; have_shorter = 1; }
-        }
-        PCRE2_SIZE next = ov[1] > start ? ov[1] : start + 1;
-        if (next <= start) break;
-        start = next;
-    }
-    pcre2_match_data_free(data);
-    if (!found) return 0;
-    *end = have_shorter ? shorter : first;
-    return 1;
-}
-
 int audio_speech_chunks(const char *text, char ***out, size_t *count) {
     *out = NULL;
     *count = 0;
     if (!text || !text[0]) return 0;
-    ensure_chunk_re();
-    char *remaining = normalize(text);
-    if (!remaining) return -1;
-    size_t cap = 8;
+    size_t bytes = strlen(text);
+    if (bytes > 1024 * 1024) return -1;
+    size_t cap = bytes + 1;
     char **chunks = calloc(cap, sizeof *chunks);
-    if (!chunks) { free(remaining); return -1; }
-    while (remaining[0]) {
-        if (*count + 1 > cap) {
-            size_t next = cap * 2;
-            char **grown = realloc(chunks, next * sizeof *chunks);
-            if (!grown) { free(remaining); return -1; }
-            chunks = grown;
-            cap = next;
-        }
-        size_t len = strlen(remaining);
-        size_t limit = *count ? CHUNK_MAX : CHUNK_FIRST;
-        if (len <= limit) {
-            chunks[*count] = strdup(remaining);
-            if (!chunks[*count]) { free(remaining); return -1; }
-            (*count)++;
-            break;
-        }
-        size_t window = len < CHUNK_MAX + 1 ? len : CHUNK_MAX + 1;
-        size_t end = 0;
-        if (!last_boundary(sentence_re, remaining, window, limit, &end)
-            && !last_boundary(clause_re, remaining, window, limit, &end)) {
-            size_t last = 0;
-            int found = 0;
-            for (size_t i = 0; i < limit + 1 && i < len; i++) {
-                if (remaining[i] == ' ') { last = i; found = 1; }
-            }
-            end = found && last > 0 ? last : limit;
-        }
-        if (end == 0) end = limit ? limit : 1;
-        size_t cut = end;
-        while (cut && isspace((unsigned char)remaining[cut - 1])) cut--;
-        if (cut == 0) cut = end;
-        chunks[*count] = strndup(remaining, cut);
-        if (!chunks[*count]) { free(remaining); return -1; }
-        (*count)++;
-        const char *next = remaining + end;
-        while (*next && isspace((unsigned char)*next)) next++;
-        memmove(remaining, next, strlen(next) + 1);
+    if (!chunks) return -1;
+    size_t n = 0;
+    if (speech_chunks(text, chunks, &n, cap) != 0) {
+        for (size_t i = 0; i < n; i++) free(chunks[i]);
+        free(chunks);
+        return -1;
     }
-    free(remaining);
     *out = chunks;
+    *count = n;
     return 0;
 }
 
@@ -851,7 +810,9 @@ static int http_curl(const audio_http_request *request, audio_http_response *res
     pthread_once(&curl_once, curl_init_once);
     CURL *curl = curl_easy_init();
     if (!curl) { response->transport_error = 1; return 0; }
-    curl_buf buf = {.max = request->timeout_ms > 0 ? SPEAK_MAX + 1 : SPEAK_MAX + 1};
+    size_t limit = request->maximum ? request->maximum : (size_t)HEALTH_MAX;
+    if (limit > SIZE_MAX - 1) limit = SIZE_MAX - 1;
+    curl_buf buf = {.max = limit + 1};
     buf.data = malloc(buf.max ? buf.max : 1);
     if (!buf.data) { curl_easy_cleanup(curl); response->transport_error = 1; return 0; }
     struct curl_slist *headers = NULL;
@@ -890,9 +851,8 @@ static int http_curl(const audio_http_request *request, audio_http_response *res
     curl_easy_cleanup(curl);
     response->status = (int)status;
     response->body = buf.data;
-    response->body_len = buf.len;
+    response->body_len = buf.overflow ? buf.max : buf.len;
     response->transport_error = rc != CURLE_OK;
-    if (buf.overflow) response->body_len = buf.max + 1;
     return 0;
 }
 
@@ -905,7 +865,7 @@ static int http_call(audio *audio, const audio_http_request *request, audio_http
 static int probe(audio *audio, const char *engine, int timeout_ms, char *err, size_t err_cap) {
     const char *url = strcmp(engine, "stt") == 0 ? audio->stt_health : audio->tts_health;
     if (!url) return 1;
-    audio_http_request request = {.method = "GET", .url = url, .timeout_ms = timeout_ms};
+    audio_http_request request = {.method = "GET", .url = url, .timeout_ms = timeout_ms, .maximum = HEALTH_MAX};
     audio_http_response response;
     http_call(audio, &request, &response);
     if (response.verbatim_error[0]) {
@@ -966,6 +926,18 @@ static int abandoned(audio *audio, atomic_int *cancelled, int stop_gen) {
     return atomic_load(&audio->stop_gen) != stop_gen;
 }
 
+/* The caller owns the cancel token and may free it after abandoning the job. */
+static int job_stopped(job *job) {
+    pthread_mutex_lock(&job->mu);
+    int left = job->left;
+    atomic_int *cancelled = left ? NULL : job->cancelled;
+    int cancel = cancelled && atomic_load(cancelled);
+    int generation = job->stop_gen;
+    pthread_mutex_unlock(&job->mu);
+    if (left || cancel) return 1;
+    return atomic_load(&job->audio->stop_gen) != generation;
+}
+
 static void live_done(audio *audio) {
     pthread_mutex_lock(&audio->live_mu);
     audio->live--;
@@ -1018,7 +990,7 @@ static void *job_main(void *arg) {
             job->result.status = -1;
             goto publish;
         }
-        while (!abandoned(owner, job->cancelled, job->stop_gen)) {
+        while (!job_stopped(job)) {
             char wait_err[512] = {0};
             int wr = lease->wait_ms ? lease->wait_ms(lease, 50, wait_err, sizeof wait_err) : 0;
             if (wr == 0) break;
@@ -1034,9 +1006,9 @@ static void *job_main(void *arg) {
             job->result.status = -1;
             goto publish;
         }
-        if (abandoned(owner, job->cancelled, job->stop_gen)) goto publish;
+        if (job_stopped(job)) goto publish;
     }
-    while (!abandoned(owner, job->cancelled, job->stop_gen)) {
+    while (!job_stopped(job)) {
         int rc = lock_timeout(job->gate, 50);
         if (rc == 0) { got_gate = 1; break; }
         if (rc != ETIMEDOUT) {
@@ -1046,7 +1018,7 @@ static void *job_main(void *arg) {
         }
     }
     if (!got_gate) goto publish;
-    if (!abandoned(owner, job->cancelled, job->stop_gen)) {
+    if (!job_stopped(job)) {
         int rc = job->op(job->user, &job->result);
         if (rc != 0) job->result.status = -1;
     }
@@ -1105,6 +1077,7 @@ static int run_cancellable(audio *audio, pthread_mutex_t *gate, const char *engi
     for (;;) {
         if (job->done) break;
         if (abandoned(audio, cancelled, job->stop_gen)) {
+            job->cancelled = NULL;
             job->left = 1;
             pthread_mutex_unlock(&job->mu);
             return 1;
@@ -1565,7 +1538,7 @@ static int http_op_run(void *user, op_result *result) {
     audio_http_request request = {
         .method = "POST", .url = op->url, .content_type = op->content_type,
         .authorization = op->authorization, .body = op->body, .body_len = op->body_len,
-        .timeout_ms = op->timeout_ms
+        .timeout_ms = op->timeout_ms, .maximum = op->maximum
     };
     audio_http_response response;
     http_call(op->audio, &request, &response);
@@ -1705,13 +1678,23 @@ static int transcribe_deepgram(audio *audio, const char *path, atomic_int *cance
         free(copy);
     }
     http_op *op = calloc(1, sizeof *op);
+    if (!op) {
+        free(url); free(payload); free(key);
+        set_err(err, err_cap, "Out of memory");
+        return -1;
+    }
     op->audio = audio;
     op->url = url;
     op->content_type = strdup("audio/wav");
     op->authorization = malloc(strlen(key) + 8);
+    op->body = payload;
+    if (!op->url || !op->content_type || !op->authorization) {
+        free(key); free_http_op(op);
+        set_err(err, err_cap, "Out of memory");
+        return -1;
+    }
     sprintf(op->authorization, "Token %s", key);
     free(key);
-    op->body = payload;
     op->body_len = payload_len;
     op->timeout_ms = 90000;
     op->maximum = LISTEN_MAX;
@@ -1759,6 +1742,12 @@ static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancel
     }
     if (audio->stt_prompt) {
         char *header = malloc(strlen(boundary) + strlen(audio->stt_prompt) + 80);
+        if (!header) {
+            free(fields);
+            free(file);
+            set_err(err, err_cap, "Out of memory");
+            return -1;
+        }
         sprintf(header, "--%s\r\nContent-Disposition: form-data; name=\"prompt\"\r\n\r\n%s\r\n", boundary, audio->stt_prompt);
         append_str(&fields, &flen, &fcap, header);
         free(header);
@@ -1771,16 +1760,32 @@ static int transcribe_whisper(audio *audio, const char *path, atomic_int *cancel
     char tail[80];
     snprintf(tail, sizeof tail, "\r\n--%s--\r\n", boundary);
     size_t total = flen + file_len + strlen(tail);
-    unsigned char *body = malloc(total);
-    memcpy(body, fields, flen);
-    memcpy(body + flen, file, file_len);
+    unsigned char *body = malloc(total ? total : 1);
+    http_op *op = calloc(1, sizeof *op);
+    if (!body || !op) {
+        free(body);
+        free(op);
+        free(fields);
+        free(file);
+        set_err(err, err_cap, "Out of memory");
+        return -1;
+    }
+    if (fields && flen) memcpy(body, fields, flen);
+    if (file && file_len) memcpy(body + flen, file, file_len);
     memcpy(body + flen + file_len, tail, strlen(tail));
     free(fields);
     free(file);
-    http_op *op = calloc(1, sizeof *op);
     op->audio = audio;
     op->url = strdup(audio->stt_url);
     op->content_type = malloc(strlen(boundary) + 48);
+    if (!op->url || !op->content_type) {
+        free(body);
+        free(op->url);
+        free(op->content_type);
+        free(op);
+        set_err(err, err_cap, "Out of memory");
+        return -1;
+    }
     sprintf(op->content_type, "multipart/form-data; boundary=%s", boundary);
     op->body = body;
     op->body_len = total;
@@ -1889,6 +1894,11 @@ static int synthesize(audio *audio, const char *chunk, const voice_choice *choic
         query_append(&op->url, "mip_opt_out", "true");
         op->content_type = strdup("application/json");
         op->authorization = malloc(strlen(key) + 8);
+        if (!op->url || !op->content_type || !op->authorization) {
+            free(key); free_http_op(op);
+            set_err(err, err_cap, "Out of memory");
+            return -1;
+        }
         sprintf(op->authorization, "Token %s", key);
         free(key);
         char *text = NULL;
@@ -1933,9 +1943,29 @@ typedef struct real_player {
 
 static real_player *real_of(audio_player *player) { return player->user; }
 
+static int write_without_sigpipe(int fd, const void *data, size_t len) {
+    sigset_t block, previous, pending;
+    sigemptyset(&block);
+    sigaddset(&block, SIGPIPE);
+    if (pthread_sigmask(SIG_BLOCK, &block, &previous) != 0) return -1;
+    int prior = 0;
+    sigemptyset(&pending);
+    if (sigpending(&pending) == 0) prior = sigismember(&pending, SIGPIPE);
+    int rc = write_all(fd, data, len);
+    if (!prior) {
+        sigemptyset(&pending);
+        if (sigpending(&pending) == 0 && sigismember(&pending, SIGPIPE)) {
+            struct timespec zero = {0, 0};
+            while (sigtimedwait(&block, NULL, &zero) < 0 && errno == EINTR) {}
+        }
+    }
+    pthread_sigmask(SIG_SETMASK, &previous, NULL);
+    return rc;
+}
+
 static int real_write(audio_player *player, const void *data, size_t len) {
     real_player *real = real_of(player);
-    return write_all(real->stdin_fd, data, len) == 0 ? (int)len : -1;
+    return write_without_sigpipe(real->stdin_fd, data, len) == 0 ? (int)len : -1;
 }
 static void real_close(audio_player *player) {
     real_player *real = real_of(player);
@@ -1980,13 +2010,28 @@ static void real_kill(audio_player *player) {
     if (!real->reaped) kill(real->pid, SIGKILL);
 }
 static void real_destroy(audio_player *player) {
+    real_player *real = real_of(player);
     real_close(player);
-    free(player->user);
+    if (real && !real->reaped && real->pid > 0) {
+        kill(real->pid, SIGTERM);
+        int waited = 0;
+        while (waited < 200 && !real->reaped) {
+            real_reap(real, 0);
+            if (real->reaped) break;
+            sleep_ms(10);
+            waited += 10;
+        }
+        if (!real->reaped) {
+            kill(real->pid, SIGKILL);
+            real_reap(real, 1);
+        }
+    }
+    free(real);
 }
 
 static audio_player *default_popen(const audio_spawn *spawn) {
     int pipefd[2] = {-1, -1};
-    if (spawn->pipe_stdin && pipe(pipefd) != 0) return NULL;
+    if (spawn->pipe_stdin && pipe2(pipefd, O_CLOEXEC) != 0) return NULL;
     posix_spawn_file_actions_t actions;
     posix_spawn_file_actions_init(&actions);
     if (spawn->pipe_stdin) {
@@ -1997,14 +2042,14 @@ static audio_player *default_popen(const audio_spawn *spawn) {
         posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
     }
     posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
-    int old_flags = -1;
+    int rc = 0;
     if (spawn->pass_fd >= 0) {
-        old_flags = fcntl(spawn->pass_fd, F_GETFD);
-        if (old_flags >= 0) fcntl(spawn->pass_fd, F_SETFD, old_flags & ~FD_CLOEXEC);
+        /* A spawn dup2 action clears CLOEXEC in the child even for fd == fd.
+         * Never make the parent's private recording inheritable by other spawns. */
+        rc = posix_spawn_file_actions_adddup2(&actions, spawn->pass_fd, spawn->pass_fd);
     }
     pid_t pid = 0;
-    int rc = posix_spawnp(&pid, spawn->argv[0], &actions, NULL, (char *const *)spawn->argv, environ);
-    if (spawn->pass_fd >= 0 && old_flags >= 0) fcntl(spawn->pass_fd, F_SETFD, old_flags);
+    if (!rc) rc = posix_spawnp(&pid, spawn->argv[0], &actions, NULL, (char *const *)spawn->argv, environ);
     posix_spawn_file_actions_destroy(&actions);
     if (spawn->pipe_stdin) close(pipefd[0]);
     if (rc != 0) {
@@ -2037,28 +2082,50 @@ static void clear_player(audio *audio, audio_player *player) {
     if (player && player->destroy) player->destroy(player);
 }
 
+static void discard_player(audio_player *player) {
+    if (!player) return;
+    if (player->poll && player->poll(player) == -1 && player->terminate)
+        player->terminate(player);
+    if (player->wait) {
+        int code = player->wait(player, 200);
+        if (code < 0 && player->kill) {
+            player->kill(player);
+            if (player->wait) player->wait(player, 200);
+        }
+    }
+    if (player->close_stdin && !player->stdin_closed) player->close_stdin(player);
+    if (player->destroy) player->destroy(player);
+}
+
+static int publish_player(audio *audio, audio_player *player, atomic_int *cancelled, int generation) {
+    pthread_mutex_lock(&audio->mu);
+    int stopped = (cancelled && atomic_load(cancelled)) || atomic_load(&audio->stop_gen) != generation;
+    audio_audible_fn fn = NULL;
+    void *user = NULL;
+    if (!stopped) {
+        audio->player = player;
+        fn = audio->audible;
+        user = audio->audible_user;
+    }
+    pthread_mutex_unlock(&audio->mu);
+    if (stopped) {
+        discard_player(player);
+        return -1;
+    }
+    if (fn) fn(user);
+    return 0;
+}
+
 static int play_fd(audio *audio, int fd, atomic_int *cancelled, char *err, size_t err_cap) {
     char path[64];
     snprintf(path, sizeof path, "/proc/self/fd/%d", fd);
     const char *argv[] = {"pw-play", path, NULL};
     audio_spawn spawn = {.argv = argv, .argc = 2, .pass_fd = fd, .pipe_stdin = 0};
-    pthread_mutex_lock(&audio->mu);
-    int cancel = cancelled && atomic_load(cancelled);
-    pthread_mutex_unlock(&audio->mu);
-    if (cancel) return 0;
+    int generation = atomic_load(&audio->stop_gen);
+    if (cancelled && atomic_load(cancelled)) return 0;
     audio_player *player = open_player(audio, &spawn);
     if (!player) { set_err(err, err_cap, "Speech playback failed"); return -1; }
-    pthread_mutex_lock(&audio->mu);
-    if (cancelled && atomic_load(cancelled)) {
-        pthread_mutex_unlock(&audio->mu);
-        if (player->destroy) player->destroy(player);
-        return 0;
-    }
-    audio->player = player;
-    audio_audible_fn fn = audio->audible;
-    void *user = audio->audible_user;
-    pthread_mutex_unlock(&audio->mu);
-    if (fn) fn(user);
+    if (publish_player(audio, player, cancelled, generation) != 0) return 0;
     if (player->wait) player->wait(player, -1);
     clear_player(audio, player);
     return 0;
@@ -2106,26 +2173,24 @@ static int stream_chunks(audio *audio, char **chunks, size_t count, const voice_
     snprintf(channels, sizeof channels, "%d", first.channels);
     const char *argv[] = {"pw-play", "--raw", "--format", format, "--rate", rate, "--channels", channels, "-", NULL};
     audio_spawn spawn = {.argv = argv, .argc = 8, .pass_fd = -1, .pipe_stdin = 1};
-    pthread_mutex_lock(&audio->mu);
-    int cancel = cancelled && atomic_load(cancelled);
-    pthread_mutex_unlock(&audio->mu);
-    if (cancel) { free_result(&first); return 0; }
+    int generation = atomic_load(&audio->stop_gen);
+    if (cancelled && atomic_load(cancelled)) { free_result(&first); return 0; }
     audio_player *player = open_player(audio, &spawn);
     if (!player) { free_result(&first); set_err(err, err_cap, "Speech playback failed"); return -1; }
-    pthread_mutex_lock(&audio->mu);
-    audio->player = player;
-    audio_audible_fn fn = audio->audible;
-    void *user = audio->audible_user;
-    pthread_mutex_unlock(&audio->mu);
-    if (fn) fn(user);
+    if (publish_player(audio, player, cancelled, generation) != 0) {
+        free_result(&first);
+        return 0;
+    }
     unsigned char *frames = first.frames;
     size_t frame_len = first.frame_len;
     int ch = first.channels, width = first.width, sample_rate = first.rate;
     first.frames = NULL;
     prefetch pending = {0};
     int failed = 0;
-    for (size_t i = 0; i < count; i++) {
-        if (cancelled && atomic_load(cancelled)) break;
+    int stopped = (cancelled && atomic_load(cancelled)) || atomic_load(&audio->stop_gen) != generation;
+    for (size_t i = 0; i < count && !stopped; i++) {
+        stopped = (cancelled && atomic_load(cancelled)) || atomic_load(&audio->stop_gen) != generation;
+        if (stopped) break;
         if (i + 1 < count) {
             pthread_t thread;
             pending = (prefetch){.audio = audio, .chunk = chunks[i + 1], .choice = choice, .cancelled = cancelled};
@@ -2136,7 +2201,8 @@ static int stream_chunks(audio *audio, char **chunks, size_t count, const voice_
             }
             if (player->write && player->write(player, frames, frame_len) < 0) {
                 pthread_join(thread, NULL);
-                if (!(cancelled && atomic_load(cancelled))) {
+                stopped = (cancelled && atomic_load(cancelled)) || atomic_load(&audio->stop_gen) != generation;
+                if (!stopped) {
                     set_err(err, err_cap, "Speech playback stopped unexpectedly");
                     failed = 1;
                 }
@@ -2162,7 +2228,8 @@ static int stream_chunks(audio *audio, char **chunks, size_t count, const voice_
             frame_len = pending.result.frame_len;
             pending.result.frames = NULL;
         } else if (player->write && player->write(player, frames, frame_len) < 0) {
-            if (!(cancelled && atomic_load(cancelled))) {
+            stopped = (cancelled && atomic_load(cancelled)) || atomic_load(&audio->stop_gen) != generation;
+            if (!stopped) {
                 set_err(err, err_cap, "Speech playback stopped unexpectedly");
                 failed = 1;
             }
@@ -2170,11 +2237,13 @@ static int stream_chunks(audio *audio, char **chunks, size_t count, const voice_
         }
     }
     free(frames);
-    if (!failed && !(cancelled && atomic_load(cancelled))) {
+    if (!stopped) stopped = (cancelled && atomic_load(cancelled)) || atomic_load(&audio->stop_gen) != generation;
+    if (!failed && !stopped) {
         if (player->close_stdin) player->close_stdin(player);
         player->stdin_closed = 1;
         int code = player->wait ? player->wait(player, -1) : 0;
-        if (code && !(cancelled && atomic_load(cancelled))) {
+        stopped = (cancelled && atomic_load(cancelled)) || atomic_load(&audio->stop_gen) != generation;
+        if (code && !stopped) {
             set_err(err, err_cap, "Speech playback failed");
             failed = 1;
         }

@@ -1184,7 +1184,7 @@ static void append_json_string(GString *out, const char *text) {
         } else if (c == '\t') {
             g_string_append(out, "\\t");
             p++;
-        } else if (c < 0x20) {
+        } else if (c < 0x20 || c == 0x7f) {
             g_string_append_printf(out, "\\u%04x", c);
             p++;
         } else if (c < 0x80) {

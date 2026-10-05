@@ -3,27 +3,29 @@
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
-
-#include <ctype.h>
+#include <glib.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
 static pcre2_code *marker_re;
+static pthread_once_t patterns_once = PTHREAD_ONCE_INIT;
 
-static void ensure(void) {
-    if (marker_re) return;
+static void compile_patterns(void) {
     int error = 0;
     PCRE2_SIZE offset = 0;
     marker_re = pcre2_compile(
         (PCRE2_SPTR)"[\\[(]\\s*(?:blank[_ ]audio|no[_ ]speech|silence|silent|"
         "music|inaudible|noise|applause|laughter|breathing)\\s*[\\])]",
-        PCRE2_ZERO_TERMINATED, PCRE2_CASELESS | PCRE2_UTF, &error, &offset, NULL);
+        PCRE2_ZERO_TERMINATED, PCRE2_CASELESS | PCRE2_UTF | PCRE2_UCP,
+        &error, &offset, NULL);
 }
 
 int has_control_characters(const char *text) {
-    if (!text) return 1;
-    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
-        if ((*p < 32 && *p != '\n' && *p != '\r' && *p != '\t') || (*p >= 127 && *p < 160))
+    if (!text || !g_utf8_validate(text, -1, NULL)) return 1;
+    for (const char *p = text; *p; p = g_utf8_next_char(p)) {
+        gunichar c = g_utf8_get_char(p);
+        if ((c < 32 && c != '\n' && c != '\r' && c != '\t') || (c >= 127 && c < 160))
             return 1;
     }
     return 0;
@@ -32,12 +34,13 @@ int has_control_characters(const char *text) {
 int dictation_text(const char *text, char *out, size_t cap) {
     if (!out || cap == 0) return -1;
     out[0] = 0;
-    if (!text) return 1;
-    ensure();
+    if (!text || !g_utf8_validate(text, -1, NULL)) return 1;
+    pthread_once(&patterns_once, compile_patterns);
     if (!marker_re) return -1;
     char *work = strdup(text);
     if (!work) return -1;
-    pcre2_match_data *data = pcre2_match_data_create(4, NULL);
+    pcre2_match_data *data = pcre2_match_data_create_from_pattern(marker_re, NULL);
+    if (!data) { free(work); return -1; }
     for (;;) {
         int rc = pcre2_match(marker_re, (PCRE2_SPTR)work, PCRE2_ZERO_TERMINATED, 0, 0, data, NULL);
         if (rc < 0) break;
@@ -46,29 +49,42 @@ int dictation_text(const char *text, char *out, size_t cap) {
         memmove(work + ov[0] + 1, work + ov[1], strlen(work + ov[1]) + 1);
     }
     pcre2_match_data_free(data);
-    size_t n = 0;
-    for (const unsigned char *p = (const unsigned char *)work; *p; p++) {
-        if (*p == 0xE2 && p[1] == 0x80 && p[2] == 0x8B) { p += 2; continue; }
-        if (*p == 0xEF && p[1] == 0xBB && p[2] == 0xBF) { p += 2; continue; }
-        if (n + 1 < cap) work[n++] = *p;
-    }
-    work[n] = 0;
-    char *dst = out;
-    int space = 1;
-    int alnum = 0;
-    for (unsigned char *p = (unsigned char *)work; *p && (size_t)(dst - out) + 1 < cap; p++) {
-        if (*p == ' ' || *p == '\t') {
-            if (!space) *dst++ = ' ';
-            space = 1;
-        } else {
-            if (isalnum(*p) || *p >= 128) alnum = 1;
-            *dst++ = *p;
-            space = 0;
+    char *dst = work;
+    int space = 0;
+    for (const char *p = work; *p;) {
+        const char *next = g_utf8_next_char(p);
+        gunichar c = g_utf8_get_char(p);
+        if (c != 0x200b && c != 0xfeff) {
+            if (c == ' ' || c == '\t') {
+                if (!space) *dst++ = ' ';
+                space = 1;
+            } else {
+                memmove(dst, p, (size_t)(next - p));
+                dst += next - p;
+                space = 0;
+            }
         }
+        p = next;
     }
-    if (dst > out && dst[-1] == ' ') dst--;
     *dst = 0;
+    const char *start = work;
+    while (*start && g_unichar_isspace(g_utf8_get_char(start))) start = g_utf8_next_char(start);
+    char *end = dst;
+    while (end > start) {
+        char *prev = g_utf8_find_prev_char(start, end);
+        if (!g_unichar_isspace(g_utf8_get_char(prev))) break;
+        end = prev;
+    }
+    *end = 0;
+    int alnum = 0;
+    for (const char *p = start; *p; p = g_utf8_next_char(p))
+        if (g_unichar_isalnum(g_utf8_get_char(p))) alnum = 1;
+    int result = 0;
+    if (alnum) {
+        size_t n = (size_t)(end - start);
+        if (n >= cap) result = -1;
+        else memcpy(out, start, n + 1);
+    }
     free(work);
-    if (!alnum) out[0] = 0;
-    return 0;
+    return result;
 }

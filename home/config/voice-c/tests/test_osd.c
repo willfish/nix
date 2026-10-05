@@ -90,6 +90,14 @@ int test_osd(void) {
             fail("failure shows the reason not a transcript");
         }
     }
+    {
+        VoiceStatus status = blank();
+        status.phase = "idle";
+        status.osd = 1;
+        status.osd_message = "Hello\xe2\x80\x8b\xe2\x80\xaeWorld\xc2\xa0Next";
+        osd_view(&status, &view);
+        if (strcmp(view.title, "HelloWorld Next") != 0) fail("public label strips format and unicode space");
+    }
 
     {
         char meter[64];

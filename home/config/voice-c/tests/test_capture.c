@@ -2,11 +2,14 @@
 #include "capture.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <math.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -53,6 +56,22 @@ static PipeWireCapture *open_script(const char *script) {
     return capture_open(path, argv, NULL);
 }
 
+static char **preferred_recorded;
+static int preferred_recorded_n;
+
+static int record_preferred_spawn(char *const *argv, int stderr_fd, CaptureProc *out, void *user) {
+    (void)user;
+    for (int i = 0; i < preferred_recorded_n; i++) free(preferred_recorded[i]);
+    free(preferred_recorded);
+    preferred_recorded = NULL;
+    preferred_recorded_n = 0;
+    while (argv[preferred_recorded_n]) preferred_recorded_n++;
+    preferred_recorded = calloc((size_t)preferred_recorded_n, sizeof *preferred_recorded);
+    for (int i = 0; i < preferred_recorded_n; i++) preferred_recorded[i] = strdup(argv[i]);
+    char *producer[] = {"python3", "-c", "import os; os.write(1, b'\\0\\0'*160)", NULL};
+    return capture_spawn_default(producer, stderr_fd, out);
+}
+
 static int near(double got, double want) {
     double delta = got - want;
     if (delta < 0) delta = -delta;
@@ -94,20 +113,7 @@ static int read_wav(int *rate, int *channels, int *width, unsigned char **frames
 }
 
 static void test_preferred_target(void) {
-    static char **recorded;
-    static int recorded_n;
-    int record_spawn(char *const *argv, int stderr_fd, CaptureProc *out, void *user) {
-        (void)user;
-        for (int i = 0; i < recorded_n; i++) free(recorded[i]);
-        free(recorded);
-        recorded_n = 0;
-        while (argv[recorded_n]) recorded_n++;
-        recorded = calloc((size_t)recorded_n, sizeof *recorded);
-        for (int i = 0; i < recorded_n; i++) recorded[i] = strdup(argv[i]);
-        char *producer[] = {"python3", "-c", "import os; os.write(1, b'\\0\\0'*160)", NULL};
-        return capture_spawn_default(producer, stderr_fd, out);
-    }
-    capture_spawn_hook = record_spawn;
+    capture_spawn_hook = record_preferred_spawn;
     PipeWireCapture *capture = capture_open(path, NULL, "alsa_input.usb-microphone");
     if (!capture || capture_wait_ready(capture, 1) != 0) {
         fail("preferred target", "not ready");
@@ -115,26 +121,27 @@ static void test_preferred_target(void) {
         int code = -1;
         if (capture_wait(capture, 1, &code) != 0 || code != 0) fail("preferred target", "wait");
         int at = -1;
-        for (int i = 0; i < recorded_n; i++) {
-            if (strcmp(recorded[i], "--target") == 0) at = i;
+        for (int i = 0; i < preferred_recorded_n; i++) {
+            if (strcmp(preferred_recorded[i], "--target") == 0) at = i;
         }
-        if (at < 0 || at + 1 >= recorded_n || strcmp(recorded[at + 1], "alsa_input.usb-microphone") != 0) {
+        if (at < 0 || at + 1 >= preferred_recorded_n || strcmp(preferred_recorded[at + 1], "alsa_input.usb-microphone") != 0) {
             fail("preferred target", "argv");
         }
         const char *want[] = {
             "pw-record", "--raw", "--rate=16000", "--channels=1", "--format=s16",
             "--sample-count=2880000", "--target", "alsa_input.usb-microphone", "-",
         };
-        if (recorded_n != 9) fail("preferred target", "argc");
-        for (int i = 0; i < recorded_n && i < 9; i++) {
-            if (!recorded[i] || strcmp(recorded[i], want[i]) != 0) fail("preferred target", recorded[i] ? recorded[i] : "null");
+        if (preferred_recorded_n != 9) fail("preferred target", "argc");
+        for (int i = 0; i < preferred_recorded_n && i < 9; i++) {
+            if (!preferred_recorded[i] || strcmp(preferred_recorded[i], want[i]) != 0)
+                fail("preferred target", preferred_recorded[i] ? preferred_recorded[i] : "null");
         }
     }
     capture_free(capture);
-    for (int i = 0; i < recorded_n; i++) free(recorded[i]);
-    free(recorded);
-    recorded = NULL;
-    recorded_n = 0;
+    for (int i = 0; i < preferred_recorded_n; i++) free(preferred_recorded[i]);
+    free(preferred_recorded);
+    preferred_recorded = NULL;
+    preferred_recorded_n = 0;
 }
 
 static void test_chunker(void) {
@@ -312,7 +319,7 @@ static void test_delayed_samples(void) {
         fail("delayed", "too soon");
     }
     int code = -1;
-    if (capture && capture_wait(capture, 1, &code) != 0 || code != 0) fail("delayed", "wait");
+    if (capture && (capture_wait(capture, 1, &code) != 0 || code != 0)) fail("delayed", "wait");
     capture_free(capture);
 }
 
@@ -538,6 +545,68 @@ static void test_cancel_before_ready(void) {
     capture_free(capture);
 }
 
+static void test_spawn_stdout_cloexec(void) {
+    char *argv[] = {"python3", "-c", "import os; os.write(1, b'\\0\\0')", NULL};
+    CaptureProc proc = {0};
+    if (capture_spawn_default(argv, -1, &proc) != 0) {
+        fail("cloexec", "spawn");
+        return;
+    }
+    int flags = fcntl(proc.stdout_fd, F_GETFD);
+    if (flags < 0 || (flags & FD_CLOEXEC) == 0) fail("cloexec", "stdout");
+    if (proc.pid > 0) kill(proc.pid, SIGKILL);
+    waitpid(proc.pid, NULL, 0);
+    if (proc.stdout_fd >= 0) close(proc.stdout_fd);
+}
+
+static void test_high_fd_read(void) {
+    struct rlimit limit;
+    if (getrlimit(RLIMIT_NOFILE, &limit) != 0) {
+        fprintf(stderr, "SKIP high fd: getrlimit\n");
+        return;
+    }
+    struct rlimit raised = limit;
+    rlim_t want = (rlim_t)FD_SETSIZE + 64;
+    if (raised.rlim_max < want) {
+        fprintf(stderr, "SKIP high fd: rlimit max\n");
+        return;
+    }
+    raised.rlim_cur = want;
+    if (setrlimit(RLIMIT_NOFILE, &raised) != 0) {
+        fprintf(stderr, "SKIP high fd: setrlimit\n");
+        return;
+    }
+    int *held = calloc((size_t)FD_SETSIZE + 8, sizeof *held);
+    int nheld = 0;
+    int reached = 0;
+    if (held) {
+        while (nheld < FD_SETSIZE + 8) {
+            int fd = open("/dev/null", O_RDONLY | O_CLOEXEC);
+            if (fd < 0) break;
+            if (fd >= FD_SETSIZE) {
+                close(fd);
+                reached = 1;
+                break;
+            }
+            held[nheld++] = fd;
+        }
+    }
+    if (!reached) {
+        fprintf(stderr, "SKIP high fd: could not fill the select set\n");
+    } else {
+        PipeWireCapture *capture = open_script("import os; os.write(1, b'\\0\\0'*320)");
+        if (!capture || capture_wait_ready(capture, 2) != 0) fail("high fd", "not ready");
+        else {
+            int code = -1;
+            if (capture_wait(capture, 2, &code) != 0 || code != 0) fail("high fd", "wait");
+        }
+        capture_free(capture);
+    }
+    for (int i = 0; i < nheld; i++) close(held[i]);
+    free(held);
+    setrlimit(RLIMIT_NOFILE, &limit);
+}
+
 static void test_wav_write_failure(void) {
     if (access("/dev/full", W_OK) != 0) {
         fprintf(stderr, "SKIP wav write failure: no /dev/full\n");
@@ -589,6 +658,8 @@ int test_capture(void) {
     setup(); test_reader_start_failure(); teardown();
     setup(); test_cancel_before_ready(); teardown();
     setup(); test_wav_write_failure(); teardown();
+    setup(); test_spawn_stdout_cloexec(); teardown();
+    setup(); test_high_fd_read(); teardown();
     return failures;
 }
 

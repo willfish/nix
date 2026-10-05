@@ -57,10 +57,27 @@ typedef int (*engine_readiness_fn)(
 
 typedef double (*engine_clock_fn)(void *ctx);
 
-/* 0 accepted ownership of arg. Nonzero: caller still owns arg. Must not run inline. */
+/* 0 accepted ownership of arg. Nonzero: caller still owns arg.
+ * Must not run fn on the calling thread. The manager calls this with its lock held.
+ * NULL uses a built-in worker, which close joins. A non-NULL executor is not owned:
+ * drain it before engine_manager_free. A job that runs after free uses freed state.
+ */
 typedef int (*engine_submit_fn)(void (*fn)(void *), void *arg, void *ctx);
 
-/* 0 and *out set, or nonzero with err set. */
+/* 0 and *out set, or nonzero with err set.
+ * Must not run fn on the calling thread. The manager calls this with its lock held.
+ * fn may already be running on another thread before this returns. A zero delay
+ * does that on the built-in scheduler, so do not wait for fn to stay idle until return.
+ *
+ * NULL uses internal threads. A finished thread is joined when its timer is cancelled
+ * or replaced. close joins any that remain, after releasing the manager lock.
+ * Cancel itself does not wait: it runs with that lock held, and fn may need the lock
+ * or may cancel its own timer.
+ *
+ * An injected scheduler is not owned or joined. close only calls cancel on timers it
+ * stored. Drain it before engine_manager_free. A callback after free uses freed state.
+ * Do not call close or free from a timer or worker callback.
+ */
 typedef int (*engine_call_later_fn)(
     double delay, void (*fn)(void *), void *arg, void *ctx,
     engine_timer **out, char *err, size_t err_cap);
@@ -105,6 +122,14 @@ int engine_manager_set_population(engine_manager *manager, int sessions, int pen
 void engine_manager_sweep(engine_manager *manager);
 int engine_manager_state(engine_manager *manager, const char *engine, engine_state *out);
 
+/* A lease remains valid after engine_lease_release until engine_manager_free.
+ * Release only drops the active link. The object stays so wait, done,
+ * cancelled, and released stay defined, and because start or readiness work
+ * may still hold it. Freeing on release is not safe. free joins built-in
+ * workers, then frees every lease. It does not join an injected executor or
+ * scheduler. Do not use a lease after free. A long-lived manager retains one
+ * lease per acquire until then.
+ */
 const char *engine_lease_name(const engine_lease *lease);
 int engine_lease_done(engine_lease *lease);
 int engine_lease_cancelled(engine_lease *lease);

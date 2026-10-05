@@ -754,6 +754,12 @@ static int starts_equal(const ObservedStart *starts, size_t n, int pid, const ch
     return !py_ne(observed, start);
 }
 
+static void free_owned_captured(CapturedIncarnation *owned, size_t n) {
+    if (!owned) return;
+    for (size_t i = 0; i < n; i++) free((void *)owned[i].start);
+    free(owned);
+}
+
 static int keep_fence(int pid, const char *start, const ObservedStart *starts, size_t nstarts,
     const CapturedIncarnation *captured, size_t ncaptured) {
     if (!captured_has(captured, ncaptured, pid, start)) return 1;
@@ -772,19 +778,28 @@ void registry_prune(AttachmentRegistry *registry, const ObservedStart *starts, s
     const CapturedIncarnation *use = captured;
     size_t use_n = has_captured ? ncaptured : 0;
     if (!has_captured) {
+        /* Copy start keys. Pruning frees the fence strings a borrow would still read. */
         use_n = registry->high_count + registry->retired_count;
         if (use_n) {
             owned = calloc(use_n, sizeof *owned);
             if (!owned) return;
             size_t n = 0;
-            for (size_t i = 0; i < registry->high_count; i++) {
+            for (size_t i = 0; i < registry->high_count && n < use_n; i++) {
                 owned[n].pid = registry->high[i].pid;
-                owned[n].start = registry->high[i].start;
+                owned[n].start = dup_str(registry->high[i].start);
+                if (registry->high[i].start && !owned[n].start) {
+                    free_owned_captured(owned, n);
+                    return;
+                }
                 n++;
             }
-            for (size_t i = 0; i < registry->retired_count; i++) {
+            for (size_t i = 0; i < registry->retired_count && n < use_n; i++) {
                 owned[n].pid = registry->retired[i].pid;
-                owned[n].start = registry->retired[i].start;
+                owned[n].start = dup_str(registry->retired[i].start);
+                if (registry->retired[i].start && !owned[n].start) {
+                    free_owned_captured(owned, n);
+                    return;
+                }
                 n++;
             }
             use = owned;
@@ -813,5 +828,5 @@ void registry_prune(AttachmentRegistry *registry, const ObservedStart *starts, s
         }
     }
     registry->retired_count = w;
-    free(owned);
+    free_owned_captured(owned, use_n);
 }

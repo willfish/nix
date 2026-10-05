@@ -274,6 +274,28 @@ static void test_stale_prune_and_incarnation(void) {
         fail("replaced incarnation kept");
     }
     fences_free(&dropped);
+
+    FenceHighwater pair[] = {
+        {7, "a", 1, "bridge-a"},
+        {7, "b", 2, "bridge-b"},
+    };
+    FenceRetired pair_retired[] = {{7, "a", "bridge-a"}, {7, "b", "bridge-b"}};
+    Fences many = {
+        .highwater = pair,
+        .highwater_count = 2,
+        .retired = pair_retired,
+        .retired_count = 2,
+    };
+    ObservedStart replaced[] = {{7, "c"}};
+    if (registry_restore_fences(registry, &many) != 0) fail("restore paired fences");
+    registry_prune(registry, replaced, 1, NULL, 0, 0);
+    Fences cleared = {0};
+    if (registry_fences(registry, &cleared) != 0 || fence_has(&cleared, 7, "a")
+        || fence_has(&cleared, 7, "b") || retired_has(&cleared, 7, "a", "bridge-a")
+        || retired_has(&cleared, 7, "b", "bridge-b")) {
+        fail("replaced incarnation pair kept");
+    }
+    fences_free(&cleared);
     registry_free(registry);
 }
 

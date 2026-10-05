@@ -715,6 +715,7 @@
               pkgs.runCommand "home-profile-boundaries" { } "touch $out";
           }
           // lib.optionalAttrs (system == linuxSystem) {
+            voice-c = import ./tests/voice-c.nix { inherit pkgs; };
             sddm = import ./tests/sddm.nix {
               inherit pkgs;
               greeterEnvironment =

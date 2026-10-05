@@ -77,9 +77,11 @@ typedef struct default_timer {
     pthread_cond_t cv;
     int cancelled;
     int started;
+    int finished;
     double delay;
     void (*fn)(void *);
     void *arg;
+    engine_manager *manager;
 } default_timer;
 
 struct engine_manager {
@@ -286,12 +288,45 @@ static void executor_shutdown(executor *executor) {
     pthread_mutex_unlock(&executor->mu);
 }
 
+/* May run with the manager lock held. Join only callbacks that have already returned. */
+static void reap_finished_timers(engine_manager *manager) {
+    default_timer *doomed = NULL;
+    pthread_mutex_lock(&manager->lock);
+    default_timer **link = &manager->timers;
+    while (*link) {
+        default_timer *item = *link;
+        int claim = 0;
+        if (item->started && !pthread_equal(item->thread, pthread_self())) {
+            pthread_mutex_lock(&item->mu);
+            claim = item->cancelled && item->finished;
+            pthread_mutex_unlock(&item->mu);
+        }
+        if (claim) {
+            *link = item->next;
+            item->next = doomed;
+            doomed = item;
+        } else {
+            link = &item->next;
+        }
+    }
+    pthread_mutex_unlock(&manager->lock);
+    while (doomed) {
+        default_timer *next = doomed->next;
+        pthread_join(doomed->thread, NULL);
+        pthread_cond_destroy(&doomed->cv);
+        pthread_mutex_destroy(&doomed->mu);
+        free(doomed);
+        doomed = next;
+    }
+}
+
 static void default_timer_cancel(engine_timer *timer) {
     default_timer *item = (default_timer *)timer;
     pthread_mutex_lock(&item->mu);
     item->cancelled = 1;
     pthread_cond_signal(&item->cv);
     pthread_mutex_unlock(&item->mu);
+    if (item->manager) reap_finished_timers(item->manager);
 }
 
 static void *default_timer_main(void *arg) {
@@ -307,6 +342,9 @@ static void *default_timer_main(void *arg) {
     int fire = !item->cancelled;
     pthread_mutex_unlock(&item->mu);
     if (fire && item->fn) item->fn(item->arg);
+    pthread_mutex_lock(&item->mu);
+    item->finished = 1;
+    pthread_mutex_unlock(&item->mu);
     return NULL;
 }
 
@@ -321,9 +359,11 @@ static int default_call_later(
         return -1;
     }
     item->base.cancel = default_timer_cancel;
+    item->manager = manager;
     item->delay = delay;
     item->fn = fn;
     item->arg = arg;
+    reap_finished_timers(manager);
     pthread_mutex_init(&item->mu, NULL);
     pthread_condattr_t attr;
     pthread_condattr_init(&attr);
@@ -348,12 +388,17 @@ static int default_call_later(
 
 static void join_timers(engine_manager *manager) {
     pthread_mutex_lock(&manager->lock);
+    for (default_timer *item = manager->timers; item; item = item->next) {
+        pthread_mutex_lock(&item->mu);
+        item->cancelled = 1;
+        pthread_cond_signal(&item->cv);
+        pthread_mutex_unlock(&item->mu);
+    }
     default_timer *items = manager->timers;
     manager->timers = NULL;
     pthread_mutex_unlock(&manager->lock);
     while (items) {
         default_timer *next = items->next;
-        default_timer_cancel(&items->base);
         if (items->started) pthread_join(items->thread, NULL);
         pthread_cond_destroy(&items->cv);
         pthread_mutex_destroy(&items->mu);

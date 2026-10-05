@@ -48,6 +48,7 @@ typedef struct audio_http_request {
     const unsigned char *body;
     size_t body_len;
     int timeout_ms;
+    size_t maximum; /* 0 selects the transport default; a larger body is over the cap */
 } audio_http_request;
 
 typedef struct audio_http_response {

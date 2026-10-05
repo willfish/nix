@@ -437,8 +437,12 @@ static int muted_from(Json *info, int *muted, int *known) {
     *known = 0;
     *muted = 0;
     Json *params = json_get(info, "params");
+    if (!params) return 0;
+    /* A present non-object is a parse error, matching Python's .get chain. */
+    if (params->type != JSON_OBJ) return -1;
     Json *props = json_get(params, "Props");
-    if (!props || props->type != JSON_ARR) return 0;
+    if (!props) return 0;
+    if (props->type != JSON_ARR) return -1;
     for (size_t i = 0; i < props->n; i++) {
         Json *mute = json_get(&props->children[i], "mute");
         if (!mute) continue;
@@ -482,12 +486,25 @@ static int parse_dump(const char *text, const char *preferred, Snap *out) {
                 const char *nick = json_str(json_get(props, "node.nick"));
                 item.description = dup_text(description);
                 item.nick = dup_text(nick);
-                if (muted_from(info, &item.muted, &item.muted_known) != 0 || !item.name
-                    || source_add(&sources, &count, &cap, item) != 0) {
+                if (muted_from(info, &item.muted, &item.muted_known) != 0 || !item.name) {
                     free(item.name);
                     free(item.description);
                     free(item.nick);
                     failed = 1;
+                } else {
+                    /* Python stores sources in a dict, so the last name wins. */
+                    Source *existing = find_source(sources, count, name);
+                    if (existing) {
+                        free(existing->name);
+                        free(existing->description);
+                        free(existing->nick);
+                        *existing = item;
+                    } else if (source_add(&sources, &count, &cap, item) != 0) {
+                        free(item.name);
+                        free(item.description);
+                        free(item.nick);
+                        failed = 1;
+                    }
                 }
             }
         }
@@ -495,22 +512,39 @@ static int parse_dump(const char *text, const char *preferred, Snap *out) {
         const char *meta_name = json_str(json_get(row_props, "metadata.name"));
         if (!meta_name || strcmp(meta_name, "default") != 0) continue;
         Json *metadata = json_get(row, "metadata");
-        if (!metadata || metadata->type != JSON_ARR) continue;
-        for (size_t m = 0; m < metadata->n; m++) {
+        if (!metadata) continue;
+        if (metadata->type != JSON_ARR) {
+            failed = 1;
+            break;
+        }
+        for (size_t m = 0; m < metadata->n && !failed; m++) {
             const char *key = json_str(json_get(&metadata->children[m], "key"));
             if (!key || strcmp(key, "default.audio.source") != 0) continue;
             Json *value = json_get(&metadata->children[m], "value");
             Json nested = {0};
             Json *object = value;
-            if (value && value->type == JSON_STR) {
+            int skip_name = !value || value->type == JSON_NULL
+                || (value->type == JSON_BOOL && !value->bool_val)
+                || (value->type == JSON_ARR && value->n == 0)
+                || (value->type == JSON_STR && (!value->str || !value->str[0]));
+            if (!skip_name && value->type == JSON_STR) {
                 Parser nested_parser = {value->str, value->str + strlen(value->str)};
                 if (parse_value(&nested_parser, &nested) != 0) {
                     failed = 1;
                     break;
                 }
+                skip_ws(&nested_parser);
+                if (nested_parser.p != nested_parser.end || nested.type != JSON_OBJ) {
+                    json_free(&nested);
+                    failed = 1;
+                    break;
+                }
                 object = &nested;
+            } else if (!skip_name && value->type != JSON_OBJ) {
+                failed = 1;
+                break;
             }
-            const char *name = json_str(json_get(object, "name"));
+            const char *name = skip_name ? NULL : json_str(json_get(object, "name"));
             free(fallback);
             fallback = dup_text(name);
             json_free(&nested);
@@ -594,10 +628,19 @@ static void *probe_main(void *arg) {
 
 static int start_probe(MicrophoneMonitor *monitor) {
     if (monitor->probe_alive) return 0;
+    /* Join the finished probe before replacing its thread id. probe_main
+       clears probe_alive and unlocks before it returns, and it does not lock
+       again, so joining here while holding the mutex cannot deadlock. A later
+       pthread_create failure must not wipe a good snapshot. */
+    if (monitor->probe_started) {
+        pthread_t finished = monitor->probe_thread;
+        monitor->probe_started = 0;
+        pthread_join(finished, NULL);
+    }
+    if (monitor->probe_alive || monitor->destroyed) return 0;
     monitor->probe_alive = 1;
     if (pthread_create(&monitor->probe_thread, NULL, probe_main, monitor) != 0) {
         monitor->probe_alive = 0;
-        publish_unknown(monitor, "Microphone details unavailable");
         return -1;
     }
     monitor->probe_started = 1;

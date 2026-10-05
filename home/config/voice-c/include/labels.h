@@ -79,6 +79,10 @@ int socket_key_equal(const SocketKey *a, const SocketKey *b);
 
 LabelsCache *labels_cache_new(const LabelsCacheConfig *cfg);
 void labels_cache_close(LabelsCache *cache);
+/* Destroys the cache. The caller must keep an injected submit scheduler
+   quiescent: no refresh callback may run once free begins. A callback after
+   that is a use-after-free. The owned pool, used when submit is NULL, is
+   joined before the cache is destroyed. */
 void labels_cache_free(LabelsCache *cache);
 int labels_cache_set_active(LabelsCache *cache, const SocketKey *keys, size_t count);
 SnapshotState *labels_cache_read(LabelsCache *cache, const SocketKey *key);

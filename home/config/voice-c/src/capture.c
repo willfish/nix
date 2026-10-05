@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 #include "capture.h"
 
 #include <errno.h>
@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/select.h>
+#include <poll.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -299,14 +299,12 @@ int capture_spawn_default(char *const *argv, int stderr_fd, CaptureProc *out) {
         return -1;
     }
 
-    if (pipe(outpipe) != 0) return -1;
-    if (pipe(errpipe) != 0) {
+    if (pipe2(outpipe, O_CLOEXEC) != 0) return -1;
+    if (pipe2(errpipe, O_CLOEXEC) != 0) {
         close(outpipe[0]);
         close(outpipe[1]);
         return -1;
     }
-    fcntl(errpipe[0], F_SETFD, FD_CLOEXEC);
-    fcntl(errpipe[1], F_SETFD, FD_CLOEXEC);
     pid_t pid = fork();
     if (pid < 0) {
         int err = errno;
@@ -593,11 +591,9 @@ static void *reader_main(void *arg) {
     unsigned char joined[8193];
     double last_samples = mono();
     while (!c->cleaned) {
-        fd_set fds;
-        FD_ZERO(&fds);
-        FD_SET(c->stdout_fd, &fds);
-        struct timeval tv = {0, 100000};
-        int ready = select(c->stdout_fd + 1, &fds, NULL, NULL, &tv);
+        if (c->stdout_fd < 0) break;
+        struct pollfd pfd = {.fd = c->stdout_fd, .events = POLLIN};
+        int ready = poll(&pfd, 1, 100);
         if (ready < 0) {
             if (errno == EINTR) continue;
             pthread_mutex_lock(&c->mu);

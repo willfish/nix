@@ -771,6 +771,54 @@ static void test_pane_name_matching_the_tab_is_not_repeated(void) {
     labels_state_free(state);
 }
 
+static void test_scheduler_rejection_is_unavailable_not_inflight(void) {
+    Runner runner = {.result = payload_json, .now = 10};
+    SocketKey key;
+    socket_key_init(&key, "/a", 1, 2);
+    LabelsCache *cache = make_cache(&runner, 1);
+    labels_cache_set_active(cache, &key, 1);
+    job_count = 8;
+    expect_true("rejection reports scheduled", labels_cache_refresh(cache, &key));
+    SnapshotState *state = labels_cache_read(cache, &key);
+    expect_int("rejection outcome", labels_state_outcome(state), LABELS_OUTCOME_UNAVAILABLE);
+    expect_true("rejection not inflight", state && !labels_state_inflight(state));
+    labels_state_free(state);
+    expect_true("failure ttl holds", !labels_cache_refresh(cache, &key));
+    runner.now = 13;
+    job_count = 0;
+    expect_true("retry after ttl", labels_cache_refresh(cache, &key));
+    expect_int("retry queued once", job_count, 1);
+    queue_run();
+    state = labels_cache_read(cache, &key);
+    expect_int("retry published", labels_state_outcome(state), LABELS_OUTCOME_OK);
+    labels_state_free(state);
+    labels_cache_free(cache);
+    socket_key_clear(&key);
+    job_count = 0;
+}
+
+static void test_identity_hash_matches_python_json(void) {
+    LabelEntry del_path = pi_row("w1:p1", "/tmp/a\x7f" "b", 1, 2);
+    LabelEntry del_other = pi_row("w1:p1", "/tmp/a\x7f" "bx", 1, 2);
+    LabelEntry plain[2] = {del_path, del_other};
+    LabelEntry *out = NULL;
+    size_t n = 0;
+    expect_int("del hash build", labels_build(plain, 2, NULL, NULL, 0, &out, &n), LABELS_OK);
+    expect_str("del path digest", out ? out[0].label : NULL, "pi \xc2\xb7 w1:p1@48d039");
+    expect_str("del other digest", out ? out[1].label : NULL, "pi \xc2\xb7 w1:p1@ef4a37");
+    labels_entries_free(out, n);
+    {
+        LabelEntry accent = pi_row("w1:p1", "/tmp/h\xc3\xa9llo", 1, 2);
+        LabelEntry accent_other = pi_row("w1:p1", "/tmp/h\xc3\xa9llox", 1, 2);
+        LabelEntry rows[2] = {accent, accent_other};
+        out = NULL;
+        n = 0;
+        expect_int("unicode hash build", labels_build(rows, 2, NULL, NULL, 0, &out, &n), LABELS_OK);
+        expect_str("unicode digest", out ? out[0].label : NULL, "pi \xc2\xb7 w1:p1@b7a5fb");
+        labels_entries_free(out, n);
+    }
+}
+
 static void test_display_agent_fallback_is_pure(void) {
     const char *json =
         "{\"workspaces\":[{\"workspace_id\":\"w1\",\"label\":\"dot\"}],"
@@ -810,6 +858,8 @@ int test_labels(void) {
     test_renamed_pane_is_shown_without_replacing_the_tab();
     test_pane_name_matching_the_tab_is_not_repeated();
     test_display_agent_fallback_is_pure();
+    test_scheduler_rejection_is_unavailable_not_inflight();
+    test_identity_hash_matches_python_json();
     return failures;
 }
 

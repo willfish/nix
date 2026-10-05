@@ -1,6 +1,7 @@
 #include "osd.h"
 
 #include <ctype.h>
+#include <glib.h>
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
@@ -129,14 +130,23 @@ static int utf8_next(const char *s, unsigned int *cp, size_t *len) {
     return 1;
 }
 
-static int is_ascii_space(unsigned int cp) {
-    return cp == ' ' || cp == '\t' || cp == '\n' || cp == '\r' || cp == '\v' || cp == '\f';
-}
-
-static int is_printable_cp(unsigned int cp) {
-    if (cp < 32 || cp == 127 || (cp >= 128 && cp <= 159)) return 0;
-    if (cp == 0x2028 || cp == 0x2029) return 0;
-    return 1;
+/* Python str.isprintable: category C, line/paragraph separators, and
+   non-ASCII spaces are not printable. ASCII space is. */
+static int py_printable(gunichar c) {
+    if (c == ' ') return 1;
+    switch (g_unichar_type(c)) {
+    case G_UNICODE_CONTROL:
+    case G_UNICODE_FORMAT:
+    case G_UNICODE_SURROGATE:
+    case G_UNICODE_PRIVATE_USE:
+    case G_UNICODE_UNASSIGNED:
+    case G_UNICODE_LINE_SEPARATOR:
+    case G_UNICODE_PARAGRAPH_SEPARATOR:
+    case G_UNICODE_SPACE_SEPARATOR:
+        return 0;
+    default:
+        return 1;
+    }
 }
 
 static void append_bytes(char *out, size_t cap, size_t *used, const char *bytes, size_t n) {
@@ -151,28 +161,33 @@ static void public_label(const char *value, size_t limit, char *out, size_t cap)
     size_t cps = 0;
     int started = 0;
     int pending_space = 0;
+    const char *cursor;
     if (!out || cap == 0) return;
     out[0] = 0;
     if (!value) value = "";
-    while (*value && cps < limit) {
+    cursor = value;
+    while (*cursor && cps < limit) {
         unsigned int cp = 0;
         size_t len = 0;
-        if (!utf8_next(value, &cp, &len)) break;
-        if (is_ascii_space(cp)) {
+        char encoded[6];
+        int n;
+        if (!utf8_next(cursor, &cp, &len)) break;
+        if (g_unichar_isspace((gunichar)cp)) {
             if (started) pending_space = 1;
-        } else if (is_printable_cp(cp)) {
+        } else if (py_printable((gunichar)cp)) {
             if (pending_space && cps < limit) {
                 append_bytes(out, cap, &used, " ", 1);
                 cps++;
                 pending_space = 0;
             }
             if (cps < limit) {
-                append_bytes(out, cap, &used, value, len);
+                n = g_unichar_to_utf8((gunichar)cp, encoded);
+                if (n > 0) append_bytes(out, cap, &used, encoded, (size_t)n);
                 cps++;
             }
             started = 1;
         }
-        value += len;
+        cursor += len;
     }
 }
 

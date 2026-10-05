@@ -47,6 +47,6 @@ test_exe = executable(
   'tests/test_pill.c',
   link_with: libpivoice,
   include_directories: included,
-  dependencies: [cairo, libm],
+  dependencies: [cairo, libm, threads],
 )
 test('voice', test_exe)

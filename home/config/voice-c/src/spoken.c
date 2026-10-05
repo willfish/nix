@@ -3,258 +3,172 @@
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
-
-#include <ctype.h>
+#include <glib.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-enum { SPOKEN_MAX_CHARS = 1500, SPOKEN_MAX_WORDS = 120, SPOKEN_MAX_LINES = 4096 };
+enum { SPOKEN_MAX_CHARS = 1500, SPOKEN_MAX_WORDS = 120 };
 
 static pcre2_code *fence_re;
 static pcre2_code *label_re;
 static pcre2_code *section_re;
 static pcre2_code *link_re;
 static pcre2_code *list_re;
+static pthread_once_t patterns_once = PTHREAD_ONCE_INIT;
 
 static pcre2_code *compile(const char *pattern, uint32_t options) {
     int error = 0;
     PCRE2_SIZE offset = 0;
-    pcre2_code *code = pcre2_compile(
-        (PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED,
-        options | PCRE2_UTF | PCRE2_UCP, &error, &offset, NULL);
-    return code;
+    return pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED,
+                        options | PCRE2_UTF | PCRE2_UCP, &error, &offset, NULL);
 }
 
-static void ensure_patterns(void) {
-    if (fence_re) return;
+static void compile_patterns(void) {
     fence_re = compile("^ {0,3}(`{3,}|~{3,})(.*)$", 0);
     label_re = compile(
         "^ {0,3}(?:#{1,6}[ \\t]+)?(?:Spoken summary|Summary|TL;DR|TLDR)"
-        "(?::[ \\t]*(.*)|[ \\t]*)$",
-        PCRE2_CASELESS);
+        "(?::[ \\t]*(.*)|[ \\t]*)$", PCRE2_CASELESS);
     section_re = compile("^ {0,3}(?:#{1,6}(?:\\s|$)|(?:=+|-+)\\s*$)", 0);
     link_re = compile("!?\\[([^\\]]+)\\]\\([^\\n)]*\\)", 0);
-    list_re = compile("^[ \\t]*(?:[-*+]\\s+|\\d+[.)]\\s+|>\\s*)", PCRE2_MULTILINE);
+    list_re = compile("^\\s*(?:[-*+]\\s+|\\d+[.)]\\s+|>\\s*)", PCRE2_MULTILINE);
 }
 
 static int match(pcre2_code *code, const char *subject, PCRE2_SIZE *ovector, uint32_t ocount) {
     pcre2_match_data *data = pcre2_match_data_create(ocount, NULL);
+    if (!data) return PCRE2_ERROR_NOMEMORY;
     int rc = pcre2_match(code, (PCRE2_SPTR)subject, PCRE2_ZERO_TERMINATED, 0, 0, data, NULL);
-    if (rc > 0) {
-        PCRE2_SIZE *found = pcre2_get_ovector_pointer(data);
-        memcpy(ovector, found, sizeof(PCRE2_SIZE) * ocount * 2);
-    }
+    if (rc > 0) memcpy(ovector, pcre2_get_ovector_pointer(data), sizeof(PCRE2_SIZE) * ocount * 2);
     pcre2_match_data_free(data);
     return rc;
 }
 
-static void strip_bold(const char *src, char *dst, size_t cap) {
-    size_t n = 0;
-    for (size_t i = 0; src[i] && n + 1 < cap; i++) {
-        if (src[i] == '*' && src[i + 1] == '*') {
-            i++;
+static void strip_markup(char *text, int bold_only) {
+    char *dst = text;
+    for (const char *p = text; *p; p++) {
+        if ((*p == '*' && p[1] == '*') || (!bold_only && *p == '_' && p[1] == '_')) {
+            p++;
             continue;
         }
-        dst[n++] = src[i];
+        if (!bold_only && *p == '`') continue;
+        *dst++ = *p;
     }
-    dst[n] = 0;
+    *dst = 0;
 }
 
-static int is_word_char(unsigned char c) {
-    return isalnum(c) || c >= 128;
+static int whitespace_only(const char *text) {
+    for (const char *p = text; *p; p = g_utf8_next_char(p))
+        if (!g_unichar_isspace(g_utf8_get_char(p))) return 0;
+    return 1;
 }
 
-static int has_alnum(const char *text) {
-    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
-        if (is_word_char(*p)) return 1;
+static char *replace_matches(pcre2_code *code, const char *text, int keep_label) {
+    pcre2_match_data *data = pcre2_match_data_create_from_pattern(code, NULL);
+    if (!data) return NULL;
+    GString *out = g_string_new(NULL);
+    size_t cursor = 0, len = strlen(text);
+    while (cursor < len) {
+        /* Preserve the original subject so ^ never matches a removed prefix. */
+        int rc = pcre2_match(code, (PCRE2_SPTR)text, len, cursor, 0, data, NULL);
+        if (rc == PCRE2_ERROR_NOMATCH) { g_string_append(out, text + cursor); break; }
+        if (rc < 0) { g_string_free(out, TRUE); pcre2_match_data_free(data); return NULL; }
+        PCRE2_SIZE *ov = pcre2_get_ovector_pointer(data);
+        g_string_append_len(out, text + cursor, ov[0] - cursor);
+        if (keep_label) g_string_append_len(out, text + ov[2], ov[3] - ov[2]);
+        cursor = ov[1];
     }
-    return 0;
-}
-
-static int word_count(const char *text) {
-    int words = 0;
-    int in = 0;
-    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
-        if (isspace(*p)) in = 0;
-        else if (!in) {
-            in = 1;
-            words++;
-        }
-    }
-    return words;
-}
-
-static char *replace_links(const char *text) {
-    PCRE2_SIZE ovector[8];
-    size_t cap = strlen(text) + 1;
-    char *out = malloc(cap);
-    if (!out) return NULL;
-    size_t n = 0;
-    const char *cursor = text;
-    while (*cursor) {
-        int rc = match(link_re, cursor, ovector, 4);
-        if (rc < 0) {
-            size_t rest = strlen(cursor);
-            memcpy(out + n, cursor, rest);
-            n += rest;
-            break;
-        }
-        memcpy(out + n, cursor, ovector[0]);
-        n += ovector[0];
-        size_t label_len = ovector[3] - ovector[2];
-        memcpy(out + n, cursor + ovector[2], label_len);
-        n += label_len;
-        cursor += ovector[1];
-    }
-    out[n] = 0;
-    return out;
-}
-
-static char *strip_lists(const char *text) {
-    size_t cap = strlen(text) + 1;
-    char *out = malloc(cap);
-    if (!out) return NULL;
-    size_t n = 0;
-    const char *line = text;
-    while (*line) {
-        const char *end = strchr(line, '\n');
-        size_t len = end ? (size_t)(end - line) : strlen(line);
-        char saved[4096];
-        if (len >= sizeof saved) len = sizeof saved - 1;
-        memcpy(saved, line, len);
-        saved[len] = 0;
-        PCRE2_SIZE ovector[6];
-        int rc = match(list_re, saved, ovector, 3);
-        size_t skip = rc > 0 ? ovector[1] : 0;
-        memcpy(out + n, saved + skip, len - skip);
-        n += len - skip;
-        if (!end) break;
-        out[n++] = '\n';
-        line = end + 1;
-    }
-    out[n] = 0;
-    return out;
-}
-
-static void collapse(const char *src, char *dst, size_t cap) {
-    size_t n = 0;
-    int space = 1;
-    for (const unsigned char *p = (const unsigned char *)src; *p && n + 1 < cap; p++) {
-        if (isspace(*p)) {
-            if (!space && n + 1 < cap) dst[n++] = ' ';
-            space = 1;
-        } else {
-            dst[n++] = *p;
-            space = 0;
-        }
-    }
-    if (n && dst[n - 1] == ' ') n--;
-    dst[n] = 0;
+    pcre2_match_data_free(data);
+    return g_string_free(out, FALSE);
 }
 
 int spoken_text(const char *text, char *out, size_t out_cap) {
     if (!out || out_cap == 0) return -1;
     out[0] = 0;
-    if (!text) return 0;
-    ensure_patterns();
+    if (!text || !g_utf8_validate(text, -1, NULL)) return 0;
+    pthread_once(&patterns_once, compile_patterns);
     if (!fence_re || !label_re || !section_re || !link_re || !list_re) return -1;
 
-    char *copy = strdup(text);
-    if (!copy) return -1;
-    char *lines[SPOKEN_MAX_LINES];
-    int count = 0;
+    gchar **split = g_strsplit(text, "\n", -1);
+    GPtrArray *lines = g_ptr_array_new();
     char *fence = NULL;
-    char *cursor = copy;
-    while (cursor && count < SPOKEN_MAX_LINES) {
-        char *nl = strchr(cursor, '\n');
-        if (nl) *nl = 0;
-        size_t len = strlen(cursor);
-        if (len && cursor[len - 1] == '\r') cursor[len - 1] = 0;
-        PCRE2_SIZE ovector[8];
-        int marked = match(fence_re, cursor, ovector, 4) > 0;
+    for (gchar **line = split; *line; line++) {
+        size_t len = strlen(*line);
+        if (len && (*line)[len - 1] == '\r') (*line)[len - 1] = 0;
+        PCRE2_SIZE ov[8];
+        int marked = match(fence_re, *line, ov, 4) > 0;
         if (fence) {
-            if (marked && cursor[ovector[2]] == fence[0]
-                && (ovector[3] - ovector[2]) >= strlen(fence)
-                && cursor[ovector[4]] == 0) {
-                free(fence);
+            if (marked && (*line)[ov[2]] == fence[0] && ov[3] - ov[2] >= strlen(fence)
+                && whitespace_only(*line + ov[4])) {
+                g_free(fence);
                 fence = NULL;
             }
         } else if (marked) {
-            size_t flen = ovector[3] - ovector[2];
-            fence = strndup(cursor + ovector[2], flen);
+            fence = g_strndup(*line + ov[2], ov[3] - ov[2]);
         } else {
-            lines[count++] = cursor;
+            g_ptr_array_add(lines, *line);
         }
-        if (!nl) break;
-        cursor = nl + 1;
     }
+    g_free(fence);
 
     int start = -1;
-    char inline_text[4096] = "";
-    for (int i = 0; i < count; i++) {
-        char stripped[4096];
-        strip_bold(lines[i], stripped, sizeof stripped);
-        PCRE2_SIZE ovector[8] = {0};
-        if (match(label_re, stripped, ovector, 4) > 0) {
-            start = i + 1;
-            inline_text[0] = 0;
-            if (ovector[2] != PCRE2_UNSET && ovector[3] > ovector[2]) {
-                size_t n = ovector[3] - ovector[2];
-                if (n >= sizeof inline_text) n = sizeof inline_text - 1;
-                memcpy(inline_text, stripped + ovector[2], n);
-                inline_text[n] = 0;
-            }
+    char *inline_text = g_strdup("");
+    for (guint i = 0; i < lines->len; i++) {
+        char *stripped = g_strdup(g_ptr_array_index(lines, i));
+        strip_markup(stripped, 1);
+        PCRE2_SIZE ov[8];
+        if (match(label_re, stripped, ov, 4) > 0) {
+            start = (int)i + 1;
+            g_free(inline_text);
+            inline_text = ov[2] != PCRE2_UNSET ? g_strndup(stripped + ov[2], ov[3] - ov[2]) : g_strdup("");
+        }
+        g_free(stripped);
+    }
+    GString *joined = g_string_new(inline_text);
+    g_free(inline_text);
+    int valid = start >= 0;
+    if (valid) {
+        for (guint i = (guint)start; i < lines->len; i++) {
+            const char *line = g_ptr_array_index(lines, i);
+            PCRE2_SIZE ov[4];
+            if (match(section_re, line, ov, 2) > 0) { valid = 0; break; }
+            g_string_append_c(joined, '\n');
+            g_string_append(joined, line);
         }
     }
-    if (start < 0) {
-        free(fence);
-        free(copy);
-        return 0;
-    }
-    for (int i = start; i < count; i++) {
-        PCRE2_SIZE ovector[4];
-        if (match(section_re, lines[i], ovector, 2) > 0) {
-            free(fence);
-            free(copy);
-            return 0;
-        }
-    }
+    g_ptr_array_free(lines, TRUE);
+    g_strfreev(split);
+    if (!valid) { g_string_free(joined, TRUE); return 0; }
 
-    size_t joined_cap = strlen(inline_text) + 2;
-    for (int i = start; i < count; i++) joined_cap += strlen(lines[i]) + 1;
-    char *joined = malloc(joined_cap);
-    if (!joined) {
-        free(fence);
-        free(copy);
-        return -1;
-    }
-    strcpy(joined, inline_text);
-    for (int i = start; i < count; i++) {
-        strcat(joined, "\n");
-        strcat(joined, lines[i]);
-    }
-    char *links = replace_links(joined);
-    char *lists = links ? strip_lists(links) : NULL;
-    if (lists) {
-        char *star = lists;
-        for (char *p = lists; *p; p++) {
-            if ((*p == '*' && p[1] == '*') || (*p == '_' && p[1] == '_')) {
-                p++;
-                continue;
-            }
-            if (*p == '`') continue;
-            *star++ = *p;
+    char *links = replace_matches(link_re, joined->str, 1);
+    char *clean = links ? replace_matches(list_re, links, 0) : NULL;
+    g_free(links);
+    g_string_free(joined, TRUE);
+    if (!clean) return -1;
+    strip_markup(clean, 0);
+    GString *normalized = g_string_new(NULL);
+    int space = 1, alnum = 0, words = 0;
+    size_t chars = 0;
+    for (const char *p = clean; *p; p = g_utf8_next_char(p)) {
+        gunichar c = g_utf8_get_char(p);
+        if (g_unichar_isspace(c)) {
+            if (!space) { g_string_append_c(normalized, ' '); chars++; }
+            space = 1;
+        } else {
+            if (space) words++;
+            g_string_append_unichar(normalized, c);
+            chars++;
+            if (g_unichar_isalnum(c)) alnum = 1;
+            space = 0;
         }
-        *star = 0;
-        collapse(lists, out, out_cap);
     }
-    free(lists);
-    free(links);
-    free(joined);
-    free(fence);
-    free(copy);
-    if (strlen(out) > SPOKEN_MAX_CHARS || word_count(out) > SPOKEN_MAX_WORDS || !has_alnum(out))
-        out[0] = 0;
-    return 0;
+    g_free(clean);
+    if (normalized->len && space) { g_string_truncate(normalized, normalized->len - 1); chars--; }
+    int result = 0;
+    if (chars <= SPOKEN_MAX_CHARS && words <= SPOKEN_MAX_WORDS && alnum) {
+        if (normalized->len >= out_cap) result = -1;
+        else memcpy(out, normalized->str, normalized->len + 1);
+    }
+    g_string_free(normalized, TRUE);
+    return result;
 }

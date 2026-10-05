@@ -337,6 +337,116 @@ static int record_target_spawn(char *const *argv, int stderr_fd, CaptureProc *ou
     return capture_spawn_default(producer, stderr_fd, out);
 }
 
+static long vm_size_kb(void) {
+    FILE *file = fopen("/proc/self/status", "r");
+    char line[256];
+    long size = -1;
+    if (!file) return -1;
+    while (fgets(line, sizeof line, file)) {
+        if (sscanf(line, "VmSize: %ld", &size) == 1) break;
+    }
+    fclose(file);
+    return size;
+}
+
+static void test_repeated_probes_keep_latest_snapshot(void) {
+    Probe probe;
+    MicrophoneMonitor *monitor;
+    long before;
+    long after;
+    probe_init(&probe);
+    monitor = mic_monitor_new("headset", probe_run, &probe);
+    before = vm_size_kb();
+    for (int i = 0; i < 8; i++) {
+        MicStatus status;
+        int want_headset = (i % 2) == 0;
+        probe.json = want_headset ? webcam_json : no_headset_json;
+        if (mic_resolve(monitor, &status) != 0) fail("repeated probe", "resolve");
+        else if (want_headset) {
+            if (!status.target || strcmp(status.target, "headset") != 0 || !status.muted_known || !status.muted)
+                fail("repeated probe", "headset");
+        } else if (status.target || !status.name || strcmp(status.name, "Webcam") != 0 || !status.missing) {
+            fail("repeated probe", "fallback");
+        }
+        mic_status_free(&status);
+    }
+    after = vm_size_kb();
+    /* Threads ignores exited-but-unjoined threads. Each one still retains a
+       stack mapping, so eight unreaped probes grow VmSize by tens of MB. */
+    if (before < 0 || after < 0 || after > before + 32768) fail("repeated probe", "probe stacks retained");
+    mic_monitor_free(monitor);
+    probe_destroy(&probe);
+}
+
+static void test_duplicate_source_name_uses_the_later_node(void) {
+    static const char *json =
+        "[{"
+        "\"info\":{\"props\":{\"node.name\":\"webcam\",\"node.description\":\"First\","
+        "\"media.class\":\"Audio/Source\"},\"params\":{\"Props\":[{\"mute\":false}]}}},"
+        "{\"info\":{\"props\":{\"node.name\":\"webcam\",\"node.description\":\"Second\","
+        "\"media.class\":\"Audio/Source\"},\"params\":{\"Props\":[{\"mute\":true}]}}},"
+        "{\"props\":{\"metadata.name\":\"default\"},\"metadata\":["
+        "{\"key\":\"default.audio.source\",\"value\":{\"name\":\"webcam\"}}]}]";
+    Probe probe;
+    MicrophoneMonitor *monitor;
+    MicStatus status;
+    probe_init(&probe);
+    probe.json = json;
+    monitor = mic_monitor_new(NULL, probe_run, &probe);
+    if (mic_resolve(monitor, &status) != 0) fail("duplicate source", "resolve");
+    else if (!status.name || strcmp(status.name, "Second") != 0 || !status.muted_known || !status.muted) {
+        fail("duplicate source", status.name ? status.name : "null");
+    }
+    mic_status_free(&status);
+    mic_monitor_free(monitor);
+    probe_destroy(&probe);
+}
+
+static void test_non_object_default_metadata_is_unavailable(void) {
+    static const char *json =
+        "[{\"info\":{\"props\":{\"node.name\":\"webcam\",\"node.description\":\"Webcam\","
+        "\"media.class\":\"Audio/Source\"},\"params\":{\"Props\":[{\"mute\":false}]}}},"
+        "{\"props\":{\"metadata.name\":\"default\"},\"metadata\":["
+        "{\"key\":\"default.audio.source\",\"value\":\"null\"}]}]"
+    ;
+    Probe probe;
+    MicrophoneMonitor *monitor;
+    MicStatus status;
+    probe_init(&probe);
+    probe.json = json;
+    monitor = mic_monitor_new(NULL, probe_run, &probe);
+    if (mic_resolve(monitor, &status) != 0) fail("null metadata", "resolve");
+    else if (!status.error || strcmp(status.error, "Microphone details unavailable") != 0 || status.target) {
+        fail("null metadata", status.error ? status.error : "null");
+    }
+    mic_status_free(&status);
+    mic_monitor_free(monitor);
+    probe_destroy(&probe);
+}
+
+static void test_object_props_fail_the_probe(void) {
+    static const char *json =
+        "[{\"info\":{\"props\":{\"node.name\":\"webcam\",\"node.description\":\"Webcam\","
+        "\"media.class\":\"Audio/Source\"},\"params\":{\"Props\":{\"mute\":true}}},"
+        "\"props\":{\"metadata.name\":\"default\"}},"
+        "{\"props\":{\"metadata.name\":\"default\"},\"metadata\":["
+        "{\"key\":\"default.audio.source\",\"value\":{\"name\":\"webcam\"}}]}]"
+    ;
+    Probe probe;
+    MicrophoneMonitor *monitor;
+    MicStatus status;
+    probe_init(&probe);
+    probe.json = json;
+    monitor = mic_monitor_new(NULL, probe_run, &probe);
+    if (mic_resolve(monitor, &status) != 0) fail("props object", "resolve");
+    else if (!status.error || strcmp(status.error, "Microphone details unavailable") != 0) {
+        fail("props object", status.error ? status.error : "null");
+    }
+    mic_status_free(&status);
+    mic_monitor_free(monitor);
+    probe_destroy(&probe);
+}
+
 static void test_capture_resolves_preferred_device_and_reports_current_name(void) {
     Probe probe;
     probe_init(&probe);
@@ -392,6 +502,10 @@ int test_devices(void) {
     test_resolve_updates_cached_status();
     test_missing_default();
     test_string_metadata_excludes_sinks();
+    test_repeated_probes_keep_latest_snapshot();
+    test_duplicate_source_name_uses_the_later_node();
+    test_non_object_default_metadata_is_unavailable();
+    test_object_props_fail_the_probe();
     test_capture_resolves_preferred_device_and_reports_current_name();
     return failures;
 }

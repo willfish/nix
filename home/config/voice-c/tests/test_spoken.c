@@ -1,6 +1,7 @@
 #include "spoken.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int failures;
@@ -74,5 +75,29 @@ int test_spoken(void) {
             expect(labels[i], input, "It worked. Next, review it.");
         }
     }
+    expect("fence closing whitespace", "## Summary\n```\nexample\n```  \nSpeak this.", "Speak this.");
+    expect("symbols only", "## Summary\n\U0001f600\u2026", "");
+    expect("nested list prefixes", "## Summary\n> > hello\n- - world", "> hello - world");
+    expect("Unicode whitespace", "## Summary\none\u00a0two\u2003three", "one two three");
+    expect("invalid UTF-8", "## Summary\n\xff", "");
+    char tiny[32];
+    if (spoken_text(long_text, tiny, sizeof tiny) != 0 || tiny[0] ||
+        spoken_text("## Summary\nA valid summary too large for this buffer.", tiny, sizeof tiny) != -1 || tiny[0]) {
+        fprintf(stderr, "FAIL truncated summary accepted\n");
+        failures++;
+    }
+    char unicode[1801] = "", unicode_input[1900];
+    for (int i = 0; i < 600; i++) strcat(unicode, "\u754c");
+    snprintf(unicode_input, sizeof unicode_input, "## Summary\n%s", unicode);
+    expect("character not byte bound", unicode_input, unicode);
+    char *many_lines = malloc(20000);
+    if (!many_lines) return failures + 1;
+    strcpy(many_lines, "## Summary\nEarlier.\n");
+    for (int i = 0; i < 4100; i++) strcat(many_lines, "\n");
+    strcat(many_lines, "## Details\nNot a final summary.");
+    expect("final section beyond line limit", many_lines, "");
+    strcat(many_lines, "\n## Summary\nFinal result.");
+    expect("final label beyond line limit", many_lines, "Final result.");
+    free(many_lines);
     return failures;
 }

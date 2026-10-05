@@ -94,5 +94,43 @@ int test_chunks(void) {
         fprintf(stderr, "FAIL legal controls rejected\n");
         failures++;
     }
+    expect_text("unicode markers", "Hi [\u00a0music\u00a0] there", "Hi there");
+    expect_text("trim newlines", " \nhello\n ", "hello");
+    expect_text("symbols only", "\u2026\U0001f600", "");
+    expect_text("unicode transcript", "\u4f60\u597d", "\u4f60\u597d");
+    if (has_control_characters("It\u2019s ready. \U0001f600") ||
+        !has_control_characters("\u0085") || !has_control_characters("\xff")) {
+        fprintf(stderr, "FAIL Unicode control classification\n");
+        failures++;
+    }
+    char tiny[3];
+    if (dictation_text("hello", tiny, sizeof tiny) != -1 || tiny[0]) {
+        fprintf(stderr, "FAIL transcript truncation accepted\n");
+        failures++;
+    }
+    char unicode[521] = "";
+    for (int i = 0; i < 130; i++) strcat(unicode, "\U0001f600");
+    /* The first limit is 120 code points, not 120 bytes. */
+    char short_unicode[481] = "", tail_unicode[41] = "";
+    for (int i = 0; i < 120; i++) strcat(short_unicode, "\U0001f600");
+    for (int i = 0; i < 10; i++) strcat(tail_unicode, "\U0001f600");
+    const char *split_unicode[] = {short_unicode, tail_unicode};
+    expect_chunks("Unicode boundaries", unicode, split_unicode, 2);
+    const char *spaces_want[] = {"one two three"};
+    expect_chunks("Unicode whitespace", "one\u00a0two\u2003three", spaces_want, 1);
+    char long_input[9001];
+    memset(long_input, 'x', sizeof long_input - 1);
+    long_input[sizeof long_input - 1] = 0;
+    char *long_parts[64] = {0};
+    size_t long_count = 0, total = 0;
+    int rc = speech_chunks(long_input, long_parts, &long_count, 64);
+    for (size_t i = 0; i < long_count; i++) {
+        total += strlen(long_parts[i]);
+        free(long_parts[i]);
+    }
+    if (rc != 0 || total != 9000) {
+        fprintf(stderr, "FAIL long speech silently truncated: %zu\n", total);
+        failures++;
+    }
     return failures;
 }
