@@ -66,19 +66,4 @@ homeConfigurations.alex = dotfiles.lib.mkHome {
 
 Set `sourceDirectory` if the checkout is not at `~/.dotfiles`; runtime theme builds use it. Pass additional Home Manager modules with `modules = [ ./home.nix ];`. Private detection belongs to the installer, not pure Nix evaluation. Setting `privateEnabled = true` explicitly opts into the private module composition and its access requirements.
 
-Root-wide `nix flake check`, `nix flake show` and lock-file updates can evaluate or fetch owner inputs. They are not the public installation entry point. The public boundary check is narrower:
-
-```sh
-nix build --extra-experimental-features 'nix-command flakes' \
-  .#checks.x86_64-linux.public-home --no-link
-```
-
-## Reproduce the clean-room test
-
-With Docker available, run:
-
-```sh
-bash tests/fresh-install/run
-```
-
-The runner sends only Git-tracked working-tree source to a fresh Debian image and installs Nix from scratch. It does not mount the host home, SSH agent or Nix store. New test/source files must be staged before running. It builds and activates for the `laptop` user, checks that private integrations are absent, then repeats the switch through the installed wrapper. The named container is retained for inspection; remove it and its image when finished.
+Root-wide `nix flake show` and lock-file updates can evaluate or fetch owner inputs. They are not the public installation entry point. Use `scripts/install-home --public --dry` to build the public home for the current identity without activating it. Private-access detection and installation remain explicit runtime boundaries; there is no flake test or clean-room test runner.

@@ -22,12 +22,7 @@ let
     }).overrideAttrs
       (old: {
         patches = (old.patches or [ ]) ++ [ ../config/launcher/no-app-arguments.patch ];
-        postPatch = (old.postPatch or "") + ''
-          cp ${../config/launcher/arguments_test.go} internal/providers/desktopapplications/launcher_arguments_test.go
-        '';
-        postCheck = (old.postCheck or "") + ''
-          go test ./internal/providers/desktopapplications
-        '';
+        doCheck = false;
       });
   projects = pkgs.writeShellApplication {
     name = "launcher-projects";

@@ -9,17 +9,18 @@ telegram-mcp, are not ports in this plan.
 ## Execution
 
 Work through the queue in order, one bounded utility or tightly coupled family
-at a time. Implement first, then migrate its Python tests using the best fit:
-Cargo unit/integration tests for Rust and compiled tests or simple drivers for C.
-There is no required test language. Run the complete relevant checks against the
-candidate executable. Keep fixtures local; live model downloads, inference and
-remote activation are not prerequisites for testing an adapter.
+at a time. Implement first, then verify the candidate executable. Optional
+migration fixtures belong inside each program's root and run manually, using
+Cargo tests or compiled/simple drivers as appropriate. Do not add repository-wide
+tests, flake checks, package test phases or commit-hook test gates. Live model
+downloads, inference and remote activation are not prerequisites for verifying
+an adapter.
 
 For every completed port:
 
 1. Replace its implementation and wire the compiled package into Nix.
 2. Preserve its public contract and remove the retired handwritten Python.
-3. Run package tests and affected integration/wiring tests, then review the diff.
+3. Build the package, run relevant manual behavior/wiring checks and review the diff.
 4. Commit only the port's files on master, run `hmswitch`, verify activation and
    push before starting the next port.
 
@@ -44,7 +45,7 @@ Rust dependencies and existing C libraries where practical.
 - [x] Agent usage/status family: C `home/config/agent-usage`, including
   the three collectors, status command and shared authentication/usage code.
 - [x] arXiv status: C `home/config/arxiv-status`.
-- [ ] GitHub notifications: `home/config/hyprland/omapager/github_watch.py`.
+- [x] GitHub notifications: C `home/config/github-watch`.
 - [ ] Wallpaper cycling: `home/config/hyprland/wallpaper_cycle.py`.
 - [ ] Voice model setup and personaplex model/patch helpers in `home/config/voice`.
 - [ ] Theme menu: `home/config/appearance/theme_menu.py`.
@@ -56,7 +57,7 @@ Rust dependencies and existing C libraries where practical.
 
 - [ ] Pi authentication/settings mergers and OpenCode Markdown adapter.
 - [ ] Hermes declaration, export, profile and Telegram routing helpers.
-- [ ] Repository behaviour, lock-policy and community-import scripts.
+- [ ] Repository lock-policy and community-import scripts; the test-only behavior gate is removed.
 - [ ] Darwin deployment, preflight and health tools.
 - [ ] AWS access-portal service and helpers. Preserve existing authorization gates.
 - [ ] Skill audit, audiobook inventory/duplicate checks, contrast, token-report and
@@ -64,8 +65,8 @@ Rust dependencies and existing C libraries where practical.
 
 ### Final audit
 
-- [ ] Port remaining Python test drivers, including memscope and fresh-install
-  harnesses, without replacing unrelated third-party runtimes.
+- [ ] Remove obsolete repository-wide Python test drivers; retain only optional,
+  program-local migration fixtures without automated wiring.
 - [ ] Audit tracked `.py` files, extensionless commands, embedded Python in Nix and
   shell, launch references and development-only Python dependencies.
 - [ ] Run the relevant complete check groups, reconcile documented exceptions,

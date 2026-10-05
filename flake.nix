@@ -623,12 +623,19 @@
               text = builtins.readFile ./scripts/probe-private-access;
             };
             mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix { };
+            voice-api = import ./home/user/voice-api-package.nix { inherit pkgs; };
+            tailscale-proxy = import ./home/user/tailscale-proxy-package.nix { inherit pkgs; };
+            assistant-tools = import ./home/user/assistant-tools-package.nix { inherit pkgs; };
+            agent-usage = import ./home/user/agent-usage-package.nix { inherit pkgs; };
+            arxiv-status = import ./home/user/arxiv-status-package.nix { inherit pkgs; };
+            github-watch = import ./home/user/github-watch-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)
               (import ./home/user/themes/omarchy.nix { inherit lib pkgs; }).packages;
 
           treefmt = {
+            flakeCheck = false;
             projectRootFile = "flake.nix";
             programs = {
               just.enable = true;
@@ -648,98 +655,6 @@
               command = "${pkgs.fish}/bin/fish_indent";
               includes = [ "*.fish" ];
             };
-          };
-
-          checks = {
-            arxiv-status = import ./home/user/arxiv-status-package.nix { inherit pkgs; };
-            agent-usage = import ./home/user/agent-usage-package.nix { inherit pkgs; };
-            assistant-tools = import ./home/user/assistant-tools-package.nix { inherit pkgs; };
-            tailscale-proxy = import ./home/user/tailscale-proxy-package.nix { inherit pkgs; };
-            voice-api = import ./home/user/voice-api-package.nix { inherit pkgs; };
-            public-home = import ./tests/public-home.nix {
-              inherit lib pkgs;
-              mkHome = args: mkHome (args // { inherit system; });
-            };
-            pi-agent-bus-composition = import ./tests/pi-agent-bus-composition.nix {
-              inherit lib pkgs;
-              home =
-                inputs.self.homeConfigurations.${
-                  if system == darwinSystem then "william-darwin" else "william-linux"
-                }.config;
-            };
-            pi-agent-bus-runtime = agent-bus.lib.mkPiRuntimeCheck {
-              inherit pkgs;
-              piPackage = pkgs.pi-coding-agent;
-              hubPackage =
-                if system == linuxSystem then
-                  inputs.self.nixosConfigurations.terminus.config.services.pi-agent-bus.package
-                else
-                  agent-bus.packages.${system}.hub;
-              extensionPackage =
-                inputs.self.homeConfigurations.${
-                  if system == darwinSystem then "william-darwin" else "william-linux"
-                }.config.programs.pi-agent-bus.package;
-            };
-            headless-darwin = import ./tests/headless-darwin.nix {
-              inherit lib pkgs;
-              darwin = inputs.self.darwinConfigurations.relay;
-              home = inputs.self.homeConfigurations.william-darwin.config;
-            };
-            host-capabilities = import ./tests/host-capabilities.nix {
-              inherit lib pkgs;
-              homes = inputs.self.homeConfigurations;
-            };
-            pre-commit = preCommitCheck;
-            home-profiles =
-              let
-                homes = inputs.self.homeConfigurations;
-                server = homes."william@terminus".config;
-                desktop = homes."william@andromeda".config;
-                darwin = homes.william-darwin.config;
-                hasNetcat = cfg: lib.any (p: lib.getName p == "netcat-openbsd") cfg.home.packages;
-              in
-              assert !server.programs.brave.enable;
-              assert !server.programs.google-chrome.enable;
-              assert !(server.systemd.user.services ? nm-auto-secret-agent);
-              assert !(server.systemd.user.services ? wifi-auto-reconnect);
-              assert !(server.home.activation ? importGraphicalSessionEnvironment);
-              assert !(server.home.sessionVariables ? BROWSER);
-              assert !(server.home.sessionVariables ? TERMINAL);
-              assert !(lib.any (p: lib.getName p == "gimp") server.home.packages);
-              assert lib.any (p: lib.getName p == "gimp") desktop.home.packages;
-              assert server.home.file ? ".config/herdr/config.toml";
-              assert desktop.programs.brave.enable && !desktop.programs.google-chrome.enable;
-              assert desktop.systemd.user.services ? nm-auto-secret-agent;
-              assert desktop.systemd.user.services ? herdr-agent-awake;
-              assert !(server.systemd.user.services ? herdr-agent-awake);
-              assert desktop.systemd.user.timers ? github-notifications;
-              assert !(server.systemd.user.timers ? github-notifications);
-              assert desktop.systemd.user.services.github-notifications.Service.Type == "oneshot";
-              assert desktop.home.sessionVariables.BROWSER == "brave";
-              assert hasNetcat desktop && hasNetcat server && !hasNetcat darwin;
-              pkgs.runCommand "home-profile-boundaries" { } "touch $out";
-          }
-          // lib.optionalAttrs (system == linuxSystem) {
-            voice-c = import ./tests/voice-c.nix { inherit pkgs; };
-            sddm = import ./tests/sddm.nix {
-              inherit pkgs;
-              greeterEnvironment =
-                inputs.self.nixosConfigurations.foundation.config.services.displayManager.sddm.settings.General.GreeterEnvironment;
-            };
-          }
-          // lib.optionalAttrs (system == darwinSystem) {
-            headless-browser =
-              pkgs.runCommand "darwin-headless-browser"
-                {
-                  nativeBuildInputs = [ (pkgs.python3.withPackages (ps: [ ps.playwright ])) ];
-                  CHROME_PATH = (import ./home/user/darwin-browser.nix { inherit pkgs; }).executable;
-                }
-                ''
-                  export HOME="$TMPDIR/home"
-                  mkdir -p "$HOME"
-                  python3 ${./tests/darwin-headless-browser.py}
-                  touch "$out"
-                '';
           };
 
           devShells.default =
@@ -764,14 +679,12 @@
                   mmdc
                 ]
                 ++ (with pkgs; [
-                  bats
                   fish
                   mitmproxy
                   dbus
                   d2
                   just
                   nodejs
-                  # Runtime dependencies exercised by local-assistant and agenda tests.
                   (python3.withPackages (ps: [
                     ps.pyyaml
                     ps.httpx

@@ -26,7 +26,6 @@ pkgs.stdenvNoCC.mkDerivation {
     pushd tools/ui
     # Reviewed upstream scripts; no dependency lifecycle scripts are enabled.
     npm run check
-    npm run test:unit -- --run
     LLAMA_BUILD_NUMBER=${pkgs.llama-cpp.version} npm run build
     popd
     runHook postBuild

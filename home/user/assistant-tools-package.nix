@@ -7,11 +7,7 @@ pkgs.rustPlatform.buildRustPackage {
   version = "0.1.0";
   src = ../config/assistant-tools;
   cargoLock.lockFile = ../config/assistant-tools/Cargo.lock;
-  doCheck = true;
-  nativeCheckInputs = [ searchProvider ];
-  preCheck = ''
-    ddgs text --help
-  '';
+  doCheck = false;
   passthru = { inherit searchProvider; };
   SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
 

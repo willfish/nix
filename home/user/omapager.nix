@@ -222,18 +222,7 @@ let
       exec ${python}/bin/python3 ${../config/hyprland/omapager/herdr_notification_focus.py} "$@"
     '';
   };
-  githubWatch = pkgs.writeShellApplication {
-    name = "github-notification-watch";
-    runtimeInputs = [
-      pkgs.gh
-      pkgs.libnotify
-      pkgs.xdg-utils
-      python
-    ];
-    text = ''
-      exec ${python}/bin/python3 ${../config/hyprland/omapager/github_watch.py}
-    '';
-  };
+  githubWatch = import ./github-watch-package.nix { inherit pkgs; };
 in
 {
   config = lib.mkIf isGraphicalLinux {

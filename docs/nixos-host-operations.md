@@ -38,21 +38,15 @@ Pushes do not build NixOS systems, Home Manager configurations, or flake checks.
 Build and activate the selected host before relying on a change. Other-platform
 targets still need a native build before deployment.
 
-Run repository-wide checks when explicitly needed:
+Format and build the affected target explicitly:
 
 ```bash
 nix fmt -- --ci
-nix flake check -L
-python3 home/config/llm/scripts/audit-skills
-nix build --no-link .#homeConfigurations.william-linux.activationPackage
-direnv exec . python3 scripts/check-behavior.py "$(nix eval --raw .#homeConfigurations.william-linux.activationPackage.outPath)"
+nix build --no-link '.#homeConfigurations."william@foundation".activationPackage'
 ```
 
-The behavioral gate discovers all Python, Node and Bats suites and runs MCP
-and Pi runtime regressions against the selected immutable generation. Unexpected
-skips fail the gate. Live Herdr/voice tests and the deployed, host-specific Qwen
-launcher check remain explicit opt-ins; the offline gate never touches live panes.
-The development shell supplies Jinja2, mitmproxy and private D-Bus test dependencies.
+There is no repository-wide behavioral test gate. Program-local migration
+fixtures are optional manual tools; package builds and commit hooks do not run them.
 
 ## Home capabilities
 
@@ -88,8 +82,7 @@ browser sessions, copied credentials, work caches, imperative Hermes scripts and
 old generations are not automatically deleted. Audit and approve cleanup of that
 state separately; an absent capability is not evidence that all past data is gone.
 
-Run `nix build .#checks.x86_64-linux.host-capabilities` to evaluate inclusion and
-exclusion assertions for every home, including Darwin. Use native builds and
+Inspect the selected home's capability configuration, then use native builds and
 runtime checks before activation; evaluation alone does not validate services.
 Terminus no longer enables dconf or desktop Stylix activation during SSH switches.
 Remote activation and any cleanup of stored data require explicit authorization.
@@ -400,33 +393,10 @@ not restricted by this capture-only safeguard.
 ### Candidate checks before activation
 
 Build the matching home and Terminus system generations using the commands
-above, then run the complete behavioral gate against that home. Its wiring
-checks read the generated credential wrapper but never execute it in fixtures.
-Run the additional composition probe with the immutable Pi, client and history
-outputs selected by that same generation, not a different upstream Pi pin:
-
-```bash
-python3 tests/pi-agent-bus-composition.py \
-  --pi-package "$pi_package" --extension-package "$extension_package" \
-  --prompt-history "$prompt_history" --mitmdump "$mitmdump" \
-  --ca-bundle "$ca_bundle" \
-  --tool-path "$tool_path"
-```
-
-Supply absolute Nix store paths. `tool_path` is a colon-separated list of Nix
-`bin` directories supplying Bash, flock, fd, ripgrep and coreutils. Bash and
-flock are resolved only from that supplied path, never the caller's host PATH.
-Use the pinned `cacert` package's certificate bundle for `ca_bundle`; the fixture
-must not depend on a host-specific `/etc/ssl` path. It replaces only the CA
-bundle path in a temporary copy of the capture script, alongside the pinned
-mitmdump substitution; production capture code is unchanged. This does not
-validate the deployed capture script's CA path on macOS: verify real Darwin
-capture separately before deployment. The probe uses a synthetic environment,
-temporary capture logs and loopback endpoints. It checks
-real Bun proxy bypass, client/history loading and exclusion modes, not service
-reachability or actual credentials. It never executes the generated credential
-wrapper. Run it natively on each target platform; alternate loopback-address
-availability is a fixture prerequisite, not proof of tailnet connectivity.
+above. Inspect the generated wrapper, selected Pi/client packages, capture
+proxy-bypass configuration and certificate bundle before activation. Never run a
+credential-loading wrapper inside synthetic fixtures. Verify actual credentials,
+Darwin capture and tailnet reachability separately after authorized deployment.
 
 Also run the external repository's complete `tests/pi-runtime.test.mjs` against
 those selected artifacts and the selected compiled hub. Its required variables

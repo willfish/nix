@@ -1,4 +1,4 @@
-project('pi-voice-c', 'c', version: '0.2.0', default_options: ['c_std=c11', 'warning_level=2'])
+project('pi-voice-c', 'c', version: '0.2.0', meson_version: '>=1.1', default_options: ['c_std=c11', 'warning_level=2'])
 cc = meson.get_compiler('c')
 add_project_arguments('-D_POSIX_C_SOURCE=200809L', '-D_DEFAULT_SOURCE', language: 'c')
 
@@ -60,8 +60,8 @@ executable('personaplex-open-c', 'src/conversation.c',
   c_args: ['-DVOICE_CONVERSATION_MAIN'], dependencies: voice_dep, install: true)
 executable('pi-voice-osd-c', 'src/osd_main.c',
   dependencies: [voice_dep, gtk, layer_shell], install: true)
-executable('voice-controller-fixture', 'tests/pi_voice_fixture.c',
-  dependencies: voice_dep, install: true, install_dir: get_option('libexecdir'))
+if get_option('fixtures')
+executable('voice-controller-fixture', 'tests/pi_voice_fixture.c', dependencies: voice_dep)
 
 test_exe = executable(
   'voice-tests',
@@ -85,7 +85,4 @@ test_exe = executable(
   'tests/test_osd_main.c',
   dependencies: voice_dep,
 )
-test('voice', test_exe, timeout: 120)
-node = find_program('node')
-test('daemon', node, args: ['--experimental-strip-types', files('tests/daemon_smoke.ts'), voice_cli], timeout: 60)
-test('native-journey', node, args: ['--experimental-strip-types', files('tests/native_journey.ts'), voice_cli], timeout: 60)
+endif

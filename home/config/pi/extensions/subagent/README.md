@@ -111,10 +111,5 @@ Herdr layout edits use positional paths and are not transactional across clients
 - `job-results.ts`: honest waiting/result rendering, segment usage and parent batch guards.
 - `controls.ts`: coordinator tool, slash command and collaboration guidance.
 
-## Checks
-
-```sh
-direnv exec . node --test tests/pi-*.test.ts tests/local-pi.test.ts
-# Optional live test: temporary owned panes, local mock model, no paid requests.
-direnv exec . env PI_TEAM_LIVE_TEST=1 node --test --test-concurrency=1 tests/pi-team-runtime.test.ts tests/pi-team-question-runtime.test.ts
-```
+Optional migration fixtures belong alongside the extension and run manually.
+Do not register them as flake, package-build or commit-hook checks.

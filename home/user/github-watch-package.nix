@@ -1,8 +1,8 @@
 { pkgs }:
 pkgs.stdenv.mkDerivation {
-  pname = "agent-usage";
+  pname = "github-watch";
   version = "0.1.0";
-  src = ../config/agent-usage;
+  src = ../config/github-watch;
   nativeBuildInputs = with pkgs; [
     meson
     ninja
@@ -11,14 +11,17 @@ pkgs.stdenv.mkDerivation {
   ];
   buildInputs = with pkgs; [
     yyjson
-    curl
     glib
   ];
   doCheck = false;
   postInstall = ''
-    for program in "$out/bin/"*; do
-      wrapProgram "$program" --set-default SSL_CERT_FILE "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-    done
+    wrapProgram "$out/bin/github-notification-watch" --prefix PATH : "${
+      pkgs.lib.makeBinPath [
+        pkgs.gh
+        pkgs.libnotify
+        pkgs.xdg-utils
+      ]
+    }"
   '';
   meta.platforms = pkgs.lib.platforms.unix;
 }

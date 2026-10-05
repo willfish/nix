@@ -21,7 +21,8 @@ both certificate trust and hostname, and probes retain a 15-second connection/id
 timeout without imposing a whole-response deadline. `SSL_CERT_FILE` selects the CA bundle; Nix supplies its
 public certificate store by default.
 
-`checks.<system>.agent-usage` compiles all four commands and runs the TypeScript
-fixtures against their C implementation, including actual local HTTP/TLS servers.
-The fixture executable is test-only and is not installed. Tests never use real
-credentials or live provider APIs.
+`nix build .#agent-usage` compiles all four commands without running fixtures.
+For manual migration verification, configure Meson with `-Dfixtures=true`, then
+run `tests/usage.test.ts` with `AGENT_USAGE_FIXTURE` and `AGENT_USAGE_BIN_DIR`
+pointing at that build. The fixture executable is not installed. Fixtures never
+use real credentials or live provider APIs; they are not flake or hook checks.

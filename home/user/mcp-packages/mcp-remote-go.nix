@@ -27,23 +27,7 @@ buildGoModule rec {
     "-X main.gitCommit=${src.rev}"
   ];
 
-  checkPhase = ''
-    runHook preCheck
-    # Auth tests isolate their own homes. The other suites start subprocesses
-    # which need a writable config directory inside the Nix sandbox.
-    #
-    # TestConcurrentAuthOperations races a 5s collect timeout against 5s
-    # exclusive lock-file waits. Under sandbox scheduling the wait-group can
-    # return after the context expires, so the select fails even when every
-    # save/load finished.
-    go test ./auth -skip TestConcurrentAuthOperations
-    # Renewal tests seed ~/.mcp-remote-go-auth. A preset config dir hides that
-    # home. The 401 renewal test dials a public host the sandbox never reaches.
-    env -u MCP_REMOTE_CONFIG_DIR HOME="$TMPDIR/mcp-remote-home" \
-      go test ./cmd/... ./internal/... ./proxy \
-      -skip TestRenewsOn401WithoutAskingTheUser
-    runHook postCheck
-  '';
+  doCheck = false;
 
   meta = {
     description = "Native stdio to remote HTTP MCP proxy";

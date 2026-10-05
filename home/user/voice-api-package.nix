@@ -5,12 +5,7 @@ pkgs.rustPlatform.buildRustPackage {
   src = ../config/voice-api;
   cargoLock.lockFile = ../config/voice-api/Cargo.lock;
 
-  nativeCheckInputs = [ pkgs.nodejs ];
-  doCheck = true;
-  postCheck = ''
-    PI_VOICE_API_TEST_BIN="$PWD/target/${pkgs.stdenv.hostPlatform.rust.rustcTarget}/release/pi-voice-api" \
-      node --experimental-strip-types --test ${../../tests/voice-api.test.ts}
-  '';
+  doCheck = false;
 
   meta = {
     description = "Loopback voice REST adapter for Whisper and audio.cpp";

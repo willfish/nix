@@ -158,7 +158,7 @@ replace the compacted KV cache with a much larger prompt.
 
 `home/user/local-llm-ui.nix` builds the UI from the same pinned llama.cpp source
 and npm dependencies as the runtime. Its small integration patch must apply and
-type checks and upstream unit tests must pass before a new UI can build. No npm
+type checks must pass before a new UI can build. No npm
 dependencies were added and dependency install scripts are disabled. The pinned
 upstream dependency audit currently reports 9 advisories (4 high, 4 moderate,
 1 low); this change does not upgrade those dependencies or claim a clean audit.
@@ -167,12 +167,6 @@ The deployed artifact is static browser assets, not the upstream Node server.
 To return to the stock UI, remove `--path ${chatUi}` from the server wrapper in
 `home/user/local-llm.nix`, rebuild and run `hmswitch`, then reload the tab. Existing
 messages remain compatible with the stock UI.
-
-Policy and transport tests:
-
-```sh
-direnv exec . node --experimental-strip-types --test tests/local-chat-compaction*.test.ts
-```
 
 ## Lean local agent in Pi
 
@@ -262,10 +256,6 @@ both test markers. That isolated test used a temporary 32K server slot. It
 verifies the tool and manual compaction paths, not a full automatic compaction
 at the production limit. The summary also suggested an unrequested next step,
 so successful recall does not establish complete summary fidelity.
-
-```sh
-direnv exec . node --test tests/local-pi.test.ts
-```
 
 ### OpenAI / Astra in Pi
 

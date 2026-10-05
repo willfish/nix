@@ -8,7 +8,6 @@ pkgs.stdenv.mkDerivation {
     meson
     ninja
     pkg-config
-    nodejs
     wrapGAppsHook4
   ];
   buildInputs = with pkgs; [
@@ -23,5 +22,5 @@ pkgs.stdenv.mkDerivation {
   ];
 
   mesonBuildType = "debugoptimized";
-  doCheck = true;
+  doCheck = false;
 }

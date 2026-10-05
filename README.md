@@ -37,9 +37,8 @@ flake.nix
 
 - `lib.mkHome` constructs a home for a supplied identity and is public by default. `homeModules.default` exposes the public module composition for reuse. See [public installation and reuse](docs/public-install.md).
 - `overlays.default` supplies the repository's tool packages and selected overrides to NixOS and Home Manager. It is distinct from the exported `packages` set.
-- `packages.<system>` exposes `activation-dbus`, `private-access-probe`, `mcp-dap-server` and generated `theme-*` packages. No `apps` output is declared.
-- `checks.<system>` covers public/private and host-profile boundaries, headless Darwin, Pi agent-bus composition/runtime, and commit hooks. Platform-specific checks cover the Linux greeter and Darwin headless browser.
-- `formatter.<system>` uses treefmt. `devShells.<system>.default` supplies local checks and test tools and installs commit hooks. These per-platform outputs are wired under `perSystem` in `flake.nix`.
+- `packages.<system>` exposes runtime adapters/helpers, `activation-dbus`, `private-access-probe`, `mcp-dap-server` and generated `theme-*` packages. No `apps` output or automated test checks are declared.
+- `formatter.<system>` uses treefmt. `devShells.<system>.default` supplies development tools and installs formatting, syntax and secret-protection hooks, not test runners. These per-platform outputs are wired under `perSystem` in `flake.nix`.
 
 ## Hosts and roles
 
@@ -129,14 +128,7 @@ For routine read-only health reports, [Justfile](Justfile) provides `just health
 
 There is **no CI workflow in this checkout**. Local commit hooks are not host builds, and pushes do not build NixOS or Home Manager configurations.
 
-For owner repository checks:
-
-```bash
-direnv exec . nix fmt -- --ci
-direnv exec . nix flake check -L
-```
-
-These do not replace native host builds or runtime checks. [tests/](tests/) contains Nix boundary checks, Python, Node/TypeScript and Bats suites, plus the public clean-install test. [scripts/check-behavior.py](scripts/check-behavior.py) runs the offline behavioral gate against a built immutable home generation; live integrations need separate checks. Follow [host operations](docs/nixos-host-operations.md) for the commands and coverage boundaries. Public installers should use the narrower checks in [public-install.md](docs/public-install.md), because root-wide flake commands can fetch owner inputs.
+Use `direnv exec . nix fmt -- --ci` for formatting, then build and verify the affected package or host. There is no repository-wide test suite or flake test gate. Optional migration fixtures live inside their program directories and run manually, not during builds or commits. Follow [host operations](docs/nixos-host-operations.md) for deployment checks and [public-install.md](docs/public-install.md) for the public installation boundary.
 
 Follow [AGENTS.md](AGENTS.md) when changing this repository: do not create branches unless explicitly instructed, and fast-forward any authorized branch into `master` before pushing. Build, activate and verify affected configurations before committing module changes, subject to authorization. Use `hmswitch` for home activation.
 

@@ -99,20 +99,7 @@ the existing servers compatible without extra discovery subprocesses.
 
 ## Verification
 
-Build the appropriate Home Manager activation package, then run the adapter
-test against the built extension and installed Pi:
-
-```sh
-direnv exec . nix build \
-  '.#homeConfigurations."william@andromeda".activationPackage' \
-  --out-link /tmp/pi-mcp-home
-PI_MCP_TEST_EXTENSION="$(readlink -f \
-  /tmp/pi-mcp-home/home-files/.pi/agent/extensions/mcp)/index.ts" \
-  direnv exec . python3 tests/pi-mcp-runtime.py
-direnv exec . node --test tests/local-pi.test.ts
-```
-
-The adapter regression uses isolated profiles, a local model fixture and a
-local MCP fixture. It does not use production credentials or call external
-services. Live verification should use server initialization, tool discovery
-and read-only calls.
+Build the appropriate Home Manager activation package, inspect its selected
+extension and activate with `hmswitch`. Verify server initialization, tool
+discovery and read-only calls. Keep production credentials out of synthetic
+fixtures; there is no repository-wide adapter test runner.

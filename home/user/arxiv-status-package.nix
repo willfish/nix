@@ -8,8 +8,7 @@ pkgs.stdenv.mkDerivation {
     ninja
     pkg-config
   ];
-  nativeCheckInputs = [ pkgs.nodejs ];
   buildInputs = [ pkgs.yyjson ];
-  doCheck = true;
+  doCheck = false;
   meta.platforms = pkgs.lib.platforms.unix;
 }

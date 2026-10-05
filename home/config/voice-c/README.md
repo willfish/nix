@@ -11,39 +11,24 @@ not part of the frontend migration.
 
 ## Build and test
 
-The Linux flake check builds and tests the same package that Home Manager installs,
-with pinned dependencies:
-
-```sh
-direnv exec . nix build --no-link .#checks.x86_64-linux.voice-c
-```
-
-For incremental development, use the C shell from the repository root:
+Home Manager builds the runtime without test targets or automatic test phases.
+For manual migration verification, use the C shell from the repository root:
 
 ```sh
 direnv exec . nix-shell home/config/voice-c/shell.nix --run '
   umask 077
-  meson setup /tmp/voice-c-build home/config/voice-c -Dbuildtype=debugoptimized
-  meson test -C /tmp/voice-c-build --print-errorlogs
+  meson setup /tmp/voice-c-build home/config/voice-c -Dbuildtype=debugoptimized -Dfixtures=true
+  meson compile -C /tmp/voice-c-build
+  /tmp/voice-c-build/voice-tests
+  node --experimental-strip-types home/config/voice-c/tests/daemon_smoke.ts /tmp/voice-c-build/pi-voice-c
+  node --experimental-strip-types home/config/voice-c/tests/native_journey.ts /tmp/voice-c-build/pi-voice-c
 '
 ```
 
-Use a fresh build directory for each checkout. To repeat tests in that checkout,
-run just the `meson test` command in the same shell. The suite uses fake
-subprocesses and loopback servers; it does not require a microphone, a live speech
-backend or a desktop session. Unit tests are C; daemon and recording journeys are
-TypeScript, run with Node's built-in TypeScript support. Capture fixtures also use
-Node rather than Python.
-
-Run the model-tool and packaging assertions from the repository root with:
-
-```sh
-direnv exec . node --test tests/voice-model-tools.test.ts tests/voice-native-wiring.test.ts
-```
-
-Those TypeScript tests invoke retained Python production APIs through a small
-language adapter. Test cases and assertions stay in TypeScript; the adapter only
-sets up API inputs and serializes results. It does not access real credentials.
+Use a fresh build directory for each checkout. These program-local fixtures use
+fake subprocesses and loopback servers, not a microphone, live speech backend,
+desktop session or real credentials. They are not registered as flake, package or
+commit-hook checks.
 
 Meson logs include the inherited environment;
 keep development build directories private and never commit or publish those logs.
@@ -56,7 +41,7 @@ if these are reported, use a targeted LeakSanitizer suppression for
 ThreadSanitizer needs instrumented GLib, Pango and Fontconfig to validate the
 painting path. A suppression matching `pill_paint` excludes that path, not just
 external allocations, and must not be described as a race-free rendering check.
-Allow a larger Meson timeout for instrumented runs (`--timeout-multiplier 3`).
+Allow additional time for instrumented manual runs.
 
 ## Text contracts
 
