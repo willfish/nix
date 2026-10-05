@@ -651,6 +651,7 @@
           };
 
           checks = {
+            tailscale-proxy = import ./home/user/tailscale-proxy-package.nix { inherit pkgs; };
             voice-api = import ./home/user/voice-api-package.nix { inherit pkgs; };
             public-home = import ./tests/public-home.nix {
               inherit lib pkgs;

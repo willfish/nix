@@ -67,6 +67,7 @@ let
   workspace = "${config.home.homeDirectory}/LocalAssistant";
   chatUi = import ./local-llm-ui.nix { inherit pkgs; };
   profilePython = pkgs.python3.withPackages (ps: [ ps.pyyaml ]);
+  tailscaleProxy = import ./tailscale-proxy-package.nix { inherit pkgs; };
   hermesOverlay = pkgs.writeText "local-qwen-hermes.json" (
     builtins.toJSON {
       model = {
@@ -375,7 +376,7 @@ let
           ''
             run_llama 127.0.0.1 18081 "$@" &
             llama_pid=$!
-            ${pkgs.python3}/bin/python3 ${../config/local-llm/tailscale_open_proxy.py} \
+            ${tailscaleProxy}/bin/tailscale-open-proxy \
               --listen-host 0.0.0.0 --listen-port 8081 \
               --upstream-host 127.0.0.1 --upstream-port 18081 \
               --key-file ${lib.escapeShellArg apiKeyPath} &

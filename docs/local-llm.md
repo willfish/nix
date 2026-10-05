@@ -91,8 +91,13 @@ The server releases the model and KV cache after ten idle minutes. Sending a new
 message reloads it, so the first response after sleeping takes longer. Browser
 history is local to the browser profile. Both servers listen on all IPv4 interfaces. On Andromeda, API requests require
 the login key. On Relay, Tailscale clients reach port 8081 without one; the
-proxy injects the key before localhost llama.cpp sees the request. LAN and
-localhost clients on Relay still send it. Health and model-list metadata remain
+compiled Rust `tailscale-open-proxy` injects the key before localhost llama.cpp
+sees the request. Its source and Cargo tests live in `home/config/tailscale-proxy`.
+Trust comes only from the TCP peer address, never forwarded headers. It preserves
+caller credentials, streaming replies and WebSocket upgrades. Request headers
+are limited to 64 KiB and 128 fields, connection setup to ten seconds and active
+connections to 512; established streams have no inference timeout. LAN and
+localhost clients on Relay still send the key. Health and model-list metadata remain
 public. HTTP is unencrypted; Tailscale provides the transport encryption. Do not
 enable Funnel or otherwise forward this port to the internet. Andromeda's NixOS firewall trusts `tailscale0` and
 does not open 8081 on the LAN, so that GPU is tailnet-only. Relay also remains

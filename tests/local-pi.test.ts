@@ -13,8 +13,8 @@ if (existsSync(extensionPath)) {
     let handler;
     extension({
       on(name, callback) {
-        assert.equal(name, 'before_provider_request');
-        handler = callback;
+        assert.ok(['message_end', 'before_provider_request'].includes(name));
+        if (name === 'before_provider_request') handler = callback;
       },
       getThinkingLevel: () => level,
     });
@@ -89,7 +89,8 @@ test('Home Manager launcher is isolated, lean and offline at startup', () => {
   assert.match(source, /thinkingFormat = "qwen-chat-template"/);
   assert.match(source, /run_llama 0\.0\.0\.0 8081/);
   assert.match(source, /run_llama 127\.0\.0\.1 18081/);
-  assert.match(source, /tailscale_open_proxy.py/);
+  assert.match(source, /\$\{tailscaleProxy\}\/bin\/tailscale-open-proxy/);
+  assert.ok(!source.includes('tailscale_open_proxy.py'));
   assert.ok(!source.includes('isAndromeda then "127.0.0.1"'), 'Andromeda llama.cpp still bound to localhost');
   assert.match(source, /Huihui-Qwen3\.8-27B-abliterated-\$\{modelQuant\}\.gguf/);
   assert.match(source, /a6ff520853eba5cad302a2a16144b7fe683792cca7fb2830a08479e78ebe12b6/);
@@ -114,7 +115,8 @@ test('voice installation and explicit Qwen loading share the supported-host pred
 
 test('voice packages clipboard support and starts only the controller at login', () => {
   const source = readFileSync(new URL('../home/user/voice.nix', import.meta.url), 'utf8');
-  assert.match(source, /python3 \$\{\.\.\/config\/voice\/voice_api\.py\} --config/);
+  assert.match(source, /\$\{voiceApi\}\/bin\/pi-voice-api --config/);
+  assert.ok(!source.includes('voice_api.py'));
   assert.match(source, /systemd\.user\.services\.pi-voice-api = lib\.mkIf localEngines/);
   assert.match(source, /systemd\.user\.services\.pi-voice-stt = lib\.mkIf voiceLocalStt/);
   assert.match(source, /lib\.optionals voiceLocalStt \[/);
