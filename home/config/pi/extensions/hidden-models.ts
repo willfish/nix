@@ -10,6 +10,7 @@ const MODEL_FIELDS = [
   "reasoning",
   "thinkingLevelMap",
   "input",
+  "inputLimits",
   "cost",
   "promptCache",
   "contextWindow",
@@ -91,6 +92,7 @@ function readStoreModels(storePath: string, provider: string) {
   }
 }
 
+// ids are exact static keys. An unlisted model, including a later Grok id, stays visible.
 export default function hiddenModels(
   pi: {
     registerProvider: (name: string, config: Record<string, unknown>) => void;

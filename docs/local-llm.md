@@ -291,8 +291,9 @@ provider is missing or is still an API key, and removes a leftover `openai` API
 key. Existing OAuth on a host is left alone so token refresh keeps working.
 OpenCode Zen and OpenRouter are not attached, so neither appears in `/model`.
 OpenCode Go remains; models turned off in the OpenCode console stay hidden in
-its catalog. After `hmswitch`, other hosts can use Astra without a browser
-login:
+its catalog. Known Grok models other than 4.7 are on that same static list for
+Go and xAI, so a later Grok id still appears until it is added. After
+`hmswitch`, other hosts can use Astra without a browser login:
 
 ```sh
 pi --provider openai-codex --model gpt-6-astra --thinking medium

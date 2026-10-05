@@ -16,9 +16,9 @@ const config = JSON.parse(readFileSync(new URL('../home/config/pi/hidden-models.
 const piNix = readFileSync(new URL('../home/user/pi.nix', import.meta.url), 'utf8');
 
 test('hidden model keys cover the OpenCode console denylist', () => {
-  assert.deepEqual(config.providers, ['opencode-go']);
-  assert.equal(config.ids.length, 46);
-  assert.equal(new Set(config.ids).size, 46);
+  assert.deepEqual(config.providers, ['opencode-go', 'xai']);
+  assert.equal(config.ids.length, 49);
+  assert.equal(new Set(config.ids).size, 49);
   for (const id of ['claude-sonnet-4-5', 'gpt-5.4', 'gpt-6-astra', 'qwen3.6-plus']) {
     assert.ok(config.ids.includes(id), id);
   }
@@ -92,7 +92,7 @@ test('extension replaces OpenCode Go and OpenRouter with the remaining catalog',
   assert.deepEqual(registered[0].providerConfig.models.map((model) => model.id), ['kimi-k2.5']);
   assert.deepEqual(registered[1].providerConfig.models.map((model) => model.id), ['inception/mercury-2']);
   assert.equal(typeof registered[0].providerConfig.refreshModels, 'function');
-  assert.equal(readHiddenModelsConfig(hiddenPath).ids.length, 46);
+  assert.equal(readHiddenModelsConfig(hiddenPath).ids.length, 49);
   assert.ok(handlers.has('session_start'));
 
   registered.length = 0;
@@ -109,6 +109,53 @@ test('extension replaces OpenCode Go and OpenRouter with the remaining catalog',
   assert.deepEqual(registered.map((entry) => entry.name), ['opencode-go', 'openrouter']);
   assert.deepEqual(registered[0].providerConfig.models.map((model) => model.id), ['kimi-k2.5']);
   assert.deepEqual(registered[1].providerConfig.models.map((model) => model.id), ['inception/mercury-2']);
+});
+
+test('static grok denylist hides known non-4.7 ids and keeps later ones', async (t) => {
+  for (const id of ['grok-4.20', 'grok-4.3', 'grok-4.5', 'grok-4.6', 'grok-build-0.1', 'x-ai/grok-4.6:batch']) {
+    assert.equal(isHiddenModel(id, config.ids), true, id);
+  }
+  assert.equal(isHiddenModel('grok-4.7', config.ids), false);
+  assert.equal(isHiddenModel('grok-5', config.ids), false);
+  assert.equal(isHiddenModel('~x-ai/grok-latest', config.ids), false);
+
+  const dir = await mkdtemp(join(tmpdir(), 'pi-hidden-grok-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const hiddenPath = join(dir, 'hidden-models.json');
+  const storePath = join(dir, 'models-store.json');
+  await writeFile(hiddenPath, JSON.stringify(config));
+  await writeFile(storePath, JSON.stringify({
+    xai: {
+      models: [
+        { id: 'grok-4.3', api: 'openai-responses', baseUrl: 'https://api.x.ai/v1' },
+        {
+          id: 'grok-4.7',
+          api: 'openai-responses',
+          baseUrl: 'https://api.x.ai/v1',
+          inputLimits: { images: { maxPerRequest: 2 } },
+        },
+        { id: 'grok-5', api: 'openai-responses', baseUrl: 'https://api.x.ai/v1' },
+      ],
+    },
+    'opencode-go': {
+      models: [
+        { id: 'grok-4.6', api: 'openai-completions', baseUrl: 'https://go.example' },
+        { id: 'grok-4.7', api: 'openai-completions', baseUrl: 'https://go.example' },
+        { id: 'kimi-k2.5', api: 'openai-completions', baseUrl: 'https://go.example' },
+      ],
+    },
+  }));
+
+  const registered = [];
+  hiddenModels({
+    registerProvider: (name, providerConfig) => registered.push({ name, providerConfig }),
+    on: () => {},
+  }, { hiddenPath, storePath });
+
+  const byName = Object.fromEntries(registered.map((entry) => [entry.name, entry.providerConfig.models]));
+  assert.deepEqual(byName.xai.map((model) => model.id), ['grok-4.7', 'grok-5']);
+  assert.equal(byName.xai[0].inputLimits.images.maxPerRequest, 2);
+  assert.deepEqual(byName['opencode-go'].map((model) => model.id), ['grok-4.7', 'kimi-k2.5']);
 });
 
 test('Home Manager deploys the denylist next to the extension', () => {

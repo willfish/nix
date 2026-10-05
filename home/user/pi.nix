@@ -127,7 +127,8 @@ in
   home.file.".pi/agent/models.json" = lib.mkIf config.dotfiles.privateEnabled {
     source = piModelsJson;
   };
-  # OpenCode console-disabled ids stay out of /model for Go.
+  # OpenCode console-disabled ids, and known non-4.7 Grok ids, stay out of
+  # /model for Go and xAI. The id list is static, so a later model still appears.
   home.file.".pi/agent/hidden-models.json".source = ../config/pi/hidden-models.json;
   home.file.".pi/agent/extensions/hidden-models.ts".source = ../config/pi/extensions/hidden-models.ts;
   home.file.".pi/agent/extensions/pi-qwen.ts".source = ../config/local-llm/pi-qwen.ts;
