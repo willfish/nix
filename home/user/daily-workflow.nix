@@ -21,10 +21,10 @@ let
       exec python3 ${../config/launcher/agenda.py} "$@"
     '';
   };
+  workflowPackage = import ./daily-workflow-package.nix { inherit pkgs; };
   workflow = pkgs.writeShellApplication {
     name = "daily-workflow";
     runtimeInputs = [
-      pkgs.python3
       pkgs.systemd
       pkgs.ghostty
       pkgs.fish
@@ -32,7 +32,7 @@ let
     ];
     text = ''
       export PATH=${lib.escapeShellArg "${config.home.profileDirectory}/bin"}:"$PATH"
-      exec python3 ${../config/launcher/daily.py} "$@"
+      exec ${workflowPackage}/bin/daily-workflow "$@"
     '';
   };
 in
