@@ -170,7 +170,7 @@ precedence. Remote hosts retain their own palettes.
   saved selection overrides it.
 - `home/user/themes/runtime.nix` builds the catalogue. Active files and the saved
   selection live under `~/.local/state/theme-menu/`.
-- `home/config/appearance/theme_menu.py` publishes selected files and writes
+- C `home/config/theme-menu` publishes selected files and writes
   native mode to `~/.local/state/theme-menu/mode`, the only light/dark
   authority. Writes are individually atomic with rollback on failure, not a
   cross-app transaction; applications may update at slightly different times.

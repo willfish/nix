@@ -632,6 +632,7 @@
             wallpaper-cycle = import ./home/user/wallpaper-cycle-package.nix { inherit pkgs; };
             voice-models = import ./home/user/voice-models-package.nix { inherit pkgs; };
             personaplex-tools = import ./home/user/personaplex-tools-package.nix { inherit pkgs; };
+            theme-menu = import ./home/user/theme-menu-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)

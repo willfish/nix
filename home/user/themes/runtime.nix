@@ -7,6 +7,7 @@
 }:
 let
   state = "${config.xdg.stateHome}/theme-menu";
+  controller = import ../theme-menu-package.nix { inherit pkgs; };
   render = import ./render.nix { inherit lib; };
   herdrTheme = import ./herdr.nix { };
   btopTheme = import ./btop.nix { inherit lib pkgs; };
@@ -139,7 +140,6 @@ let
   package = pkgs.writeShellApplication {
     name = "theme-menu";
     runtimeInputs = [
-      pkgs.python3
       pkgs.fuzzel
       pkgs.glib
       pkgs.dconf
@@ -155,7 +155,7 @@ let
       # dconf.lib supplies the GIO backend; dconf is the user database tool.
       export XDG_DATA_DIRS="${schemaData}:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
       export GIO_EXTRA_MODULES="${dconfModules}''${GIO_EXTRA_MODULES:+:}''${GIO_EXTRA_MODULES:-}"
-      exec python3 ${../../config/appearance/theme_menu.py} --catalogue ${manifest} --state ${lib.escapeShellArg state} "$@"
+      exec ${controller}/bin/theme-menu --catalogue ${manifest} --state ${lib.escapeShellArg state} "$@"
     '';
   };
 in

@@ -1,0 +1,17 @@
+{ pkgs }:
+pkgs.stdenv.mkDerivation {
+  pname = "theme-menu";
+  version = "0.1.0";
+  src = ../config/theme-menu;
+  nativeBuildInputs = with pkgs; [
+    meson
+    ninja
+    pkg-config
+  ];
+  buildInputs = with pkgs; [
+    glib
+    yyjson
+  ];
+  doCheck = false;
+  meta.platforms = pkgs.lib.platforms.unix;
+}
