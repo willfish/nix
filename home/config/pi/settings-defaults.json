@@ -1,8 +1,8 @@
 {
   "defaultProvider": "opencode-go",
-  "defaultModel": "space-bunny-free",
+  "defaultModel": "glm-5.3-flash",
   "modelThinkingLevels": {
-    "opencode-go/space-bunny-free": "high"
+    "opencode-go/glm-5.3-flash": "high"
   },
   "quietStartup": true,
   "editorPaddingX": 1,

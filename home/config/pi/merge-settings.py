@@ -21,7 +21,9 @@ OM_DEFAULT_OFF_MARKER = ".om-default-off-migrated"
 LEFTOVER_DEFAULTS = {
     ("xai", "grok-4.6"),
     ("xai", "grok-4.7"),
+    ("opencode-go", "deepseek-v4.1-flash"),
     ("opencode-go", "glm-5.3"),
+    ("opencode-go", "space-bunny-free"),
 }
 
 

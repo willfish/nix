@@ -109,7 +109,7 @@ direnv exec . nix build \
 PI_MCP_TEST_EXTENSION="$(readlink -f \
   /tmp/pi-mcp-home/home-files/.pi/agent/extensions/mcp)/index.ts" \
   direnv exec . python3 tests/pi-mcp-runtime.py
-direnv exec . node --test tests/local-pi.test.ts tests/pi-openai.test.ts
+direnv exec . node --test tests/local-pi.test.ts
 ```
 
 The adapter regression uses isolated profiles, a local model fixture and a
