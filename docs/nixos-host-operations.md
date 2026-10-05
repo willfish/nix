@@ -267,6 +267,38 @@ After switching, compare the active Home Manager generation with the evaluated
 `william-darwin` activation output and verify the selected runtime secrets.
 Do not infer successful activation merely from the updated Git checkout.
 
+## Terminus binary cache
+
+Terminus serves its Nix store as a binary cache (harmonia) at
+`http://terminus:5000`, reachable only over tailscale: the firewall keeps port
+5000 closed on the LAN and `tailscale0` is a trusted interface. The cache has
+no authentication; any tailnet client can read it. Its priority (30) beats
+cache.nixos.org (40), so substituting hosts prefer it. All NixOS hosts list it
+as a substituter in `system/modules/base.nix` and pick that up on their next
+switch; an unreachable terminus just logs a warning and falls back to the
+remaining caches.
+
+The cache serves only what is in Terminus's store, and the weekly 7-day GC
+deletes anything unreferenced. Populate it with:
+
+```bash
+scripts/cache-push /nix/store/...
+```
+
+`cache-push` signs the given paths with the cache signing key (decrypted from
+the private nix-config checkout; Terminus enforces `require-sigs`), copies each
+closure over ssh-ng (william is a trusted user on Terminus), and registers a GC
+root under `/nix/var/nix/gcroots/cache`. A daily timer expires roots older
+than 14 days, so treat the cache as a transit cache for recent builds, not an
+archive. Re-push to refresh expiry. Host closures deployed from Terminus are
+already rooted by their system profiles and need no push.
+
+Paths are signed on the fly with `TERMINUS_CACHE_SIGNING_KEY` (sops secret in
+the private nix-config, Terminus-only); consumers trust the matching
+`terminus-cache-1` public key from `base.nix`. To rotate: generate a new pair
+with `nix key generate-secret`, update the sops value and `base.nix`, and
+switch Terminus before consumers.
+
 ## Terminus Immich upgrades
 
 Immich server and machine learning use the existing locked unstable package set;

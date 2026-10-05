@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Push store paths to the terminus binary cache and root them against GC.
+# Terminus enforces require-sigs, so paths are signed with the cache key
+# (decrypted from the private nix-config checkout) before copying; harmonia
+# also re-signs narinfo when serving. Roots expire after 14 days via the
+# cache-gcroot-prune timer on terminus.
+set -euo pipefail
+set +x
+
+if [ "$#" -lt 1 ]; then
+  echo "usage: cache-push /nix/store/PATH..." >&2
+  exit 64
+fi
+
+nix_config_root="${NIX_CONFIG_ROOT:-$HOME/Repositories/nix-config}"
+env_file="$nix_config_root/secrets/env.yaml"
+if [ ! -r "$env_file" ]; then
+  echo "cache-push: cannot read $env_file (clone nix-config or set NIX_CONFIG_ROOT)" >&2
+  exit 1
+fi
+
+ssh_args=(-o BatchMode=yes -o ConnectTimeout=3 -o HostKeyAlias=terminus)
+target=""
+for candidate in terminus.local terminus; do
+  if nc -z -w 1 "$candidate" 22 </dev/null >/dev/null 2>&1; then
+    target="$candidate"
+    break
+  fi
+done
+if [ -z "$target" ]; then
+  echo "cache-push: terminus is unreachable over LAN and tailscale" >&2
+  exit 1
+fi
+
+paths=()
+for arg in "$@"; do
+  case "$arg" in
+    /nix/store/*) ;;
+    *)
+      echo "cache-push: not a store path: $arg" >&2
+      exit 64
+      ;;
+  esac
+  # Realise first so local result symlinks and .drv outputs all exist.
+  path="$(readlink -f "$arg")"
+  nix-store --realise "$path" >/dev/null
+  paths+=("$path")
+done
+
+# The daemon on terminus only imports paths signed by a trusted key.
+umask 077
+key_dir="$(mktemp -d)"
+trap 'rm -rf -- "$key_dir"' EXIT
+sops decrypt --extract '["TERMINUS_CACHE_SIGNING_KEY"]' "$env_file" > "$key_dir/cache-key"
+nix store sign --key-file "$key_dir/cache-key" "${paths[@]}"
+
+# william is a trusted user on terminus, so ssh-ng needs no remote sudo.
+NIX_SSHOPTS="${ssh_args[*]}" nix copy --to "ssh-ng://$target" "${paths[@]}"
+
+# Root each top-level path; its references stay alive transitively. Re-pushes
+# replace the link, refreshing the expiry clock.
+for path in "${paths[@]}"; do
+  name="$(basename "$path")"
+  # shellcheck disable=SC2029 # name/path expand on the client by design.
+  ssh "${ssh_args[@]}" "$target" \
+    "rm -f '/nix/var/nix/gcroots/cache/$name'; nix-store --add-root '/nix/var/nix/gcroots/cache/$name' --realise '$path'" >/dev/null
+done
+
+echo "cache-push: ${#paths[@]} path(s) served from http://terminus:5000"

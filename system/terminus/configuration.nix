@@ -35,6 +35,42 @@
     requires = [ "sops-install-secrets.service" ];
   };
 
+  # Binary cache of this host's store. The firewall stays closed on the LAN;
+  # tailscale0 is a trusted interface, so only tailnet clients can reach it.
+  # Priority 30 beats cache.nixos.org (40). scripts/cache-push populates it.
+  services.harmonia.cache = {
+    enable = true;
+    signKeyPaths = [ config.sops.secrets.TERMINUS_CACHE_SIGNING_KEY.path ];
+    settings.priority = 30;
+  };
+
+  systemd.services.harmonia = lib.mkIf config.sops.useSystemdActivation {
+    after = [ "sops-install-secrets.service" ];
+    requires = [ "sops-install-secrets.service" ];
+  };
+
+  # cache-push runs as william over SSH; let that user manage cache GC roots.
+  systemd.tmpfiles.rules = [ "d /nix/var/nix/gcroots/cache 0755 william users - -" ];
+
+  # cache-push roots pushed closures under gcroots/cache; expire those links
+  # ahead of the weekly 7-day store GC so the cache cannot grow unbounded.
+  systemd.services.cache-gcroot-prune = {
+    description = "Expire binary-cache GC roots";
+    serviceConfig.Type = "oneshot";
+    script = ''
+      if [ -d /nix/var/nix/gcroots/cache ]; then
+        ${pkgs.findutils}/bin/find /nix/var/nix/gcroots/cache -mindepth 1 -type l -mtime +14 -delete
+      fi
+    '';
+  };
+  systemd.timers.cache-gcroot-prune = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
+  };
+
   services.immich = {
     enable = true;
     # The release-channel Immich 2 package is insecure. Keep the system and
