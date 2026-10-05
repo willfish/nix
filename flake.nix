@@ -630,6 +630,7 @@
             arxiv-status = import ./home/user/arxiv-status-package.nix { inherit pkgs; };
             github-watch = import ./home/user/github-watch-package.nix { inherit pkgs; };
             wallpaper-cycle = import ./home/user/wallpaper-cycle-package.nix { inherit pkgs; };
+            voice-models = import ./home/user/voice-models-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)

@@ -90,11 +90,11 @@ let
       exec ${nativeVoice}/bin/voice-menu-c --config ${menuConfig} "$@"
     '';
   };
+  modelHelper = import ./voice-models-package.nix { inherit pkgs; };
   modelSetup = pkgs.writeShellApplication {
     name = "pi-voice-models";
-    runtimeInputs = [ pkgs.python3 ];
     text = ''
-      exec python3 ${../config/voice/voice-model-setup} ${
+      exec ${modelHelper}/bin/voice-model-setup ${
         lib.optionalString (!voiceTts) "--stt-only "
       }--host ${lib.escapeShellArg hostName} "$@"
     '';

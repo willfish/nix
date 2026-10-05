@@ -47,7 +47,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] arXiv status: C `home/config/arxiv-status`.
 - [x] GitHub notifications: C `home/config/github-watch`.
 - [x] Wallpaper cycling: C `home/config/wallpaper-cycle`.
-- [ ] Voice model setup and personaplex model/patch helpers in `home/config/voice`.
+- [x] Voice model setup: C `home/config/voice-models`.
+- [ ] Personaplex model/patch helpers in `home/config/voice`.
 - [ ] Theme menu: `home/config/appearance/theme_menu.py`.
 - [ ] Launcher projects, daily and agenda helpers in `home/config/launcher`.
 - [ ] Herdr notification focus and omapager preparation/icon/patch helpers.
