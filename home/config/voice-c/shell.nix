@@ -10,6 +10,7 @@ pkgs.mkShell {
     pcre2
     meson
     ninja
+    nodejs
     gtk4
     cairo
     pango

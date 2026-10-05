@@ -333,7 +333,7 @@ static int record_target_spawn(char *const *argv, int stderr_fd, CaptureProc *ou
     while (argv[recorded_argc]) recorded_argc++;
     recorded_argv = calloc((size_t)recorded_argc, sizeof *recorded_argv);
     for (int i = 0; i < recorded_argc; i++) recorded_argv[i] = strdup(argv[i]);
-    char *producer[] = {"python3", "-c", "import os; os.write(1, b'\\0\\0'*16)", NULL};
+    char *producer[] = {"node", "-e", "require('node:fs').writeSync(1,Buffer.alloc(32))", NULL};
     return capture_spawn_default(producer, stderr_fd, out);
 }
 

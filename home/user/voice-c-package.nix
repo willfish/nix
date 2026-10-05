@@ -8,7 +8,7 @@ pkgs.stdenv.mkDerivation {
     meson
     ninja
     pkg-config
-    python3
+    nodejs
     wrapGAppsHook4
   ];
   buildInputs = with pkgs; [

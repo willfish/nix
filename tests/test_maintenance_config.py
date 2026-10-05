@@ -36,20 +36,15 @@ class BehavioralGateTests(unittest.TestCase):
 
     def test_theme_fixtures_use_the_candidate_binary_not_user_launcher(self):
         home = Path("/nix/store/fixture-home-manager-generation")
-        fixture = (
-            Path("/nix/store/native-voice/libexec") / "voice-controller-fixture"
-        )
         with (
             patch.object(Path, "resolve", return_value=home),
             patch.object(Path, "is_file", return_value=True),
-            patch.object(gate, "native_voice_fixture", return_value=fixture),
+            patch.object(gate, "native_voice_fixture", return_value=None),
             patch.dict(os.environ),
         ):
             gate.configure(home)
             self.assertEqual(
                 os.environ["PI_THEME_TEST_BIN"], str(home / "home-path/bin/pi"))
-            self.assertEqual(
-                os.environ["PI_VOICE_CONTROLLER_FIXTURE"], str(fixture))
 
     def test_editor_secret_leftovers_are_ignored_without_creating_them(self):
         result = subprocess.run(

@@ -2809,18 +2809,13 @@ static void test_player_pipe_is_not_inherited_by_capture(void) {
     }
     CHECK(npipes > 0);
     capture_test_reset();
-    char py[1024];
-    snprintf(py, sizeof py,
-        "import os\n"
-        "out=open('%s','w')\n"
-        "for name in os.listdir('/proc/self/fd'):\n"
-        "    try:\n"
-        "        st=os.stat('/proc/self/fd/'+name)\n"
-        "    except OSError:\n"
-        "        continue\n"
-        "    out.write('%%d %%d\\n'%%(st.st_dev, st.st_ino))\n",
-        fdfile);
-    char *argv[] = {"python3", "-c", py, NULL};
+    const char *fd_script =
+        "const fs=require('node:fs');let rows='';"
+        "for(const name of fs.readdirSync('/proc/self/fd')){"
+        "try{const st=fs.statSync('/proc/self/fd/'+name,{bigint:true});"
+        "rows+=st.dev+' '+st.ino+'\\n';}catch{}}"
+        "fs.writeFileSync(process.argv[1],rows);";
+    char *argv[] = {"node", "-e", (char *)fd_script, fdfile, NULL};
     PipeWireCapture *capture = capture_open(capwav, argv, NULL);
     int code = -1;
     if (!capture || capture_wait(capture, 2, &code) != 0) fail_msg("capture did not finish");

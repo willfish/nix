@@ -89,6 +89,6 @@ test_exe = executable(
   dependencies: voice_dep,
 )
 test('voice', test_exe, timeout: 120)
-python = find_program('python3')
-test('daemon', python, args: [files('tests/daemon_smoke.py'), voice_cli], timeout: 60)
-test('native-journey', python, args: [files('tests/native_journey.py'), voice_cli], timeout: 60)
+node = find_program('node')
+test('daemon', node, args: ['--experimental-strip-types', files('tests/daemon_smoke.ts'), voice_cli], timeout: 60)
+test('native-journey', node, args: ['--experimental-strip-types', files('tests/native_journey.ts'), voice_cli], timeout: 60)

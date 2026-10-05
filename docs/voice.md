@@ -520,6 +520,8 @@ Physical microphone and listening trials
 are still needed to assess recognition and speech quality.
 Capture tests use real subprocess fixtures for startup timeout, cancellation,
 stalls, disconnects, partial PCM reads and file-write failures.
-`tests/voice_pill_native.py` exercises the installed pill in disposable headless
+`tests/voice-pill-native.ts` exercises the installed pill in disposable headless
 Sway, including visibility, transparency, idle animation and click-through
-behavior. It does not establish assistive-technology accessibility.
+behavior. It does not establish assistive-technology accessibility. Run it with
+`node tests/voice-pill-native.ts /path/to/pi-voice-osd /private/output` in an
+environment containing Sway, Grim and dbus-daemon.

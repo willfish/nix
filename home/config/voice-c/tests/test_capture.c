@@ -52,7 +52,14 @@ static void teardown(void) {
 }
 
 static PipeWireCapture *open_script(const char *script) {
-    char *argv[] = {"python3", "-u", "-c", (char *)script, NULL};
+    char code[8192];
+    snprintf(code, sizeof code,
+        "const fs=require('node:fs');"
+        "const pcm=(n,v=0)=>{const b=Buffer.alloc(n*2);for(let i=0;i<n;i++)b.writeInt16LE(v,i*2);return b;};"
+        "const write=b=>fs.writeSync(1,b);"
+        "const sleep=ms=>new Promise(r=>setTimeout(r,ms));"
+        "(async()=>{%s})().catch(e=>{console.error(e);process.exitCode=1;});", script);
+    char *argv[] = {"node", "-e", code, NULL};
     return capture_open(path, argv, NULL);
 }
 
@@ -68,7 +75,7 @@ static int record_preferred_spawn(char *const *argv, int stderr_fd, CaptureProc 
     while (argv[preferred_recorded_n]) preferred_recorded_n++;
     preferred_recorded = calloc((size_t)preferred_recorded_n, sizeof *preferred_recorded);
     for (int i = 0; i < preferred_recorded_n; i++) preferred_recorded[i] = strdup(argv[i]);
-    char *producer[] = {"python3", "-c", "import os; os.write(1, b'\\0\\0'*160)", NULL};
+    char *producer[] = {"node", "-e", "require('node:fs').writeSync(1,Buffer.alloc(320))", NULL};
     return capture_spawn_default(producer, stderr_fd, out);
 }
 
@@ -194,16 +201,10 @@ static void test_chunker(void) {
 
 static void test_pause_emits_before_end(void) {
     PipeWireCapture *capture = open_script(
-        "import os, signal, sys, time\n"
-        "signal.signal(signal.SIGINT, lambda *_: sys.exit(0))\n"
-        "frame = b'\\x00\\x20' * 320\n"
-        "quiet = b'\\x00\\x00' * 320\n"
-        "os.write(1, frame * 10)\n"
-        "time.sleep(0.05)\n"
-        "os.write(1, quiet * 40)\n"
-        "time.sleep(0.05)\n"
-        "os.write(1, frame * 10)\n"
-        "time.sleep(10)\n");
+        "process.on('SIGINT',()=>process.exit(0));"
+        "write(pcm(3200,8192));await sleep(50);"
+        "write(pcm(12800));await sleep(50);"
+        "write(pcm(3200,8192));await sleep(10000);");
     if (!capture || capture_wait_ready(capture, 2) != 0) {
         fail("pause chunk", "not ready");
         capture_free(capture);
@@ -240,7 +241,7 @@ static void test_pause_emits_before_end(void) {
 }
 
 static void test_clipping(void) {
-    PipeWireCapture *capture = open_script("import os; os.write(1, b'\\xff\\x7f' * 320)");
+    PipeWireCapture *capture = open_script("write(pcm(320,32767));");
     int code = -1;
     if (!capture || capture_wait_ready(capture, 1) != 0 || capture_wait(capture, 1, &code) != 0 || code != 0) {
         fail("clipping", "wait");
@@ -252,10 +253,8 @@ static void test_clipping(void) {
 
 static void test_ready_finalizes_wav(void) {
     PipeWireCapture *capture = open_script(
-        "import os, signal, sys, time\n"
-        "signal.signal(signal.SIGINT, lambda *_: sys.exit(0))\n"
-        "os.write(1, b'\\x00\\x20' * 320)\n"
-        "time.sleep(10)\n");
+        "process.on('SIGINT',()=>process.exit(0));"
+        "write(pcm(320,8192));await sleep(10000);");
     if (!capture || capture_wait_ready(capture, 2) != 0) {
         fail("ready wav", "not ready");
         capture_free(capture);
@@ -288,7 +287,7 @@ static void test_ready_finalizes_wav(void) {
 }
 
 static void test_no_samples(void) {
-    PipeWireCapture *capture = open_script("pass");
+    PipeWireCapture *capture = open_script("");
     if (!capture || capture_wait_ready(capture, 1) == 0) fail("no samples", "ready");
     else if (!capture_error(capture) || !strstr(capture_error(capture), "samples")) fail("no samples", "error");
     int code = -1;
@@ -298,7 +297,7 @@ static void test_no_samples(void) {
 }
 
 static void test_producer_timeout_reaped(void) {
-    PipeWireCapture *capture = open_script("import time; time.sleep(10)");
+    PipeWireCapture *capture = open_script("await sleep(10000);");
     if (!capture || capture_wait_ready(capture, 0.1) == 0) fail("startup timeout", "ready");
     else if (!capture_error(capture) || !strstr(capture_error(capture), "samples")) fail("startup timeout", "error");
     int code = 0;
@@ -309,9 +308,7 @@ static void test_producer_timeout_reaped(void) {
 
 static void test_delayed_samples(void) {
     PipeWireCapture *capture = open_script(
-        "import os, time\n"
-        "time.sleep(0.2)\n"
-        "os.write(1, b'\\0\\0' * 160)\n");
+        "await sleep(200);write(pcm(160));");
     double started = mono();
     if (!capture || capture_wait_ready(capture, 2) != 0) fail("delayed", "not ready");
     else if (capture_started_at(capture) - started < 0.15) {
@@ -325,10 +322,8 @@ static void test_delayed_samples(void) {
 
 static void test_odd_byte_boundary(void) {
     PipeWireCapture *capture = open_script(
-        "import os, time\n"
-        "os.write(1, b'\\x00')\n"
-        "time.sleep(0.1)\n"
-        "os.write(1, b'\\x20' + b'\\x00\\x20' * 99)\n");
+        "write(Buffer.from([0]));await sleep(100);"
+        "write(Buffer.concat([Buffer.from([32]),pcm(99,8192)]));");
     double started = mono();
     if (!capture || capture_wait_ready(capture, 1) != 0) fail("odd byte", "not ready");
     else if (capture_started_at(capture) - started < 0.08) {
@@ -356,10 +351,7 @@ static void test_odd_byte_boundary(void) {
 
 static void test_abnormal_exit(void) {
     PipeWireCapture *capture = open_script(
-        "import os, time\n"
-        "os.write(1, b'\\0\\0' * 160)\n"
-        "time.sleep(0.1)\n"
-        "raise SystemExit(7)\n");
+        "write(pcm(160));await sleep(100);process.exit(7);");
     int code = 0;
     if (!capture || capture_wait_ready(capture, 1) != 0) fail("exit 7", "not ready");
     if (capture && (capture_wait(capture, 1, &code) != 0 || code != 7)) fail("exit 7", "code");
@@ -369,10 +361,8 @@ static void test_abnormal_exit(void) {
 
 static void test_exit_one_after_stop(void) {
     PipeWireCapture *capture = open_script(
-        "import os, signal, sys, time\n"
-        "signal.signal(signal.SIGINT, lambda *_: sys.exit(1))\n"
-        "os.write(1, b'\\0\\0' * 320)\n"
-        "time.sleep(10)\n");
+        "process.on('SIGINT',()=>process.exit(1));"
+        "write(pcm(320));await sleep(10000);");
     int code = -1;
     if (!capture || capture_wait_ready(capture, 1) != 0) fail("exit 1 stop", "not ready");
     capture_close(capture);
@@ -388,10 +378,7 @@ static void test_exit_one_after_stop(void) {
 }
 
 static void test_exit_one_without_stop(void) {
-    PipeWireCapture *capture = open_script(
-        "import os\n"
-        "os.write(1, b'\\0\\0' * 320)\n"
-        "raise SystemExit(1)\n");
+    PipeWireCapture *capture = open_script("write(pcm(320));process.exit(1);");
     int code = 0;
     if (!capture || capture_wait(capture, 1, &code) != 0 || code != 1) fail("exit 1", "code");
     if (!exited_with(capture ? capture_error(capture) : NULL, 1)) fail("exit 1", capture ? capture_error(capture) : "null");
@@ -400,11 +387,9 @@ static void test_exit_one_without_stop(void) {
 
 static void test_stderr_not_hidden(void) {
     PipeWireCapture *capture = open_script(
-        "import os, signal, sys, time\n"
-        "signal.signal(signal.SIGINT, lambda *_: sys.exit(1))\n"
-        "os.write(2, b'error: connection lost\\n')\n"
-        "os.write(1, b'\\0\\0' * 320)\n"
-        "time.sleep(10)\n");
+        "process.on('SIGINT',()=>process.exit(1));"
+        "fs.writeSync(2,'error: connection lost\\n');"
+        "write(pcm(320));await sleep(10000);");
     int code = 0;
     if (!capture || capture_wait_ready(capture, 1) != 0) fail("stderr", "not ready");
     capture_close(capture);
@@ -419,10 +404,7 @@ static void test_stderr_not_hidden(void) {
 static void test_sample_limit_exit_one(void) {
     int saved = capture_sample_limit;
     capture_sample_limit = 320;
-    PipeWireCapture *capture = open_script(
-        "import os\n"
-        "os.write(1, b'\\0\\0' * 320)\n"
-        "raise SystemExit(1)\n");
+    PipeWireCapture *capture = open_script("write(pcm(320));process.exit(1);");
     int code = -1;
     if (!capture || capture_wait(capture, 1, &code) != 0 || code != 0) fail("sample limit", "code");
     if (capture && capture_error(capture)) fail("sample limit", capture_error(capture));
@@ -432,9 +414,7 @@ static void test_sample_limit_exit_one(void) {
 
 static void test_stall(void) {
     PipeWireCapture *capture = open_script(
-        "import os, time\n"
-        "os.write(1, b'\\0\\0' * 160)\n"
-        "time.sleep(10)\n");
+        "write(pcm(160));await sleep(10000);");
     int code = 0;
     if (!capture || capture_wait_ready(capture, 1) != 0) fail("stall", "not ready");
     if (capture && capture_wait(capture, 4, &code) != 0) fail("stall", "not stopped");
@@ -450,10 +430,7 @@ static void test_stall(void) {
 
 static void test_disconnect(void) {
     PipeWireCapture *capture = open_script(
-        "import os, time\n"
-        "os.write(1, b'\\0\\0' * 160)\n"
-        "os.close(1)\n"
-        "time.sleep(10)\n");
+        "write(pcm(160));fs.closeSync(1);await sleep(10000);");
     int code = 0;
     if (!capture || capture_wait_ready(capture, 1) != 0) fail("disconnect", "not ready");
     if (capture && capture_wait(capture, 1, &code) != 0) fail("disconnect", "not reaped");
@@ -466,11 +443,8 @@ static void test_disconnect(void) {
 
 static void test_close_escalates(void) {
     PipeWireCapture *capture = open_script(
-        "import os, signal, time\n"
-        "signal.signal(signal.SIGINT, signal.SIG_IGN)\n"
-        "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
-        "os.write(1, b'\\0\\0' * 160)\n"
-        "time.sleep(10)\n");
+        "process.on('SIGINT',()=>{});process.on('SIGTERM',()=>{});"
+        "write(pcm(160));await sleep(10000);");
     if (!capture || capture_wait_ready(capture, 1) != 0) {
         fail("escalate", "not ready");
         capture_free(capture);
@@ -519,7 +493,7 @@ static void test_reader_start_failure(void) {
     spawned_pid = 0;
     capture_spawn_hook = record_pid;
     capture_reader_start_hook = fail_reader;
-    PipeWireCapture *capture = open_script("import time; time.sleep(10)");
+    PipeWireCapture *capture = open_script("await sleep(10000);");
     if (capture) fail("reader start", "opened");
     struct stat st;
     if (stat(path, &st) == 0) fail("reader start", "wav remains");
@@ -532,7 +506,7 @@ static void test_reader_start_failure(void) {
 }
 
 static void test_cancel_before_ready(void) {
-    PipeWireCapture *capture = open_script("import time; time.sleep(10)");
+    PipeWireCapture *capture = open_script("await sleep(10000);");
     if (!capture) {
         fail("cancel", "open");
         return;
@@ -546,7 +520,7 @@ static void test_cancel_before_ready(void) {
 }
 
 static void test_spawn_stdout_cloexec(void) {
-    char *argv[] = {"python3", "-c", "import os; os.write(1, b'\\0\\0')", NULL};
+    char *argv[] = {"node", "-e", "require('node:fs').writeSync(1,Buffer.alloc(2))", NULL};
     CaptureProc proc = {0};
     if (capture_spawn_default(argv, -1, &proc) != 0) {
         fail("cloexec", "spawn");
@@ -594,7 +568,7 @@ static void test_high_fd_read(void) {
     if (!reached) {
         fprintf(stderr, "SKIP high fd: could not fill the select set\n");
     } else {
-        PipeWireCapture *capture = open_script("import os; os.write(1, b'\\0\\0'*320)");
+        PipeWireCapture *capture = open_script("write(pcm(320));");
         if (!capture || capture_wait_ready(capture, 2) != 0) fail("high fd", "not ready");
         else {
             int code = -1;
@@ -617,9 +591,7 @@ static void test_wav_write_failure(void) {
         return;
     }
     PipeWireCapture *capture = open_script(
-        "import os, time\n"
-        "os.write(1, b'\\0\\0' * 8192)\n"
-        "time.sleep(10)\n");
+        "write(pcm(8192));await sleep(10000);");
     int code = 0;
     if (!capture || capture_wait(capture, 1, &code) != 0) fail("wav write", "unfinished");
     if (capture && capture_poll(capture, &code) != 0) fail("wav write", "poll");
