@@ -2,6 +2,7 @@
 #define VOICE_CONTROLLER_INTERNAL
 #include "controller.h"
 #include "protocol.h"
+#include "labels.h"
 #include "text.h"
 
 #include <dirent.h>
@@ -329,6 +330,14 @@ static int ok_field(const char *json, const char *key, const char *expect) {
     return match;
 }
 
+static SnapshotState *named_snapshot(void *user, const char *path, uint64_t device, uint64_t inode) {
+    (void)user; (void)device; (void)inode;
+    check(path && strcmp(path, "/tmp/herdr.sock") == 0, "labels use the session socket");
+    return labels_parse_snapshot("{\"workspaces\":[{\"workspace_id\":\"w1\",\"label\":\"Dotfiles\"}],"
+        "\"tabs\":[{\"tab_id\":\"t1\",\"label\":\"Voice work\"}],"
+        "\"panes\":[{\"pane_id\":\"w1:p2\",\"workspace_id\":\"w1\",\"tab_id\":\"t1\",\"label\":\"Backend task\"}]}");
+}
+
 int test_controller(void) {
     char dir[] = "/tmp/voice-controller-XXXXXX";
     if (!mkdtemp(dir)) return 1;
@@ -350,6 +359,24 @@ int test_controller(void) {
     check(ok_field(status, "connection_state", "ready"), "register ready");
     check(ok_field(status, "pane", "w1:p2"), "register pane");
     free(status);
+    session_entry *named = controller_find(app, "token-1");
+    named->has_socket_key = 1;
+    socket_key_init(&named->socket_key, "/tmp/herdr.sock", 1, 2);
+    app->deps.has_catalogue = 1;
+    app->deps.catalogue.read_snapshot = named_snapshot;
+    status = call(app, "{\"action\":\"status\"}");
+    yyjson_doc *label_doc = yyjson_read(status, strlen(status), 0);
+    yyjson_val *label = yyjson_ptr_get(yyjson_doc_get_root(label_doc), "/sessions/0/label");
+    const char *label_text = yyjson_get_str(label);
+    check(label_text && strstr(label_text, "Dotfiles") && strstr(label_text, "Voice work")
+        && strstr(label_text, "Backend task"), "session picker receives workspace tab and pane names");
+    yyjson_doc_free(label_doc);
+    free(status);
+    app->deps.catalogue.read_snapshot = NULL;
+    status = call(app, "{\"action\":\"status\"}");
+    check(status && strstr(status, "w1:p2") && !strstr(status, "Backend task"), "missing snapshot retains identity fallback");
+    free(status);
+    app->deps.has_catalogue = 0;
     status = call(app, "{\"action\":\"team-toggle\"}");
     check(status && strstr(status, "\"show_team\":true"), "team toggle");
     free(status);

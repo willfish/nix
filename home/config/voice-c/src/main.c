@@ -188,6 +188,15 @@ static int cat_read_panes(void *user, const char *path, uint64_t device, uint64_
     return 0;
 }
 
+static SnapshotState *cat_read_snapshot(void *user, const char *path, uint64_t device, uint64_t inode) {
+    (void)user;
+    SocketKey key;
+    if (socket_key_init(&key, path, device, inode) != 0) return NULL;
+    SnapshotState *state = labels_cache_read(label_cache, &key);
+    socket_key_clear(&key);
+    return state;
+}
+
 static void cat_close(void *user) {
     (void)user;
     if (label_cache) labels_cache_close(label_cache);
@@ -674,6 +683,7 @@ static int cmd_serve(void) {
         deps.catalogue.set_active = cat_set_active;
         deps.catalogue.refresh = cat_refresh;
         deps.catalogue.read_panes = cat_read_panes;
+        deps.catalogue.read_snapshot = cat_read_snapshot;
         deps.catalogue.close = cat_close;
     }
     audio_report backends;

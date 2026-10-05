@@ -122,6 +122,8 @@ typedef struct controller_herdr {
         char **result_json, char *err, size_t err_cap);
 } controller_herdr;
 
+struct SnapshotState;
+
 typedef struct controller_catalogue {
     void *user;
     int max_keys;
@@ -131,6 +133,9 @@ typedef struct controller_catalogue {
     /* 1 authoritative. *pane_ids owned, count entries, each malloc'd. */
     int (*read_panes)(void *user, const char *path, uint64_t device, uint64_t inode,
         int *authoritative, char ***pane_ids, size_t *count);
+    /* Owned immutable snapshot; caller releases with labels_state_free. */
+    struct SnapshotState *(*read_snapshot)(void *user, const char *path,
+        uint64_t device, uint64_t inode);
     void (*close)(void *user);
 } controller_catalogue;
 

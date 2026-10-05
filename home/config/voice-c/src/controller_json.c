@@ -553,14 +553,9 @@ char *controller_status_json(voice_controller *app) {
             if (!seen) keys[nk++] = raw_rows[i].socket_key;
         }
         for (size_t i = 0; i < nk; i++) {
-            if (app->deps.catalogue.read_panes) {
-                int auth = 0;
-                char **ids = NULL;
-                size_t count = 0;
-                app->deps.catalogue.read_panes(app->deps.catalogue.user, keys[i].path, keys[i].device, keys[i].inode, &auth, &ids, &count);
-                for (size_t p = 0; p < count; p++) free(ids[p]);
-                free(ids);
-            }
+            if (app->deps.catalogue.read_snapshot)
+                states[i] = app->deps.catalogue.read_snapshot(app->deps.catalogue.user,
+                    keys[i].path, keys[i].device, keys[i].inode);
         }
         LabelEntry *labelled = NULL;
         size_t labelled_count = 0;
@@ -580,6 +575,7 @@ char *controller_status_json(voice_controller *app) {
             }
             labels_entries_free(labelled, labelled_count);
         }
+        for (size_t i = 0; i < nk; i++) labels_state_free(states[i]);
     }
     for (size_t i = 0; i < raw_count; i++) labels_entry_clear(&raw_rows[i]);
     char *text = yyjson_mut_write(doc, 0, NULL);
