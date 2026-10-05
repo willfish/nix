@@ -16,3 +16,4 @@ sessions
 .playwright-mcp
 
 metadata
+*.py
