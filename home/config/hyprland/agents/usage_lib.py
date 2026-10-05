@@ -273,6 +273,12 @@ def scan_grok_sessions(
 
 
 def fraction(value: Any) -> float:
+    """Read a value that may already be a 0-1 fraction.
+
+    Values above 1 are treated as percents. Exactly 1 stays 1, so this must
+    not be used for a field that is always a 0-100 percent.
+    """
+
     try:
         parsed = float(str(value).strip().replace("%", ""))
     except (TypeError, ValueError):
@@ -282,6 +288,22 @@ def fraction(value: Any) -> float:
     if parsed > 1:
         parsed = parsed / 100.0
     return min(1.0, parsed)
+
+
+def percent_scale(value: Any) -> float:
+    """Read Codex used_percent, which is always a 0-100 used share.
+
+    1 means one percent consumed, not a full pool. Do not route Grok through
+    this: its credits reader is separate and must keep its own scale.
+    """
+
+    try:
+        parsed = float(str(value).strip().replace("%", ""))
+    except (TypeError, ValueError):
+        return -1.0
+    if parsed < 0 or parsed != parsed:
+        return -1.0
+    return min(1.0, parsed / 100.0)
 
 
 def grok_usage_fraction(value: Any) -> float:
@@ -707,7 +729,7 @@ def parse_codex_wham(
         window = limit.get(key)
         if not isinstance(window, dict) or window.get("used_percent") is None:
             continue
-        percent = fraction(window.get("used_percent"))
+        percent = percent_scale(window.get("used_percent"))
         if percent < 0:
             continue
         seconds = number(window.get("limit_window_seconds"))
