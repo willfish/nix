@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer, request } from 'node:http';
+import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+
+// Always test the candidate build, never a binary from the active user profile.
+const system = `${process.arch === 'arm64' ? 'aarch64' : 'x86_64'}-${process.platform === 'darwin' ? 'darwin' : 'linux'}`;
+const binary = process.env.PI_VOICE_API_TEST_BIN ?? join(execFileSync('nix', [
+  'build', '--no-link', '--print-out-paths', `.#checks.${system}.voice-api`,
+], { encoding: 'utf8' }).trim(), 'bin/pi-voice-api');
 
 function wav() {
   const b = Buffer.alloc(48);
@@ -17,10 +24,14 @@ function wav() {
   return b;
 }
 
-async function fixture(t, options: { managed?: boolean; unready?: boolean; startFailure?: boolean; loading?: number } = {}) {
+async function fixture(t, options: {
+  managed?: boolean; unready?: boolean; startFailure?: boolean; loading?: number;
+  stopDelay?: number; stopFailure?: boolean; env?: NodeJS.ProcessEnv;
+} = {}) {
   const requests: { url: string; body: Buffer; headers: object }[] = [];
   let upstreamStatus = 200;
   let upstreamBody: Buffer | undefined;
+  let upstreamHeaders = {};
   let delay = 0;
   let healthAttempts = 0;
   const upstream = createServer(async (req, res) => {
@@ -35,7 +46,7 @@ async function fixture(t, options: { managed?: boolean; unready?: boolean; start
     for await (const chunk of req) parts.push(chunk);
     requests.push({ url: req.url!, body: Buffer.concat(parts), headers: req.headers });
     await new Promise(resolve => setTimeout(resolve, delay));
-    res.writeHead(upstreamStatus);
+    res.writeHead(upstreamStatus, upstreamHeaders);
     res.end(upstreamBody ?? (req.url === '/inference' ? '{"text":"Hello world"}' : wav()));
   });
   upstream.listen(0, '127.0.0.1');
@@ -54,6 +65,13 @@ async function fixture(t, options: { managed?: boolean; unready?: boolean; start
   await writeFile(join(dir, 'service.cjs'), `
     require('node:fs').appendFileSync(${JSON.stringify(commandLog)}, JSON.stringify(process.argv.slice(2)) + '\\n');
     if (${!!options.startFailure} && process.argv[2] === 'start') process.exit(1);
+    if (process.argv[2] === 'stop') {
+      if (${!!options.stopFailure} && !require('node:fs').existsSync(${JSON.stringify(join(dir, 'stop-failed'))})) {
+        require('node:fs').writeFileSync(${JSON.stringify(join(dir, 'stop-failed'))}, '');
+        process.exit(1);
+      }
+      setTimeout(() => {}, ${options.stopDelay ?? 0});
+    }
   `);
   await writeFile(join(dir, 'config.json'), JSON.stringify({
     port: apiPort, stt_url: `http://127.0.0.1:${port}/inference`,
@@ -69,14 +87,19 @@ async function fixture(t, options: { managed?: boolean; unready?: boolean; start
       },
     } : {}),
   }));
-  const child = spawn('python3', ['home/config/voice/voice_api.py', '--config', join(dir, 'config.json')], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(binary, ['--config', join(dir, 'config.json')], {
+    stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...options.env },
+  });
   let errors = '';
+  let output = '';
   child.stderr.on('data', chunk => { errors += chunk; });
+  child.stdout.on('data', chunk => { output += chunk; });
   t.after(async () => {
     if (child.exitCode === null && child.signalCode === null) {
       const exit = once(child, 'exit'); child.kill(); await exit;
     }
     assert.equal(errors, '', 'backend must not log requests or tracebacks');
+    assert.equal(output, '', 'backend must not log transcripts to stdout');
   });
   const base = `http://127.0.0.1:${apiPort}`;
   let ready = false;
@@ -89,8 +112,8 @@ async function fixture(t, options: { managed?: boolean; unready?: boolean; start
   return { requests, base,
     async commands() { return (await readFile(commandLog, 'utf8')).trim().split('\n').filter(Boolean).map(line => JSON.parse(line)); },
     async stop() { const exit = once(child, 'exit'); child.kill(); await exit; },
-    setReply(status: number, body?: Buffer, ms = 0) {
-    upstreamStatus = status; upstreamBody = body; delay = ms;
+    setReply(status: number, body?: Buffer, ms = 0, headers = {}) {
+    upstreamStatus = status; upstreamBody = body; delay = ms; upstreamHeaders = headers;
   }, post(path: string, body: Buffer | string, headers = {}) {
     return fetch(base + path, { method: 'POST', body, headers });
   } };
@@ -228,4 +251,117 @@ test('concurrent inference is bounded and recovers after completion', async t =>
   assert.equal((await f.post('/v1/listen', wav())).status, 429);
   assert.equal((await first).status, 200);
   assert.equal((await f.post('/v1/listen', wav())).status, 200);
+});
+
+function raw(base: string, message: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(base);
+    const socket = connect(Number(url.port), url.hostname);
+    let response = '';
+    socket.setTimeout(2000, () => socket.destroy(new Error('response timed out')));
+    socket.on('connect', () => socket.write(message));
+    socket.on('data', chunk => { response += chunk; });
+    socket.on('end', () => resolve(response));
+    socket.on('error', reject);
+  });
+}
+
+test('HTTP framing is bounded and ambiguous requests never reach inference', async t => {
+  const f = await fixture(t);
+  for (const [headers, status] of [
+    ['', 411],
+    ['Content-Length: 0\r\n', 413],
+    ['Content-Length: 1\r\nContent-Length: 2\r\n', 400],
+    ['Content-Length: nope\r\n', 400],
+    ['Transfer-Encoding: chunked\r\n', 403],
+  ] as const) {
+    const response = await raw(f.base, `POST /v1/listen HTTP/1.1\r\nHost: localhost\r\n${headers}\r\n`);
+    assert.match(response, new RegExp(`^HTTP/1.1 ${status} `));
+  }
+  assert.equal(f.requests.length, 0);
+  assert.equal((await f.post('/v1/listen', wav())).status, 200);
+});
+
+test('requests ignore proxy environment and never forward credentials or follow redirects', async t => {
+  const f = await fixture(t, { env: {
+    http_proxy: 'http://127.0.0.1:1', HTTP_PROXY: 'http://127.0.0.1:1',
+    all_proxy: 'http://127.0.0.1:1', ALL_PROXY: 'http://127.0.0.1:1', no_proxy: '', NO_PROXY: '',
+  } });
+  assert.equal((await f.post('/v1/listen', wav(), { Authorization: 'Token private', Cookie: 'private' })).status, 200);
+  assert.equal(f.requests[0].headers['authorization'], undefined);
+  assert.equal(f.requests[0].headers['cookie'], undefined);
+  for (const status of [301, 302, 307, 308]) {
+    f.setReply(status, Buffer.from('private redirect'), 0, { Location: '/inference' });
+    assert.equal((await f.post('/v1/listen', wav())).status, 502);
+  }
+  assert.equal(f.requests.length, 5, 'one request per call, no redirect follow-up');
+});
+
+test('malformed WAV formats and truncated output are rejected', async t => {
+  const f = await fixture(t);
+  for (const bytes of [wav().subarray(0, 45), Buffer.from('RIFF')]) {
+    assert.equal((await f.post('/v1/listen', bytes)).status, 400);
+    f.setReply(200, bytes);
+    assert.equal((await f.post('/v1/speak', '{"text":"Hello"}')).status, 502);
+  }
+  for (const [offset, value] of [[20, 3], [22, 0], [22, 2], [34, 8]] as const) {
+    const bytes = wav(); bytes.writeUInt16LE(value, offset);
+    assert.equal((await f.post('/v1/listen', bytes)).status, 400);
+  }
+  const wrongRate = wav(); wrongRate.writeUInt32LE(48000, 24);
+  f.setReply(200, wrongRate);
+  assert.equal((await f.post('/v1/speak', '{"text":"Hello"}')).status, 502);
+});
+
+test('oversized upstream responses fail without leaking their contents', async t => {
+  const f = await fixture(t);
+  f.setReply(200, Buffer.alloc(32 * 1024 * 1024 + 1, 'x'));
+  const response = await f.post('/v1/listen', wav());
+  assert.equal(response.status, 502);
+  assert.ok((await response.text()).length < 200);
+});
+
+test('shutdown drains active inference before stopping owned services', async t => {
+  const f = await fixture(t, { managed: true });
+  f.setReply(200, undefined, 200);
+  const result = f.post('/v1/listen', wav());
+  while (!f.requests.length) await new Promise(resolve => setTimeout(resolve, 5));
+  const stopped = f.stop();
+  assert.equal((await result).status, 200);
+  await stopped;
+  const commands = await f.commands();
+  assert.ok(commands.some(args => args[0] === 'stop' && args[1] === 'fixture-stt.service'));
+  assert.ok(commands.some(args => args[0] === 'stop' && args[1] === 'fixture-tts.service'));
+});
+
+test('idle stop commands do not block health requests and failed stops are retried', async t => {
+  const f = await fixture(t, { managed: true, stopDelay: 400, stopFailure: true });
+  const deadline = Date.now() + 4000;
+  while (Date.now() < deadline && (await f.commands()).filter(args => args[0] === 'stop').length < 2)
+    await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal((await fetch(f.base + '/health', { signal: AbortSignal.timeout(300) })).status, 200);
+  while (Date.now() < deadline && (await f.commands()).filter(args => args[0] === 'stop' && args[1] === 'fixture-stt.service').length < 2)
+    await new Promise(resolve => setTimeout(resolve, 10));
+  assert.ok((await f.commands()).filter(args => args[0] === 'stop' && args[1] === 'fixture-stt.service').length >= 2);
+});
+
+test('invalid configuration fails before serving and never logs URLs or reference paths', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'voice-api-config-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  for (const override of [
+    { stt_url: 'http://example.com/private' },
+    { tts_url: 'http://private:secret@127.0.0.1/private' },
+    { stt_url: 'https://127.0.0.1/private' },
+    { tts_url: 'http://127.0.0.1:0/private' },
+    { queue_timeout: -1 },
+    { systemctl: [] },
+    { engines: { stt: { unit: 'fixture-stt.service', health_url: 'http://example.com/private' } } },
+  ]) {
+    const path = join(dir, 'config.json');
+    await writeFile(path, JSON.stringify({ stt_url: 'http://127.0.0.1/stt', tts_url: 'http://127.0.0.1/tts', ...override }));
+    const child = spawn(binary, ['--config', path]);
+    let error = ''; child.stderr.on('data', chunk => { error += chunk; });
+    assert.equal((await once(child, 'exit'))[0], 1);
+    assert.equal(error, 'pi-voice-api: invalid configuration\n');
+  }
 });

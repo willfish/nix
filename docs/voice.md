@@ -77,8 +77,8 @@ paths or provider-specific voice policies in C. An optional
 playback chunks; only the backend interprets it for voice-reference selection.
 
 `pi-voice-api.service` is installed only where the generated config offers a
-local backend. It runs the standard-library-only
-`home/config/voice/voice_api.py` on loopback port 8180. Its separate configuration
+local backend. It runs the compiled Rust `pi-voice-api` executable from
+`home/config/voice-api` on loopback port 8180. Its separate configuration
 contains inference URLs, systemd unit names, readiness URLs, idle timeout and
 trusted voice-reference mappings. The backend starts the necessary engine,
 waits for readiness, translates its native protocol and stops engines after
@@ -89,8 +89,8 @@ browser origins and oversized bodies without logging transcripts or accepting
 reference paths from callers.
 
 This is a REST compatibility subset, not Deepgram's complete API: there are no
-WebSockets, diarization or cloud voice emulation. Python is self-contained as the
-HTTP and lifecycle adapter, not as an inference runtime. Whisper, audio.cpp and
+WebSockets, diarization or cloud voice emulation. Rust provides the HTTP and
+lifecycle adapter, not an inference runtime. Whisper, audio.cpp and
 their models remain external dependencies. The always-running API is lightweight;
 it does not load inference models into its own process.
 

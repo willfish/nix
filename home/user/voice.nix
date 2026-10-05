@@ -21,6 +21,7 @@ let
   sttModel = "ggml-large-v3-turbo-q5_0.bin";
   vulkanDriver = "nvidia_icd.json";
   nativeVoice = import ./voice-c-package.nix { inherit pkgs; };
+  voiceApi = import ./voice-api-package.nix { inherit pkgs; };
   makeVoice =
     harness:
     pkgs.writeShellApplication {
@@ -319,7 +320,7 @@ in
         Before = [ "personaplex.service" ];
       };
       Service = common // {
-        ExecStart = "${pkgs.python3}/bin/python3 ${../config/voice/voice_api.py} --config ${apiConfig}";
+        ExecStart = "${voiceApi}/bin/pi-voice-api --config ${apiConfig}";
         TimeoutStopSec = 300;
       };
     };

@@ -651,6 +651,7 @@
           };
 
           checks = {
+            voice-api = import ./home/user/voice-api-package.nix { inherit pkgs; };
             public-home = import ./tests/public-home.nix {
               inherit lib pkgs;
               mkHome = args: mkHome (args // { inherit system; });
