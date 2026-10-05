@@ -580,11 +580,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1791001326,
-        "narHash": "sha256-pwJhtpRcNX1pJ9luUy3Eh1EYUFsZjv5m2xSqZ1hEhMU=",
+        "lastModified": 1791175671,
+        "narHash": "sha256-1szYaEAFYPApOgy2HGLbqtVys8SIqk5mlvz9agPFLr0=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "83984ebbbe5322b261d9fdc24eb15cf44f23abec",
+        "rev": "ba24820b562c0e1ff95d283a2e2e1debcbcbad83",
         "type": "github"
       },
       "original": {
@@ -658,11 +658,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790499302,
-        "narHash": "sha256-Gbf/U9ptJhQh0qnDnJ/+a8MAcq1HXunbArUTHR2wNYk=",
+        "lastModified": 1791105314,
+        "narHash": "sha256-oTM7QFgRQ+vxBpMBMc7hEYpqBtpXAzXu2xuB/tru84U=",
         "owner": "nix-community",
         "repo": "nix-index-database",
-        "rev": "161d7c91accd93034bb3c295224d9d895a778573",
+        "rev": "e740bc4e9d8918d7819a51486d5099930c65c72e",
         "type": "github"
       },
       "original": {
@@ -676,11 +676,11 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "lastModified": 1790948122,
-        "narHash": "sha256-fDMYyzY1lI5b8RuCMrvoaIgTeRwNnTG4dNk1ucROlQE=",
+        "lastModified": 1791128201,
+        "narHash": "sha256-rlsYY/Dg/LhbIj51Aa6TLvRpZeb3KZgUTd7llQ5XcJE=",
         "owner": "NixOS",
         "repo": "nixos-hardware",
-        "rev": "0953bb1a609df63013176e3463393f8df993d3ef",
+        "rev": "31cc5f4d9b9ba601071e8b8504601b9b176e2756",
         "type": "github"
       },
       "original": {
@@ -708,11 +708,11 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1790822859,
-        "narHash": "sha256-69xHQhAeMAD2wDXO7T2pcOZIF9Sga2W+JkmY2a11Ops=",
+        "lastModified": 1791048980,
+        "narHash": "sha256-KgItSKML8Xvte0B7/uGnBDsYzSnnKHcOaiUbgWBXLXw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "c59305bab2065cfecc4944690d9eedbb56f3a9fa",
+        "rev": "a7868a727837f3c09cee2ce0ca671c76b1589fed",
         "type": "github"
       },
       "original": {
@@ -785,11 +785,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1790920529,
-        "narHash": "sha256-nQyFkMR78WP6PiXKkDW2SjqzLf/spQqjRuxRGSbcV8k=",
+        "lastModified": 1791143449,
+        "narHash": "sha256-9+n3ReS2y9xS199LoJjKUWHwZrISGHWgkD/LUZTDZyA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "774debe7a0d1b496e35677ad955a1011c6ff74f3",
+        "rev": "0d9e9b832d03ac387417e16ce1febf73b2e631e1",
         "type": "github"
       },
       "original": {
@@ -848,11 +848,11 @@
     "omarchy": {
       "flake": false,
       "locked": {
-        "lastModified": 1790994078,
-        "narHash": "sha256-aksNVqx02RXkReRSPhH/4tOU48i1NBuErWjMMt+tT6w=",
+        "lastModified": 1791205087,
+        "narHash": "sha256-ryT+TQuMuImYyClW77nrZRaQFAMSbGN3W+5/HYfJRuQ=",
         "owner": "basecamp",
         "repo": "omarchy",
-        "rev": "a85e29abb556816f4644cf975e98da694b486aa8",
+        "rev": "b9e0ac4f1d8b33ab01af0cbb3a95c8667ee69eb3",
         "type": "github"
       },
       "original": {
@@ -983,10 +983,10 @@
     "omarchy-theme-black-gold": {
       "flake": false,
       "locked": {
-        "lastModified": 1785879085,
-        "narHash": "sha256-V3fowiFpIHeRyD8Bpjd93JSLtMuG+aNb8GYOGVpjBVI=",
+        "lastModified": 1791198255,
+        "narHash": "sha256-5/WGvhlXn9Y7J1byBERIuKjtLArWtMFpmRz5hBUIMMI=",
         "ref": "refs/heads/V2-Blackgold",
-        "rev": "79e26a50f1133f95c056a77857fcd416b6a03766",
+        "rev": "f5c4b0675fdc7b637126b0b3425eb269ebc366fe",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/HANCORE-linux/omarchy-blackgold-theme"
@@ -1034,10 +1034,10 @@
     "omarchy-theme-dos-moos": {
       "flake": false,
       "locked": {
-        "lastModified": 1786608468,
-        "narHash": "sha256-kUH78aOA9CC95uDJxZyfr9wDJ5Lv0O354dLpTPIfHNM=",
+        "lastModified": 1791198099,
+        "narHash": "sha256-KLl3mz5EiJba/HkK+BTKWdBiGo6smV8kYLUAHfh/FiE=",
         "ref": "refs/heads/main",
-        "rev": "85ed3d208130639efb033d1c5fe25d754322cee3",
+        "rev": "5c608a4249a09a828bbac0054cabe5e19ec0d9dd",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/HANCORE-linux/omarchy-dos-moos-theme"
@@ -1204,10 +1204,10 @@
     "omarchy-theme-greek-noir": {
       "flake": false,
       "locked": {
-        "lastModified": 1786324706,
-        "narHash": "sha256-TOvW7XUx8G5tN7VZE6pONlZFmTf9QWP/HqQkVdchWzM=",
+        "lastModified": 1791198176,
+        "narHash": "sha256-oQ9VrtYTl0BBZsGijwIaw6vYZT83pGjdh2O0yWiJJT4=",
         "ref": "refs/heads/main",
-        "rev": "4dde93cb42f775af791957d828ae8ff9728f7796",
+        "rev": "50152bb8392fae480950e2dae33b10c91035dc56",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/HANCORE-linux/omarchy-greek-noir-theme"
@@ -1408,10 +1408,10 @@
     "omarchy-theme-oxo-carbon": {
       "flake": false,
       "locked": {
-        "lastModified": 1785930466,
-        "narHash": "sha256-XA8UjwVciC3DFIDN8dQqO47M3lxqasYWpe7sBw4BwyA=",
+        "lastModified": 1791207582,
+        "narHash": "sha256-xjg8xwab4g34iqUqlE66j+pImnZULGaFPFkvCkDW0UM=",
         "ref": "refs/heads/main",
-        "rev": "237496f82c404bcf4a13f0e9cb2113b6266edf40",
+        "rev": "87ad5445c035d60bc5b0da2fe2dc495230a23d77",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/HANCORE-linux/omarchy-oxocarbon-theme"
@@ -1510,10 +1510,10 @@
     "omarchy-theme-rose-of-dune": {
       "flake": false,
       "locked": {
-        "lastModified": 1785940503,
-        "narHash": "sha256-bY28YTfyiDASJyg4jc0EDG874D/2kCEgqWacj71j8c4=",
+        "lastModified": 1791208100,
+        "narHash": "sha256-QbtPgmGAOHUsSVh0/asJUOsKOQltC9vzEkFcOR7SlpI=",
         "ref": "refs/heads/main",
-        "rev": "d6dc57d6482fdd41fdc08dad9784cffaabaeb0cd",
+        "rev": "d53c6ac4fae4eba465fadbebf8b6b43bbf4f1739",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/HANCORE-linux/omarchy-roseofdune-theme"
@@ -1964,11 +1964,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790498116,
-        "narHash": "sha256-rs9meAYxW3zzrh43yaW7htrqCD+X9+pupDPHN86fumI=",
+        "lastModified": 1791103873,
+        "narHash": "sha256-nFxM+pKoZ8LJAEnUXARyCaOAloWgaW9kZQOSjWzKcTE=",
         "owner": "Mic92",
         "repo": "sops-nix",
-        "rev": "5efb5a6f4f5ab192817d28557dd4d650fa14d866",
+        "rev": "dcd241ba97088c22569d1573286e1b9daad340c0",
         "type": "github"
       },
       "original": {
@@ -2200,11 +2200,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786901030,
-        "narHash": "sha256-WSFCsDSE5ffgD2MqzkM2CYjeFiKhRF/dJUN8uedb6YE=",
+        "lastModified": 1791203292,
+        "narHash": "sha256-vuzVwvjeucSnwKwMBpyP8r5IzdrMKCHEdwTrRFwUN7I=",
         "owner": "numtide",
         "repo": "treefmt-nix",
-        "rev": "27b3b12a8e6375f28ebe122f07d230ca5459bbfa",
+        "rev": "03d8ee1bcbc8f9638907bb79edb9673151d0e22b",
         "type": "github"
       },
       "original": {
