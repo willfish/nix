@@ -1,0 +1,1 @@
+option('fixtures', type: 'boolean', value: false, description: 'Build the manual migration fixture executable')

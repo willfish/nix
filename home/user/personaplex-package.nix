@@ -2,6 +2,7 @@
 let
   python = pkgs.python3;
   ps = python.pkgs;
+  tools = import ./personaplex-tools-package.nix { pkgs = pkgs.buildPackages; };
   # This runtime is only deployed on Andromeda's RTX 5090. The stock NVSHMEM
   # build targets every GPU generation and nests four compiler threads per job.
   nvshmem = pkgs.cudaPackages.libnvshmem.overrideAttrs (old: {
@@ -70,7 +71,7 @@ let
         --replace-fail 'web.run_app(app, port=args.port, ssl_context=ssl_context)' 'web.run_app(app, host=args.host, port=args.port, ssl_context=ssl_context, access_log=None)' \
         --replace-fail 'hf_hub_download(args.hf_repo, "config.json")' 'pass  # Assets are installed and verified separately; no runtime downloads.' \
         --replace-fail 'clog.log("info", f"text prompt: {request.query['"'"'text_prompt'"'"']}")' 'pass  # Do not journal conversation prompts.'
-      ${python.interpreter} ${../config/voice/personaplex_patch.py} moshi/server.py ${../config/voice/personaplex-browser-guard.js}
+      ${tools}/bin/personaplex-patch moshi/server.py ${../config/voice/personaplex-browser-guard.js}
     '';
     pythonImportsCheck = [
       "moshi.models.loaders"

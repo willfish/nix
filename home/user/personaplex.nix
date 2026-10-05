@@ -10,12 +10,12 @@ let
   runtime = import ./personaplex-package.nix { inherit pkgs; };
   nativeVoice = import ./voice-c-package.nix { inherit pkgs; };
   dataDir = "${config.home.homeDirectory}/.local/share/pi-voice/personaplex";
+  tools = import ./personaplex-tools-package.nix { inherit pkgs; };
   models = pkgs.writeShellApplication {
     name = "personaplex-models";
-    runtimeInputs = [ pkgs.python3 ];
     text = ''
       umask 077
-      exec python3 ${../config/voice/personaplex_models.py} --data-dir ${lib.escapeShellArg dataDir} "$@"
+      exec ${tools}/bin/personaplex-models --data-dir ${lib.escapeShellArg dataDir} "$@"
     '';
   };
   memoryCheck = pkgs.writeShellApplication {
