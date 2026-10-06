@@ -202,8 +202,7 @@ in
       voiceOsd
       voiceMenu
     ]
-    ++ lib.optionals localEngines [ modelSetup ]
-    ++ lib.optionals voiceTts [ (makeVoice "qwen-pi") ];
+    ++ lib.optionals localEngines [ modelSetup ];
     xdg.configFile."pi-voice/config.json".text = builtins.toJSON {
       backends =
         lib.optionals voiceLocalStt [

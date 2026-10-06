@@ -106,7 +106,6 @@ in
 
   # Keep credentials and user settings writable. Fill missing declared defaults
   # only; /settings remains the owner of keys that already exist.
-  # qwen-pi has a separate local profile and does not use these models.
   # Built-in catalogs stay intact; these keys only make the models available.
   # OpenCode Zen is omitted on purpose: its Astra entry looks like ChatGPT
   # subscription Astra and 401s with this account.
@@ -134,8 +133,7 @@ in
   home.file.".pi/agent/extensions/usage.ts".source = ../config/pi/extensions/usage.ts;
   home.file.".pi/agent/extensions/skill-catalog".source = ../config/pi/extensions/skill-catalog;
   # Observational memory with Jev. Package and home default off; /om on
-  # enables a session. Omitted from qwen-pi's
-  # explicit extension list. Not a chat model: System One is called directly.
+  # enables a session. Not a chat model: System One is called directly.
   home.file.".pi/agent/extensions/pi-observational-memory-jev".source =
     ../config/pi/extensions/pi-observational-memory-jev;
   home.file.".pi/agent/extensions/reading-policy.ts".source =
@@ -150,14 +148,12 @@ in
   # Use the example shipped with the pinned Pi runtime and its host API.
   home.file.".pi/agent/extensions/todo.ts".source =
     "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
-  # Subagent delegation for the standard profile. Auto-discovered by pi; the
-  # qwen-pi launcher passes --no-extensions plus an explicit list that omits
-  # it, so the memory-constrained local Qwen profile never spawns subagent
-  # processes. Agent frontmatter pins model and thinking for each role.
+  # Subagent delegation auto-discovered by Pi. Agent frontmatter pins model
+  # and thinking for each role.
   # Adapted pinned upstream example: interactive herdr teams and persona skills.
   home.file.".pi/agent/extensions/subagent".source = "${piExtensions}/subagent";
   # Pinned upstream fuzzy history overlay. Enter restores without submitting.
-  # Both launchers share code, but history/index/settings follow getAgentDir().
+  # History/index/settings follow getAgentDir().
   home.file.".pi/agent/extensions/prompt-history".source = promptHistory;
   home.file.".pi/agent/agents/scout.md".source = ../config/pi/agents/scout.md;
   home.file.".pi/agent/agents/planner.md".source = ../config/pi/agents/planner.md;
@@ -185,8 +181,7 @@ in
   home.file.".pi/agent/prompts/review.md".source = ../config/pi/prompts/review.md;
   home.file.".pi/agent/prompts/design.md".source = ../config/pi/prompts/design.md;
 
-  # The adapter reads this shared path even with PI_CODING_AGENT_DIR set by
-  # qwen-pi. Credentials remain in the shared runtime MCP wrappers.
+  # Credentials remain in the shared runtime MCP wrappers.
   home.file.".config/mcp/mcp.json".text = builtins.toJSON {
     mcpServers = llmMcps.piServers;
     settings = {

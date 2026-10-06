@@ -3,11 +3,9 @@
   lib,
   pkgs,
   hostName,
-  piThemeArgs,
   ...
 }:
 let
-  voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   isAutomationDarwin = pkgs.stdenv.isDarwin && config.dotfiles.role == "automation";
   isAndromeda = pkgs.stdenv.isLinux && hostName == "andromeda";
   isRelay = isAutomationDarwin && hostName == "relay";
@@ -40,8 +38,6 @@ let
       "Huihui-Qwen3.6-35B-A3B-abliterated.${modelQuant}.gguf"
     else
       "Huihui-Qwen3.8-27B-abliterated-${modelQuant}.gguf";
-  modelLabel =
-    if isRelay then "Huihui Qwen 3.6 35B-A3B abliterated" else "Huihui Qwen 3.8 27B abliterated";
   modelPath = "${modelDir}/${modelName}";
   modelHash =
     if isRelay then
@@ -73,7 +69,6 @@ let
       apiKeyPath
       ;
   };
-  activeModelAlias = if isAndromeda then strata.alias else modelAlias;
   workspace = "${config.home.homeDirectory}/LocalAssistant";
   chatUi = import ./local-llm-ui.nix { inherit pkgs; };
   profilePython = pkgs.python3.withPackages (ps: [ ps.pyyaml ]);
@@ -179,67 +174,6 @@ let
         else
           "${config.home.homeDirectory}/.local/bin/hermes"
       } -p qwen --yolo --in "$PWD" "$@"
-    '';
-  };
-  piAgentDir = "${config.xdg.configHome}/local-llm/pi";
-  piSettings = pkgs.writeText "local-qwen-pi-settings.json" (
-    builtins.toJSON {
-      defaultProvider = hostName;
-      defaultModel = activeModelAlias;
-      # pi-qwen.ts sends this level as Qwen's chat-template reasoning effort.
-      defaultThinkingLevel = if isAndromeda then "high" else "medium";
-      enableInstallTelemetry = false;
-      compaction = {
-        enabled = true;
-        reserveTokens = 16384;
-        keepRecentTokens = 8192;
-      };
-      retry.provider = {
-        timeoutMs = 1800000;
-        maxRetries = 0;
-      };
-    }
-  );
-  piSystemPrompt = pkgs.writeText "local-qwen-pi-system.md" ''
-    You are a local system administration and coding assistant running on William's ${hostName} computer.
-    Use the available tools to inspect the actual machine, run commands and edit files.
-    Work in the current directory. Diagnose before changing things, preserve unrelated work,
-    and verify your changes. Never claim to have run a tool unless you did.
-    Keep replies concise. Never print secrets. Ask before destructive or out-of-scope actions.
-    Use existing tools or ephemeral Nix tooling; do not install global dependencies unasked.
-    Use the mcp tool for configured external services. Connect to a server before searching
-    its tools if the metadata cache is empty. Never send messages or publish changes unasked.
-    Do not use em dashes. Internet access may be unavailable; use local evidence when offline.
-    Keep the full readable answer, then end each final response with a ## Summary section.
-    Only that section is read aloud. Use short conversational prose: outcome, important caveat,
-    then next action if needed. Aim for 30 to 80 words, at most 120 words and 1500 characters.
-    No lists, code, URLs, long paths or Markdown emphasis in the summary. Add no new claims.
-    Put nothing after it. Omit it for exact-output constraints such as JSON-only requests.
-  '';
-  qwenPi = pkgs.writeShellApplication {
-    name = "qwen-pi";
-    text = ''
-      umask 077
-      export PI_CODING_AGENT_DIR=${lib.escapeShellArg piAgentDir}
-      export PI_TELEMETRY=0
-      ${lib.optionalString voiceFeatures.stt "export PI_VOICE_HARNESS=qwen-pi"}
-      exec ${pkgs.pi-coding-agent}/bin/pi \
-        --offline --provider ${hostName} --model ${activeModelAlias} \
-        --no-context-files --no-skills --no-extensions --no-prompt-templates --no-themes \
-        ${piThemeArgs} \
-        --extension ${../config/local-llm/pi-qwen.ts} \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/mcp/index.ts \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/todo.ts \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/question.ts \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-agent-state.ts \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-ui.ts \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/herdr-model.ts \
-        --extension ${config.home.homeDirectory}/.pi/agent/extensions/prompt-history/index.ts \
-        ${lib.optionalString voiceFeatures.stt "--extension ${config.home.homeDirectory}/.pi/agent/extensions/pi-voice.ts"} \
-        --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/plan-work.md \
-        --prompt-template ${config.home.homeDirectory}/.pi/agent/prompts/review.md \
-        --system-prompt "$(< ${piSystemPrompt})" \
-        --tools read,bash,edit,write,mcp,todo,question "$@"
     '';
   };
   # DDGS remains the third-party search provider, invoked on demand.
@@ -426,7 +360,6 @@ in
 lib.mkIf (isAutomationDarwin || isAndromeda) {
   dotfiles.hermes.qwenOverlay = lib.mkIf isRelay "${hermesOverlay}";
   home.packages = [
-    qwenPi
     fetchModel
     server
   ]
@@ -440,60 +373,6 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     chatKey
     assistantTools
   ];
-
-  xdg.configFile."local-llm/pi/models.json".text = builtins.toJSON {
-    providers.${hostName} = {
-      baseUrl = "http://127.0.0.1:8081/v1";
-      api = "openai-completions";
-      # Resolve at request time, never embed the secret in the Nix store.
-      apiKey = "!${pkgs.coreutils}/bin/cat ${lib.escapeShellArg apiKeyPath}";
-      models =
-        lib.optionals isAndromeda [
-          {
-            id = strata.alias;
-            name = "Local Qwen3.8 Flash-Next ${strata.quant} (Strata)";
-            reasoning = true;
-            input = [ "text" ];
-            contextWindow = contextSize;
-            maxTokens = 16384;
-            compat = {
-              supportsStore = false;
-              supportsDeveloperRole = false;
-              supportsReasoningEffort = false;
-              maxTokensField = "max_tokens";
-              thinkingFormat = "qwen-chat-template";
-            };
-          }
-        ]
-        ++ lib.optionals (!isAndromeda) [
-          {
-            id = modelAlias;
-            name = "Local ${modelLabel} ${modelQuant}";
-            reasoning = true;
-            input = [ "text" ];
-            contextWindow = contextSize;
-            maxTokens = 16384;
-            compat = {
-              supportsStore = false;
-              supportsDeveloperRole = false;
-              supportsReasoningEffort = false;
-              maxTokensField = "max_tokens";
-              thinkingFormat = "qwen-chat-template";
-            };
-          }
-        ];
-    };
-  };
-
-  # Pi writes settings from its UI, so install a writable copy, keeping a backup on changes.
-  home.activation.configureLocalPi = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    piSettingsPath=${lib.escapeShellArg "${piAgentDir}/settings.json"}
-    ${pkgs.coreutils}/bin/mkdir -p ${lib.escapeShellArg piAgentDir}
-    if [ -e "$piSettingsPath" ] && ! ${pkgs.diffutils}/bin/cmp -s ${piSettings} "$piSettingsPath"; then
-      ${pkgs.coreutils}/bin/cp -p "$piSettingsPath" "$piSettingsPath.before-home-manager-$(${pkgs.coreutils}/bin/date +%Y%m%d%H%M%S)"
-    fi
-    ${pkgs.coreutils}/bin/install -m 0600 ${piSettings} "$piSettingsPath"
-  '';
 
   home.activation.configureLocalHermes = lib.mkIf isAutomationDarwin (
     lib.hm.dag.entryAfter [ "writeBoundary" "configureHermesDeclaration" ] ''

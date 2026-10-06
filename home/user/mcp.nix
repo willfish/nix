@@ -229,7 +229,7 @@ in
     '';
   };
 
-  # Read-write roots for every Pi profile, including qwen-pi.
+  # Read-write roots for Pi.
   home.file.".local/bin/mcp-filesystem" = lib.mkIf (enabled "filesystem") {
     executable = true;
     text = ''
