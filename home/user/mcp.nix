@@ -62,30 +62,10 @@ let
   braveSearchMcpServer = pkgs.callPackage ./mcp-packages/brave-search-mcp-server.nix { };
   telegramMcpServer = pkgs.callPackage ./mcp-packages/telegram-mcp.nix { };
   mcpDapServer = pkgs.callPackage ./mcp-packages/mcp-dap-server.nix { };
-  # One-time Telethon login for the file-based session used by mcp-telegram.
-  telegramLoginScript = pkgs.writeTextFile {
-    name = "telegram-mcp-login.py";
-    destination = "/telegram-mcp-login.py";
-    executable = true;
-    text = ''
-      #!${telegramMcpServer.passthru.interpreter}/bin/python3
-      import os
-
-      from telethon.sync import TelegramClient
-
-      client = TelegramClient(
-          os.environ["TELEGRAM_SESSION_NAME"],
-          int(os.environ["TELEGRAM_API_ID"]),
-          os.environ["TELEGRAM_API_HASH"],
-      )
-      # start() connects and checks authorization, prompting only if needed.
-      try:
-          client.start()
-          me = client.get_me()
-          print(f"Logged in as {me.first_name} (@{me.username})")
-      finally:
-          client.disconnect()
-    '';
+  # Native login glue; Telethon remains the unchanged upstream runtime.
+  telegramLogin = import ./mcp-packages/telegram-login.nix {
+    inherit pkgs;
+    interpreter = telegramMcpServer.passthru.interpreter;
   };
 
 in
@@ -370,7 +350,7 @@ in
       export XDG_STATE_HOME="$state_root"
       export TELEGRAM_SESSION_NAME="$state_dir/session"
 
-      exec "${telegramLoginScript}/telegram-mcp-login.py"
+      exec ${telegramLogin}/bin/telegram-mcp-login
     '';
   };
 

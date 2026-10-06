@@ -650,6 +650,10 @@
             darwin-tools = import ./system/darwin/tools-package.nix { inherit pkgs; };
             skill-tools = import ./home/user/skill-tools-package.nix { inherit pkgs; };
             aws-access-portal = import ./home/user/aws-access-portal-package.nix { inherit pkgs; };
+            telegram-login = import ./home/user/mcp-packages/telegram-login.nix {
+              inherit pkgs;
+              interpreter = (pkgs.callPackage ./home/user/mcp-packages/telegram-mcp.nix { }).passthru.interpreter;
+            };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)

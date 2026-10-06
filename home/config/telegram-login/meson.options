@@ -1,0 +1,2 @@
+option('python_executable', type: 'string', description: 'Pinned base CPython executable')
+option('site_packages', type: 'string', description: 'Pinned Telethon interpreter site-packages directory')

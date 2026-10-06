@@ -1,0 +1,6 @@
+project('telegram-login', 'c', version: '0.1.0', default_options: ['c_std=c17', 'warning_level=3', 'werror=true'])
+config = configuration_data()
+config.set_quoted('TELEGRAM_PYTHON', get_option('python_executable'))
+config.set_quoted('TELEGRAM_SITE', get_option('site_packages'))
+configure_file(output: 'config.h', configuration: config)
+executable('telegram-mcp-login', 'main.c', dependencies: dependency('python3-embed'), install: true)
