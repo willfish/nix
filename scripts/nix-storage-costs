@@ -388,7 +388,7 @@ def chunks(values, size):
 
 sizes = {}
 for chunk in chunks(sorted(all_paths | {path for path in (system_path, home_path) if path}), 400):
-    info = json.loads(subprocess.check_output(["nix", "path-info", "--json", *chunk], text=True))
+    info = json.loads(subprocess.check_output(["nix", "path-info", "--json", "--json-format", "1", *chunk], text=True))
     for path, metadata in info.items():
         if not metadata:
             # Unrealized or unknown to the daemon; treat as zero rather than crash.
@@ -397,7 +397,7 @@ for chunk in chunks(sorted(all_paths | {path for path in (system_path, home_path
         sizes[path] = int(metadata.get("narSize") or 0)
 
 def closure_size(path):
-    info = json.loads(subprocess.check_output(["nix", "path-info", "--json", "-S", path], text=True))
+    info = json.loads(subprocess.check_output(["nix", "path-info", "--json", "--json-format", "1", "-S", path], text=True))
     return int(info[path]["closureSize"])
 
 ref_counts = Counter()
