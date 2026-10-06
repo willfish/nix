@@ -7,6 +7,7 @@
 }:
 let
   inherit (homeConfiguration) home;
+  tools = import ./tools-package.nix { inherit pkgs; };
   specs = builtins.attrValues homeConfiguration.dotfiles.darwinDaemons;
   runtimeFiles = lib.concatMap (
     s:
@@ -54,7 +55,7 @@ let
             );
           });
       operatorTools = lib.genAttrs [ "deploy" "preflight" "health" ] (
-        name: builtins.hashFile "sha256" (./scripts + "/${name}.py")
+        _: builtins.hashString "sha256" "${tools}"
       );
       legacyUserJobs = [
         "ai.hermes.gateway"
@@ -78,10 +79,10 @@ let
     }
   );
   preflight = pkgs.writeShellScriptBin "darwin-preflight" ''
-    exec ${pkgs.python3}/bin/python3 ${./scripts/preflight.py} --config ${contract} "$@"
+    exec ${tools}/bin/darwin-preflight --config ${contract} "$@"
   '';
   deploy = pkgs.writeShellScriptBin "darwin-deploy" ''
-    exec ${pkgs.python3}/bin/python3 ${./scripts/deploy.py} "$@"
+    exec ${tools}/bin/darwin-deploy "$@"
   '';
 in
 {

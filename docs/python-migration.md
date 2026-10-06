@@ -72,7 +72,8 @@ Rust dependencies and existing C libraries where practical.
   C `home/config/hermes-tools`.
 - [x] Repository lock-policy and community importer: C `home/config/repo-tools`.
   The test-only behavior gate remains removed.
-- [ ] Darwin deployment, preflight and health tools.
+- [x] Darwin deployment, preflight and health tools: C `home/config/darwin-tools`.
+  Native macOS deployment and recovery remain separately authorized operations.
 - [ ] AWS access-portal service and helpers. Preserve existing authorization gates.
 - [ ] Skill audit, audiobook inventory/duplicate checks, contrast, token-report and
   YouTube extraction utilities.

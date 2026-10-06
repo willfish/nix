@@ -6,6 +6,7 @@
   ...
 }:
 let
+  tools = import ./tools-package.nix { inherit pkgs; };
   appNames = builtins.attrNames homeConfiguration.dotfiles.darwinDaemons;
   logs = map (name: "/var/log/dotfiles/${name}.log") (
     appNames
@@ -46,7 +47,7 @@ let
     }
   );
   health = pkgs.writeShellScriptBin "darwin-health" ''
-    exec ${pkgs.python3}/bin/python3 ${./scripts/health.py} --config ${healthConfig} "$@"
+    exec ${tools}/bin/darwin-health --config ${healthConfig} "$@"
   '';
 in
 {
