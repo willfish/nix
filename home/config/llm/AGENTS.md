@@ -22,6 +22,16 @@ Track multi-step work with a checklist; plan/todo tools are optional. Subagents 
 
 Session titles are generated silently. Do not spend a separate tool call labelling routine work; use `set_agent_label` for deliberate overrides.
 
+### Proportionate delivery
+
+For small utilities and straightforward ports, default to a direct implementation and a short checklist. Preserve the required behaviour; do not build a framework, new abstraction layer or general compatibility engine around it. Reuse existing code where useful.
+
+Implement the bounded batch, then do one representative end-to-end manual check (offline when live execution is unsafe), plus existing required checks. Do not automatically create a new test suite, parity harness, failure-injection rig or sanitizer matrix. Add targeted regression tests for observed defects, explicit requirements or material safety risks, not hypothetical corner cases.
+
+Do not expand a port into an audit of every malformed input, Unicode case or runtime quirk. Investigate only when evidence makes it relevant to the required behaviour or safety boundary. Record unrelated discoveries for later rather than blocking delivery on them.
+
+Run final verification once the implementation is stable. Repeat only affected checks after a relevant code, environment or extraction change; a status update or commit alone does not invalidate evidence. Once the bounded contract passes, commit, activate and push as required, then move on. Do not reopen completed work without a concrete defect or unmet requirement.
+
 ## Verification
 
 Do not use TDD. Implement first, then verify with tests; regression tests while debugging are fine.

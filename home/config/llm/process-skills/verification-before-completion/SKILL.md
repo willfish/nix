@@ -13,9 +13,24 @@ Before drafting or updating prose, read `~/.agents/guides/documentation-relevanc
 
 **Iron Law:** NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE.
 
-Claiming something is done without actually verifying it in this turn is not efficiency — it is lying to the user and to yourself.
+Verify the current artifact in its actual environment before claiming completion.
+Fresh evidence is tied to that artifact, not to how many status messages or tool
+calls have occurred.
 
-## The Gate (Run This Every Time)
+## Choose proportionate verification
+
+For small utilities and direct ports, default to one representative end-to-end
+manual check after implementation, plus existing required checks. Use safe offline
+fixtures where live execution needs separate authorization. Do not manufacture a
+new test suite, parity harness, failure-injection rig or sanitizer matrix merely
+to satisfy this skill. Add targeted tests for observed defects, explicit
+requirements or material safety risks.
+
+Reuse evidence within an unchanged batch. Repeat affected checks after relevant
+code, configuration, environment or extraction changes, not merely after a commit
+or progress message. Preserve authorization gates and report coverage honestly.
+
+## The Gate
 
 Before you say anything like:
 - "It's fixed"
@@ -25,10 +40,10 @@ Before you say anything like:
 - "Requirements are met"
 - "This is ready for review"
 
-You **must** do all of the following in the current response:
+The evidence for the current artifact must establish all of the following:
 
 1. **Identify** the exact command(s) that would prove the claim.
-2. **Run** the full, fresh command(s) using the `run_command` tool (or `todo_write` + commands if multi-step).
+2. **Run** the required checks in the actual worktree/environment, once the implementation is stable.
 3. **Read** the complete output, including exit codes and any failure counts.
 4. **Confirm** that the output actually supports the claim you want to make.
 5. Only *then* make the claim and include key evidence in your response to the requester.
@@ -72,8 +87,8 @@ Recommended pairing:
 
 If you feel the urge to:
 - Say "it should be good now"
-- Reference a previous run of the command
-- Run a subset of the verification ("just the important tests")
+- Rely on checks for an older artifact or a different environment
+- Skip required checks or claim more coverage than the checks establish
 - Trust that your change "obviously" fixed it
 - Skip verification because "the user is waiting"
 

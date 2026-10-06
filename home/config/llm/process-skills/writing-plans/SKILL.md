@@ -12,17 +12,21 @@ metadata:
 
 Before drafting or updating prose, read `~/.agents/guides/documentation-relevance.md`; retain detail only when it serves this artifact's reader and purpose.
 
-**Goal:** Produce a plan so clear and detailed that a skilled developer (or subagent) who has never seen the codebase can implement it correctly with minimal additional context.
+**Goal:** Make the scope, approach and finish line clear without planning the implementation twice.
 
-**When to use:** Any non-trivial feature, refactor, or bug fix that will take more than a few focused steps. Especially valuable before entering heavy implementation.
+For small utilities and straightforward ports, use a short checklist and implement
+directly. Do not write a formal plan, prewrite the code, or invent a test matrix.
+Plan one representative end-to-end manual check plus existing required checks.
+Expand the plan only for genuine architectural uncertainty, dependencies or
+material risk. The detailed format below is for that larger work.
 
 ## Core Principles
 
 - Assume the implementer is competent but has **zero** context on this specific problem or codebase.
-- Every task must be small enough to complete in 2–15 minutes.
-- Every code-changing step must include the actual code (no "implement X" placeholders).
-- Do not use TDD. Implement first, then add tests and verify.
-- Frequent small commits are better than large ones.
+- Group related changes into coherent, bounded deliveries.
+- Specify important interfaces, constraints and check commands; do not duplicate the implementation in prose.
+- Do not use TDD. Implement first, then verify; add tests where the task or evidence calls for them.
+- Use one final verification and release cycle per bounded batch where practical.
 - The plan itself should be reviewable and executable.
 
 ## Recommended Workflow
@@ -37,7 +41,7 @@ Before drafting or updating prose, read `~/.agents/guides/documentation-relevanc
    options such as Subagent-driven, Inline, and Do not implement. Do not ask
    that choice in the chat editor.
 
-## Plan Structure (Required)
+## Detailed plan structure
 
 Every plan should start with this header:
 
@@ -98,9 +102,9 @@ Then break the work into tasks using this format:
 ## Rules for High-Quality Plans
 
 - **No placeholders.** Never write "TBD", "implement proper error handling", "add tests later", or "similar to Task 5".
-- Every code step must contain real, copy-pasteable code or commands.
-- Each task should leave the codebase in a working, testable state.
-- Prefer many small tasks over fewer large ones.
+- Include concrete commands and decisive interface details, not a second copy of the implementation.
+- Each delivery should leave the codebase in a working, testable state.
+- Prefer a few coherent tasks over unnecessary fragmentation.
 - Include verification commands with expected output where possible.
 - When modifying existing code, show the relevant before/after context or exact edit location.
 
@@ -110,8 +114,8 @@ After writing the full plan, run this checklist:
 
 1. Does every requirement from the original spec have at least one task that clearly implements it?
 2. Are there any "magic" steps that assume the implementer already knows something important?
-3. Did I include actual code/commands instead of descriptions?
-4. Are the tasks small enough that a subagent could do one per invocation?
+3. Is the plan specific enough to act on without prewriting the implementation?
+4. Have I added complexity, edge cases or checkpoints unsupported by the task?
 
 Fix anything you find.
 
