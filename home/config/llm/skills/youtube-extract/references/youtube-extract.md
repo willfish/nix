@@ -5,16 +5,19 @@ Before drafting or updating prose, read
 
 ## Command
 
-From any checkout of this skill:
+From the deployed skill directory:
 
 ```bash
-python3 scripts/youtube_extract.py \
+scripts/youtube-extract \
   'https://www.youtube.com/watch?v=VIDEO_ID&t=1051s'
-python3 scripts/youtube_extract.py \
+scripts/youtube-extract \
   --url URL --around 17m31s --window 90 --query qwen
 ```
 
-The script calls `yt-dlp --skip-download --no-playlist`, writes info JSON and
+Home Manager supplies the compiled helper. From the dotfiles checkout, use
+`direnv exec . nix shell .#skill-tools -c youtube-extract` with the same arguments.
+
+The helper calls `yt-dlp --skip-download --no-playlist`, writes info JSON and
 English VTT into a temp dir, then prints metadata plus a caption slice. It never
 passes `-f`, `-x`, or an audio/video output.
 
@@ -30,7 +33,7 @@ instead of a live fetch for a real URL.
 | Quote or paraphrase | `--query` with distinctive words |
 | Whole video summary | Description and chapters; sample captions if needed |
 
-Auto-captions overlap. The script drops rolling duplicates. Proper nouns in
+Auto-captions overlap. The helper drops rolling duplicates. Proper nouns in
 auto-captions are unreliable; prefer the description when they disagree.
 
 ## Failures

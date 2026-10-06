@@ -75,8 +75,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Darwin deployment, preflight and health tools: C `home/config/darwin-tools`.
   Native macOS deployment and recovery remain separately authorized operations.
 - [ ] AWS access-portal service and helpers. Preserve existing authorization gates.
-- [ ] Skill audit, audiobook inventory/duplicate checks, contrast, token-report and
-  YouTube extraction utilities.
+- [x] Contrast and YouTube extraction helpers: C `home/config/skill-tools`.
+- [ ] Skill audit, audiobook inventory/duplicate checks and token-report utilities.
 
 ### Final audit
 

@@ -81,7 +81,7 @@ re-export; inspect native shapes and data as well as every rendered page.
 For an opaque sRGB colour pair, the bundled helper is a narrow numerical check:
 
 ```sh
-python3 /absolute/path/to/design-workflow/scripts/contrast.py '#18212b' '#ffffff'
+~/.agents/skills/design-workflow/scripts/contrast '#18212b' '#ffffff'
 ```
 
 It fails below 4.5 by default; use `--minimum 3` only for an applicable large-text

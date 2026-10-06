@@ -18,7 +18,7 @@ Do not scrape `youtube.com` in the browser unless `yt-dlp` fails.
 ## Workflow
 
 1. Parse the URL. Honour `t=` / `&t=` as the centre timestamp.
-2. Run `scripts/youtube_extract.py` with the URL. Use `--around` when the user
+2. Run the deployed `scripts/youtube-extract` helper with the URL. Use `--around` when the user
    names a time that is not in the URL. Use `--query` for names, quotes, or
    products. Prefer a host `yt-dlp`; otherwise
    `nix shell nixpkgs#yt-dlp -c yt-dlp`.

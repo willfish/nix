@@ -29,6 +29,11 @@ let
   hermesSkillRoot = ".hermes/skills/personal";
 
   publicLlmRoot = "${configDir}/llm";
+  skillTools = import ./skill-tools-package.nix { inherit pkgs; };
+  nativeSkillScripts = {
+    design-workflow = [ "contrast" ];
+    youtube-extract = [ "youtube-extract" ];
+  };
   privateLlm =
     if config.dotfiles.privateEnabled then
       config.privateConfig.llm
@@ -194,6 +199,8 @@ let
     skill:
     let
       skillDir = resolveSkillDir skill;
+      nativeScripts =
+        if skillDir == "${publicLlmRoot}/skills/${skill}" then nativeSkillScripts.${skill} or [ ] else [ ];
     in
     [
       {
@@ -213,6 +220,10 @@ let
       name = "scripts/${scriptName}";
       source = "${skillDir}/scripts/${scriptName}";
     }) (localSkillScripts skillDir)
+    ++ map (scriptName: {
+      name = "scripts/${scriptName}";
+      source = "${skillTools}/bin/${scriptName}";
+    }) nativeScripts
     ++ lib.mapAttrsToList (referenceName: referenceSource: {
       name = "references/${referenceName}";
       source = referenceSource;
