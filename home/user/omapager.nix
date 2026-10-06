@@ -56,11 +56,17 @@ let
       fi
     '';
   };
-  prepare = ../config/hyprland/omapager/prepare-shell.py;
+  omapagerTools = import ./omapager-tools-package.nix { inherit pkgs; };
+  patchTools = import ./omapager-tools-package.nix {
+    pkgs = pkgs.buildPackages;
+    withIcons = false;
+  };
   bundle =
     pkgs.runCommand "omapager-shell"
       {
         nativeBuildInputs = [
+          patchTools
+          # Upstream helper shebangs still need their Python interpreter.
           pkgs.python3
           pkgs.bash
         ];
@@ -70,7 +76,7 @@ let
                 cp -r ${omarchySource}/shell/Commons/. "$out/shell/Commons/"
                 cp -r ${omarchySource}/shell/Ui/. "$out/shell/Ui/"
                 chmod -R u+w "$out"
-                python3 ${prepare} "$out"
+                omapager-prepare-shell "$out"
                 cp ${../config/hyprland/omapager/shell.qml} "$out/shell/shell.qml"
                 cp -a ${pluginSrc}/. "$out/shell/omapager/"
                 chmod -R u+w "$out/shell/omapager"
@@ -85,8 +91,8 @@ let
                 substituteInPlace "$out/shell/omapager/bin/omapager-run-helper" \
                   --replace-fail 'PYTHON = Path("/usr/bin/python3")' \
                   'PYTHON = Path("${python}/bin/python3")'
-                cp ${../config/hyprland/omapager/icon_paths.py} \
-                  "$out/shell/omapager/bin/icon_paths.py"
+                cp ${omapagerTools}/lib/omapager/icon_paths.so \
+                  "$out/shell/omapager/bin/icon_paths.so"
                 substituteInPlace "$out/shell/omapager/bin/omapager-icon" \
                   --replace-fail 'from omapager_files import private_dir, write_bytes, write_json, read_json' \
                   'from omapager_files import private_dir, write_bytes, write_json, read_json
@@ -103,10 +109,8 @@ let
                   'icon_paths.allowed_icon(hit, [base])' \
                   --replace-fail 'os.path.realpath(fields["Icon"]).startswith(os.path.realpath(d) + os.sep)' \
                   'icon_paths.allowed_icon(fields["Icon"], [d])'
-                python3 ${../config/hyprland/omapager/patch-icon.py} \
-                  "$out/shell/omapager/bin/omapager-icon"
-                python3 ${../config/hyprland/omapager/patch-herdr-focus.py} \
-                  "$out/shell/omapager/Service.qml" \
+                omapager-patch-icon "$out/shell/omapager/bin/omapager-icon"
+                omapager-patch-herdr-focus "$out/shell/omapager/Service.qml" \
                   ${herdrFocus}/bin/herdr-notification-focus
                 {
                   echo 'module Omapager'

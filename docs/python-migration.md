@@ -55,7 +55,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Launcher agenda: C `home/config/daily-agenda`, including private feed
   fetching, sandboxed recurrence expansion, reminders and both calendar caches.
 - [x] Herdr notification focus: C `home/config/herdr-notification-focus`.
-- [ ] Omapager preparation/icon/patch helpers.
+- [x] Omapager preparation/icon/patch helpers: C `home/config/omapager-tools`,
+  including the compiled icon module for the unchanged upstream Python runtime.
 - [ ] Greeter selection and embedded NetworkManager/panel Python helpers.
 
 ### Configuration, build and skill utilities

@@ -1,0 +1,2 @@
+option('icons', type: 'boolean', value: true, description: 'Build the upstream Python icon module')
+option('fixtures', type: 'boolean', value: false, description: 'Build optional manual fixtures, never installed')

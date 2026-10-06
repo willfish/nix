@@ -639,6 +639,7 @@
             herdr-notification-focus = import ./home/user/herdr-notification-focus-package.nix {
               inherit pkgs;
             };
+            omapager-tools = import ./home/user/omapager-tools-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)
