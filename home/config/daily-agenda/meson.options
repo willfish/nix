@@ -1,0 +1,2 @@
+option('zoneinfo', type: 'string', value: '/etc/zoneinfo', description: 'IANA TZif directory')
+option('fixtures', type: 'boolean', value: false, description: 'Build optional manual fixtures, without registering or installing tests')

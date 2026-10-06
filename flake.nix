@@ -635,6 +635,7 @@
             theme-menu = import ./home/user/theme-menu-package.nix { inherit pkgs; };
             launcher-projects = import ./home/user/launcher-projects-package.nix { inherit pkgs; };
             daily-workflow = import ./home/user/daily-workflow-package.nix { inherit pkgs; };
+            daily-agenda = import ./home/user/daily-agenda-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)
@@ -697,8 +698,6 @@
                     ps.beautifulsoup4
                     ps.jinja2
                     ps.dbus-next
-                    ps.icalendar
-                    ps.recurring-ical-events
                   ]))
                 ]);
               shellHook =

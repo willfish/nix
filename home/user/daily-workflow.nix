@@ -9,16 +9,12 @@ let
   credentials =
     config.sops.secrets.GOOGLE_CALENDAR_ICAL.path
       or "${config.xdg.configHome}/sops-nix/secrets/GOOGLE_CALENDAR_ICAL";
-  agendaPython = pkgs.python3.withPackages (ps: [
-    ps.icalendar
-    ps.recurring-ical-events
-  ]);
+  agendaPackage = import ./daily-agenda-package.nix { inherit pkgs; };
   agenda = pkgs.writeShellApplication {
     name = "daily-agenda";
-    runtimeInputs = [ agendaPython ];
     text = ''
       export DAILY_CALENDAR_CREDENTIALS=''${DAILY_CALENDAR_CREDENTIALS:-${lib.escapeShellArg credentials}}
-      exec python3 ${../config/launcher/agenda.py} "$@"
+      exec ${agendaPackage}/bin/daily-agenda "$@"
     '';
   };
   workflowPackage = import ./daily-workflow-package.nix { inherit pkgs; };
