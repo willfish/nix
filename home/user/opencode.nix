@@ -9,7 +9,7 @@
 let
   llmMcps = import ./llm-mcps.nix { inherit config; };
   piModels = builtins.fromJSON (builtins.readFile ../config/pi/models.json);
-  adapt = ../config/opencode/adapt-markdown.py;
+  adapt = lib.getExe (import ./opencode-adapt-package.nix { pkgs = pkgs.buildPackages; });
   qwenBaseUrl =
     host:
     if hostName == host then "http://127.0.0.1:8081/v1" else "http://${host}.taile09696.ts.net:8081/v1";
@@ -60,13 +60,13 @@ let
     kind: source:
     pkgs.runCommand "opencode-${kind}" { } ''
       mkdir -p "$out"
-      ${pkgs.python3}/bin/python3 ${adapt} --kind ${kind} ${source} "$out"
+      ${adapt} --kind ${kind} ${source} "$out"
     '';
   upstreamPrompts = "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts";
   commands = pkgs.runCommand "opencode-commands" { } ''
     mkdir -p "$out"
-    ${pkgs.python3}/bin/python3 ${adapt} --kind command ${../config/pi/prompts} "$out"
-    ${pkgs.python3}/bin/python3 ${adapt} --kind command ${upstreamPrompts} "$out"
+    ${adapt} --kind command ${../config/pi/prompts} "$out"
+    ${adapt} --kind command ${upstreamPrompts} "$out"
   '';
   busEnabled =
     config.dotfiles.privateEnabled && ((config.programs.pi-agent-bus or { }).enable or false);
