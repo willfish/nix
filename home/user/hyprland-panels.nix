@@ -18,39 +18,12 @@ let
     rev = "15509fca18f14b9e7da5d7bf85cdf3d9da665bae";
     hash = "sha256-XfCeAmSyWltREKuDn9/6OdwyvjdtlQWH+9QLRnEOmlY=";
   };
+  panelSettings = import ./panel-settings-package.nix { inherit pkgs; };
   calendarSettings = pkgs.writeShellApplication {
     name = "hypr-calendar-settings";
-    runtimeInputs = [
-      pkgs.python3
-      pkgs.coreutils
-    ];
     text = ''
-      dest=${lib.escapeShellArg "${config.xdg.configHome}/hyprland/calendar-settings.json"}
-      python3 - "$dest" "$@" <<'PY'
-      import json, os, sys, tempfile
-      dest = sys.argv[1]
-      if len(sys.argv) != 3 or len(sys.argv[2]) > 8000:
-          raise SystemExit(2)
-      value = json.loads(sys.argv[2])
-      if not isinstance(value, dict):
-          raise SystemExit(2)
-      parent = os.path.dirname(dest)
-      os.makedirs(parent, mode=0o700, exist_ok=True)
-      fd, temporary = tempfile.mkstemp(prefix=".calendar-settings-", dir=parent)
-      try:
-          with os.fdopen(fd, "w") as stream:
-              json.dump(value, stream)
-              stream.write("\n")
-              stream.flush()
-              os.fchmod(stream.fileno(), 0o600)
-          os.replace(temporary, dest)
-      except Exception:
-          try:
-              os.unlink(temporary)
-          except OSError:
-              pass
-          raise
-      PY
+      exec ${panelSettings}/bin/hypr-calendar-settings \
+        ${lib.escapeShellArg "${config.xdg.configHome}/hyprland/calendar-settings.json"} "$@"
     '';
   };
   # Waybar owns the bar, so the plugin's bar pill stays out. The panel and its
@@ -63,37 +36,9 @@ let
   };
   weatherSettings = pkgs.writeShellApplication {
     name = "hypr-weather-settings";
-    runtimeInputs = [
-      pkgs.python3
-      pkgs.coreutils
-    ];
     text = ''
-      dest=${lib.escapeShellArg "${config.xdg.configHome}/hyprland/weather-settings.json"}
-      python3 - "$dest" "$@" <<'PY'
-      import json, os, sys, tempfile
-      dest = sys.argv[1]
-      if len(sys.argv) != 3 or len(sys.argv[2]) > 8000:
-          raise SystemExit(2)
-      value = json.loads(sys.argv[2])
-      if not isinstance(value, dict):
-          raise SystemExit(2)
-      parent = os.path.dirname(dest)
-      os.makedirs(parent, mode=0o700, exist_ok=True)
-      fd, temporary = tempfile.mkstemp(prefix=".weather-settings-", dir=parent)
-      try:
-          with os.fdopen(fd, "w") as stream:
-              json.dump(value, stream)
-              stream.write("\n")
-              stream.flush()
-              os.fchmod(stream.fileno(), 0o600)
-          os.replace(temporary, dest)
-      except Exception:
-          try:
-              os.unlink(temporary)
-          except OSError:
-              pass
-          raise
-      PY
+      exec ${panelSettings}/bin/hypr-weather-settings \
+        ${lib.escapeShellArg "${config.xdg.configHome}/hyprland/weather-settings.json"} "$@"
     '';
   };
   # The panel's city picker. Same file the service already watches.

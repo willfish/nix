@@ -57,7 +57,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Herdr notification focus: C `home/config/herdr-notification-focus`.
 - [x] Omapager preparation/icon/patch helpers: C `home/config/omapager-tools`,
   including the compiled icon module for the unchanged upstream Python runtime.
-- [ ] Greeter selection and embedded NetworkManager/panel Python helpers.
+- [x] Calendar/weather panel settings writers: C `home/config/panel-settings`.
+- [ ] Greeter selection and embedded NetworkManager Python services.
 
 ### Configuration, build and skill utilities
 
