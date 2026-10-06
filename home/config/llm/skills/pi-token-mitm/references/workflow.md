@@ -17,15 +17,19 @@ Change it only when the user asks for a different workload.
 
 ## Commands
 
-From the skill directory after deploy, or from
-`home/config/llm/skills/pi-token-mitm` in the dotfiles checkout:
+From the skill directory after Home Manager activation:
 
 ```sh
-python3 scripts/report.py --capture
-python3 scripts/report.py --from-run RUN_ID
+scripts/pi-token-report --capture
+scripts/pi-token-report --from-run RUN_ID
 ```
 
-`report.py` finds the store Pi binary from `~/.local/bin/pi` so the inner
+From the dotfiles checkout, use
+`direnv exec . nix shell .#skill-tools -c pi-token-report` with the same arguments.
+The reporter is compiled C; the unchanged model-generated `add.py` benchmark
+still uses the packaged Python interpreter.
+
+`pi-token-report` finds the store Pi binary from `~/.local/bin/pi` so the inner
 process does not nest another prompt-capture. It writes:
 
 - `$XDG_STATE_HOME/prompt-capture/pi.jsonl` (full capture, private)
@@ -34,7 +38,10 @@ process does not nest another prompt-capture. It writes:
 - `$XDG_STATE_HOME/prompt-capture/reports/latest.html`
 
 The 2026-09-12 baseline metadata is `scripts/baseline-2026-09-12.json`.
-Copy any preserved HTML into `reports/` rather than into Git.
+Copy any preserved HTML into `reports/` rather than into Git. Reports omit
+arbitrary skill queries, MCP argument values and unexpected probe output; only
+the fixed benchmark query label is retained. URL credentials and query strings
+are removed from the JSON archive. The full trace and nested log remain private.
 
 ## Reading the numbers
 

@@ -6,6 +6,8 @@ if host_machine.system() == 'linux' and get_option('b_sanitize').contains('addre
   link = ['-no-pie']
 endif
 common = ['common.c', '../repo-tools/common.c']
+executable('pi-token-report', ['token-report.c', 'token-render.c', 'token-capture.c'] + common,
+  dependencies: deps, link_args: link, c_args: ['-DPROBE_PYTHON="' + get_option('probe_python') + '"'], install: true)
 foreach pair : [['contrast', 'contrast.c'], ['youtube-extract', 'youtube.c'], ['libation-inventory', 'libation.c']]
   executable(pair[0], [pair[1]] + common, dependencies: deps, link_args: link, install: true)
 endforeach

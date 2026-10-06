@@ -22,6 +22,8 @@ pkgs.stdenv.mkDerivation {
     glib
     yyjson
   ];
+  # The fixed capture workload still asks the nested model to write add.py.
+  mesonFlags = [ "-Dprobe_python=${pkgs.python3}/bin/python3" ];
   doCheck = false;
   meta.platforms = pkgs.lib.platforms.unix;
 }

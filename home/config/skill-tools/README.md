@@ -17,6 +17,13 @@ with no matches or staging eligibility. Directory symlinks are not traversed.
 `libation-inventory` prints existing indexed media paths, never account data.
 These helpers inventory only; they do not copy, delete or import media.
 
+`pi-token-report` rebuilds private HTML/JSON token reports or orchestrates the
+unchanged three-turn capture workload. Provider token totals and character-share
+cost estimates remain distinct. Reports omit arbitrary arguments, private query
+text, URL credentials and unexpected probe output. The third-party Python runtime
+is retained solely to run the workload's model-generated `add.py`, not reporter
+logic. Live capture still requires the skill's explicit user authorization.
+
 Home Manager copies the host-native executables into their public skill bundles.
 Private skill overrides, discovery metadata and authorization gates are unchanged.
 From this checkout, use `nix shell .#skill-tools -c contrast ...` or

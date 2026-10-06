@@ -78,7 +78,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Contrast, YouTube extraction, audiobook inventory/duplicate checks and
   Libation index helper: C `home/config/skill-tools`.
 - [x] Skill audit: C `home/config/repo-tools/audit.c`.
-- [ ] Token-report utility.
+- [x] Token-report utility: C `home/config/skill-tools`. Its fixed, model-generated
+  Python benchmark workload is retained for comparable captures.
 
 ### Final audit
 

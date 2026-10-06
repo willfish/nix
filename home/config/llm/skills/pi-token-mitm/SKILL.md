@@ -41,6 +41,8 @@ token cost from character counts alone.
 
 ## Verify
 
-Run `python3 tests/test_pi_token_mitm.py` from the dotfiles checkout. Confirm
-the HTML path, request count, and Brave title before claiming the report is
-ready.
+Use the manual fixtures in `home/config/skill-tools/tests/token.test.ts` from
+the dotfiles checkout, with `SKILL_TOOLS_BIN` set to the directory containing
+the native executables. They use synthetic traces and a stub capture process, not inference.
+For a real report, confirm the HTML path, request count and Brave title before
+claiming it is ready.

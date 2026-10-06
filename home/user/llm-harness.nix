@@ -38,6 +38,7 @@ let
     ];
     design-workflow = [ "contrast" ];
     youtube-extract = [ "youtube-extract" ];
+    pi-token-mitm = [ "pi-token-report" ];
   };
   privateLlm =
     if config.dotfiles.privateEnabled then
