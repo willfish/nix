@@ -8,6 +8,7 @@
   ...
 }:
 let
+  piConfig = import ./pi-config-package.nix { inherit pkgs; };
   voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   llmMcps = import ./llm-mcps.nix { inherit config; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
@@ -214,14 +215,14 @@ in
   };
 
   home.activation.piSettingsDefaults = lib.hm.dag.entryAfter [ "sops-nix" ] ''
-    ${pkgs.python3}/bin/python3 ${../config/pi/merge-settings.py} \
+    ${piConfig}/bin/pi-merge-settings \
       ${../config/pi/settings-defaults.json} \
       "$HOME/.pi/agent/settings.json"
-    ${pkgs.python3}/bin/python3 ${../config/pi/merge-settings.py} \
+    ${piConfig}/bin/pi-merge-settings \
       ${../config/pi/keybindings-defaults.json} \
       "$HOME/.pi/agent/keybindings.json"
     ${lib.optionalString config.dotfiles.privateEnabled ''
-      ${pkgs.python3}/bin/python3 ${../config/pi/merge-auth.py} \
+      ${piConfig}/bin/pi-merge-auth \
         "$HOME/.pi/agent/auth.json" \
         --drop openai \
         --drop opencode \
