@@ -187,7 +187,7 @@ let
       defaultProvider = hostName;
       defaultModel = activeModelAlias;
       # pi-qwen.ts sends this level as Qwen's chat-template reasoning effort.
-      defaultThinkingLevel = "medium";
+      defaultThinkingLevel = if isAndromeda then "high" else "medium";
       enableInstallTelemetry = false;
       compaction = {
         enabled = true;
