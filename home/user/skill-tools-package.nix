@@ -8,6 +8,8 @@ pkgs.stdenv.mkDerivation {
       ../config/skill-tools
       ../config/repo-tools/common.c
       ../config/repo-tools/common.h
+      ../config/pi-config/src/json.c
+      ../config/pi-config/include/json.h
     ];
   };
   sourceRoot = "source/skill-tools";

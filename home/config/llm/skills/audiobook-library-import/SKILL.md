@@ -26,8 +26,8 @@ import into Audiobookshelf libraries on Terminus, and metadata repair.
 |------|------|
 | Any inventory, copy, import, or metadata mutation | `references/audiobook-library-import.md` completely |
 | Watcher vs scan, library roots, API discipline, layout, safety | `references/audiobookshelf-best-practices.md` completely |
-| Deterministic qBittorrent inventory (NUL list / status report) | `scripts/qbittorrent_inventory.py` |
-| Source → target duplicate preflight (names/ASIN vs library roots) | `scripts/source_target_duplicate_check.py` |
+| Deterministic qBittorrent inventory (NUL list / status report) | Deployed `scripts/qbittorrent-inventory --help` |
+| Source → target duplicate preflight (names/ASIN vs library roots) | Deployed `scripts/source-target-duplicate-check --help` |
 
 Do not invent paths or skip safety rules when in a hurry.
 
@@ -60,7 +60,7 @@ Both sources land in staging, then share review → prepare → import → metad
 1. **qBittorrent (Andromeda)** — inventory from fast-resume (not a blind
    `~/Downloads` dump). Check torrent **status** (complete / incomplete /
    seeding / missing path) before rsync. Use
-   `scripts/qbittorrent_inventory.py` for status + NUL path lists.
+   the deployed `scripts/qbittorrent-inventory` for status + NUL path lists.
 2. **Libation (Andromeda)** — Audible liberations under
    `Music/Libation/Books` (one book folder, typically `.m4b` + sidecar).
    Inventory existing folders and/or `FileLocationsV2.json` paths that still
@@ -81,7 +81,7 @@ Both sources land in staging, then share review → prepare → import → metad
    - match on folder/name, ASIN/ISBN, size, then checksum for same-size hits;
    - mark exact/work-level hits as `duplicate` with evidence; do not stage or
      import them unless the user wants a second edition and it is labelled.
-   Use `scripts/source_target_duplicate_check.py` plus AC5 in the import guide.
+   Use the deployed `scripts/source-target-duplicate-check` plus AC5 in the import guide.
 4. Copy only non-duplicate selected payloads into a dated directory under
    `/srv/media/imports/`, never directly into an Audiobookshelf-watched root.
 5. Re-run the transfer incrementally, then require a full checksum dry-run

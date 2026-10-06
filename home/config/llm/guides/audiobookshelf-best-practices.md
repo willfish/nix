@@ -183,7 +183,7 @@ SQLite is **not** allowed for:
 Before copying from Andromeda (qBittorrent or Libation) and before moving from
 staging into a live root, compare **source payload names/ASINs** to **all**
 library targets (`/srv/media/audiobooks*`, phone library). Use the skill
-helper `source_target_duplicate_check.py` and the full procedure in the import
+helper `source-target-duplicate-check` and the full procedure in the import
 guide **Phase 1c**. Name/ASIN hits are enough to skip most wasted transfers;
 confirm same-size candidates with checksums before final accept/reject.
 
@@ -286,4 +286,4 @@ invalid/zero-duration items; progress on pre-existing items unchanged.
 - Skill: `audiobook-library-import` (`/audiobook-library-import`)
 - Import runbook: `audiobook-library-import.md`
 - Host wiring: `system/terminus/configuration.nix`
-- Inventory helper: skill `scripts/qbittorrent_inventory.py`
+- Inventory helper: deployed skill `scripts/qbittorrent-inventory`

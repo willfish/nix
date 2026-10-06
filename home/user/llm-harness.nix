@@ -31,6 +31,11 @@ let
   publicLlmRoot = "${configDir}/llm";
   skillTools = import ./skill-tools-package.nix { inherit pkgs; };
   nativeSkillScripts = {
+    audiobook-library-import = [
+      "qbittorrent-inventory"
+      "source-target-duplicate-check"
+      "libation-inventory"
+    ];
     design-workflow = [ "contrast" ];
     youtube-extract = [ "youtube-extract" ];
   };

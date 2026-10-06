@@ -71,22 +71,22 @@ current library and item IDs by name and exact path before making API calls.
 
 ### Tooling
 
-Use existing tools first. Prefer the skill inventory script (no extra deps):
+Use existing tools first. Home Manager supplies native skill inventory helpers:
 
 ```bash
 # On Andromeda: status + candidates report
-python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
   --format markdown -o /tmp/qbt-candidates.md
 
 # NUL list of transfer-ready relative names for rsync --from0
-python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
   --transfer-ready-only --format nul > /tmp/andromeda-audiobooks.list0
 ```
 
 In the dotfiles checkout before activation:
 
 ```bash
-python3 home/config/llm/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+direnv exec . nix shell .#skill-tools -c qbittorrent-inventory \
   --format markdown
 ```
 
@@ -156,7 +156,7 @@ active or incomplete torrent must not be staged as if it were final.
 On Andromeda (or via SSH from another host):
 
 ```bash
-python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
   --format markdown
 ```
 
@@ -191,11 +191,11 @@ Use the skill script:
 
 ```bash
 # Markdown report (candidates / incomplete / missing)
-python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
   --format markdown -o /tmp/qbt-candidates.md
 
 # NUL-delimited relative names for transfer-ready only
-python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
   --transfer-ready-only --format nul > /tmp/andromeda-audiobooks.list0
 ```
 
@@ -217,13 +217,13 @@ When working **from Terminus**, pull the list over SSH:
 
 ```bash
 ssh andromeda \
-  'python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+  '~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
      --transfer-ready-only --format nul' \
   > /tmp/andromeda-audiobooks.list0
 ```
 
-(After `hmswitch` on Andromeda so the skill script is deployed under
-`~/.agents/skills/...`. From a checkout, point at the repo path instead.)
+(After `hmswitch` on Andromeda so the native helper is deployed under
+`~/.agents/skills/...`. From a checkout, use the `nix shell` command above.)
 
 ## Phase 1b: Libation source (Andromeda)
 
@@ -268,18 +268,7 @@ Example inventory:
 find /home/william/Music/Libation/Books -mindepth 1 -maxdepth 1 -type d -print
 
 # Paths still on disk according to FileLocations (no secrets printed)
-python3 - <<'PY'
-import json, pathlib
-fl = json.loads(pathlib.Path.home().joinpath(
-    ".local/share/Libation/FileLocationsV2.json").read_text())
-d = fl.get("Dictionary", {})
-for asin, entries in d.items():
-    for e in entries:
-        p = (e.get("Path") or {})
-        path = p.get("Path") if isinstance(p, dict) else p
-        if path and pathlib.Path(path).exists():
-            print(path)
-PY
+~/.agents/skills/audiobook-library-import/scripts/libation-inventory
 ```
 
 If `Books` is empty and all FileLocations paths are missing, there is nothing
@@ -335,12 +324,12 @@ names:
 
 ```bash
 # From Andromeda inventory names:
-python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
   --transfer-ready-only --format names \
   > /tmp/source-names.txt
 
 # On Terminus: check those names against all library roots:
-python3 ~/.agents/skills/audiobook-library-import/scripts/source_target_duplicate_check.py \
+~/.agents/skills/audiobook-library-import/scripts/source-target-duplicate-check \
   --sources-file /tmp/source-names.txt \
   --targets /srv/media/audiobooks \
             /srv/media/audiobooks-children \
@@ -353,10 +342,10 @@ Cross-host one-liner (run from a machine with SSH to both):
 
 ```bash
 ssh andromeda \
-  'python3 ~/.agents/skills/audiobook-library-import/scripts/qbittorrent_inventory.py \
+  '~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
      --transfer-ready-only --format names' \
   | ssh terminus \
-  'python3 ~/.agents/skills/audiobook-library-import/scripts/source_target_duplicate_check.py \
+  '~/.agents/skills/audiobook-library-import/scripts/source-target-duplicate-check \
      --sources-file - \
      --targets /srv/media/audiobooks /srv/media/audiobooks-children \
                /srv/media/audiobooks-celine /srv/media/phone-audiobooks \

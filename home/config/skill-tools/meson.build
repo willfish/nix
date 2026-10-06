@@ -6,6 +6,10 @@ if host_machine.system() == 'linux' and get_option('b_sanitize').contains('addre
   link = ['-no-pie']
 endif
 common = ['common.c', '../repo-tools/common.c']
-foreach pair : [['contrast', 'contrast.c'], ['youtube-extract', 'youtube.c']]
+foreach pair : [['contrast', 'contrast.c'], ['youtube-extract', 'youtube.c'], ['libation-inventory', 'libation.c']]
   executable(pair[0], [pair[1]] + common, dependencies: deps, link_args: link, install: true)
+endforeach
+foreach pair : [['qbittorrent-inventory', 'inventory.c'], ['source-target-duplicate-check', 'duplicates.c']]
+  executable(pair[0], [pair[1], 'audio.c', '../pi-config/src/json.c'] + common,
+    dependencies: deps, include_directories: '../pi-config/include', link_args: link, install: true)
 endforeach
