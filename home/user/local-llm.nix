@@ -64,6 +64,16 @@ let
   ollamaBlob = "${config.home.homeDirectory}/.ollama/models/blobs/sha256-${modelHash}";
   logPath = "${config.home.homeDirectory}/Library/Logs/local-llm.log";
   apiKeyPath = "${config.xdg.configHome}/local-llm/api-key";
+  strata = import ./strata.nix {
+    inherit
+      config
+      lib
+      pkgs
+      contextSize
+      apiKeyPath
+      ;
+  };
+  activeModelAlias = if isAndromeda then strata.alias else modelAlias;
   workspace = "${config.home.homeDirectory}/LocalAssistant";
   chatUi = import ./local-llm-ui.nix { inherit pkgs; };
   profilePython = pkgs.python3.withPackages (ps: [ ps.pyyaml ]);
@@ -175,7 +185,7 @@ let
   piSettings = pkgs.writeText "local-qwen-pi-settings.json" (
     builtins.toJSON {
       defaultProvider = hostName;
-      defaultModel = modelAlias;
+      defaultModel = activeModelAlias;
       # pi-qwen.ts sends this level as Qwen's chat-template reasoning effort.
       defaultThinkingLevel = "medium";
       enableInstallTelemetry = false;
@@ -214,7 +224,7 @@ let
       export PI_TELEMETRY=0
       ${lib.optionalString voiceFeatures.stt "export PI_VOICE_HARNESS=qwen-pi"}
       exec ${pkgs.pi-coding-agent}/bin/pi \
-        --offline --provider ${hostName} --model ${modelAlias} \
+        --offline --provider ${hostName} --model ${activeModelAlias} \
         --no-context-files --no-skills --no-extensions --no-prompt-templates --no-themes \
         ${piThemeArgs} \
         --extension ${../config/local-llm/pi-qwen.ts} \
@@ -420,6 +430,10 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     fetchModel
     server
   ]
+  ++ lib.optionals isAndromeda [
+    strata.server
+    strata.fetch
+  ]
   ++ lib.optionals isAutomationDarwin [
     pkgs.llama-cpp
     chat
@@ -433,23 +447,41 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
       api = "openai-completions";
       # Resolve at request time, never embed the secret in the Nix store.
       apiKey = "!${pkgs.coreutils}/bin/cat ${lib.escapeShellArg apiKeyPath}";
-      models = [
-        {
-          id = modelAlias;
-          name = "Local ${modelLabel} ${modelQuant}";
-          reasoning = true;
-          input = [ "text" ];
-          contextWindow = contextSize;
-          maxTokens = 16384;
-          compat = {
-            supportsStore = false;
-            supportsDeveloperRole = false;
-            supportsReasoningEffort = false;
-            maxTokensField = "max_tokens";
-            thinkingFormat = "qwen-chat-template";
-          };
-        }
-      ];
+      models =
+        lib.optionals isAndromeda [
+          {
+            id = strata.alias;
+            name = "Local Qwen3.8 Flash-Next ${strata.quant} (Strata)";
+            reasoning = true;
+            input = [ "text" ];
+            contextWindow = contextSize;
+            maxTokens = 16384;
+            compat = {
+              supportsStore = false;
+              supportsDeveloperRole = false;
+              supportsReasoningEffort = false;
+              maxTokensField = "max_tokens";
+              thinkingFormat = "qwen-chat-template";
+            };
+          }
+        ]
+        ++ [
+          {
+            id = modelAlias;
+            name = "Local ${modelLabel} ${modelQuant}";
+            reasoning = true;
+            input = [ "text" ];
+            contextWindow = contextSize;
+            maxTokens = 16384;
+            compat = {
+              supportsStore = false;
+              supportsDeveloperRole = false;
+              supportsReasoningEffort = false;
+              maxTokensField = "max_tokens";
+              thinkingFormat = "qwen-chat-template";
+            };
+          }
+        ];
     };
   };
 
@@ -529,8 +561,29 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
 
   systemd.user.services.local-llm = lib.mkIf isAndromeda {
     Unit = {
-      Description = "Local Huihui Qwen3.8 27B ${modelQuant} on the NVIDIA GPU";
+      Description = "Local Qwen3.8 Flash-Next ${strata.quant} with Strata (128K context)";
       After = [ "graphical-session.target" ];
+      Conflicts = [ "local-llm-27b.service" ];
+      ConditionPathExists = strata.readyPath;
+    };
+    Service = {
+      ExecStart = "${strata.server}/bin/strata-server";
+      Restart = "on-failure";
+      RestartSec = 5;
+      TimeoutStopSec = 30;
+      UMask = "0077";
+      NoNewPrivileges = true;
+    };
+    Install.WantedBy = [ "default.target" ];
+  };
+
+  # Manual A/B fallback on the same authenticated endpoint. Starting either
+  # service stops the other before it allocates GPU memory.
+  systemd.user.services.local-llm-27b = lib.mkIf isAndromeda {
+    Unit = {
+      Description = "Local Huihui Qwen3.8 27B ${modelQuant} (Strata trial fallback)";
+      Conflicts = [ "local-llm.service" ];
+      After = [ "local-llm.service" ];
       ConditionPathExists = modelPath;
     };
     Service = {
@@ -541,6 +594,5 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
       UMask = "0077";
       NoNewPrivileges = true;
     };
-    Install.WantedBy = [ "default.target" ];
   };
 }
