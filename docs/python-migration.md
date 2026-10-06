@@ -60,7 +60,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Calendar/weather panel settings writers: C `home/config/panel-settings`.
 - [x] Greeter selection: C `home/config/greeter-select` with unchanged root
   service confinement and catalogue-only asset selection.
-- [ ] Embedded NetworkManager Python secret agent.
+- [x] NetworkManager secret agent: Rust `home/config/nm-auto-secret-agent` with a
+  compiled libnm bridge. The existing Bash reconnect watcher is unchanged.
 
 ### Configuration, build and skill utilities
 

@@ -642,6 +642,7 @@
             omapager-tools = import ./home/user/omapager-tools-package.nix { inherit pkgs; };
             panel-settings = import ./home/user/panel-settings-package.nix { inherit pkgs; };
             greeter-select = import ./system/modules/greeter-select-package.nix { inherit pkgs; };
+            nm-auto-secret-agent = import ./home/user/nm-auto-secret-agent-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)

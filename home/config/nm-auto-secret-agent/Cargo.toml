@@ -1,0 +1,22 @@
+[package]
+name = "nm-auto-secret-agent"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+autotests = false
+
+[features]
+fixtures = []
+
+[[bin]]
+name = "nm-auto-secret-agent"
+path = "src/main.rs"
+
+[[bin]]
+name = "nm-agent-fixture"
+path = "tests/fixture.rs"
+required-features = ["fixtures"]
+
+[profile.release]
+lto = true
+strip = true
