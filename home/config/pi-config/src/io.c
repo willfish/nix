@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "config.h"
+#include "text.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -77,16 +78,13 @@ GString *config_read(const char *path) {
   g_free(data);
   return out;
 }
-static bool space(gunichar cp) {
-  return g_unichar_isspace(cp) || (cp >= 0x1c && cp <= 0x1f);
-}
 GString *config_strip(GString *s) {
   size_t at = 0, end = s->len;
-  while (at < end && space(g_utf8_get_char(s->str + at)))
+  while (at < end && python_space(g_utf8_get_char(s->str + at)))
     at = (size_t)(g_utf8_next_char(s->str + at) - s->str);
   while (end > at) {
     char *previous = g_utf8_find_prev_char(s->str, s->str + end);
-    if (!space(g_utf8_get_char(previous)))
+    if (!python_space(g_utf8_get_char(previous)))
       break;
     end = (size_t)(previous - s->str);
   }

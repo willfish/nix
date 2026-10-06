@@ -345,6 +345,41 @@ test("secret values retain interior whitespace/NUL and escaped JSON while Unicod
       else native = readFileSync(join(root, "auth.json"));
     });
 });
+test("secret stripping includes every Python whitespace code point, including vertical tab and NEL", () => {
+  const chars = [
+    0x09,
+    0x0a,
+    0x0b,
+    0x0c,
+    0x0d,
+    0x1c,
+    0x1d,
+    0x1e,
+    0x1f,
+    0x20,
+    0x85,
+    0xa0,
+    0x1680,
+    ...Array.from({ length: 11 }, (_, i) => 0x2000 + i),
+    0x2028,
+    0x2029,
+    0x202f,
+    0x205f,
+    0x3000,
+  ];
+  for (const cp of chars)
+    for (const old of legacy ? [false, true] : [false])
+      temp((root) => {
+        const opts = seed(root),
+          space = String.fromCodePoint(cp);
+        writeFileSync(join(root, "refresh"), space + "fixture-refresh" + space);
+        writeFileSync(join(root, "account"), space + "fixture-account" + space);
+        assert.equal(auth(root, old, opts).status, 0);
+        const entry = json(join(root, "auth.json"))["openai-codex"];
+        assert.equal(entry.refresh, "fixture-refresh");
+        assert.equal(entry.accountId, "fixture-account");
+      });
+});
 test("both secret files are validated before even an unchanged auth entry is loaded", () => {
   for (const old of legacy ? [false, true] : [false])
     temp((root) => {

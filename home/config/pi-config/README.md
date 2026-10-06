@@ -1,4 +1,4 @@
-# Pi configuration mergers
+# Pi configuration helpers
 
 C commands used by Home Manager after secret activation. They keep Pi's auth,
 settings and keybindings writable rather than replacing user state with store
@@ -49,6 +49,21 @@ incomplete entries. New entries contain `type`, `refresh`, `accountId`, empty
 - Application failures return 1 with a value-free diagnostic; usage errors
   return 2. Successful and no-op merges return 0 without output.
 
+## Capture bus-host parsing
+
+`pi-capture-bus-host` reads `PI_AGENT_BUS_URL` and prints an accepted hostname
+plus LF, or just LF. Unset/empty values use `http://terminus:7420`. Accept only
+lowercase HTTP(S) schemes, ASCII DNS labels and canonical dotted IPv4 when the
+final label looks numeric or hexadecimal. Lowercase the output hostname, not
+the caller's URL. Ports retain the existing decimal grammar without an added
+range limit; paths reject Python whitespace, backslashes, queries and fragments.
+This is the capture bypass policy, not a general URL validator.
+
+The Pi wrapper combines both existing proxy-exclusion lists with the accepted
+host. Unsupported URLs or parser failures disable bus participation for capture
+without aborting Pi or rewriting the URL. Capture-off, offline, disabled-bus,
+explicit credentials and missing-secret behavior remain unchanged.
+
 ## Manual fixtures
 
 Use GLib, Meson, Ninja and pkg-config from an ephemeral Nix shell in the direnv
@@ -61,6 +76,9 @@ meson compile -C /tmp/pi-config-build
 PI_CONFIG_BIN_DIR=/tmp/pi-config-build \
 PI_CONFIG_FAILURES=/tmp/pi-config-build/pi-config-failures.so \
   node --experimental-strip-types --test home/config/pi-config/tests/merge.test.ts
+PI_BUS_HOST_BIN=/tmp/pi-config-build/pi-capture-bus-host \
+PI_BUS_HOST_ARGV=/tmp/pi-config-build/pi-host-argv \
+  node --experimental-strip-types --test home/config/pi-config/tests/bus-host.test.ts
 ```
 
 Fixtures default off, are not installed and have no automated registration.
@@ -68,4 +86,9 @@ They use disposable secrets, failed publication, no-op metadata checks and marke
 ordering. Optional legacy comparison uses
 `PI_CONFIG_LEGACY=/path/pi-merge-{kind}-legacy.py` and `PI_CONFIG_PYTHON`.
 For sanitizer runs, `PI_CONFIG_ASAN_RT` places the compiler's ASan runtime before
-the failure interposer. Production recognizes none of the fixture controls.
+the failure interposer. Host-parser parity uses `PI_BUS_HOST_LEGACY` and
+`PI_BUS_HOST_PYTHON`. `PI_BUS_HOST_WRAPPERS` may supply JSON containing rendered
+`foundation` and `public` Pi wrapper text; the fixtures replace every credential,
+Pi and capture executable with disposable stubs before running it. They never
+start real prompt capture, contact a provider/bus or read real secrets.
+Production recognizes none of the fixture controls.

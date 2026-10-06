@@ -65,8 +65,9 @@ Rust dependencies and existing C libraries where practical.
 
 ### Configuration, build and skill utilities
 
-- [x] Pi authentication/settings mergers: C `home/config/pi-config`.
-- [ ] Pi capture bus-host parser and OpenCode Markdown adapter.
+- [x] Pi authentication/settings mergers and capture bus-host parser:
+  C `home/config/pi-config`.
+- [ ] OpenCode Markdown adapter.
 - [ ] Hermes declaration, export, profile and Telegram routing helpers.
 - [ ] Repository lock-policy and community-import scripts; the test-only behavior gate is removed.
 - [ ] Darwin deployment, preflight and health tools.

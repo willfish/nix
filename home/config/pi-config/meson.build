@@ -8,6 +8,8 @@ endif
 foreach kind : ['settings', 'auth']
   executable('pi-merge-' + kind, 'src/main.c', 'src/merge.c', 'src/io.c', 'src/json.c', dependencies: glib, include_directories: inc, c_args: kind == 'auth' ? ['-DAUTH_MERGER'] : [], link_args: link, install: true)
 endforeach
+executable('pi-capture-bus-host', 'src/bus-host.c', dependencies: glib, include_directories: inc, link_args: link, install: true)
 if get_option('fixtures')
+  executable('pi-host-argv', 'tests/host-argv.c', dependencies: glib, link_args: link)
   shared_module('pi-config-failures', 'tests/failures.c', dependencies: meson.get_compiler('c').find_library('dl'), name_prefix: '')
 endif

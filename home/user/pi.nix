@@ -86,22 +86,7 @@ in
         # Accept only authority spellings unchanged by WHATWG URL parsing.
         # Other forms disable bus participation for capture, never rewrite the
         # caller's URL. Empty URLs use the client's effective default.
-        if ! bus_host="$(${pkgs.python3}/bin/python3 -c '
-      import ipaddress, os, re
-      raw = os.environ.get("PI_AGENT_BUS_URL") or "http://terminus:7420"
-      match = re.fullmatch(r"https?://([A-Za-z0-9.-]+)(?::[0-9]+)?(?:/[^\s\\?#]*)?", raw)
-      host = match[1].lower() if match else ""
-      labels = host.split(".")
-      if not all(re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label) for label in labels):
-          host = ""
-      elif re.fullmatch(r"[0-9]+|0x[0-9a-f]*", labels[-1]):
-          try:
-              if str(ipaddress.IPv4Address(host)) != host:
-                  host = ""
-          except ValueError:
-              host = ""
-      print(host)
-      ' 2>/dev/null)"; then
+        if ! bus_host="$(${piConfig}/bin/pi-capture-bus-host 2>/dev/null)"; then
           bus_host=""
         fi
         if [ -n "$bus_host" ]; then
