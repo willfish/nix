@@ -145,9 +145,18 @@ in
     export { default } from "${../config/pi/goal}/index.ts";
   '';
   home.file.".pi/agent/extensions/question.ts".source = "${piExtensions}/question.ts";
-  # Use the example shipped with the pinned Pi runtime and its host API.
-  home.file.".pi/agent/extensions/todo.ts".source =
-    "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts";
+  # Validation errors have details = {}, not a todo state snapshot. The pinned
+  # example crashes when rendering these errors or restoring their session.
+  home.file.".pi/agent/extensions/todo.ts".source = pkgs.runCommand "pi-todo.ts" { } ''
+    cp ${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/todo.ts "$out"
+    chmod u+w "$out"
+    substituteInPlace "$out" --replace-fail \
+      'if (!details) {' \
+      'if (!details || !["list", "add", "toggle", "clear"].includes(details.action)) {' \
+      --replace-fail \
+      'if (details) {' \
+      'if (details && Array.isArray(details.todos) && Number.isInteger(details.nextId)) {'
+  '';
   # Subagent delegation auto-discovered by Pi. Agent frontmatter pins model
   # and thinking for each role.
   # Adapted pinned upstream example: interactive herdr teams and persona skills.
