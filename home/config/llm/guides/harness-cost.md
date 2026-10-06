@@ -48,7 +48,8 @@ and extension composition. A smaller payload does not excuse inaccessible tools
 or weaker roles. Investigate changed payload ceilings rather than rubber-stamping
 new snapshots; retain a capability/cost rationale.
 
-Run `direnv exec . python3 home/config/llm/scripts/audit-skills` when changing shared
-skills. Verify deployed guide links and unchanged skill metadata. Shared guides
+From the dotfiles checkout, run
+`direnv exec . nix shell .#repo-tools -c audit-skills --root "$PWD"` when changing
+shared skills. Verify deployed guide links and unchanged skill metadata. Shared guides
 deploy recursively via `home/user/llm-harness.nix`; no new always-loaded registry
 entry is needed.

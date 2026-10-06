@@ -44,7 +44,8 @@ Do not turn a user-invoked workflow into an automatic action.
 ## Verify
 
 Read back the files. Validate names, frontmatter, references and deployment.
-Run `python3 home/config/llm/scripts/audit-skills` in the dotfiles environment.
+From the dotfiles checkout, run
+`direnv exec . nix shell .#repo-tools -c audit-skills --root "$PWD"`.
 Test realistic positive and negative trigger scenarios, authorization gates and
 helper scripts. Use isolated fixtures and clean up artifacts. Report observed
 results and any blockers, not inferred success.

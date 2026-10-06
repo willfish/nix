@@ -1,6 +1,6 @@
 # Repository data helpers
 
-Build with `nix build .#repo-tools`. Both commands operate on data only; neither
+Build with `nix build .#repo-tools`. These commands operate on data only; none
 runs Git, evaluates flake inputs, fetches repositories or executes theme code.
 
 ## Lock update policy
@@ -37,6 +37,18 @@ catalogues fail. Unavailable themes remain in the catalogue but not the generate
 input block. Publication retains the original direct, ordered two-file writes,
 not an all-files transaction.
 
+## Skill audit
+
+`audit-skills [--root CHECKOUT]` audits the public skill catalogue, deployment
+parity, frontmatter descriptions, references, explicit-invocation metadata and
+freshness dates. It retains the sectioned report and nonzero status for either
+errors or warnings. Frontmatter handling remains a text convention, not a YAML
+parser. Source paths must resolve to files within the LLM root; ambiguous JSON,
+unsafe mappings and local/mapped collisions fail before auditing.
+
+The checkout defaults to the current directory. Use an explicit root outside it.
+The audit does not run skill scripts, load private overlays or authorize changes.
+
 ## Manual verification
 
 Supply GLib, yyjson, libxml2 (with HTML5 token mode), Meson, Ninja, pkg-config and
@@ -47,6 +59,7 @@ meson setup /tmp/repo-tools-build home/config/repo-tools
 meson compile -C /tmp/repo-tools-build
 LOCK_POLICY_BIN=/tmp/repo-tools-build/check-flake-lock-update \
 COMMUNITY_IMPORT_BIN=/tmp/repo-tools-build/import-omarchy-community \
+SKILL_AUDIT_BIN=/tmp/repo-tools-build/audit-skills \
   node --experimental-strip-types --test home/config/repo-tools/*.test.ts
 ```
 
@@ -54,4 +67,6 @@ Fixtures are manual, noninstalled and unregistered. They use local lock data and
 disposable checkout copies, never live imports or merges. Optional
 `LOCK_POLICY_LEGACY` and `COMMUNITY_IMPORT_LEGACY` select retained original scripts;
 `*_PYTHON` selects their interpreter. `COMMUNITY_IMPORT_PAGE` adds a pinned local
-HTML-page comparison. No migration test is run by the package or commit hooks.
+HTML-page comparison. `SKILL_AUDIT_REFERENCE` optionally selects an external
+reference adapter accepting `--root CHECKOUT`. No migration test is run by the
+package or commit hooks.

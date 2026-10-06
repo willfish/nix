@@ -26,10 +26,10 @@ been vendored or installed elsewhere.
 
 ## Local Maintenance Workflow
 
-For this dotfiles harness, use the local static audit first:
+From the dotfiles checkout, use the local static audit first:
 
 ```bash
-home/config/llm/scripts/audit-skills
+direnv exec . nix shell .#repo-tools -c audit-skills --root "$PWD"
 ```
 
 Use the retained plugin-eval references only when designing a future evaluation

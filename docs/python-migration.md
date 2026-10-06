@@ -77,7 +77,8 @@ Rust dependencies and existing C libraries where practical.
 - [ ] AWS access-portal service and helpers. Preserve existing authorization gates.
 - [x] Contrast, YouTube extraction, audiobook inventory/duplicate checks and
   Libation index helper: C `home/config/skill-tools`.
-- [ ] Skill audit and token-report utilities.
+- [x] Skill audit: C `home/config/repo-tools/audit.c`.
+- [ ] Token-report utility.
 
 ### Final audit
 

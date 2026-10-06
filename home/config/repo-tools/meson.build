@@ -4,5 +4,6 @@ link = []
 if host_machine.system() == 'linux' and get_option('b_sanitize').contains('address')
   link = ['-no-pie']
 endif
+executable('audit-skills', 'audit.c', 'common.c', dependencies: deps, link_args: link, install: true)
 executable('check-flake-lock-update', 'lock.c', 'common.c', dependencies: deps, link_args: link, install: true)
 executable('import-omarchy-community', 'import.c', 'common.c', dependencies: deps + [dependency('libxml-2.0', version: '>=2.14')], link_args: link, install: true)

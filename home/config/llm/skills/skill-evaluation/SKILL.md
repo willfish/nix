@@ -12,10 +12,10 @@ Use this for local skill-harness maintenance and evaluation.
 
 ## Default Workflow
 
-1. Run the static audit first:
+1. From the dotfiles checkout, run the static audit first:
 
 ```bash
-home/config/llm/scripts/audit-skills
+direnv exec . nix shell .#repo-tools -c audit-skills --root "$PWD"
 ```
 
 2. Treat audit findings as local maintenance work:
@@ -37,9 +37,9 @@ home/config/llm/scripts/audit-skills
 
 ## Completion
 
-Before claiming harness maintenance is complete, run:
+Before claiming harness maintenance is complete, run from the dotfiles checkout:
 
 ```bash
-home/config/llm/scripts/audit-skills
+direnv exec . nix shell .#repo-tools -c audit-skills --root "$PWD"
 nix build .#homeConfigurations.william-linux.activationPackage --dry-run
 ```
