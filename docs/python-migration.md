@@ -54,7 +54,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Launcher daily workflow: C `home/config/daily-workflow`.
 - [x] Launcher agenda: C `home/config/daily-agenda`, including private feed
   fetching, sandboxed recurrence expansion, reminders and both calendar caches.
-- [ ] Herdr notification focus and omapager preparation/icon/patch helpers.
+- [x] Herdr notification focus: C `home/config/herdr-notification-focus`.
+- [ ] Omapager preparation/icon/patch helpers.
 - [ ] Greeter selection and embedded NetworkManager/panel Python helpers.
 
 ### Configuration, build and skill utilities

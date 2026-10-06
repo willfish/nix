@@ -636,6 +636,9 @@
             launcher-projects = import ./home/user/launcher-projects-package.nix { inherit pkgs; };
             daily-workflow = import ./home/user/daily-workflow-package.nix { inherit pkgs; };
             daily-agenda = import ./home/user/daily-agenda-package.nix { inherit pkgs; };
+            herdr-notification-focus = import ./home/user/herdr-notification-focus-package.nix {
+              inherit pkgs;
+            };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)

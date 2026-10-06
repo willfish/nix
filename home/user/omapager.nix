@@ -211,15 +211,15 @@ let
         '{text:"󰂚", tooltip:$tooltip, class:$class}'
     '';
   };
+  herdrFocusPackage = import ./herdr-notification-focus-package.nix { inherit pkgs; };
   herdrFocus = pkgs.writeShellApplication {
     name = "herdr-notification-focus";
     runtimeInputs = [
-      python
       pkgs.herdr
       pkgs.hyprland
     ];
     text = ''
-      exec ${python}/bin/python3 ${../config/hyprland/omapager/herdr_notification_focus.py} "$@"
+      exec ${herdrFocusPackage}/bin/herdr-notification-focus "$@"
     '';
   };
   githubWatch = import ./github-watch-package.nix { inherit pkgs; };
