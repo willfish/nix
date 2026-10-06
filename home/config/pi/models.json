@@ -41,22 +41,6 @@
             "maxTokensField": "max_tokens",
             "thinkingFormat": "qwen-chat-template"
           }
-        },
-        {
-          "id": "qwen3.8-27b",
-          "name": "Andromeda Huihui Qwen 3.8 27B (manual fallback service)",
-          "reasoning": true,
-          "input": ["text"],
-          "contextWindow": 131072,
-          "maxTokens": 16384,
-          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
-          "compat": {
-            "supportsStore": false,
-            "supportsDeveloperRole": false,
-            "supportsReasoningEffort": false,
-            "maxTokensField": "max_tokens",
-            "thinkingFormat": "qwen-chat-template"
-          }
         }
       ]
     },

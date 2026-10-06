@@ -45,10 +45,11 @@ let
         "--kv"
         "int8"
         "--vram-reserve-mib"
-        "3072"
+        "2048"
       ];
       tokenizer = "${pack}/tokenizer";
       model_name = alias;
+      parallel = 2;
       log = "${stateDir}/engine.log";
       host = "0.0.0.0";
       port = 8081;

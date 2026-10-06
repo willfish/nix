@@ -465,7 +465,7 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
             };
           }
         ]
-        ++ [
+        ++ lib.optionals (!isAndromeda) [
           {
             id = modelAlias;
             name = "Local ${modelLabel} ${modelQuant}";
@@ -563,7 +563,6 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     Unit = {
       Description = "Local Qwen3.8 Flash-Next ${strata.quant} with Strata (128K context)";
       After = [ "graphical-session.target" ];
-      Conflicts = [ "local-llm-27b.service" ];
       ConditionPathExists = strata.readyPath;
     };
     Service = {
@@ -577,22 +576,4 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     Install.WantedBy = [ "default.target" ];
   };
 
-  # Manual A/B fallback on the same authenticated endpoint. Starting either
-  # service stops the other before it allocates GPU memory.
-  systemd.user.services.local-llm-27b = lib.mkIf isAndromeda {
-    Unit = {
-      Description = "Local Huihui Qwen3.8 27B ${modelQuant} (Strata trial fallback)";
-      Conflicts = [ "local-llm.service" ];
-      After = [ "local-llm.service" ];
-      ConditionPathExists = modelPath;
-    };
-    Service = {
-      ExecStart = "${server}/bin/local-llm-server";
-      Restart = "on-failure";
-      RestartSec = 5;
-      TimeoutStopSec = 30;
-      UMask = "0077";
-      NoNewPrivileges = true;
-    };
-  };
 }

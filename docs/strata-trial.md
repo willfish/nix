@@ -2,8 +2,14 @@
 
 Andromeda's `local-llm.service` serves Qwen3.8-Flash-Next through Strata at
 `http://127.0.0.1:8081`, with the existing API key and tailnet endpoint unchanged.
-The trial uses Unsloth UD-Q4_K_XL, 131,072 tokens of context and an 8-bit KV cache.
-It reserves 3 GiB of otherwise free VRAM for desktop and voice workloads.
+The trial uses Unsloth UD-Q4_K_XL with two concurrent slots, each allowing
+131,072 tokens of context, and an 8-bit KV cache. Extra requests queue until a
+slot is free. Slot state reduces the GPU expert cache; two slots do not imply
+twice the throughput. Speculative decoding remains enabled for solo requests,
+but batched MTP is disabled: this engine/model combination fails slot admission
+with an unsupported native MMVQ type when that option is enabled.
+It requests a 2 GiB VRAM reserve for desktop and voice workloads; check actual
+free VRAM after all slot and draft buffers have loaded.
 
 Strata and its CUDA 13 toolchain are pinned and built through Nix. Model files
 live outside the Nix store in `~/.local/share/strata`. To provision them again,
@@ -16,24 +22,10 @@ run `strata-fetch`, then `systemctl --user restart local-llm`. Allow roughly
 - The browser chat is at `http://127.0.0.1:8081`. It requires the existing local
   model API key, held in `~/.config/local-llm/api-key`.
 - In OpenCode, select the Flash-Next model under Andromeda.
-- Only one of the two local model services can run at a time. Selecting a model
-  in a client does not switch the server.
+- The 27B fallback service and client model entry are disabled. Its files are
+  retained on disk, but it uses no GPU memory.
 
-Switch back to the retained 27B model without downloading it again:
-
-```sh
-systemctl --user start local-llm-27b
-qwen-pi --model qwen3.8-27b
-```
-
-Return to Strata:
-
-```sh
-systemctl --user start local-llm
-qwen-pi
-```
-
-The fallback is manual. Login and Home Manager activation default to Strata.
+Login and Home Manager activation start Strata.
 Compare identical prompts, thinking levels and context lengths. Check time to
 first output, total completion time and correctness, not only output tokens per
 second. This quantisation is experimental upstream; a higher bit count does not
