@@ -20,6 +20,7 @@ direnv exec . nix-shell home/config/voice-c/shell.nix --run '
   meson setup /tmp/voice-c-build home/config/voice-c -Dbuildtype=debugoptimized -Dfixtures=true
   meson compile -C /tmp/voice-c-build
   /tmp/voice-c-build/voice-tests
+  /tmp/voice-c-build/voice-json-allocation
   node --experimental-strip-types home/config/voice-c/tests/daemon_smoke.ts /tmp/voice-c-build/pi-voice-c
   node --experimental-strip-types home/config/voice-c/tests/native_journey.ts /tmp/voice-c-build/pi-voice-c
 '

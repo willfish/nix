@@ -11,7 +11,11 @@ The status command reads sorted JSON records from
 `${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage`.
 
 Pi owns provider credentials. OAuth refresh preserves profile fields and replaces
-`auth.json` atomically at mode 0600. OpenCode Go uses the environment key first,
+`auth.json` atomically at mode 0600. A failed save produces an explicit status and
+stops the usage probe rather than using credentials that were not persisted.
+These short-lived commands terminate with a value-free diagnostic on allocation
+failure or allocation-size overflow, including JSON construction.
+OpenCode Go uses the environment key first,
 then Pi's models configuration, then its auth registry. A configured `!command`
 is trusted shell configuration, executed with a 20-second timeout. Keys and
 provider diagnostics never appear in display records or logs.

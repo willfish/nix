@@ -31,7 +31,7 @@ static Val *limit(Doc *d, const char *label, const char *title, double percent,
 }
 Allowance parse_codex(Doc *d, Val *p, double now) {
   Allowance a = {.limits = yyjson_mut_arr(d), .tier = "", .status = ""};
-  char *plan = strdup(text(get(p, "plan_type")));
+  char *plan = duplicate(text(get(p, "plan_type")));
   bool start = true;
   for (char *s = plan; *s; s++) {
     if (*s == '_')
@@ -55,14 +55,14 @@ Allowance parse_codex(Doc *d, Val *p, double now) {
     char label[80];
     const char *title = "Limit";
     if (seconds >= 6 * 86400) {
-      strcpy(label, "Weekly (7-day)");
+      snprintf(label, sizeof label, "%s", "Weekly (7-day)");
       title = "Weekly";
     } else if (seconds >= 3600) {
       snprintf(label, sizeof label, "%.0fh window",
                fmax(1, nearbyint(seconds / 3600.0)));
       title = "Session";
     } else
-      strcpy(label, "Limit");
+      snprintf(label, sizeof label, "%s", "Limit");
     const char *end = iso_timestamp(d, get(w, "reset_at"));
     if (!*end && get(w, "reset_after_seconds") &&
         !yyjson_mut_is_null(get(w, "reset_after_seconds")))
@@ -87,7 +87,7 @@ Val *parse_grok(Doc *d, Val *p) {
                                              get(cfg, "billing_period_end"))));
   bool monthly = false;
   const char *kind = text(get(period, "type"));
-  char *upper = strdup(kind);
+  char *upper = duplicate(kind);
   for (char *s = upper; *s; s++)
     *s = (char)toupper((unsigned char)*s);
   monthly = strstr(upper, "MONTH") != NULL;
@@ -163,7 +163,7 @@ const char *grok_tier(Doc *d, Val *p) {
   const char *named =
       text(either(get(p, "subscription_tier"),
                   either(get(p, "subscriptionTier"), get(p, "plan"))));
-  char *s = strip_text(strdup(named));
+  char *s = strip_text(duplicate(named));
   if (*s) {
     for (char *c = s; *c; c++)
       if (*c == '_')
@@ -177,7 +177,7 @@ const char *grok_tier(Doc *d, Val *p) {
   if (!v || (!yyjson_mut_is_num(v) && !yyjson_mut_is_str(v) &&
              !yyjson_mut_is_bool(v)))
     return "";
-  char *clean = strip_text(strdup(text(v))), *end;
+  char *clean = strip_text(duplicate(text(v))), *end;
   long tier = strtol(clean, &end, 10);
   if (yyjson_mut_is_num(v))
     tier = (long)yyjson_mut_get_num(v);
@@ -278,13 +278,8 @@ static void insert(Set *s, const char *key) {
   for (size_t i = 0; i < s->n; i++)
     if (!strcmp(s->items[i], key))
       return;
-  char **p = realloc(s->items, (s->n + 1) * sizeof *p);
-  if (!p) {
-    fputs("agent-usage: allocation failed\n", stderr);
-    exit(1);
-  }
-  s->items = p;
-  s->items[s->n++] = strdup(key);
+  s->items = resize(s->items, size_add(s->n, 1), sizeof *s->items);
+  s->items[s->n++] = duplicate(key);
 }
 static void clear_set(Set *s) {
   for (size_t i = 0; i < s->n; i++)
@@ -330,11 +325,8 @@ static void add_model(Stats *s, const char *day, const char *session,
     if (!strcmp(s->models[m].name, name))
       break;
   if (m == s->model_count) {
-    Model *p = realloc(s->models, (m + 1) * sizeof *p);
-    if (!p)
-      exit(1);
-    s->models = p;
-    s->models[m] = (Model){.name = strdup(name)};
+    s->models = resize(s->models, size_add(m, 1), sizeof *s->models);
+    s->models[m] = (Model){.name = duplicate(name)};
     s->model_count++;
   }
   for (size_t i = 0; i < 4; i++)
@@ -422,18 +414,18 @@ static void walk(const char *root, const char *suffix,
   closedir(dir);
 }
 static char *stem(const char *path) {
-  char *s = strdup(strrchr(path, '/') ? strrchr(path, '/') + 1 : path);
+  char *s = duplicate(strrchr(path, '/') ? strrchr(path, '/') + 1 : path);
   char *dot = strrchr(s, '.');
   if (dot && dot != s)
     *dot = 0;
   return s;
 }
 static char *parent_name(const char *path) {
-  char *s = strdup(path);
+  char *s = duplicate(path);
   char *slash = strrchr(s, '/');
   if (slash)
     *slash = 0;
-  char *out = strdup(strrchr(s, '/') ? strrchr(s, '/') + 1 : s);
+  char *out = duplicate(strrchr(s, '/') ? strrchr(s, '/') + 1 : s);
   free(s);
   return out;
 }
@@ -451,7 +443,7 @@ static void pi_file(const char *path, void *raw) {
   size_t capacity = 0;
   ssize_t length;
   while ((length = getline(&line, &capacity, f)) >= 0) {
-    Doc *d = yyjson_mut_doc_new(NULL);
+    Doc *d = new_doc();
     Val *event = parse_bytes(d, line, (size_t)length),
         *m = get(event, "message");
     Val *role = get(m, "role");
@@ -490,7 +482,7 @@ Val *scan_pi(Doc *d, const char *root, const char *provider, double now) {
 }
 static void opencode_file(const char *path, void *raw) {
   Scan *ctx = raw;
-  Doc *d = yyjson_mut_doc_new(NULL);
+  Doc *d = new_doc();
   Val *m = load(d, path), *role = get(m, "role");
   const char *provider = text(get(m, "providerID")),
              *model = text(get(m, "modelID"));
@@ -558,7 +550,7 @@ static void grok_file(const char *path, void *raw) {
   size_t capacity = 0;
   ssize_t length;
   while ((length = getline(&line, &capacity, f)) >= 0) {
-    Doc *d = yyjson_mut_doc_new(NULL);
+    Doc *d = new_doc();
     Val *e = parse_bytes(d, line, (size_t)length), *params = get(e, "params"),
         *update = get(params, "update"), *u = get(update, "usage");
     int64_t tokens[4];
@@ -581,11 +573,8 @@ static void grok_file(const char *path, void *raw) {
         if (!strcmp(ctx->winners[i].id, id))
           break;
       if (i == ctx->n) {
-        Winner *p = realloc(ctx->winners, (i + 1) * sizeof *p);
-        if (!p)
-          exit(1);
-        ctx->winners = p;
-        p[i] = (Winner){.id = strdup(id), .total = INT64_MIN};
+        ctx->winners = resize(ctx->winners, size_add(i, 1), sizeof *ctx->winners);
+        ctx->winners[i] = (Winner){.id = duplicate(id), .total = INT64_MIN};
         ctx->n++;
       }
       Winner *w = &ctx->winners[i];
@@ -663,14 +652,10 @@ Val *record(Doc *d, const char *id, const char *name, Val *stats, Allowance a,
   return v;
 }
 static void append(char **s, const char *suffix) {
-  size_t n = (*s ? strlen(*s) : 0) + strlen(suffix) + 1;
-  char *p = realloc(*s, n);
-  if (!p)
-    exit(1);
-  if (!*s)
-    *p = 0;
-  *s = p;
-  strcat(p, suffix);
+  size_t used = *s ? strlen(*s) : 0;
+  size_t n = size_add(size_add(used, strlen(suffix)), 1);
+  *s = resize(*s, n, 1);
+  snprintf(*s + used, n - used, "%s", suffix);
 }
 Val *waybar(Doc *d, Val *records) {
   char *lines = NULL;

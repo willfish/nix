@@ -90,7 +90,7 @@ int main(void) {
   if (total)
     snprintf(text, sizeof(text), "%s%zu", unseen ? "!" : "", total);
   else
-    strcpy(text, "\uf0c3");
+    snprintf(text, sizeof text, "%s", "\uf0c3");
   size_t suffix_len = strlen(suffix);
   char *tooltip = category_len > SIZE_MAX - suffix_len - 1
                       ? NULL

@@ -1,4 +1,4 @@
-project('pi-voice-c', 'c', version: '0.2.0', meson_version: '>=1.1', default_options: ['c_std=c11', 'warning_level=2'])
+project('pi-voice-c', 'c', version: '0.2.0', meson_version: '>=1.1', default_options: ['c_std=c17', 'warning_level=3', 'werror=true'])
 cc = meson.get_compiler('c')
 add_project_arguments('-D_POSIX_C_SOURCE=200809L', '-D_DEFAULT_SOURCE', language: 'c')
 
@@ -9,7 +9,8 @@ threads = dependency('threads')
 cairo = dependency('cairo')
 pango = dependency('pangocairo')
 glib = dependency('glib-2.0')
-gtk = dependency('gtk4')
+# Keep pedantic diagnostics on owned code, not on upstream GTK headers.
+gtk = dependency('gtk4', include_type: 'system')
 layer_shell = dependency('gtk4-layer-shell-0')
 libm = cc.find_library('m', required: false)
 core_deps = [yyjson, libcurl, pcre2, threads, cairo, pango, glib, libm]
@@ -62,6 +63,7 @@ executable('pi-voice-osd-c', 'src/osd_main.c',
   dependencies: [voice_dep, gtk, layer_shell], install: true)
 if get_option('fixtures')
 executable('voice-controller-fixture', 'tests/pi_voice_fixture.c', dependencies: voice_dep)
+executable('voice-json-allocation', 'tests/json_allocation.c', dependencies: voice_dep)
 
 test_exe = executable(
   'voice-tests',

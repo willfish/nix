@@ -357,7 +357,7 @@ static void test_real_snapshot_runner_reaps_the_child(void) {
         fail("snapshot runner", "mkdtemp");
         return;
     }
-    char sock_path[512];
+    char sock_path[sizeof dir + sizeof "/herdr.sock"];
     snprintf(sock_path, sizeof sock_path, "%s/herdr.sock", dir);
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     struct sockaddr_un addr;

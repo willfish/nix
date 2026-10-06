@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
                  .transport = http_request,
                  .real_time = true};
   curl_global_init(CURL_GLOBAL_DEFAULT);
-  Doc *d = yyjson_mut_doc_new(NULL);
+  Doc *d = new_doc();
   Val *v = id ? collect(d, &ctx, id) : waybar(d, status_records(d));
   char *output = encode(v);
   bool ok = output != NULL;

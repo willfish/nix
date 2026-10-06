@@ -10,16 +10,59 @@
 #include <string.h>
 #include <unistd.h>
 
+_Noreturn void allocation_failed(void) {
+  fputs("agent-usage: allocation failed\n", stderr);
+  exit(1);
+}
+size_t size_add(size_t a, size_t b) {
+  if (b > SIZE_MAX - a)
+    allocation_failed();
+  return a + b;
+}
 void *allocate(size_t n) {
   void *p = calloc(1, n ? n : 1);
-  if (!p) {
-    fputs("agent-usage: allocation failed\n", stderr);
-    exit(1);
-  }
+  if (!p)
+    allocation_failed();
   return p;
 }
+void *resize(void *old, size_t count, size_t size) {
+  if (size && count > SIZE_MAX / size)
+    allocation_failed();
+  size_t bytes = count * size;
+  void *p = realloc(old, bytes ? bytes : 1);
+  if (!p)
+    allocation_failed();
+  return p;
+}
+char *duplicate(const char *s) {
+  size_t n = size_add(strlen(s), 1);
+  char *out = allocate(n);
+  memcpy(out, s, n);
+  return out;
+}
+static void *json_malloc(void *ctx, size_t size) {
+  (void)ctx;
+  return allocate(size);
+}
+static void *json_realloc(void *ctx, void *ptr, size_t old, size_t size) {
+  (void)ctx;
+  (void)old;
+  return resize(ptr, size, 1);
+}
+static void json_free(void *ctx, void *ptr) {
+  (void)ctx;
+  free(ptr);
+}
+static const yyjson_alc allocator = {
+    .malloc = json_malloc, .realloc = json_realloc, .free = json_free};
+Doc *new_doc(void) {
+  Doc *d = yyjson_mut_doc_new(&allocator);
+  if (!d)
+    allocation_failed();
+  return d;
+}
 char *join(const char *a, const char *b) {
-  size_t n = strlen(a) + strlen(b) + 2;
+  size_t n = size_add(size_add(strlen(a), strlen(b)), 2);
   char *s = allocate(n);
   snprintf(s, n, "%s/%s", a, b);
   return s;
@@ -36,10 +79,10 @@ char *agent_dir(void) {
   if (!p || !*p)
     return join(home_dir(), ".pi/agent");
   if (!strcmp(p, "~"))
-    return strdup(home_dir());
+    return duplicate(home_dir());
   if (!strncmp(p, "~/", 2))
     return join(home_dir(), p + 2);
-  return strdup(p);
+  return duplicate(p);
 }
 Val *get(Val *v, const char *key) { return yyjson_mut_obj_get(v, key); }
 bool truth(Val *v) {
@@ -92,7 +135,8 @@ Val *parse_bytes(Doc *d, const char *s, size_t len) {
   // Session logs and HTTP bodies previously used UTF-8 replacement decoding.
   char *valid = g_utf8_make_valid(s, (gssize)len);
   yyjson_doc *r =
-      yyjson_read(valid, strlen(valid), YYJSON_READ_ALLOW_INF_AND_NAN);
+      yyjson_read_opts(valid, strlen(valid), YYJSON_READ_ALLOW_INF_AND_NAN,
+                       &allocator, NULL);
   g_free(valid);
   if (!r)
     return NULL;
@@ -102,14 +146,16 @@ Val *parse_bytes(Doc *d, const char *s, size_t len) {
 }
 Val *load(Doc *d, const char *path) {
   yyjson_doc *r =
-      yyjson_read_file(path, YYJSON_READ_ALLOW_INF_AND_NAN, NULL, NULL);
+      yyjson_read_file(path, YYJSON_READ_ALLOW_INF_AND_NAN, &allocator, NULL);
   if (!r)
     return NULL;
   Val *v = yyjson_val_mut_copy(d, yyjson_doc_get_root(r));
   yyjson_doc_free(r);
   return v;
 }
-char *encode(Val *v) { return yyjson_mut_val_write(v, 0, NULL); }
+char *encode(Val *v) {
+  return yyjson_mut_val_write_opts(v, 0, &allocator, NULL, NULL);
+}
 static bool text_space(gunichar c) {
   return g_unichar_isspace(c) || c == '\v' || c == 0x85 ||
          (c >= 0x1c && c <= 0x1f);
@@ -140,7 +186,7 @@ static double numeric(Val *v, bool percent, bool *valid) {
     *valid = false;
     return 0;
   }
-  char *s = strdup(text(v));
+  char *s = duplicate(text(v));
   if (percent)
     strip_text(s);
   char *out = s;
@@ -213,7 +259,7 @@ const char *iso_timestamp(Doc *d, Val *v) {
     return "";
   const char *s = text(v);
   if (yyjson_mut_is_str(v)) {
-    char *clean = strip_text(strdup(s));
+    char *clean = strip_text(duplicate(s));
     bool is_number = digits(clean);
     free(clean);
     if (!is_number)
@@ -237,7 +283,7 @@ void local_day(Val *v, double now, char out[11]) {
   time_t instant = (time_t)now;
   bool valid;
   double n = numeric(v, false, &valid);
-  char *clean = yyjson_mut_is_str(v) ? strip_text(strdup(text(v))) : NULL;
+  char *clean = yyjson_mut_is_str(v) ? strip_text(duplicate(text(v))) : NULL;
   bool numeric_string = clean && digits(clean);
   if (numeric_string) {
     n = strtod(clean, NULL);

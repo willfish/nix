@@ -409,9 +409,10 @@ static bool date_value(const char *s, GDate *out) {
     char *a = g_match_info_fetch(info, 1), *b = g_match_info_fetch(info, 2),
          *c = g_match_info_fetch(info, 3), *d = g_match_info_fetch(info, 4),
          *e = g_match_info_fetch(info, 5);
-    year = (unsigned)atoi(a);
-    unsigned week = (unsigned)atoi(*b ? b : d);
-    day = (unsigned)(*c ? atoi(c) : *e ? atoi(e) : 1);
+    /* The regex bounds these decimal captures to four, two and one digits. */
+    year = (unsigned)strtoul(a, NULL, 10);
+    unsigned week = (unsigned)strtoul(*b ? b : d, NULL, 10);
+    day = (unsigned)(*c ? *c - '0' : *e ? *e - '0' : 1);
     if (year >= 1 && year <= 9999 && week >= 1 && week <= 53) {
       GDate first;
       g_date_clear(&first, 1);

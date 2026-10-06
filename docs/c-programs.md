@@ -14,7 +14,7 @@ New and touched Meson projects use:
 default_options: ['c_std=c17', 'warning_level=3', 'werror=true']
 ```
 
-Handwritten compiler lines use `-std=c17 -Wall -Wextra -Wpedantic -Werror`. Leave Nix's stdenv hardening on. Production builds already get fortified libc, stack protection, RELRO, immediate binding, position-independent executables and a non-executable stack. Do not disable those to silence a warning. Fix the warning.
+Handwritten compiler lines use `-std=c17 -Wall -Wextra -Wpedantic -Werror`. Mark upstream dependency headers as system headers when their diagnostics would otherwise be attributed to our build; keep these warnings enabled for owned code. Leave Nix's stdenv hardening on. Production builds already get fortified libc, stack protection, RELRO, immediate binding, position-independent executables and a non-executable stack. Do not disable those to silence a warning. Fix the warning.
 
 Address and undefined-behavior sanitizers belong in a separate manual build, not in an installed binary. When a change touches a parser, allocator, signal path or untrusted input, configure that program with `-Db_sanitize=address,undefined` in a private build directory and run its existing fixture. Do not add a repository-wide test suite, flake check, package test phase or commit-hook gate. Fixtures stay program-local and off by default.
 
@@ -22,7 +22,7 @@ Address and undefined-behavior sanitizers belong in a separate manual build, not
 
 These are the CERT C rules that matter here. Apply them when writing or changing C. Do not do a style sweep of untouched programs.
 
-- Check every allocation. Keep the old pointer until the new one has succeeded. `realloc` frees the old block on success, so assigning its result over the only copy of that pointer loses the block if a later allocation fails.
+- Check every allocation. Hold a `realloc` result in a temporary until it succeeds, then immediately update the owning pointer before attempting another allocation: the old pointer may already be invalid. For all-or-nothing replacement of multiple buffers, allocate and copy fresh blocks instead of delaying ownership updates after successful `realloc` calls.
 - Bound every size calculation before adding or multiplying. Prefer an explicit overflow check. `atoi` and `atol` do not report range errors. Use `strtol` with an end pointer, or parse a string the grammar has already constrained.
 - Do not use `strcpy`, `strcat` or `sprintf` in production code. Use `snprintf` with the destination size, including when the buffer was sized from `strlen`. A correct size that is not visible at the call is still the wrong call.
 - Check writes, renames, `fchmod` and closes. Ignoring a failed credential save is a bug unless the caller has another defined failure path. Say so at the call if a failure is intentionally discarded.
@@ -33,16 +33,5 @@ These are the CERT C rules that matter here. Apply them when writing or changing
 
 C23 features are worth adopting only when they remove a bug class, and only after the Darwin build constraint above is met. The useful ones are `[[nodiscard]]` on save and write functions, `<stdckdint.h>` for size calculations, and `memset_explicit` for token buffers. `auto`, `typeof` and `#embed` do not make these programs more robust.
 
-## Current gaps
-
-Twenty-one Meson projects already request C17, warning level 3 and warnings as errors. `memscope` and the NetworkManager C bridge match that bar. The greeter, Pi config, daily agenda, PersonaPlex archive extractor and voice attachment checks already follow the path, credential and confinement rules above. These spots do not.
-
-`home/config/voice-c` is C11 at warning level 2, and warnings are not errors. Its private JSON parser grows an object's key and member arrays with two `realloc` calls, then on failure frees both results and the object. If only one `realloc` succeeds, that call has already freed the pointer still stored in the object, and the cleanup uses it. Assign both results to temporaries and store them only after both succeed. This is latent: it needs allocation failure. The parser still handles speech responses.
-
-`write_nosig` in `home/config/voice-c/src/ipc.c` ignores `SIGPIPE` for the whole process and then restores the previous action. Another thread can restore the default action while a write is in progress, and the process dies. The voice daemon ignores `SIGPIPE` at startup, so its server loop is covered. Other callers of the IPC helpers are not. Use the thread-mask pattern from the audio player.
-
-`home/config/agent-usage` is C11 despite strict warnings. Its directory creation does not check a failed `strdup` before walking the path. OAuth refresh ignores the result of `write_auth`, so a failed atomic save can leave the new token only in memory while the caller continues.
-
-`home/config/prompt-capture` is C17, but only warning level 2. `home/config/repo-tools/audit.c` uses `atoi` on ISO week fields. Those captures are already digit-bounded by the regex, so this is a rule miss rather than an overflow. Replace it when that parser is next touched.
-
-Remove a gap from this section when it is fixed. Do not turn the section into a changelog.
+Record concrete unresolved exceptions with their affected program and consequence.
+Remove an exception when fixed; do not turn the guide into a changelog.

@@ -1,6 +1,9 @@
 #define _POSIX_C_SOURCE 200809L
 #include "ipc.h"
 
+#include <errno.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,10 +89,61 @@ static void test_unix_json_roundtrip(void) {
     rmdir(dir);
 }
 
+static volatile sig_atomic_t pipe_signals;
+static void pipe_handler(int signal) { (void)signal; pipe_signals++; }
+
+static void test_pipe_signal_ownership(void) {
+    test_name = "pipe signal ownership";
+    sigset_t block, old_mask, pending;
+    sigemptyset(&block);
+    sigaddset(&block, SIGPIPE);
+    struct sigaction action = {.sa_handler = pipe_handler}, old_action, current;
+    sigemptyset(&action.sa_mask);
+    CHECK(sigaction(SIGPIPE, &action, &old_action) == 0);
+    CHECK(pthread_sigmask(SIG_BLOCK, &block, &old_mask) == 0);
+    CHECK(raise(SIGPIPE) == 0);
+    const char *argv[] = {"cat"};
+    ipc_process_request request = {.argv = argv, .argc = 1,
+        .stdin_bytes = (const unsigned char *)"payload", .stdin_len = 7,
+        .capture_stdout = 1, .deadline_ms = 2000};
+    ipc_process_result result;
+    char err[128];
+    CHECK(ipc_process_run(&request, &result, err, sizeof err) == IPC_OK);
+    ipc_process_result_free(&result);
+    CHECK(sigpending(&pending) == 0);
+    CHECK(sigismember(&pending, SIGPIPE) == 1);
+    CHECK(sigaction(SIGPIPE, NULL, &current) == 0);
+    CHECK(current.sa_handler == pipe_handler);
+    if (sigismember(&pending, SIGPIPE) == 1) {
+        int signal;
+        CHECK(sigwait(&block, &signal) == 0);
+        CHECK(signal == SIGPIPE);
+    }
+    CHECK(pthread_sigmask(SIG_SETMASK, &old_mask, NULL) == 0);
+
+    /* A closed child pipe generates a new SIGPIPE, which belongs to the write. */
+    const char *closed[] = {"sh", "-c", "exec 0<&-; sleep 1"};
+    unsigned char *large = calloc(1, 1024 * 1024);
+    CHECK(large != NULL);
+    if (large) {
+        request.argv = closed; request.argc = 3;
+        request.stdin_bytes = large; request.stdin_len = 1024 * 1024;
+        pipe_signals = 0;
+        CHECK(ipc_process_run(&request, &result, err, sizeof err) == IPC_ERR);
+        CHECK(pipe_signals == 0);
+        CHECK(sigaction(SIGPIPE, NULL, &current) == 0);
+        CHECK(current.sa_handler == pipe_handler);
+        ipc_process_result_free(&result);
+        free(large);
+    }
+    CHECK(sigaction(SIGPIPE, &old_action, NULL) == 0);
+}
+
 int test_ipc(void) {
     failures = 0;
     test_process_captures_without_shell();
     test_process_deadline_kills();
     test_unix_json_roundtrip();
+    test_pipe_signal_ownership();
     return failures;
 }

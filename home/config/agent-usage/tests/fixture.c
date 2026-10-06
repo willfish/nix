@@ -27,11 +27,17 @@ int main(int argc, char **argv) {
   size_t capacity = 0;
   if (getline(&line, &capacity, stdin) < 0)
     return 2;
-  Doc *d = yyjson_mut_doc_new(NULL);
+  Doc *d = new_doc();
   Val *args = parse(d, line), *v = get(args, "value"), *out = NULL;
   double now = yyjson_mut_get_num(get(args, "now"));
   const char *op = argv[1];
-  if (!strcmp(op, "number"))
+  if (!strcmp(op, "overflow_add")) {
+    (void)size_add(SIZE_MAX, 1);
+    return 3;
+  } else if (!strcmp(op, "overflow_multiply")) {
+    (void)resize(NULL, SIZE_MAX, 2);
+    return 3;
+  } else if (!strcmp(op, "number"))
     out = yyjson_mut_sint(d, number(v));
   else if (!strcmp(op, "fraction"))
     out = yyjson_mut_real(d, fraction(v, truth(get(args, "percent"))));

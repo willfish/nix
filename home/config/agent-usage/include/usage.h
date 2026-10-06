@@ -26,7 +26,13 @@ typedef struct {
 } Context;
 double context_now(Context *ctx);
 
+/* These short-lived helpers terminate with a private diagnostic on OOM. */
+_Noreturn void allocation_failed(void);
+size_t size_add(size_t a, size_t b);
 void *allocate(size_t n);
+void *resize(void *old, size_t count, size_t size);
+char *duplicate(const char *s);
+Doc *new_doc(void);
 char *join(const char *a, const char *b);
 char *strip_text(char *s);
 const char *home_dir(void);

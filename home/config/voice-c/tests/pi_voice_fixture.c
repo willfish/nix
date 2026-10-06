@@ -176,7 +176,6 @@ static char *fixture_state(void) {
         if (!entry->used || !entry->target) continue;
         yyjson_mut_val *row = yyjson_mut_obj(doc);
         yyjson_mut_obj_add_strcpy(doc, row, "token", entry->token);
-        yyjson_mut_doc *target_doc = NULL;
         char *selection = controller_selection_json(app);
         (void)selection;
         yyjson_mut_val *target = yyjson_mut_obj(doc);
@@ -281,8 +280,10 @@ static void handle_client(int client) {
         yyjson_doc_free(doc);
     }
     if (response) {
-        write(client, response, strlen(response));
-        write(client, "\n", 1);
+        size_t length = strlen(response);
+        if (write(client, response, length) != (ssize_t)length ||
+            write(client, "\n", 1) != 1)
+            fputs("fixture response write failed\n", stderr);
         free(response);
     }
     close(client);

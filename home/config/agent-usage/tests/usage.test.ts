@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile, execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, chmodSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
 import { tmpdir } from 'node:os';
@@ -180,6 +180,31 @@ test('OAuth refresh persists all profiles atomically at mode 0600 and rotates th
   const output = collect('codex', root, [{ status: 200, body: { access_token: 'fixture-new', refresh_token: 'new-refresh', expires_in: 3600 } }, { status: 200, body: codexBody }]);
   assert.equal(output.requests[0].url, 'https://auth.openai.com/oauth/token'); assert.equal(new URLSearchParams(output.requests[0].form).get('refresh_token'), 'refresh with &'); assert.equal(output.requests[1].token, 'fixture-new');
   const path = join(root, 'agent/auth.json'), stored = JSON.parse(readFileSync(path, 'utf8')); assert.equal(stored['openai-codex'].accountId, 'acct'); assert.equal(stored['openai-codex'].extra, 42); assert.deepEqual(stored.other, original.other); assert.equal(statSync(path).mode & 0o777, 0o600); assert.deepEqual(readdirSync(join(root, 'agent')), ['auth.json']);
+});
+
+test('failed credential publication reports the failure without probing with unsaved tokens', t => {
+  const root = dir(t), folder = join(root, 'agent'), path = join(folder, 'auth.json');
+  auth(root, { 'openai-codex': { access: 'fixture-old', refresh: 'fixture-refresh', expires: 1 } });
+  const before = readFileSync(path, 'utf8');
+  chmodSync(folder, 0o500);
+  try {
+    const output = collect('codex', root, [{ status: 200, body: { access_token: 'fixture-new', refresh_token: 'fixture-rotated', expires_in: 3600 } }]);
+    assert.equal(output.requests.length, 1);
+    assert.equal(readFileSync(path, 'utf8'), before);
+    assert.equal(output.record.usageStatusText, "Couldn't save refreshed credentials");
+    assert.match(output.record.authHelpText, /writable/);
+    assert.doesNotMatch(JSON.stringify(output.record), /fixture-(old|new|rotated|refresh)/);
+    assert.deepEqual(readdirSync(folder), ['auth.json']);
+  } finally { chmodSync(folder, 0o700); }
+});
+
+test('allocation size overflow exits with a value-free diagnostic', () => {
+  for (const op of ['overflow_add', 'overflow_multiply']) {
+    const output = spawnSync(fixture, [op], { input: '{}\n', encoding: 'utf8' });
+    assert.equal(output.status, 1);
+    assert.equal(output.stdout, '');
+    assert.equal(output.stderr, 'agent-usage: allocation failed\n');
+  }
 });
 
 test('failed refresh falls back only to a still-valid token, and missing refresh stops expired probes', t => {

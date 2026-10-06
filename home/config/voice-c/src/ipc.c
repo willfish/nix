@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <pthread.h>
 #include <signal.h>
 #include <spawn.h>
 #include <stdio.h>
@@ -42,13 +43,27 @@ static int set_cloexec(int fd) {
 }
 
 static ssize_t write_nosig(int fd, const void *data, size_t len) {
-    struct sigaction ignore, previous;
-    memset(&ignore, 0, sizeof ignore);
-    ignore.sa_handler = SIG_IGN;
-    sigaction(SIGPIPE, &ignore, &previous);
+    sigset_t block, previous, pending;
+    sigemptyset(&block);
+    sigaddset(&block, SIGPIPE);
+    int error = pthread_sigmask(SIG_BLOCK, &block, &previous);
+    if (error) { errno = error; return -1; }
+    if (sigpending(&pending) != 0) {
+        int saved = errno;
+        error = pthread_sigmask(SIG_SETMASK, &previous, NULL);
+        errno = error ? error : saved;
+        return -1;
+    }
+    int prior = sigismember(&pending, SIGPIPE);
     ssize_t n = write(fd, data, len);
     int saved = errno;
-    sigaction(SIGPIPE, &previous, NULL);
+    /* Never alter the process disposition or consume an older pending signal. */
+    if (n < 0 && saved == EPIPE && !prior) {
+        struct timespec zero = {0, 0};
+        while (sigtimedwait(&block, NULL, &zero) < 0 && errno == EINTR) {}
+    }
+    error = pthread_sigmask(SIG_SETMASK, &previous, NULL);
+    if (error) { errno = error; return -1; }
     errno = saved;
     return n;
 }

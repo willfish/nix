@@ -99,7 +99,7 @@ int test_chunks(void) {
     expect_text("symbols only", "\u2026\U0001f600", "");
     expect_text("unicode transcript", "\u4f60\u597d", "\u4f60\u597d");
     if (has_control_characters("It\u2019s ready. \U0001f600") ||
-        !has_control_characters("\u0085") || !has_control_characters("\xff")) {
+        !has_control_characters("\xc2\x85") || !has_control_characters("\xff")) {
         fprintf(stderr, "FAIL Unicode control classification\n");
         failures++;
     }

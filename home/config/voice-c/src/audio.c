@@ -462,17 +462,24 @@ static json_value *parse_value(const char **cursor, const char *end, int depth) 
             *cursor = p;
             json_value *member = parse_value(cursor, end, depth + 1);
             if (!member) { json_free(key); json_free(obj); return NULL; }
-            char **keys = realloc(obj->keys, (obj->nmembers + 1) * sizeof *keys);
-            json_value **members = realloc(obj->members, (obj->nmembers + 1) * sizeof *members);
-            if (!keys || !members) {
-                free(keys);
-                free(members);
-                json_free(key);
-                json_free(member);
-                json_free(obj);
+            if (obj->nmembers >= SIZE_MAX / sizeof *obj->keys ||
+                obj->nmembers >= SIZE_MAX / sizeof *obj->members) {
+                json_free(key); json_free(member); json_free(obj);
                 return NULL;
             }
+            char **keys = realloc(obj->keys, (obj->nmembers + 1) * sizeof *keys);
+            if (!keys) {
+                json_free(key); json_free(member); json_free(obj);
+                return NULL;
+            }
+            /* Publish each successful realloc before another allocation can
+             * fail: the old pointer may already have been freed. */
             obj->keys = keys;
+            json_value **members = realloc(obj->members, (obj->nmembers + 1) * sizeof *members);
+            if (!members) {
+                json_free(key); json_free(member); json_free(obj);
+                return NULL;
+            }
             obj->members = members;
             obj->keys[obj->nmembers] = key->string;
             key->string = NULL;

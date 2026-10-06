@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 static bool mkdirs(const char *path) {
-  char *s = strdup(path);
+  char *s = duplicate(path);
   for (char *p = s + 1; *p; p++)
     if (*p == '/') {
       *p = 0;
@@ -28,12 +28,12 @@ static bool mkdirs(const char *path) {
   return ok;
 }
 bool write_auth(const char *path, Val *auth) {
-  char *parent = strdup(path), *slash = strrchr(parent, '/');
+  char *parent = duplicate(path), *slash = strrchr(parent, '/');
   if (slash)
     *slash = 0;
   else {
     free(parent);
-    parent = strdup(".");
+    parent = duplicate(".");
   }
   if (!mkdirs(parent)) {
     free(parent);
@@ -46,16 +46,20 @@ bool write_auth(const char *path, Val *auth) {
   if (fd >= 0 && data) {
     FILE *f = fdopen(fd, "w");
     if (f) {
-      ok = fputs(data, f) >= 0 && fputc('\n', f) != EOF && fflush(f) == 0 &&
-           fchmod(fd, 0600) == 0;
+      ok = fchmod(fd, 0600) == 0 && fputs(data, f) >= 0 &&
+           fputc('\n', f) != EOF && fflush(f) == 0;
       if (fclose(f))
         ok = false;
-    } else
-      close(fd);
+    } else {
+      /* Publication is already failing; closing cannot restore success. */
+      (void)close(fd);
+    }
     if (ok && rename(temporary, path))
       ok = false;
-  } else if (fd >= 0)
-    close(fd);
+  } else if (fd >= 0) {
+    /* Encoding failed; never publish the temporary. */
+    (void)close(fd);
+  }
   if (!ok)
     unlink(temporary);
   free(data);
@@ -111,9 +115,7 @@ static size_t receive(char *data, size_t size, size_t count, void *raw) {
   if (b->len == SIZE_MAX || n > SIZE_MAX - b->len - 1)
     return 0;
   b->activity = monotonic_ms();
-  char *p = realloc(b->data, b->len + n + 1);
-  if (!p)
-    return 0;
+  char *p = resize(b->data, b->len + n + 1, 1);
   b->data = p;
   memcpy(p + b->len, data, n);
   b->len += n;
@@ -126,6 +128,12 @@ static bool safe_header(const char *value) {
       return false;
   return true;
 }
+static void add_header(struct curl_slist **headers, const char *value) {
+  struct curl_slist *next = curl_slist_append(*headers, value);
+  if (!next)
+    allocation_failed();
+  *headers = next;
+}
 Reply http_request(Doc *d, const char *url, const char *token,
                    const char *extra_headers, const char *form) {
   Reply r = {.failed = true};
@@ -136,16 +144,16 @@ Reply http_request(Doc *d, const char *url, const char *token,
     return r;
   struct curl_slist *headers = NULL;
   Buffer b = {.activity = monotonic_ms()};
-  headers = curl_slist_append(headers, "Accept: application/json");
+  add_header(&headers, "Accept: application/json");
   if (token) {
-    size_t n = strlen(token) + 32;
+    size_t n = size_add(strlen(token), 32);
     char *h = allocate(n);
     snprintf(h, n, "Authorization: Bearer %s", token);
-    headers = curl_slist_append(headers, h);
+    add_header(&headers, h);
     free(h);
   }
   if (extra_headers && *extra_headers) {
-    char *s = strdup(extra_headers), *save = NULL;
+    char *s = duplicate(extra_headers), *save = NULL;
     for (char *h = strtok_r(s, "\n", &save); h;
          h = strtok_r(NULL, "\n", &save)) {
       if (!safe_header(h)) {
@@ -154,7 +162,7 @@ Reply http_request(Doc *d, const char *url, const char *token,
         curl_easy_cleanup(curl);
         return r;
       }
-      headers = curl_slist_append(headers, h);
+      add_header(&headers, h);
     }
     free(s);
   }
@@ -178,8 +186,7 @@ Reply http_request(Doc *d, const char *url, const char *token,
   if (ca && *ca)
     curl_easy_setopt(curl, CURLOPT_CAINFO, ca);
   if (form) {
-    headers = curl_slist_append(
-        headers, "Content-Type: application/x-www-form-urlencoded");
+    add_header(&headers, "Content-Type: application/x-www-form-urlencoded");
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, form);
   }
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -238,7 +245,7 @@ const char *oauth_access(Doc *d, Context *ctx, const char *provider,
     free(path);
     return "";
   }
-  size_t n = strlen(escaped) + strlen(client) + 80;
+  size_t n = size_add(size_add(strlen(escaped), strlen(client)), 80);
   char *form = allocate(n);
   snprintf(form, n, "grant_type=refresh_token&refresh_token=%s&client_id=%s",
            escaped, client);
@@ -258,7 +265,11 @@ const char *oauth_access(Doc *d, Context *ctx, const char *provider,
   }
   Val *updated = merge_oauth(d, entry, reply.body, now);
   put(d, auth, provider, updated);
-  (void)write_auth(path, auth);
+  if (!write_auth(path, auth)) {
+    free(path);
+    *failure = "Couldn't save refreshed credentials";
+    return "";
+  }
   free(path);
   *failure = "";
   return text(get(updated, "access"));
@@ -277,13 +288,13 @@ static double monotonic_ms(void) {
   return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
 }
 char *command_key(const char *raw, int timeout_ms) {
-  char *value = strip_text(strdup(raw));
+  char *value = strip_text(duplicate(raw));
   if (*value != '!')
     return value;
   int pipes[2];
   if (pipe(pipes)) {
     free(value);
-    return strdup("");
+    return duplicate("");
   }
   pid_t pid = fork();
   if (pid == 0) {
@@ -303,7 +314,7 @@ char *command_key(const char *raw, int timeout_ms) {
   close(pipes[1]);
   if (pid < 0) {
     close(pipes[0]);
-    return strdup("");
+    return duplicate("");
   }
   setpgid(pid, pid);
   fcntl(pipes[0], F_SETFL, O_NONBLOCK);
@@ -350,14 +361,14 @@ char *command_key(const char *raw, int timeout_ms) {
   close(pipes[0]);
   if (failed || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
     free(b.data);
-    return strdup("");
+    return duplicate("");
   }
-  return strip_text(b.data ? b.data : strdup(""));
+  return strip_text(b.data ? b.data : duplicate(""));
 }
 char *opencode_key(Doc *d) {
   const char *env = getenv("OPENCODE_GO_API_KEY");
   if (env && *env)
-    return strdup(env);
+    return duplicate(env);
   char *dir = agent_dir(), *path = join(dir, "models.json");
   Val *models = load(d, path),
       *entry = get(get(models, "providers"), "opencode-go");
@@ -384,7 +395,7 @@ Val *jwt_claims(Doc *d, const char *token) {
   const char *end = strchr(start, '.');
   if (!end)
     end = start + strlen(start);
-  char *decoded = allocate((size_t)(end - start) + 1);
+  char *decoded = allocate(size_add((size_t)(end - start), 1));
   size_t n = 0;
   unsigned acc = 0, bits = 0;
   bool valid = true;
@@ -418,7 +429,7 @@ Val *collect(Doc *d, Context *ctx, const char *id) {
       : grok ? "Run /login xai in Pi."
              : "Connect OpenCode Go in Pi (`/login opencode-go`).";
   const char *raw = getenv("PI_AGENT_DIR");
-  char *root = (raw && *raw) ? strdup(raw) : join(home_dir(), ".pi/agent"),
+  char *root = (raw && *raw) ? duplicate(raw) : join(home_dir(), ".pi/agent"),
        *sessions = join(root, "sessions");
   Val *stats = scan_pi(d, sessions, provider, context_now(ctx));
   free(sessions);
@@ -444,7 +455,9 @@ Val *collect(Doc *d, Context *ctx, const char *id) {
                          : grok ? (*token ? grok_tier(d, claims) : "")
                                 : "Go",
                  .status = failure};
-  const char *help = *failure ? auth_help : "";
+  const char *help = !strcmp(failure, "Couldn't save refreshed credentials")
+                         ? "Check that Pi's credential registry is writable before signing in again."
+                         : *failure ? auth_help : "";
   bool retry = false;
   if (*token) {
     char *extra = NULL;
@@ -456,8 +469,9 @@ Val *collect(Doc *d, Context *ctx, const char *id) {
       const char *account = text(get(get(auth, "openai-codex"), "accountId"));
       valid = header_value(account);
       if (*account) {
-        extra = allocate(strlen(account) + 32);
-        sprintf(extra, "ChatGPT-Account-Id: %s", account);
+        size_t n = size_add(strlen(account), 32);
+        extra = allocate(n);
+        snprintf(extra, n, "ChatGPT-Account-Id: %s", account);
       }
     } else if (grok) {
       Val *user = get(claims, "principal_id");
@@ -465,10 +479,11 @@ Val *collect(Doc *d, Context *ctx, const char *id) {
         user = get(claims, "sub");
       const char *uid = text(user);
       valid = header_value(uid);
-      extra = allocate(strlen(uid) + 80);
-      sprintf(extra, "x-xai-token-auth: xai-grok-cli\nx-userid: %s", uid);
+      size_t n = size_add(strlen(uid), 80);
+      extra = allocate(n);
+      snprintf(extra, n, "x-xai-token-auth: xai-grok-cli\nx-userid: %s", uid);
     } else
-      extra = strdup("User-Agent: hypr-agent-usage");
+      extra = duplicate("User-Agent: hypr-agent-usage");
     Reply reply = valid
                       ? ctx->transport(
                             d,

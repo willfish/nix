@@ -1,4 +1,4 @@
-project('agent-usage', 'c', version: '0.1.0', meson_version: '>=1.1', default_options: ['c_std=c11', 'warning_level=3', 'werror=true'])
+project('agent-usage', 'c', version: '0.1.0', meson_version: '>=1.1', default_options: ['c_std=c17', 'warning_level=3', 'werror=true'])
 add_project_arguments('-D_POSIX_C_SOURCE=200809L', '-D_DEFAULT_SOURCE', '-D_XOPEN_SOURCE=700', language: 'c')
 cc = meson.get_compiler('c')
 deps = [dependency('yyjson'), dependency('libcurl'), dependency('glib-2.0'), cc.find_library('m')]
