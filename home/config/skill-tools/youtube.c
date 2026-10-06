@@ -556,7 +556,8 @@ static bool fetch(const char *url, const char *dir, yyjson_doc **info,
     for (size_t i = 0; i < 5; i++)
       g_ptr_array_add(args, (gpointer)prefix[i]);
   }
-  const char *flags[] = {"--skip-download",
+  const char *flags[] = {"--ignore-errors",
+                         "--skip-download",
                          "--no-playlist",
                          "--no-warnings",
                          "--write-info-json",

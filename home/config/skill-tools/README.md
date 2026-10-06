@@ -5,8 +5,9 @@ It does not establish accessibility or evaluate composited colours.
 
 `youtube-extract` retains the metadata, caption cleanup, rolling deduplication,
 time-window and casefolded search CLI. It prefers a host `yt-dlp`, falling back
-to ephemeral Nix, and requests metadata and English subtitles without media.
-Local fixture inputs never fetch. Temporary downloads are removed; a supplied
+to ephemeral Nix, and requests metadata and English subtitles without media,
+tolerating partial caption failures so metadata and remaining subtitle
+languages survive a 429. Local fixture inputs never fetch. Temporary downloads are removed; a supplied
 work directory is retained. Third-party yt-dlp remains unchanged.
 
 `qbittorrent-inventory` reads only fast-resume-declared payloads, preserves raw

@@ -305,6 +305,7 @@ test("host yt-dlp uses only metadata/subtitle flags, selects manual captions and
   assert.equal(p.matches[0].text, "manual");
   const args = JSON.parse(fs.readFileSync(env.DOWNLOAD_LOG, "utf8"));
   assert.deepEqual(args.slice(0, -2), [
+    "--ignore-errors",
     "--skip-download",
     "--no-playlist",
     "--no-warnings",
@@ -320,6 +321,43 @@ test("host yt-dlp uses only metadata/subtitle flags, selects manual captions and
   assert(!args.includes("-x") && !args.includes("-f"));
   assert.equal(fs.existsSync(dirname(args.at(-2))), false);
 });
+test("yt-dlp partial caption failure still yields metadata and captions", () => {
+  const dir = join(root, `bin-partial-${serial++}`);
+  fs.mkdirSync(dir);
+  const helper = file("partial-captions-helper.js", [
+    "const fs=require('node:fs'),p=require('node:path');",
+    "const args=process.argv.slice(2);",
+    "fs.writeFileSync(process.env.DOWNLOAD_LOG,JSON.stringify(args));",
+    "if(process.env.DOWNLOAD_MODE==='strict'&&args.includes('--ignore-errors'))process.exit(17);",
+    "const out=args[args.indexOf('-o')+1],dir=p.dirname(out);",
+    "fs.mkdirSync(dir,{recursive:true});",
+    "fs.writeFileSync(p.join(dir,'video.info.json'),JSON.stringify({title:'stub title',uploader:'stub uploader',duration:61}));",
+    "fs.writeFileSync(p.join(dir,'a.auto.vtt'),'0:00 --> 0:01\\nauto\\n');",
+    "fs.writeFileSync(p.join(dir,'video.en.vtt'),'0:00 --> 0:01\\nkept\\n');",
+  ].join("\n"));
+  const stub = join(dir, "yt-dlp");
+  fs.writeFileSync(
+    stub,
+    `#!${process.execPath}\nrequire(${JSON.stringify(helper)})\n`,
+    { mode: 0o755 },
+  );
+  const strict = run(youtube, ["https://youtu.be/qILTuXLxfBM"], {
+    PATH: dir,
+    DOWNLOAD_LOG: file("strict-log", ""),
+    DOWNLOAD_MODE: "strict",
+  });
+  assert.equal(strict.status, 1);
+  const log = file("with-log", "");
+  const p = payload(["https://youtu.be/qILTuXLxfBM"], {
+    PATH: dir,
+    DOWNLOAD_LOG: log,
+  });
+  assert.equal(p.cue_count, 1);
+  assert.equal(p.title, "stub title");
+  const args = JSON.parse(fs.readFileSync(log, "utf8"));
+  assert(args.includes("--ignore-errors"));
+});
+
 test("Nix fallback keeps existing work directories, handles missing captions and propagates fetch failure", () => {
   const env = downloader("nix"),
     workdir = join(root, "work");
