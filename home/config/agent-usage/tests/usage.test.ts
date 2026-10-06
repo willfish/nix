@@ -33,6 +33,21 @@ test('numbers, fractions and provider percentages retain their distinct scales',
   assert.equal(call('fraction', { value: 1, percent: true }), .01);
 });
 
+test('configured keys, provider labels and numeric/date text retain whitespace handling', () => {
+  assert.equal(call('command', { value: '\u00a0fixture-key\u00a0', timeout_ms: 1000 }), 'fixture-key');
+  assert.equal(call('command', { value: "!printf '\\302\\240fixture-key\\302\\240'", timeout_ms: 1000 }), 'fixture-key');
+  assert.equal(call('codex', { value: { plan_type: '\u00a0pro_plus\u00a0' } }).plan, 'Pro Plus');
+  assert.equal(call('tier', { value: { plan: '\u00a0go_plus\u00a0' } }), 'go plus');
+  assert.equal(call('tier', { value: { tier: ' 5 ' } }), 'SuperGrok Heavy');
+  assert.equal(call('number', { value: '\u00a02.5\u00a0' }), 2);
+  assert.equal(call('fraction', { value: '40%\u00a0' }), .4);
+  assert.equal(call('timestamp', { value: '\u00a01791050635\u00a0' }), '2026-10-03T18:03:55+00:00');
+  assert.equal(call('day', { value: '\u00a01791050635\u00a0' }), '2026-10-03');
+  assert.equal(call('day', { value: '\u00a02026-10-03T12:00:00Z\u00a0' }), '2026-10-03');
+  assert.equal(call('number', { value: '\u001c2\u001c' }), 0);
+  assert.equal(call('tier', { value: { tier: '\u001c5\u001c' } }), '');
+});
+
 test('timestamps, milliseconds, offsets, malformed dates and recent calendar days', () => {
   assert.equal(call('day', { value: now * 1000 }), '2026-09-29');
   assert.equal(call('day', { value: String(now) }), '2026-09-29');

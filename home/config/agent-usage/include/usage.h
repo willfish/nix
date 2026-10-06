@@ -28,6 +28,7 @@ double context_now(Context *ctx);
 
 void *allocate(size_t n);
 char *join(const char *a, const char *b);
+char *strip_text(char *s);
 const char *home_dir(void);
 char *agent_dir(void);
 Val *get(Val *v, const char *key);

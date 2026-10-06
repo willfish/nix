@@ -40,13 +40,7 @@ Allowance parse_codex(Doc *d, Val *p, double now) {
     *s = (char)(start ? toupper(c) : tolower(c));
     start = !isalpha(c);
   }
-  char *s = plan;
-  while (isspace((unsigned char)*s))
-    s++;
-  size_t length = strlen(s);
-  while (length && isspace((unsigned char)s[length - 1]))
-    s[--length] = 0;
-  a.tier = yyjson_mut_get_str(yyjson_mut_strcpy(d, s));
+  a.tier = yyjson_mut_get_str(yyjson_mut_strcpy(d, strip_text(plan)));
   free(plan);
   Val *rate = get(p, "rate_limit");
   const char *keys[] = {"primary_window", "secondary_window"};
@@ -169,17 +163,12 @@ const char *grok_tier(Doc *d, Val *p) {
   const char *named =
       text(either(get(p, "subscription_tier"),
                   either(get(p, "subscriptionTier"), get(p, "plan"))));
-  char *s = strdup(named), *begin = s;
-  while (isspace((unsigned char)*begin))
-    begin++;
-  size_t n = strlen(begin);
-  while (n && isspace((unsigned char)begin[n - 1]))
-    begin[--n] = 0;
-  if (n) {
-    for (char *c = begin; *c; c++)
+  char *s = strip_text(strdup(named));
+  if (*s) {
+    for (char *c = s; *c; c++)
       if (*c == '_')
         *c = ' ';
-    const char *out = yyjson_mut_get_str(yyjson_mut_strcpy(d, begin));
+    const char *out = yyjson_mut_get_str(yyjson_mut_strcpy(d, s));
     free(s);
     return out;
   }
@@ -188,14 +177,15 @@ const char *grok_tier(Doc *d, Val *p) {
   if (!v || (!yyjson_mut_is_num(v) && !yyjson_mut_is_str(v) &&
              !yyjson_mut_is_bool(v)))
     return "";
-  char *end;
-  long tier = strtol(text(v), &end, 10);
+  char *clean = strip_text(strdup(text(v))), *end;
+  long tier = strtol(clean, &end, 10);
   if (yyjson_mut_is_num(v))
     tier = (long)yyjson_mut_get_num(v);
   else if (yyjson_mut_is_bool(v))
     tier = yyjson_mut_get_bool(v);
-  else if (end == text(v) || *end)
-    return "";
+  else if (end == clean || *end || strpbrk(text(v), "\x1c\x1d\x1e\x1f"))
+    tier = -1;
+  free(clean);
   const char *labels[] = {"Free",           "SuperGrok",  "X Basic",
                           "X Premium",      "X Premium+", "SuperGrok Heavy",
                           "SuperGrok Lite", "SuperGrok+"};

@@ -276,19 +276,8 @@ static double monotonic_ms(void) {
   clock_gettime(CLOCK_MONOTONIC, &t);
   return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
 }
-static char *trim(char *s) {
-  char *begin = s;
-  while (isspace((unsigned char)*begin))
-    begin++;
-  size_t n = strlen(begin);
-  while (n && isspace((unsigned char)begin[n - 1]))
-    begin[--n] = 0;
-  if (begin != s)
-    memmove(s, begin, n + 1);
-  return s;
-}
 char *command_key(const char *raw, int timeout_ms) {
-  char *value = trim(strdup(raw));
+  char *value = strip_text(strdup(raw));
   if (*value != '!')
     return value;
   int pipes[2];
@@ -363,7 +352,7 @@ char *command_key(const char *raw, int timeout_ms) {
     free(b.data);
     return strdup("");
   }
-  return trim(b.data ? b.data : strdup(""));
+  return strip_text(b.data ? b.data : strdup(""));
 }
 char *opencode_key(Doc *d) {
   const char *env = getenv("OPENCODE_GO_API_KEY");

@@ -110,6 +110,27 @@ Val *load(Doc *d, const char *path) {
   return v;
 }
 char *encode(Val *v) { return yyjson_mut_val_write(v, 0, NULL); }
+static bool text_space(gunichar c) {
+  return g_unichar_isspace(c) || c == '\v' || c == 0x85 ||
+         (c >= 0x1c && c <= 0x1f);
+}
+char *strip_text(char *s) {
+  char *begin = s, *end = s + strlen(s);
+  while (begin < end &&
+         text_space(g_utf8_get_char_validated(begin, end - begin)))
+    begin = g_utf8_next_char(begin);
+  while (end > begin) {
+    char *previous = g_utf8_find_prev_char(begin, end);
+    if (!previous ||
+        !text_space(g_utf8_get_char_validated(previous, end - previous)))
+      break;
+    end = previous;
+  }
+  size_t length = (size_t)(end - begin);
+  memmove(s, begin, length);
+  s[length] = 0;
+  return s;
+}
 static double numeric(Val *v, bool percent, bool *valid) {
   if (yyjson_mut_is_num(v)) {
     *valid = true;
@@ -119,18 +140,25 @@ static double numeric(Val *v, bool percent, bool *valid) {
     *valid = false;
     return 0;
   }
-  char *s = strdup(text(v)), *out = s;
-  for (const char *p = text(v); *p; p++)
+  char *s = strdup(text(v));
+  if (percent)
+    strip_text(s);
+  char *out = s;
+  for (const char *p = s; *p; p++)
     if (!percent || *p != '%')
       *out++ = *p;
   *out = 0;
+  // float() rejects these separators, although explicit str.strip() removes
+  // them.
+  if (strpbrk(s, "\x1c\x1d\x1e\x1f")) {
+    free(s);
+    *valid = false;
+    return 0;
+  }
+  strip_text(s);
   char *end;
   double n = strtod(s, &end);
-  *valid = end != s;
-  while (isspace((unsigned char)*end))
-    end++;
-  if (*end)
-    *valid = false;
+  *valid = end != s && !*end;
   free(s);
   return n;
 }
@@ -184,8 +212,13 @@ const char *iso_timestamp(Doc *d, Val *v) {
   if (!truth(v))
     return "";
   const char *s = text(v);
-  if (yyjson_mut_is_str(v) && !digits(s))
-    return s;
+  if (yyjson_mut_is_str(v)) {
+    char *clean = strip_text(strdup(s));
+    bool is_number = digits(clean);
+    free(clean);
+    if (!is_number)
+      return s;
+  }
   bool valid;
   double n = numeric(v, false, &valid);
   if (yyjson_mut_is_bool(v)) {
@@ -204,21 +237,24 @@ void local_day(Val *v, double now, char out[11]) {
   time_t instant = (time_t)now;
   bool valid;
   double n = numeric(v, false, &valid);
+  char *clean = yyjson_mut_is_str(v) ? strip_text(strdup(text(v))) : NULL;
+  bool numeric_string = clean && digits(clean);
+  if (numeric_string) {
+    n = strtod(clean, NULL);
+    valid = true;
+  }
   if (yyjson_mut_is_bool(v)) {
     valid = true;
     n = yyjson_mut_get_bool(v);
   }
-  if (yyjson_mut_is_num(v) || yyjson_mut_is_bool(v) ||
-      (yyjson_mut_is_str(v) && digits(text(v)))) {
+  if (yyjson_mut_is_num(v) || yyjson_mut_is_bool(v) || numeric_string) {
     if (n > 10000000000.0)
       n /= 1000;
     if (valid && isfinite(n) && n > -62135596800.0 && n < 253402300800.0)
       instant = (time_t)n;
-  } else if (yyjson_mut_is_str(v) && *text(v)) {
+  } else if (clean && *clean) {
     struct tm parsed = {.tm_isdst = -1};
-    const char *s = text(v);
-    while (isspace((unsigned char)*s))
-      s++;
+    const char *s = clean;
     char *end = strptime(s, "%Y-%m-%d", &parsed);
     if (end) {
       bool date_ok =
@@ -249,6 +285,7 @@ void local_day(Val *v, double now, char out[11]) {
       }
     }
   }
+  free(clean);
   struct tm t;
   if (!localtime_r(&instant, &t))
     localtime_r(&(time_t){(time_t)now}, &t);
