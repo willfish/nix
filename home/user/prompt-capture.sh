@@ -121,7 +121,6 @@ if port_open; then
 fi
 rm -f "$pidfile"
 
-workdir="$(mktemp -d "$cdir/work.XXXXXX")"
 run_id="$(date +%Y%m%dT%H%M%S)-$$"
 srv_pid=""
 
@@ -137,205 +136,12 @@ cleanup() {
     kill -KILL "$srv_pid" 2>/dev/null || true
   fi
   rm -f "$pidfile"
-  rm -rf "$workdir"
   exit "$rc"
 }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 trap 'exit 129' HUP
-
-cat >"$workdir/addon.py" <<'PYEOF'
-import codecs
-import json
-import os
-import time
-
-REDACTED_HEADERS = {
-    "authorization",
-    "proxy-authorization",
-    "x-api-key",
-    "api-key",
-    "x-openrouter-api-key",
-    "cookie",
-}
-MAX_CHARS = 200000
-
-_jsonl = os.environ.get("PROMPT_CAPTURE_JSONL")
-_tool = os.environ.get("PROMPT_CAPTURE_TOOL", "unknown")
-_run = os.environ.get("PROMPT_CAPTURE_RUN", "")
-_fh = open(_jsonl, "a", encoding="utf-8") if _jsonl else None
-
-
-def _clip(text):
-    if text is None:
-        return ""
-    if len(text) > MAX_CHARS:
-        return text[:MAX_CHARS] + "...<truncated %d chars>" % (len(text) - MAX_CHARS)
-    return text
-
-
-def _clean(headers):
-    return {
-        k: "<redacted>" if k.lower() in REDACTED_HEADERS else v
-        for k, v in headers.items()
-    }
-
-
-def _usage(flow, text):
-    try:
-        payload = json.loads(text)
-    except (ValueError, TypeError):
-        return
-    if not isinstance(payload, dict):
-        return
-    usage = payload.get("usage")
-    for key in ("message", "response"):
-        if not isinstance(usage, dict) and isinstance(payload.get(key), dict):
-            usage = payload[key].get("usage")
-    if _fh is not None and isinstance(usage, dict):
-        _fh.write(json.dumps({
-            "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "run": _run, "tool": _tool, "kind": "usage",
-            "flow_id": flow.id, "usage": usage,
-        }) + "\n")
-        _fh.flush()
-
-
-def _record(kind, flow):
-    if _fh is None:
-        return
-    req = flow.request
-    body = req.get_text(strict=False) or ""
-    rec = {
-        "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "run": _run,
-        "tool": _tool,
-        "kind": kind,
-        "flow_id": flow.id,
-        "method": req.method,
-        "url": req.pretty_host + req.path,
-        "request_headers": _clean(req.headers),
-        "request_body": body,
-        "request_bytes": len(req.raw_content or b""),
-        "request_chars": len(body),
-    }
-    try:
-        payload = json.loads(body)
-        if isinstance(payload, dict):
-            rec["model"] = payload.get("model")
-            for key, label in (("messages", "message_count"), ("tools", "tool_count")):
-                if isinstance(payload.get(key), list):
-                    rec[label] = len(payload[key])
-    except (ValueError, TypeError):
-        pass
-    resp = flow.response
-    if resp is not None:
-        rec["status"] = resp.status_code
-        if not resp.stream:
-            _usage(flow, resp.get_text(strict=False))
-        if not resp.stream and os.environ.get("PROMPT_CAPTURE_RESPONSE_BODY") == "1":
-            rec["response_body"] = _clip(resp.get_text(strict=False))
-    _fh.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
-    _fh.flush()
-
-
-class PromptCapture:
-    def responseheaders(self, flow):
-        content_type = flow.response.headers.get("content-type", "")
-        if content_type.split(";", 1)[0].strip().lower() != "text/event-stream":
-            return
-        capture_body = os.environ.get("PROMPT_CAPTURE_RESPONSE_BODY") == "1"
-        decoder = codecs.getincrementaldecoder("utf-8")("replace")
-        pending = ""
-        data_lines = []
-
-        def capture_chunk(chunk):
-            nonlocal pending
-            # Forward the original bytes immediately, including the final empty
-            # chunk. Decode incrementally because UTF-8 can span network chunks.
-            try:
-                text = decoder.decode(chunk, final=not chunk)
-                pending += text
-                while "\n" in pending:
-                    line, pending = pending.split("\n", 1)
-                    line = line.rstrip("\r")
-                    if not line:
-                        if data_lines:
-                            _usage(flow, "\n".join(data_lines))
-                            data_lines.clear()
-                    elif line.startswith("data:"):
-                        data_lines.append(line[5:].lstrip(" "))
-                if not chunk:
-                    if pending.startswith("data:"):
-                        data_lines.append(pending[5:].lstrip(" "))
-                    if data_lines:
-                        _usage(flow, "\n".join(data_lines))
-                        data_lines.clear()
-                    pending = ""
-                if _fh is not None and text and capture_body:
-                    rec = {
-                        "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                        "run": _run,
-                        "tool": _tool,
-                        "kind": "response_chunk",
-                        "flow_id": flow.id,
-                        "method": flow.request.method,
-                        "url": flow.request.pretty_host + flow.request.path,
-                        "status": flow.response.status_code,
-                        "response_body": _clip(text),
-                    }
-                    _fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                    _fh.flush()
-            except Exception as exc:
-                print("prompt-capture addon error: %r" % (exc,), flush=True)
-            return chunk
-
-        flow.response.stream = capture_chunk
-
-    def request(self, flow):
-        try:
-            _record("request", flow)
-        except Exception as exc:
-            print("prompt-capture addon error: %r" % (exc,), flush=True)
-
-    def response(self, flow):
-        try:
-            _record("response", flow)
-        except Exception as exc:
-            print("prompt-capture addon error: %r" % (exc,), flush=True)
-
-    def websocket_message(self, flow):
-        # Codex-style backends stream the real payload over WebSocket frames
-        # after the HTTP upgrade, so record text frames explicitly.
-        try:
-            if _fh is None or flow.websocket is None:
-                return
-            msg = flow.websocket.messages[-1]
-            if msg.is_text:
-                payload = msg.text
-            elif msg.type.name == "BINARY":
-                payload = repr(msg.content)
-            else:
-                return
-            rec = {
-                "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                "run": _run,
-                "tool": _tool,
-                "kind": "ws_request" if msg.from_client else "ws_response",
-                "flow_id": flow.id,
-                "method": "WS",
-                "url": flow.request.pretty_host + flow.request.path,
-                "data": _clip(payload),
-            }
-            _fh.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
-            _fh.flush()
-        except Exception as exc:
-            print("prompt-capture addon error: %r" % (exc,), flush=True)
-
-
-addons = [PromptCapture()]
-PYEOF
 
 proxy_args=()
 if [ -n "${PROMPT_CAPTURE_UPSTREAM:-}" ]; then
@@ -350,7 +156,6 @@ PROMPT_CAPTURE_JSONL="$jsonl" \
   --listen-host 127.0.0.1 \
   --listen-port "$port" \
   --set confdir="$confdir" \
-  -s "$workdir/addon.py" \
   >"$serverlog" 2>&1 &
 srv_pid=$!
 echo "$srv_pid" >"$pidfile"

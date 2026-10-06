@@ -84,6 +84,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Skill audit: C `home/config/repo-tools/audit.c`.
 - [x] Token-report utility: C `home/config/skill-tools`. Its fixed, model-generated
   Python benchmark workload is retained for comparable captures.
+- [x] Prompt-capture MITM add-on: C `home/config/prompt-capture`, retaining the
+  upstream mitmproxy runtime, transparent streams and private JSONL records.
 - [x] Telegram manual-login adapter: C `home/config/telegram-login`, using the
   unchanged upstream Telethon runtime through the CPython API.
 

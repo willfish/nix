@@ -1,0 +1,2 @@
+option('python_executable', type: 'string', description: 'Pinned mitmproxy interpreter')
+option('site_packages', type: 'string', description: 'Pinned mitmproxy site-packages')

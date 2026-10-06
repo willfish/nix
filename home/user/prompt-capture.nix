@@ -1,5 +1,7 @@
 { pkgs, ... }:
-
+let
+  adapter = import ./prompt-capture-package.nix { inherit pkgs; };
+in
 # Opt-in prompt capture for the LLM CLIs (CAPTURE_PROMPTS=1).
 #
 # The script lives in prompt-capture.sh (shfmt-formatted, shellchecked);
@@ -14,7 +16,7 @@ pkgs.writeTextFile {
   checkPhase = "${pkgs.bash}/bin/bash -n -O extglob \"$target\"";
   text = ''
     #!${pkgs.bash}/bin/bash
-    MITMDUMP="${pkgs.mitmproxy}/bin/mitmdump"
+    MITMDUMP="${adapter}/bin/prompt-capture-mitm"
     FLOCK="${pkgs.flock}/bin/flock"
     ${builtins.readFile ./prompt-capture.sh}
   '';
