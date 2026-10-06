@@ -30,7 +30,10 @@ in
         message = "Relay requires an encrypted Hermes declaration from the private input.";
       }
     ];
-    home.packages = [ pkgs.hermes-agent ];
+    home.packages = [
+      pkgs.hermes-agent
+      (import ./hermes-tools-package.nix { inherit pkgs; })
+    ];
     home.sessionVariables.HERMES_MANAGED = "home-manager";
     home.file.".hermes/.runtime-revision".text = "${pkgs.hermes-agent.sourceRevision}\n";
     # Override the old imperative launcher, whose path precedes the Nix profile.

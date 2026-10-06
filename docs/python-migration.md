@@ -68,7 +68,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Pi authentication/settings mergers and capture bus-host parser:
   C `home/config/pi-config`.
 - [x] OpenCode Markdown adapter: C `home/config/opencode-adapt`.
-- [ ] Hermes declaration, export, profile and Telegram routing helpers.
+- [x] Hermes encrypted exporter: C `home/config/hermes-tools`.
+- [ ] Hermes declaration, profile and Telegram routing helpers.
 - [ ] Repository lock-policy and community-import scripts; the test-only behavior gate is removed.
 - [ ] Darwin deployment, preflight and health tools.
 - [ ] AWS access-portal service and helpers. Preserve existing authorization gates.
