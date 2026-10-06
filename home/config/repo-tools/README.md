@@ -49,6 +49,14 @@ unsafe mappings and local/mapped collisions fail before auditing.
 The checkout defaults to the current directory. Use an explicit root outside it.
 The audit does not run skill scripts, load private overlays or authorize changes.
 
+## Storage costs
+
+`scripts/nix-storage-costs` retains configuration selection and build orchestration.
+It calls `nix-storage-report` from this package for local store queries, shared and
+unique closure accounting, grouped summaries, CSV and Markdown output. Home Manager
+installs the package with the shell helpers. Before activation, run the script via
+`nix shell .#repo-tools -c scripts/nix-storage-costs ...`.
+
 ## Manual verification
 
 Supply GLib, yyjson, libxml2 (with HTML5 token mode), Meson, Ninja, pkg-config and
@@ -60,6 +68,7 @@ meson compile -C /tmp/repo-tools-build
 LOCK_POLICY_BIN=/tmp/repo-tools-build/check-flake-lock-update \
 COMMUNITY_IMPORT_BIN=/tmp/repo-tools-build/import-omarchy-community \
 SKILL_AUDIT_BIN=/tmp/repo-tools-build/audit-skills \
+STORAGE_REPORT_BIN=/tmp/repo-tools-build/nix-storage-report \
   node --experimental-strip-types --test home/config/repo-tools/*.test.ts
 ```
 

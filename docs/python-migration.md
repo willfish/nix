@@ -70,7 +70,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] OpenCode Markdown adapter: C `home/config/opencode-adapt`.
 - [x] Hermes exporter, declaration installer, profile and Telegram routing:
   C `home/config/hermes-tools`.
-- [x] Repository lock-policy and community importer: C `home/config/repo-tools`.
+- [x] Repository lock-policy, community importer and storage-cost accounting:
+  C `home/config/repo-tools`.
   The test-only behavior gate remains removed.
 - [x] Darwin deployment, preflight and health tools: C `home/config/darwin-tools`.
   Native macOS deployment and recovery remain separately authorized operations.
