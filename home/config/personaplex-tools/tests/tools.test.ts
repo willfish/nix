@@ -266,6 +266,16 @@ test("credentials prefer the environment, fall back through HF_HOME, and trim Py
 	});
 	assert.equal(r.status, 0, r.stderr);
 });
+test("token files strip every Python whitespace character but explicit environment tokens remain literal", async (t) => {
+  const dir=root(t);
+  for(const cp of [9,10,11,12,13,28,29,30,31,32,0x85,0xa0,0x1680,...Array.from({length:11},(_,i)=>0x2000+i),0x2028,0x2029,0x202f,0x205f,0x3000]) {
+    const space=String.fromCodePoint(cp);writeFileSync(join(dir,'token'),space+token+space);
+    const r=await invoke(fixture!,['token',token],{env:{HF_TOKEN:'',HF_HOME:dir}});
+    assert.equal(r.status,0,r.stderr);assert.equal(r.stdout,'match\n');
+  }
+  const raw='\v'+token+'\v';const r=await invoke(fixture!,['token',raw],{env:{HF_TOKEN:raw,HF_HOME:dir}});
+  assert.equal(r.status,0,r.stderr);assert.equal(r.stdout,'match\n');
+});
 test("missing or malformed credentials fail closed without printing their contents", async (t) => {
 	const dir = root(t);
 	for (const env of [

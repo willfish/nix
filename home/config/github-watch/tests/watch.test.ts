@@ -91,10 +91,12 @@ test('notify-send argv retains the desktop entry, icon, priority, expiry, separa
 });
 test('only the trimmed Open action launches a browser, including Unicode whitespace', t => {
   const s = sandbox(t); const url = 'https://github.com/a/b/issues/1';
-  for (const output of ['open\n', '\u2003open\u00a0']) assert.equal(call('open', { output, url }, s.env), true);
-  for (const output of ['', 'closed', 'Open', 'open something']) assert.equal(call('open', { output, url }, s.env), false);
+  const whitespace = [9,10,11,12,13,28,29,30,31,32,0x85,0xa0,0x1680,...Array.from({length:11},(_,i)=>0x2000+i),0x2028,0x2029,0x202f,0x205f,0x3000];
+  const outputs = ['open\n', ...whitespace.map(cp => String.fromCodePoint(cp)+'open'+String.fromCodePoint(cp))];
+  for (const output of outputs) assert.equal(call('open', { output, url }, s.env), true);
+  for (const output of ['', 'closed', 'Open', 'open something', 'op\ven', '\u200bopen\u200b']) assert.equal(call('open', { output, url }, s.env), false);
   assert.equal(call('open', { output: 'open', url: '' }, s.env), false);
-  assert.deepEqual(s.calls().map(x => x.args), [[url], [url]]);
+  assert.deepEqual(s.calls().map(x => x.args), outputs.map(() => [url]));
 });
 test('subprocess capture suppresses diagnostics, reports failure, handles absent commands and kills timeouts', () => {
   assert.deepEqual(call('capture', { argv: ['sh', '-c', 'printf data; printf secret >&2; exit 4'], timeout_ms: 1000 }), { started: true, ok: false, timed_out: false, output: 'data' });

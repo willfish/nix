@@ -34,6 +34,17 @@ test('toast formats, whitespace, events, Unicode decimal numbers and tab separat
  for(const digit of ['²','①','፩','🄁'])pure('parse',null,['Ghostty','pi finished: admin · '+digit],{},1);
  for(const [summary,text] of [['Slack',body],['Ghostty','finished: admin · 3'],['Ghostty','pi finished: dot · -1'],['Ghostty','pi finished: dot · x'],['ghostty',body]])assert.equal(pure('parse',null,[summary,text]),null);
 });
+test('all Python whitespace is stripped from toast fields and numeric snapshot strings',()=>{
+ for(const cp of [9,10,11,12,13,28,29,30,31,32,0x85,0xa0,0x1680,...Array.from({length:11},(_,i)=>0x2000+i),0x2028,0x2029,0x202f,0x205f,0x3000]) {
+  const space=String.fromCodePoint(cp);
+  const wrapped=space+'pi'+space+' finished: '+space+'admin'+space+' · '+space+'3'+space+' · '+space+'2 hadleigh review'+space;
+  const parsed=pure('parse',null,[space+'Ghostty'+space,wrapped]);assert.deepEqual(parsed,toast());
+  if(cp<28||cp>31) {
+   const s=snap();(s.workspaces[1] as any).number=space+'3'+space;(s.agents[1] as any).state_change_seq=space+'9'+space;
+   assert.equal(pure('resolve',{snapshot:s,toast:parsed}).pane_id,'p2');
+  }
+ }
+});
 test('pane status preference, display/prefix matching and first equal-sequence tie',()=>{
  assert.equal(resolve(snap()).pane_id,'p2');
  for(const name of ['PI','pi · medium','pi custom model'])assert.equal(resolve(snap(),body.replace('pi ',name+' ')).pane_id,'p2');
@@ -59,6 +70,13 @@ test('wide integers, decimal separators, JSON ID types and invalid numeric recor
  const wide=JSON.stringify({snapshot:snap(),toast:toast()}).replace('"state_change_seq":9','"state_change_seq":18446744073709551615');assert.equal(pure('resolve',wide).pane_id,'p2');
  const n=snap();(n.workspaces[1] as any).workspace_id=3;(n.tabs[1] as any).workspace_id='3';assert.deepEqual(resolve(n),{workspace_id:3});
  pure('parse',null,['Ghostty','pi finished: admin · ²'],{},1);
+ for(const cp of [28,29,30,31]) {
+  const separator=String.fromCodePoint(cp), ws=snap(), seq=snap();
+  (ws.workspaces[1] as any).number=separator+'3'+separator;
+  (seq.agents[1] as any).state_change_seq=separator+'9'+separator;
+  pure('resolve',{snapshot:ws,toast:toast()},[],{},1);
+  pure('resolve',{snapshot:seq,toast:toast()},[],{},1);
+ }
 });
 test('unused malformed groups do not poison workspace fallbacks; selected malformed status fails',()=>{
  assert.equal(pure('resolve',{snapshot:{workspaces:[],tabs:'bad',agents:'bad'},toast:toast()}),null);
@@ -108,6 +126,11 @@ test('proc stat parsing, ancestor cycles/limit and session-specific attachment w
 }));
 test('remember resolves through ordered sockets and persists the first target',async()=>scenario(async(root,exe,calls,peer)=>{
  const e=env(root),first=join(root,'first.sock');await peer(first,{workspaces:[]});await peer(join(root,'config/herdr/herdr.sock'),snap());const r=await command(exe,args(),{...e,HERDR_SOCKET_PATH:first});assert.equal(r.status,0,r.stderr);assert.equal(calls.length,2);assert.equal(calls[0].method,'session.snapshot');assert.equal(calls[0].id,'omapager-herdr-focus');const saved=JSON.parse(readFileSync(cache(root),'utf8')).entries[0];assert.equal(saved.pane_id,'p2');assert.equal(saved.socket,calls[1].path);assert.deepEqual(actions(root),[]);
+}));
+test('CLI whitespace-wrapped toasts match legacy using only disposable peers',async()=>scenario(async(root,exe,calls,peer)=>{
+ const path=join(root,'config/herdr/herdr.sock');await peer(path,snap());
+ const r=await command(exe,['remember','--summary','\vGhostty\v','--body','\v'+body+'\v','--ts','space'],env(root));
+ assert.equal(r.status,0,r.stderr);assert.equal(calls.length,1);assert.equal(JSON.parse(readFileSync(cache(root),'utf8')).entries[0].pane_id,'p2');assert.deepEqual(actions(root),[]);
 }));
 test('remember ignores unrelated toasts without contacting peers or compositor',async()=>scenario(async(root,exe,calls,peer)=>{
  const path=join(root,'config/herdr/herdr.sock');await peer(path,snap());const r=await command(exe,['remember','--summary','Slack','--body',body],env(root));assert.equal(r.status,0,r.stderr);assert.equal(calls.length,0);assert.equal(existsSync(cache(root)),false);assert.deepEqual(actions(root),[]);

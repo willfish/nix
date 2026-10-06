@@ -60,7 +60,8 @@ GPtrArray *keys(yyjson_val *o) {
   return out;
 }
 static bool whitespace(gunichar c) {
-  return g_unichar_isspace(c) || c == 0x85 || (c >= 0x1c && c <= 0x1f);
+  return g_unichar_isspace(c) || c == '\v' || c == 0x85 ||
+         (c >= 0x1c && c <= 0x1f);
 }
 char *clean(const char *value, size_t limit) {
   if (!value)

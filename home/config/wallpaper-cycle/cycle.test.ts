@@ -96,6 +96,17 @@ test('empty/default selection, Unicode whitespace and invalid mode select the co
     assert.equal(f.run(), 0); assert.equal(f.calls()[0][4], '/flake with spaces;no-shell#theme-rose');
   }
 });
+test('every Python whitespace character is stripped from selection, mode and current basename', t => {
+  for(const cp of [9,10,11,12,13,28,29,30,31,32,0x85,0xa0,0x1680,...Array.from({length:11},(_,i)=>0x2000+i),0x2028,0x2029,0x202f,0x205f,0x3000]) {
+    const space=String.fromCodePoint(cp), f=fixture(t);
+    f.selection(space+'default-palette'+space);
+    writeFileSync(join(f.state,'mode'),space+'light'+space);
+    writeFileSync(f.current,space+'b.png'+space);
+    assert.equal(f.run(),0);
+    assert.equal(f.calls()[0][4],'/flake with spaces;no-shell#theme-light-rose');
+    assert.equal(readFileSync(f.current,'utf8'),'c.png\n');
+  }
+});
 test('explicit palette and light mode resolve independently', t => {
   const f = fixture(t); f.selection('default-palette\n'); writeFileSync(join(f.state, 'mode'), 'light\n');
   assert.equal(f.run(), 0); assert.equal(f.calls()[0][4], '/flake with spaces;no-shell#theme-light-rose');

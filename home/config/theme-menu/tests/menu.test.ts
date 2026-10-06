@@ -742,6 +742,16 @@ test("reload deadlines warn without preventing selection and command stdin/argv 
 	assert.ok(Date.now() - start < 7500);
 	assert.match(result.stderr, /Reload Ghostty configuration manually/);
 });
+test("Python whitespace around saved selection and picker results retains the same theme choice", async (t) => {
+  for (const cp of [9,10,11,12,13,28,29,30,31,32,0x85,0xa0,0x1680,...Array.from({length:11},(_,i)=>0x2000+i),0x2028,0x2029,0x202f,0x205f,0x3000]) {
+    const f=setup(t), space=String.fromCodePoint(cp);
+    mkdirSync(f.state);writeFileSync(join(f.state,'selection'),space+'rose-pine'+space);
+    const applied=await run(f,['--no-reload','--reapply']);assert.equal(applied.status,0,applied.stderr);
+    assert.equal(readFileSync(join(f.state,'selection'),'utf8'),'rose-pine\n');
+    const reset=await run(f,['--no-reload'],{TM_COMMANDS:JSON.stringify({fuzzel:{out:space+'1'+space}})});
+    assert.equal(reset.status,0,reset.stderr);assert.equal(existsSync(join(f.state,'selection')),false);
+  }
+});
 test("Python whitespace/splitlines variables and selection contrast choices are preserved", async () => {
 	const r = await execute(
 		fixture,

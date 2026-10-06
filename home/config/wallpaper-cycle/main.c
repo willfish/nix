@@ -21,7 +21,8 @@ static yyjson_val *field(yyjson_val *root, const char *name) {
   return found;
 }
 static bool space(gunichar c) {
-  return g_unichar_isspace(c) || c == 0x85 || (c >= 0x1c && c <= 0x1f);
+  return g_unichar_isspace(c) || c == '\v' || c == 0x85 ||
+         (c >= 0x1c && c <= 0x1f);
 }
 static char *read_text(const char *path) {
   char *text = NULL;

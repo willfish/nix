@@ -85,6 +85,16 @@ test('credential grammar, naming, permissions, symlink targets and BOMs',()=>{sc
  for(const url of [feed,feed.replace('user%40example.com','a%23b')])assert.equal(run(fixture,['url',url]).status,0);
  for(const url of [feed+'?x',feed+'#x',feed.replace('calendar.google.com','calendar.google.com.evil'),feed.replace('user%40example.com','a%2fb'),feed.replace('user%40example.com','a%2540b'),feed.replace('user%40example.com','..'),feed.replace('calendar.google.com','calendar.google.com:443')])assert.equal(run(fixture,['url',url]).status,1);
 });});
+test('credential files strip every Python whitespace character before feed validation',()=>{scratch(root=>{
+ const path=join(root,'secret');
+ for(const cp of [9,10,11,12,13,28,29,30,31,32,0x85,0xa0,0x1680,...Array.from({length:11},(_,i)=>0x2000+i),0x2028,0x2029,0x202f,0x205f,0x3000]) {
+  const space=String.fromCodePoint(cp);writeFileSync(path,space+feed+space,{mode:0o600});
+  const result=run(fixture,['feeds',path]);assert.equal(result.status,0,result.stderr);
+  const e={...env(root),DAILY_CALENDAR_CREDENTIALS:path},native=run(bin,['--status'],'',e);
+  assert.equal(native.status,0,native.stderr);assert.match(native.stdout,/Calendar feed: present/);
+  if(legacy)assert.equal(native.stdout,run(legacy,['--status'],'',e).stdout);
+ }
+});});
 test('notes sections, unchecked boxes, fences, deduplication and Unicode lines',()=>{scratch(root=>{
  const path=join(root,'notes');writeFileSync(path,'# Reminders\r\n- First\n- [ ] Work\n- [x] Done\n```\n- hidden\n```\n# Other\n- Not a reminder\n- [ ] Everywhere\n# Todos\n+ First\u2028* Café\n- \u001b[31mDanger\u0000here\n');
  const r=run(fixture,['notes',path]);assert.equal(r.status,0,r.stderr);assert.deepEqual(JSON.parse(r.stdout).rows,['First','Work','Everywhere','Café','[31mDangerhere']);

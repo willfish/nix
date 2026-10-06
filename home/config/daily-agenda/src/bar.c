@@ -7,7 +7,8 @@ static char *public_https(const char *value, GPtrArray *secrets) {
             g_utf8_strlen(link, -1) <= 500 && !strpbrk(link, "\"'<>");
   for (const char *p = link; ok && *p; p = g_utf8_next_char(p)) {
     gunichar c = g_utf8_get_char(p);
-    if (g_unichar_isspace(c) || c == 0x85 || (c >= 0x1c && c <= 0x1f))
+    if (g_unichar_isspace(c) || c == '\v' || c == 0x85 ||
+        (c >= 0x1c && c <= 0x1f))
       ok = false;
   }
   GUri *uri = ok ? g_uri_parse(link, G_URI_FLAGS_PARSE_RELAXED, NULL) : NULL;

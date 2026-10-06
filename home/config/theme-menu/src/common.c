@@ -73,7 +73,8 @@ GPtrArray *keys(yyjson_val *object) {
   return list;
 }
 static bool space(gunichar c) {
-  return g_unichar_isspace(c) || c == 0x85 || (c >= 0x1c && c <= 0x1f);
+  return g_unichar_isspace(c) || c == '\v' || c == 0x85 ||
+         (c >= 0x1c && c <= 0x1f);
 }
 char *trim(const char *text) {
   const char *begin = text, *end = text + strlen(text);

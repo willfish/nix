@@ -28,12 +28,13 @@ char *strip(const char *s) {
   const char *a = s, *b = s + strlen(s);
   while (*a && (g_unichar_isspace(g_utf8_get_char(a)) ||
                 (g_utf8_get_char(a) >= 0x1c && g_utf8_get_char(a) <= 0x1f) ||
-                g_utf8_get_char(a) == 0x85))
+                g_utf8_get_char(a) == '\v' || g_utf8_get_char(a) == 0x85))
     a = g_utf8_next_char(a);
   while (b > a) {
     const char *p = g_utf8_find_prev_char(a, b);
     gunichar c = g_utf8_get_char(p);
-    if (!g_unichar_isspace(c) && !(c >= 0x1c && c <= 0x1f) && c != 0x85)
+    if (!g_unichar_isspace(c) && !(c >= 0x1c && c <= 0x1f) && c != '\v' &&
+        c != 0x85)
       break;
     b = p;
   }
@@ -69,7 +70,9 @@ char *string(Val *v) {
   return s;
 }
 char *integer_text(const char *s) {
-  if (!s || !g_utf8_validate(s, -1, NULL)) {
+  // Python int() does not accept the four ASCII separators that str.strip()
+  // treats as whitespace. Do not erase them before validating numeric fields.
+  if (!s || !g_utf8_validate(s, -1, NULL) || strpbrk(s, "\x1c\x1d\x1e\x1f")) {
     focus_error = true;
     return NULL;
   }

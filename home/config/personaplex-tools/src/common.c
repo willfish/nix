@@ -58,7 +58,8 @@ int pp_matches(const char *path, const Asset *asset) {
   return ok ? valid : -1;
 }
 static bool space(gunichar c) {
-  return g_unichar_isspace(c) || c == 0x85 || (c >= 0x1c && c <= 0x1f);
+  return g_unichar_isspace(c) || c == '\v' || c == 0x85 ||
+         (c >= 0x1c && c <= 0x1f);
 }
 char *pp_token(char **error) {
   const char *env = g_getenv("HF_TOKEN");

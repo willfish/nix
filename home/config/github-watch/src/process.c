@@ -76,7 +76,8 @@ void capture_free(Capture *c) {
   g_free(c);
 }
 static bool space(gunichar c) {
-  return g_unichar_isspace(c) || (c >= 0x1c && c <= 0x1f);
+  return g_unichar_isspace(c) || c == '\v' || c == 0x85 ||
+         (c >= 0x1c && c <= 0x1f);
 }
 bool open_chosen(const char *output, const char *url) {
   char *action = g_strdup(output ? output : "");
