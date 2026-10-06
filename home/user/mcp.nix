@@ -8,6 +8,7 @@
 let
   braveCdpEndpoint = "http://127.0.0.1:9222";
   awsAccessPortal = import ./aws-access-portal-package.nix { inherit pkgs; };
+  slackSession = import ./slack-session-package.nix { inherit pkgs; };
   inherit (import ./llm-mcps.nix { inherit config; }) servers;
   enabled = name: builtins.any (server: server.name == name) servers;
   agentBrowserVersion = "0.38.2";
@@ -296,8 +297,7 @@ in
       set -euo pipefail
       export OUT_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/slack-session/tokens.env"
       export SLACK_CDP_URL="''${SLACK_CDP_URL:-http://127.0.0.1:9222}"
-      export SLACK_REFRESH_PYTHON="${pkgs.python3.withPackages (ps: [ ps.websockets ])}/bin/python3"
-      exec ${pkgs.bash}/bin/bash ${../config}/llm/scripts/slack-refresh-session.sh
+      exec ${slackSession}/bin/slack-refresh-session "$@"
     '';
   };
 

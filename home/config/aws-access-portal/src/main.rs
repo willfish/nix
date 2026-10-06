@@ -1,3 +1,4 @@
+mod cdp;
 mod client;
 mod portal;
 mod runtime;

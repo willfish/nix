@@ -75,6 +75,8 @@ Rust dependencies and existing C libraries where practical.
   The test-only behavior gate remains removed.
 - [x] Darwin deployment, preflight and health tools: C `home/config/darwin-tools`.
   Native macOS deployment and recovery remain separately authorized operations.
+- [x] Slack session refresh: Rust `home/config/slack-session`, retaining private
+  publication, workspace/tab ownership and optional SOPS updates.
 - [x] AWS access-portal service and helpers: Rust `home/config/aws-access-portal`,
   retaining explicit login scope and local production-administrator approval.
 - [x] Contrast, YouTube extraction, audiobook inventory/duplicate checks and
