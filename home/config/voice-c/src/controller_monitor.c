@@ -726,7 +726,18 @@ void controller_refresh_reconnect(voice_controller *app) {
     char canonical[CTRL_PATH];
     uint64_t ndev = 0, nino = 0;
     if (socket_instance(path, canonical, sizeof canonical, &ndev, &nino) != 0) return;
-    if (ndev != dev || nino != ino) return;
+    if (ndev != dev || nino != ino) {
+        /* Herdr restarted on the same path: keep waiting for the pane against the
+         * new instance instead of remembering an endpoint that can never answer. */
+        pthread_mutex_lock(&app->state);
+        if (app->has_reconnect && strcmp(app->reconnect_path, path) == 0) {
+            app->reconnect_pane.socket_device = ndev;
+            app->reconnect_pane.socket_inode = nino;
+            controller_save_selection(app);
+        }
+        pthread_mutex_unlock(&app->state);
+        return;
+    }
     if (app->deps.has_catalogue && app->deps.catalogue.read_panes) {
         int auth = 0;
         char **ids = NULL;

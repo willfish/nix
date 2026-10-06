@@ -672,14 +672,20 @@ static int run_process(const char *socket_path, double timeout, char **stdout_te
     struct timespec start;
     clock_gettime(CLOCK_MONOTONIC, &start);
     int timed_out = 0;
+    int failed = 0;
     int status = 0;
     int exited = 0;
     for (;;) {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
         double elapsed = (double)(now.tv_sec - start.tv_sec) + (double)(now.tv_nsec - start.tv_nsec) / 1e9;
-        int remain = (int)((timeout - elapsed) * 1000.0);
-        if (remain < 0) remain = 0;
+        double left = timeout - elapsed;
+        if (left <= 0) {
+            timed_out = 1;
+            break;
+        }
+        int remain = (int)(left * 1000.0);
+        if (remain < 1) remain = 1;
         struct pollfd pfd = {.fd = fds[0], .events = POLLIN};
         int pr = poll(&pfd, 1, remain);
         if (pr > 0) {
@@ -687,36 +693,49 @@ static int run_process(const char *socket_path, double timeout, char **stdout_te
             ssize_t n = read(fds[0], tmp, sizeof tmp);
             if (n > 0) {
                 if (append_bytes(&buf, &len, &cap, tmp, (size_t)n) != 0) {
-                    timed_out = 1;
+                    failed = 1;
                     break;
                 }
-            } else if (n == 0) {
-                break;
+                continue;
             }
+            if (n == 0) break;
+            if (n < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) continue;
+            failed = 1;
+            break;
         }
+        if (pr == 0 || errno == EINTR) continue;
+        failed = 1;
+        break;
+    }
+    /* Closing stdout is not the same as exiting: reap inside the same budget. */
+    while (!exited) {
         pid_t wr = waitpid(pid, &status, WNOHANG);
         if (wr == pid) {
             exited = 1;
-            char tmp[4096];
-            ssize_t n;
-            while ((n = read(fds[0], tmp, sizeof tmp)) > 0) {
-                if (append_bytes(&buf, &len, &cap, tmp, (size_t)n) != 0) break;
+        } else if (wr < 0 && errno != EINTR) {
+            exited = 1;
+            status = -1;
+        } else if (timed_out || failed) {
+            break;
+        } else {
+            struct timespec nap = {0, 2000000}, past;
+            nanosleep(&nap, NULL);
+            clock_gettime(CLOCK_MONOTONIC, &past);
+            double elapsed = (double)(past.tv_sec - start.tv_sec) + (double)(past.tv_nsec - start.tv_nsec) / 1e9;
+            if (elapsed >= timeout) {
+                timed_out = 1;
+                break;
             }
-            break;
-        }
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        elapsed = (double)(now.tv_sec - start.tv_sec) + (double)(now.tv_nsec - start.tv_nsec) / 1e9;
-        if (elapsed >= timeout) {
-            timed_out = 1;
-            break;
         }
     }
     close(fds[0]);
-    if (timed_out || !exited) {
+    if (!exited) {
         kill(pid, SIGKILL);
         waitpid(pid, &status, 0);
+    }
+    if (!exited || timed_out || failed) {
         free(buf);
-        set_error("herdr snapshot timed out");
+        set_error(timed_out ? "herdr snapshot timed out" : "herdr snapshot read failed");
         return LABELS_ERR;
     }
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {

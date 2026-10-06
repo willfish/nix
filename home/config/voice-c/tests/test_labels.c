@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 static int failures;
@@ -318,6 +321,114 @@ static void test_runner_checks_socket_instance_and_passes_timeout(void) {
     expect_int("command not called", exec3.calls, 0);
     labels_set_stat_fn(NULL, NULL);
     labels_set_exec_fn(NULL, NULL);
+    socket_key_clear(&key);
+}
+
+/* The real runner shells out to herdr, so the pipe reader has to survive output
+ * larger than one read and a child that closes stdout before exiting. */
+static char fake_path[1024];
+
+static int write_fake_herdr(const char *dir, const char *body) {
+    snprintf(fake_path, sizeof fake_path, "%s/herdr", dir);
+    FILE *file = fopen(fake_path, "w");
+    if (!file) return -1;
+    if (chmod(fake_path, 0700) != 0) {
+        fclose(file);
+        return -1;
+    }
+    int ok = fprintf(file, "#!/bin/sh\n%s\n", body) > 0;
+    if (fclose(file) != 0) return -1;
+    return ok ? 0 : -1;
+}
+
+#define FAKE_HERDR_BODY \
+    "printf '{\"result\":{\"snapshot\":{\"panes\":['\n" \
+    "i=0\n" \
+    "while [ $i -lt 400 ]; do\n" \
+    "  if [ $i -gt 0 ]; then printf ','; fi\n" \
+    "  printf '{\"pane_id\":\"w9:p%s\",\"tab\":\"padding-padding-padding-padding-padding\"}' \"$i\"\n" \
+    "  i=$((i + 1))\n" \
+    "done\n" \
+    "printf '],\"tabs\":[],\"workspaces\":[]}}}'\n"
+
+static void test_real_snapshot_runner_reaps_the_child(void) {
+    char dir[] = "/tmp/voice-labels-runner-XXXXXX";
+    if (!mkdtemp(dir)) {
+        fail("snapshot runner", "mkdtemp");
+        return;
+    }
+    char sock_path[512];
+    snprintf(sock_path, sizeof sock_path, "%s/herdr.sock", dir);
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    struct sockaddr_un addr;
+    struct stat st;
+    memset(&addr, 0, sizeof addr);
+    addr.sun_family = AF_UNIX;
+    snprintf(addr.sun_path, sizeof addr.sun_path, "%s", sock_path);
+    if (fd < 0 || bind(fd, (struct sockaddr *)&addr, sizeof addr) != 0 || stat(sock_path, &st) != 0) {
+        fail("snapshot runner", "socket setup");
+        if (fd >= 0) close(fd);
+        return;
+    }
+    char path_env[4096];
+    const char *old_path = getenv("PATH");
+    snprintf(path_env, sizeof path_env, "%s%s%s", dir, old_path && old_path[0] ? ":" : "",
+        old_path ? old_path : "");
+    if (setenv("PATH", path_env, 1) != 0) {
+        fail("snapshot runner", "path setup");
+        close(fd);
+        return;
+    }
+    SocketKey key;
+    socket_key_init(&key, sock_path, (uint64_t)st.st_dev, (uint64_t)st.st_ino);
+    char *json = NULL;
+
+    if (write_fake_herdr(dir, FAKE_HERDR_BODY) == 0) {
+        json = NULL;
+        int rc = labels_run_snapshot(&key, 5.0, &json);
+        expect_int("multi-read snapshot ok", rc, LABELS_OK);
+        SnapshotState *state = json ? labels_parse_snapshot(json) : NULL;
+        expect_int("multi-read panes parsed", state ? (int)labels_state_pane_count(state) : -1, 400);
+        labels_state_free(state);
+        free(json);
+    } else {
+        fail("snapshot runner", "write fake herdr");
+    }
+
+    /* Output flushed, stdout closed, child still running: EOF is not a timeout. */
+    if (write_fake_herdr(dir, FAKE_HERDR_BODY "exec 1>&-\nsleep 0.2\nexit 0") == 0) {
+        json = NULL;
+        int rc = labels_run_snapshot(&key, 5.0, &json);
+        expect_int("closed stdout snapshot ok", rc, LABELS_OK);
+        SnapshotState *state = json ? labels_parse_snapshot(json) : NULL;
+        expect_int("closed stdout panes parsed", state ? (int)labels_state_pane_count(state) : -1, 400);
+        labels_state_free(state);
+        free(json);
+    } else {
+        fail("snapshot runner", "write closed stdout fake");
+    }
+
+    if (write_fake_herdr(dir, "exit 3") == 0) {
+        json = NULL;
+        expect_true("failing herdr rejected", labels_run_snapshot(&key, 5.0, &json) != LABELS_OK);
+        expect_true("failure is not a timeout", strstr(labels_last_error(), "timed out") == NULL);
+        free(json);
+    }
+
+    /* A child that never finishes still hits the deadline and is reaped. */
+    if (write_fake_herdr(dir, "exec 1>&-\nsleep 30") == 0) {
+        json = NULL;
+        expect_true("slow herdr times out", labels_run_snapshot(&key, 0.5, &json) != LABELS_OK);
+        expect_true("timeout is named", strstr(labels_last_error(), "timed out") != NULL);
+        free(json);
+    }
+
+    if (old_path) setenv("PATH", old_path, 1);
+    else unsetenv("PATH");
+    close(fd);
+    unlink(sock_path);
+    unlink(fake_path);
+    rmdir(dir);
     socket_key_clear(&key);
 }
 
@@ -845,6 +956,7 @@ int test_labels(void) {
     test_malformed_negative_ttl_and_immutable_snapshots();
     test_retirement_fences_late_result_and_bounds_pending_work();
     test_runner_checks_socket_instance_and_passes_timeout();
+    test_real_snapshot_runner_reaps_the_child();
     test_simultaneous_refreshes_only_schedule_once();
     test_blocked_worker_does_not_block_reads_or_other_socket();
     test_preferred_and_legacy_unchanged();
