@@ -5,6 +5,7 @@
   ...
 }:
 let
+  greeterSelect = import ./greeter-select-package.nix { inherit pkgs; };
   hostDefaults = import ../../home/user/themes/host-defaults.nix;
   rendered = import ./greeter-themes.nix { inherit lib pkgs; };
   selectionDir = "/var/lib/desktop-theme";
@@ -62,7 +63,7 @@ in
     unitConfig.RequiresMountsFor = selectionDir;
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = "${pkgs.python3}/bin/python3 ${./greeter_select.py} ${manifest}";
+      ExecStart = "${lib.getExe greeterSelect} ${manifest}";
       User = "root";
       UMask = "0022";
       NoNewPrivileges = true;

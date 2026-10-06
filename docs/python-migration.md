@@ -58,7 +58,9 @@ Rust dependencies and existing C libraries where practical.
 - [x] Omapager preparation/icon/patch helpers: C `home/config/omapager-tools`,
   including the compiled icon module for the unchanged upstream Python runtime.
 - [x] Calendar/weather panel settings writers: C `home/config/panel-settings`.
-- [ ] Greeter selection and embedded NetworkManager Python services.
+- [x] Greeter selection: C `home/config/greeter-select` with unchanged root
+  service confinement and catalogue-only asset selection.
+- [ ] Embedded NetworkManager Python secret agent.
 
 ### Configuration, build and skill utilities
 
