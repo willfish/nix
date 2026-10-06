@@ -32,6 +32,7 @@ let
         "80"
         "--prefill"
         "auto"
+        # --batch-mtp kills this pack: "mtp: unsupported native MMVQ GGML type".
         "--spec"
         "4"
         "--spec-min-p"
@@ -49,6 +50,8 @@ let
       ];
       tokenizer = "${pack}/tokenizer";
       model_name = alias;
+      # Shorten max_tokens to the room left instead of answering 400 (#545).
+      fit_max_tokens = true;
       parallel = 2;
       log = "${stateDir}/engine.log";
       host = "0.0.0.0";
