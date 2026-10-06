@@ -1,7 +1,6 @@
 {
   lib,
   stdenv,
-  python3,
 }:
 stdenv.mkDerivation {
   pname = "memscope";
@@ -14,12 +13,9 @@ stdenv.mkDerivation {
       ./main.c
       ./proc.c
       ./render.c
-      ./tests.py
-      ./test_proc.c
     ];
   };
-  nativeCheckInputs = [ python3 ];
-  doCheck = true;
+  doCheck = false;
   makeFlags = [ "PREFIX=$(out)" ];
   meta = {
     description = "One-shot RAM overview and proportional mapped-file memory chart";

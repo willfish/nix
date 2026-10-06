@@ -93,6 +93,9 @@ Rust dependencies and existing C libraries where practical.
 - [ ] Run the relevant complete check groups, reconcile documented exceptions,
   and finish the final commit, activation and push.
 
+The `memscope` CLI, terminal and live-memory test driver is TypeScript/C and runs
+only through its explicit local `make check` target, not package builds.
+
 ## Current coverage limits
 
 The voice REST adapter, Tailscale proxy and assistant MCP service have

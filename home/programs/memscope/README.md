@@ -69,5 +69,7 @@ direnv exec . make -C home/programs/memscope check
 `--proc-root PATH` accepts an offline procfs fixture tree for reproducible checks.
 It does not provide remote access or change privileges. Tests cover the CLI,
 accounting, terminal widths, permission failures and live shared/private mmap
-behavior. Build dependencies are a C17 compiler and make; tests also use Python's
-standard library. Python is not a runtime dependency of the installed program.
+behavior. Build dependencies are a C17 compiler and make; manual tests also use
+Node 24 or newer and a noninstalled C helper for PTY and mmap operations. The
+suite is not run by package builds, flake checks or commit hooks. Set
+`MEMSCOPE_BIN` to exercise a packaged binary with the same manual driver.
