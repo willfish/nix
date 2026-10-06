@@ -70,7 +70,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] OpenCode Markdown adapter: C `home/config/opencode-adapt`.
 - [x] Hermes exporter, declaration installer, profile and Telegram routing:
   C `home/config/hermes-tools`.
-- [ ] Repository lock-policy and community-import scripts; the test-only behavior gate is removed.
+- [x] Repository lock-policy and community importer: C `home/config/repo-tools`.
+  The test-only behavior gate remains removed.
 - [ ] Darwin deployment, preflight and health tools.
 - [ ] AWS access-portal service and helpers. Preserve existing authorization gates.
 - [ ] Skill audit, audiobook inventory/duplicate checks, contrast, token-report and

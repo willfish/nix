@@ -77,7 +77,8 @@ commit and download its HTML as data:
 site_rev=71cd3ed9e83511875ab9472127616989deb68bf5
 url="https://raw.githubusercontent.com/omacom/omarchy-site/$site_rev/themes/index.html"
 page=$(nix store prefetch-file --json "$url" | jq -r .storePath)
-python3 scripts/import-omarchy-community.py "$page" "$url"
+direnv exec . nix shell .#repo-tools -c \
+  import-omarchy-community --root "$PWD" "$page" "$url"
 direnv exec . nix flake lock
 ```
 

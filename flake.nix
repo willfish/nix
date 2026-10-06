@@ -646,6 +646,7 @@
             pi-config = import ./home/user/pi-config-package.nix { inherit pkgs; };
             opencode-adapt = import ./home/user/opencode-adapt-package.nix { inherit pkgs; };
             hermes-tools = import ./home/user/hermes-tools-package.nix { inherit pkgs; };
+            repo-tools = import ./home/user/repo-tools-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)
