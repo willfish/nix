@@ -144,5 +144,6 @@ Follow [AGENTS.md](AGENTS.md) when changing this repository: do not create branc
 | Use Pi's coding workflow | [Pi workflow](docs/pi-workflow.md) |
 | Configure Pi's MCP integration | [Pi MCP](docs/pi-mcp.md) |
 | Operate local models | [Local LLM](docs/local-llm.md) |
+| Change a C helper | [C programs](docs/c-programs.md) |
 
 Shared agent rules, guides and skills live under [home/config/llm/](home/config/llm/); [home/user/llm-harness.nix](home/user/llm-harness.nix) wires their deployment. Edit maintained source rather than generated files in the home directory.
