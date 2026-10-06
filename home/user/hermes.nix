@@ -9,6 +9,7 @@ let
   isRelay = pkgs.stdenv.isDarwin && hostName == "relay";
   cfg = config.dotfiles.hermes;
   hermesHome = "${config.home.homeDirectory}/.hermes";
+  hermesTools = import ./hermes-tools-package.nix { inherit pkgs; };
 in
 {
   options.dotfiles.hermes.declarationFile = lib.mkOption {
@@ -32,7 +33,7 @@ in
     ];
     home.packages = [
       pkgs.hermes-agent
-      (import ./hermes-tools-package.nix { inherit pkgs; })
+      hermesTools
     ];
     home.sessionVariables.HERMES_MANAGED = "home-manager";
     home.file.".hermes/.runtime-revision".text = "${pkgs.hermes-agent.sourceRevision}\n";
@@ -55,10 +56,7 @@ in
       fi
     '';
     home.activation.configureHermesDeclaration = lib.hm.dag.entryAfter [ "writeBoundary" "sops-nix" ] ''
-      PYTHONPATH=${../config/local-llm} \
-      ${
-        pkgs.python3.withPackages (ps: [ ps.pyyaml ])
-      }/bin/python3 ${../config/local-llm/hermes_declaration.py} \
+      ${hermesTools}/bin/hermes-declaration \
         ${
           lib.escapeShellArg (
             if cfg.declarationFile == null then "/missing-hermes-declaration" else cfg.declarationFile

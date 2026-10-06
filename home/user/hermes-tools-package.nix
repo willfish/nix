@@ -12,6 +12,7 @@ pkgs.stdenv.mkDerivation {
   buildInputs = with pkgs; [
     glib
     yyjson
+    libyaml
   ];
   postInstall = ''
     wrapProgram "$out/bin/hermes-export" \

@@ -71,7 +71,7 @@ let
   };
   workspace = "${config.home.homeDirectory}/LocalAssistant";
   chatUi = import ./local-llm-ui.nix { inherit pkgs; };
-  profilePython = pkgs.python3.withPackages (ps: [ ps.pyyaml ]);
+  hermesTools = import ./hermes-tools-package.nix { inherit pkgs; };
   tailscaleProxy = import ./tailscale-proxy-package.nix { inherit pkgs; };
   hermesOverlay = pkgs.writeText "local-qwen-hermes.json" (
     builtins.toJSON {
@@ -385,7 +385,7 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
         )
       } ]; then
         ${lib.optionalString (!isRelay) ''
-          ${profilePython}/bin/python3 ${../config/local-llm/hermes_profile.py} \
+          ${hermesTools}/bin/hermes-profile \
             ${lib.escapeShellArg "${config.home.homeDirectory}/.hermes/profiles/qwen/config.yaml"} \
             ${hermesOverlay} --key-file ${lib.escapeShellArg apiKeyPath}
         ''}
