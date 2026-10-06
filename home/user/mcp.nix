@@ -7,6 +7,7 @@
 }:
 let
   braveCdpEndpoint = "http://127.0.0.1:9222";
+  awsAccessPortal = import ./aws-access-portal-package.nix { inherit pkgs; };
   inherit (import ./llm-mcps.nix { inherit config; }) servers;
   enabled = name: builtins.any (server: server.name == name) servers;
   agentBrowserVersion = "0.38.2";
@@ -203,8 +204,7 @@ in
       unset AWS_PORTAL_APPROVAL_COMMAND AWS_PORTAL_ALLOW_APPROVAL_HOOK
 
       export PATH=${lib.escapeShellArg "${pkgs.fuzzel}/bin"}:"$PATH"
-      exec ${pkgs.python3.withPackages (ps: [ ps.websockets ])}/bin/python3 \
-        ${../config/llm/scripts/aws-access-portal}/server.py
+      exec ${awsAccessPortal}/bin/aws-access-portal
     '';
   };
 

@@ -1,0 +1,72 @@
+{
+  "instructions": "Use this server for TransformUK AWS IAM Identity Center credentials. Do not drive the Brave portal yourself and do not read sops secrets. Call export_credentials with the least-privileged account and role that can do the task. Source the returned env_file in the shell that needs AWS and do not read or print that file. Production administrator roles block on a local approval prompt; do not dismiss or answer it.",
+  "tools": [
+    {
+      "name": "status",
+      "description": "Report whether the Brave portal session is signed in. Does not return secrets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "login",
+      "description": "Sign in through a background Brave tab if the portal session is missing. Does not focus the tab. Closes the tab it opens. Does not return secrets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_accounts",
+      "description": "List assigned AWS accounts. Signs in first if needed. Does not return credentials.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_roles",
+      "description": "List roles in one account. Name the account. Roles that need local approval before export are flagged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string"
+          },
+          "account_name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "export_credentials",
+      "description": "Write short-lived credentials for one named role to a mode 0600 env file. Does not return secret values. Source env_file in the working shell. Production administrator roles wait for Will's local approval and fail closed if denied.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string"
+          },
+          "account_name": {
+            "type": "string"
+          },
+          "role_name": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string",
+            "default": "eu-west-2"
+          }
+        },
+        "required": ["role_name"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

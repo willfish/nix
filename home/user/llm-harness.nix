@@ -276,7 +276,7 @@ in
     type = lib.types.path;
     readOnly = true;
     default = ../config/llm/scripts;
-    description = "Public LLM Python scripts consumed by private overlay modules.";
+    description = "Public LLM helper scripts consumed by private overlay modules.";
   };
 
   config.home.file =

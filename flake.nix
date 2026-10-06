@@ -649,6 +649,7 @@
             repo-tools = import ./home/user/repo-tools-package.nix { inherit pkgs; };
             darwin-tools = import ./system/darwin/tools-package.nix { inherit pkgs; };
             skill-tools = import ./home/user/skill-tools-package.nix { inherit pkgs; };
+            aws-access-portal = import ./home/user/aws-access-portal-package.nix { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)

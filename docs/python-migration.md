@@ -74,7 +74,8 @@ Rust dependencies and existing C libraries where practical.
   The test-only behavior gate remains removed.
 - [x] Darwin deployment, preflight and health tools: C `home/config/darwin-tools`.
   Native macOS deployment and recovery remain separately authorized operations.
-- [ ] AWS access-portal service and helpers. Preserve existing authorization gates.
+- [x] AWS access-portal service and helpers: Rust `home/config/aws-access-portal`,
+  retaining explicit login scope and local production-administrator approval.
 - [x] Contrast, YouTube extraction, audiobook inventory/duplicate checks and
   Libation index helper: C `home/config/skill-tools`.
 - [x] Skill audit: C `home/config/repo-tools/audit.c`.
