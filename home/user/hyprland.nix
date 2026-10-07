@@ -272,6 +272,44 @@
           exec fuzzel --config ${fuzzelConfig}
         '';
       };
+      presentations = pkgs.writeShellApplication {
+        name = "hypr-presentations";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.findutils
+          pkgs.fuzzel
+          pkgs.ghostty
+          pkgs.libnotify
+          themeSeed
+        ];
+        text = ''
+          root="$HOME/Presentations"
+          mkdir -p "$root"
+          mapfile -d "" -t decks < <(
+            find "$root" -type f -iname '*.md' -printf '%T@ %P\0' \
+              | sort -znr | cut -z -d ' ' -f 2-
+          )
+          if [ "''${#decks[@]}" -eq 0 ]; then
+            notify-send "Presentations" "Add Markdown slides to ~/Presentations to get started."
+            exit 0
+          fi
+
+          hypr-theme-seed
+          if ! index=$(printf '%s\0' "''${decks[@]}" | fuzzel \
+            --config ${fuzzelConfig} --dmenu0 --index \
+            --match-mode=fzf --no-sort --width=70 --prompt "Presentations > "); then
+            exit 0
+          fi
+          [[ "$index" =~ ^[0-9]+$ ]] || exit 0
+          (( index < ''${#decks[@]} )) || exit 0
+
+          exec ghostty --class=com.william.presentation \
+            --gtk-single-instance=false --title="Presentation" \
+            --window-width=110 --window-height=38 --background-opacity=1 \
+            -e ${config.programs.neovim.finalPackage}/bin/nvim \
+            -c Presenting -- "$root/''${decks[index]}"
+        '';
+      };
       # Focus an existing window whose class is one of the :-separated names,
       # otherwise launch the command. The separator is a colon because Hyprland
       # runs bind commands through a shell, where a pipe would split the command.
@@ -467,6 +505,7 @@
       home.packages = [
         launcher
         openApp
+        presentations
         pkgs.grimblast
         record
         session
@@ -567,6 +606,7 @@
           bindd =
             settings.bindings.bindd
             ++ [
+              "SUPER SHIFT, R, Presentations, exec, ${presentations}/bin/hypr-presentations"
               "SUPER, V, Screenrecording, exec, ${record}/bin/hypr-record"
               "SUPER ALT, V, Screenrecording with camera, exec, ${record}/bin/hypr-record face"
               "SUPER CTRL, V, Video message, exec, ${record}/bin/hypr-record camera"
@@ -580,6 +620,12 @@
               "match:class" = rule.class;
             }) settings.floating.rules
             ++ [
+              {
+                name = "presentation";
+                "match:class" = "^com\\.william\\.presentation$";
+                float = true;
+                center = true;
+              }
               {
                 name = "daily-agenda";
                 "match:class" = "^com\\.mitchellh\\.ghostty$";
