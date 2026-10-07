@@ -8,7 +8,7 @@
   ...
 }:
 let
-  piConfig = import ./pi-config-package.nix { inherit pkgs; };
+  piConfig = import ../../programs/pi-config { inherit pkgs; };
   voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   llmMcps = import ./llm-mcps.nix { inherit config; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };

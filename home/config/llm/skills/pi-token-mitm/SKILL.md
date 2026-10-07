@@ -41,8 +41,8 @@ token cost from character counts alone.
 
 ## Verify
 
-Use the manual fixtures in `home/config/skill-tools/tests/token.test.ts` from
-the dotfiles checkout, with `SKILL_TOOLS_BIN` set to the directory containing
-the native executables. They use synthetic traces and a stub capture process, not inference.
+Use the manual native fixtures documented in `programs/pi-token-report/README.md`
+from the dotfiles checkout. They use synthetic traces and a stub capture
+process, not inference.
 For a real report, confirm the HTML path, request count and Brave title before
 claiming it is ready.

@@ -7,7 +7,7 @@
 }:
 let
   state = "${config.xdg.stateHome}/theme-menu";
-  controller = import ../theme-menu-package.nix { inherit pkgs; };
+  controller = import ../../../programs/theme-menu { inherit pkgs; };
   render = import ./render.nix { inherit lib; };
   herdrTheme = import ./herdr.nix { };
   btopTheme = import ./btop.nix { inherit lib pkgs; };

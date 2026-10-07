@@ -2,7 +2,7 @@
 let
   python = pkgs.python3;
   ps = python.pkgs;
-  tools = import ./personaplex-tools-package.nix { pkgs = pkgs.buildPackages; };
+  tools = import ../../programs/personaplex-tools { pkgs = pkgs.buildPackages; };
   # This runtime is only deployed on Andromeda's RTX 5090. The stock NVSHMEM
   # build targets every GPU generation and nests four compiler threads per job.
   nvshmem = pkgs.cudaPackages.libnvshmem.overrideAttrs (old: {

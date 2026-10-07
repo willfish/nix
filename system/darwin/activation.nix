@@ -7,7 +7,7 @@
 }:
 let
   inherit (homeConfiguration) home;
-  tools = import ./tools-package.nix { inherit pkgs; };
+  tools = import ../../programs/darwin-deployment { inherit pkgs; };
   specs = builtins.attrValues homeConfiguration.dotfiles.darwinDaemons;
   runtimeFiles = lib.concatMap (
     s:

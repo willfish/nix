@@ -7,8 +7,8 @@
 }:
 let
   braveCdpEndpoint = "http://127.0.0.1:9222";
-  awsAccessPortal = import ./aws-access-portal-package.nix { inherit pkgs; };
-  slackSession = import ./slack-session-package.nix { inherit pkgs; };
+  awsAccessPortal = import ../../programs/aws-access-portal { inherit pkgs; };
+  slackSession = import ../../programs/slack-session { inherit pkgs; };
   inherit (import ./llm-mcps.nix { inherit config; }) servers;
   enabled = name: builtins.any (server: server.name == name) servers;
   agentBrowserVersion = "0.38.2";
@@ -64,7 +64,7 @@ let
   telegramMcpServer = pkgs.callPackage ./mcp-packages/telegram-mcp.nix { };
   mcpDapServer = pkgs.callPackage ./mcp-packages/mcp-dap-server.nix { };
   # Native login glue; Telethon remains the unchanged upstream runtime.
-  telegramLogin = import ./mcp-packages/telegram-login.nix {
+  telegramLogin = import ../../programs/telegram-login {
     inherit pkgs;
     interpreter = telegramMcpServer.passthru.interpreter;
   };

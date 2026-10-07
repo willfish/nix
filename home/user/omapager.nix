@@ -56,8 +56,8 @@ let
       fi
     '';
   };
-  omapagerTools = import ./omapager-tools-package.nix { inherit pkgs; };
-  patchTools = import ./omapager-tools-package.nix {
+  omapagerTools = import ../../programs/omapager-tools { inherit pkgs; };
+  patchTools = import ../../programs/omapager-tools {
     pkgs = pkgs.buildPackages;
     withIcons = false;
   };
@@ -215,7 +215,7 @@ let
         '{text:"󰂚", tooltip:$tooltip, class:$class}'
     '';
   };
-  herdrFocusPackage = import ./herdr-notification-focus-package.nix { inherit pkgs; };
+  herdrFocusPackage = import ../../programs/herdr-notification-focus { inherit pkgs; };
   herdrFocus = pkgs.writeShellApplication {
     name = "herdr-notification-focus";
     runtimeInputs = [
@@ -226,7 +226,7 @@ let
       exec ${herdrFocusPackage}/bin/herdr-notification-focus "$@"
     '';
   };
-  githubWatch = import ./github-watch-package.nix { inherit pkgs; };
+  githubWatch = import ../../programs/github-notification-watch { inherit pkgs; };
 in
 {
   config = lib.mkIf isGraphicalLinux {

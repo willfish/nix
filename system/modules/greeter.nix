@@ -5,7 +5,7 @@
   ...
 }:
 let
-  greeterSelect = import ./greeter-select-package.nix { inherit pkgs; };
+  greeterSelect = import ../../programs/login-theme-apply { inherit pkgs; };
   hostDefaults = import ../../home/user/themes/host-defaults.nix;
   rendered = import ./greeter-themes.nix { inherit lib pkgs; };
   selectionDir = "/var/lib/desktop-theme";

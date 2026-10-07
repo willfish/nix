@@ -24,7 +24,7 @@ let
         patches = (old.patches or [ ]) ++ [ ../config/launcher/no-app-arguments.patch ];
         doCheck = false;
       });
-  projectsPackage = import ./launcher-projects-package.nix { inherit pkgs; };
+  projectsPackage = import ../../programs/launcher-projects { inherit pkgs; };
   projects = pkgs.writeShellApplication {
     name = "launcher-projects";
     runtimeInputs = [

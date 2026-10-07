@@ -20,8 +20,8 @@
       settings = import ../config/hyprland/settings.nix;
       omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
       ttfx = pkgs.callPackage ./ttfx.nix { };
-      agentStatus = import ./agent-usage-package.nix { inherit pkgs; };
-      arxivStatus = import ./arxiv-status-package.nix { inherit pkgs; };
+      agentStatus = import ../../programs/agent-usage { inherit pkgs; };
+      arxivStatus = import ../../programs/arxiv-status { inherit pkgs; };
       tailscaleStatus = pkgs.writeShellApplication {
         name = "hypr-tailscale-status";
         runtimeInputs = [
@@ -131,7 +131,7 @@
         fi
         exec ${pkgs.swaybg}/bin/swaybg --image "$image" --mode ${lib.escapeShellArg settings.wallpaper.mode}
       '';
-      wallpaperCycleHelper = import ./wallpaper-cycle-package.nix { inherit pkgs; };
+      wallpaperCycleHelper = import ../../programs/wallpaper-cycle { inherit pkgs; };
       wallpaperCycle = pkgs.writeShellApplication {
         name = "hypr-wallpaper-cycle";
         runtimeInputs = [
@@ -396,14 +396,7 @@
         ];
         text = builtins.readFile ../config/hyprland/record.sh;
       };
-      agentAwake = pkgs.runCommandCC "herdr-agent-awake" { } ''
-        mkdir -p "$out/bin"
-        $CC -std=c17 -Wall -Wextra -Wpedantic -Werror -O2 \
-          -DSYSTEMD_INHIBIT=\"${lib.getExe' pkgs.systemd "systemd-inhibit"}\" \
-          -DSLEEP_BIN=\"${lib.getExe' pkgs.coreutils "sleep"}\" \
-          -o "$out/bin/herdr-agent-awake" \
-          ${../config/hyprland/agent-awake.c}
-      '';
+      agentAwake = import ../../programs/herdr-sleep-inhibit { inherit pkgs; };
       session = pkgs.writeShellApplication {
         name = "hypr-session";
         runtimeInputs = [

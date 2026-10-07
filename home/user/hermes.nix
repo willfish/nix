@@ -9,7 +9,7 @@ let
   isRelay = pkgs.stdenv.isDarwin && hostName == "relay";
   cfg = config.dotfiles.hermes;
   hermesHome = "${config.home.homeDirectory}/.hermes";
-  hermesTools = import ./hermes-tools-package.nix { inherit pkgs; };
+  hermesTools = import ../../programs/hermes-config { inherit pkgs; };
 in
 {
   options.dotfiles.hermes.declarationFile = lib.mkOption {

@@ -33,60 +33,62 @@ Rust dependencies and existing C libraries where practical.
 
 ### Services
 
-- [x] Local voice REST API: Rust `home/config/voice-api`.
-- [x] Tailscale authentication proxy: Rust `home/config/tailscale-proxy`.
+- [x] Local voice REST API: Rust `programs/voice-api`.
+- [x] Tailscale authentication proxy: Rust `programs/tailscale-proxy`.
   Preserve peer-address-only trust, caller credentials, streaming and WebSocket
   upgrades. Never put the relay key in the Nix store or logs.
-- [x] Local assistant MCP service: Rust `home/config/assistant-tools`.
+- [x] Local assistant MCP service: Rust `programs/assistant-tools`.
   Preserve read/write roots, credential exclusions and web-fetch restrictions.
 
 ### Desktop helpers
 
-- [x] Agent usage/status family: C `home/config/agent-usage`, including
+- [x] Agent usage/status family: C `programs/agent-usage`, including
   the three collectors, status command and shared authentication/usage code.
-- [x] arXiv status: C `home/config/arxiv-status`.
-- [x] GitHub notifications: C `home/config/github-watch`.
-- [x] Wallpaper cycling: C `home/config/wallpaper-cycle`.
-- [x] Voice model setup: C `home/config/voice-models`.
-- [x] PersonaPlex model/patch helpers: C `home/config/personaplex-tools`.
-- [x] Theme menu: C `home/config/theme-menu`.
-- [x] Launcher project discovery/opening: C `home/config/launcher-projects`.
-- [x] Launcher daily workflow: C `home/config/daily-workflow`.
-- [x] Launcher agenda: C `home/config/daily-agenda`, including private feed
+- [x] arXiv status: C `programs/arxiv-status`.
+- [x] GitHub notifications: C `programs/github-notification-watch`.
+- [x] Wallpaper cycling: C `programs/wallpaper-cycle`.
+- [x] Voice model setup: C `programs/voice-models`.
+- [x] PersonaPlex model/patch helpers: C `programs/personaplex-tools`.
+- [x] Theme menu: C `programs/theme-menu`.
+- [x] Launcher project discovery/opening: C `programs/launcher-projects`.
+- [x] Launcher daily workflow: C `programs/daily-launcher`.
+- [x] Launcher agenda: C `programs/daily-agenda`, including private feed
   fetching, sandboxed recurrence expansion, reminders and both calendar caches.
-- [x] Herdr notification focus: C `home/config/herdr-notification-focus`.
-- [x] Omapager preparation/icon/patch helpers: C `home/config/omapager-tools`,
+- [x] Herdr notification focus: C `programs/herdr-notification-focus`.
+- [x] Omapager preparation/icon/patch helpers: C `programs/omapager-tools`,
   including the compiled icon module for the unchanged upstream Python runtime.
-- [x] Calendar/weather panel settings writers: C `home/config/panel-settings`.
-- [x] Greeter selection: C `home/config/greeter-select` with unchanged root
+- [x] Calendar/weather panel settings writers: C `programs/panel-settings`.
+- [x] Greeter selection: C `programs/login-theme-apply` with unchanged root
   service confinement and catalogue-only asset selection.
-- [x] NetworkManager secret agent: Rust `home/config/nm-auto-secret-agent` with a
+- [x] NetworkManager secret agent: Rust `programs/nm-auto-secret-agent` with a
   compiled libnm bridge. The existing Bash reconnect watcher is unchanged.
 
 ### Configuration, build and skill utilities
 
 - [x] Pi authentication/settings mergers and capture bus-host parser:
-  C `home/config/pi-config`.
-- [x] OpenCode Markdown adapter: C `home/config/opencode-adapt`.
+  C `programs/pi-config`.
+- [x] OpenCode Markdown adapter: C `programs/opencode-adapt`.
 - [x] Hermes exporter, declaration installer, profile and Telegram routing:
-  C `home/config/hermes-tools`.
+  C `programs/hermes-config`.
 - [x] Repository lock-policy, community importer and storage-cost accounting:
-  C `home/config/repo-tools`.
+  C `programs/check-flake-lock-update`, `programs/import-omarchy-community` and
+  `programs/nix-storage-report`.
   The test-only behavior gate remains removed.
-- [x] Darwin deployment, preflight and health tools: C `home/config/darwin-tools`.
+- [x] Darwin deployment, preflight and health tools: C `programs/darwin-deployment`.
   Native macOS deployment and recovery remain separately authorized operations.
-- [x] Slack session refresh: Rust `home/config/slack-session`, retaining private
+- [x] Slack session refresh: Rust `programs/slack-session`, retaining private
   publication, workspace/tab ownership and optional SOPS updates.
-- [x] AWS access-portal service and helpers: Rust `home/config/aws-access-portal`,
+- [x] AWS access-portal service and helpers: Rust `programs/aws-access-portal`,
   retaining explicit login scope and local production-administrator approval.
 - [x] Contrast, YouTube extraction, audiobook inventory/duplicate checks and
-  Libation index helper: C `home/config/skill-tools`.
-- [x] Skill audit: C `home/config/repo-tools/audit.c`.
-- [x] Token-report utility: C `home/config/skill-tools`. Its fixed, model-generated
+  Libation index helper: C `programs/color-contrast`, `programs/youtube-extract`
+  and `programs/audiobook-library`.
+- [x] Skill audit: C `programs/audit-skills`.
+- [x] Token-report utility: C `programs/pi-token-report`. Its fixed, model-generated
   Python benchmark workload is retained for comparable captures.
-- [x] Prompt-capture MITM add-on: C `home/config/prompt-capture`, retaining the
+- [x] Prompt-capture MITM add-on: C `programs/prompt-capture`, retaining the
   upstream mitmproxy runtime, transparent streams and private JSONL records.
-- [x] Telegram manual-login adapter: C `home/config/telegram-login`, using the
+- [x] Telegram manual-login adapter: C `programs/telegram-login`, using the
   unchanged upstream Telethon runtime through the CPython API.
 
 ### Final audit

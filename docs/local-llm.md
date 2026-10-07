@@ -35,7 +35,7 @@ This connection provides
 internet search, reading web pages, listing and searching files, reading text
 files, and writing text files in a dedicated workspace. The service is the compiled
 Rust `local-assistant-tools` package, with its source and Cargo tests in
-`home/config/assistant-tools`. It uses the official Rust MCP SDK with stateless
+`programs/assistant-tools`. It uses the official Rust MCP SDK with stateless
 JSON responses; the existing third-party DDGS search engine runs on demand through
 its CLI, retaining the original 15-second per-provider timeout and fallback
 sequence. DDGS remains outside the handwritten-Python migration.
@@ -104,7 +104,7 @@ message reloads it, so the first response after sleeping takes longer. Browser
 history is local to the browser profile. Both servers listen on all IPv4 interfaces. On Andromeda, API requests require
 the login key. On Relay, Tailscale clients reach port 8081 without one; the
 compiled Rust `tailscale-open-proxy` injects the key before localhost llama.cpp
-sees the request. Its source and Cargo tests live in `home/config/tailscale-proxy`.
+sees the request. Its source and Cargo tests live in `programs/tailscale-proxy`.
 Trust comes only from the TCP peer address, never forwarded headers. It preserves
 caller credentials, streaming replies and WebSocket upgrades. Request headers
 are limited to 64 KiB and 128 fields, connection setup to ten seconds and active

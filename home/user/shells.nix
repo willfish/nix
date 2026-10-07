@@ -229,7 +229,7 @@ in
   home.packages = [
     git-cleanup
     git-cm
-    (import ./repo-tools-package.nix { inherit pkgs; })
+    (import ../../programs/collections/repo-tools { inherit pkgs; })
   ];
 
   programs.bash = {

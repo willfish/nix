@@ -9,7 +9,7 @@
 let
   llmMcps = import ./llm-mcps.nix { inherit config; };
   piModels = builtins.fromJSON (builtins.readFile ../config/pi/models.json);
-  adapt = lib.getExe (import ./opencode-adapt-package.nix { pkgs = pkgs.buildPackages; });
+  adapt = lib.getExe (import ../../programs/opencode-adapt { pkgs = pkgs.buildPackages; });
   qwenBaseUrl =
     host:
     if hostName == host then "http://127.0.0.1:8081/v1" else "http://${host}.taile09696.ts.net:8081/v1";

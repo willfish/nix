@@ -1,6 +1,6 @@
 { pkgs, ... }:
 let
-  adapter = import ./prompt-capture-package.nix { inherit pkgs; };
+  adapter = import ../../programs/prompt-capture { inherit pkgs; };
 in
 # Opt-in prompt capture for the LLM CLIs (CAPTURE_PROMPTS=1).
 #

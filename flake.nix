@@ -623,39 +623,56 @@
               text = builtins.readFile ./scripts/probe-private-access;
             };
             mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix { };
-            voice-api = import ./home/user/voice-api-package.nix { inherit pkgs; };
-            tailscale-proxy = import ./home/user/tailscale-proxy-package.nix { inherit pkgs; };
-            assistant-tools = import ./home/user/assistant-tools-package.nix { inherit pkgs; };
-            agent-usage = import ./home/user/agent-usage-package.nix { inherit pkgs; };
-            arxiv-status = import ./home/user/arxiv-status-package.nix { inherit pkgs; };
-            github-watch = import ./home/user/github-watch-package.nix { inherit pkgs; };
-            wallpaper-cycle = import ./home/user/wallpaper-cycle-package.nix { inherit pkgs; };
-            voice-models = import ./home/user/voice-models-package.nix { inherit pkgs; };
-            personaplex-tools = import ./home/user/personaplex-tools-package.nix { inherit pkgs; };
-            theme-menu = import ./home/user/theme-menu-package.nix { inherit pkgs; };
-            launcher-projects = import ./home/user/launcher-projects-package.nix { inherit pkgs; };
-            daily-workflow = import ./home/user/daily-workflow-package.nix { inherit pkgs; };
-            daily-agenda = import ./home/user/daily-agenda-package.nix { inherit pkgs; };
-            herdr-notification-focus = import ./home/user/herdr-notification-focus-package.nix {
-              inherit pkgs;
-            };
-            omapager-tools = import ./home/user/omapager-tools-package.nix { inherit pkgs; };
-            panel-settings = import ./home/user/panel-settings-package.nix { inherit pkgs; };
-            greeter-select = import ./system/modules/greeter-select-package.nix { inherit pkgs; };
-            nm-auto-secret-agent = import ./home/user/nm-auto-secret-agent-package.nix { inherit pkgs; };
-            pi-config = import ./home/user/pi-config-package.nix { inherit pkgs; };
-            opencode-adapt = import ./home/user/opencode-adapt-package.nix { inherit pkgs; };
-            hermes-tools = import ./home/user/hermes-tools-package.nix { inherit pkgs; };
-            repo-tools = import ./home/user/repo-tools-package.nix { inherit pkgs; };
-            darwin-tools = import ./system/darwin/tools-package.nix { inherit pkgs; };
-            skill-tools = import ./home/user/skill-tools-package.nix { inherit pkgs; };
-            aws-access-portal = import ./home/user/aws-access-portal-package.nix { inherit pkgs; };
-            slack-session = import ./home/user/slack-session-package.nix { inherit pkgs; };
-            prompt-capture-mitm = import ./home/user/prompt-capture-package.nix { inherit pkgs; };
-            telegram-login = import ./home/user/mcp-packages/telegram-login.nix {
+            voice-api = import ./programs/voice-api { inherit pkgs; };
+            tailscale-proxy = import ./programs/tailscale-proxy { inherit pkgs; };
+            assistant-tools = import ./programs/assistant-tools { inherit pkgs; };
+            agent-usage = import ./programs/agent-usage { inherit pkgs; };
+            arxiv-status = import ./programs/arxiv-status { inherit pkgs; };
+            github-notification-watch = import ./programs/github-notification-watch { inherit pkgs; };
+            wallpaper-cycle = import ./programs/wallpaper-cycle { inherit pkgs; };
+            voice-models = import ./programs/voice-models { inherit pkgs; };
+            personaplex-tools = import ./programs/personaplex-tools { inherit pkgs; };
+            theme-menu = import ./programs/theme-menu { inherit pkgs; };
+            launcher-projects = import ./programs/launcher-projects { inherit pkgs; };
+            daily-launcher = import ./programs/daily-launcher { inherit pkgs; };
+            daily-agenda = import ./programs/daily-agenda { inherit pkgs; };
+            herdr-notification-focus = import ./programs/herdr-notification-focus { inherit pkgs; };
+            omapager-tools = import ./programs/omapager-tools { inherit pkgs; };
+            panel-settings = import ./programs/panel-settings { inherit pkgs; };
+            login-theme-apply = import ./programs/login-theme-apply { inherit pkgs; };
+            nm-auto-secret-agent = import ./programs/nm-auto-secret-agent { inherit pkgs; };
+            pi-config = import ./programs/pi-config { inherit pkgs; };
+            opencode-adapt = import ./programs/opencode-adapt { inherit pkgs; };
+            hermes-config = import ./programs/hermes-config { inherit pkgs; };
+            check-flake-lock-update = import ./programs/check-flake-lock-update { inherit pkgs; };
+            import-omarchy-community = import ./programs/import-omarchy-community { inherit pkgs; };
+            audit-skills = import ./programs/audit-skills { inherit pkgs; };
+            nix-storage-report = import ./programs/nix-storage-report { inherit pkgs; };
+            repo-tools = import ./programs/collections/repo-tools { inherit pkgs; };
+            darwin-deployment = import ./programs/darwin-deployment { inherit pkgs; };
+            color-contrast = import ./programs/color-contrast { inherit pkgs; };
+            youtube-extract = import ./programs/youtube-extract { inherit pkgs; };
+            audiobook-library = import ./programs/audiobook-library { inherit pkgs; };
+            pi-token-report = import ./programs/pi-token-report { inherit pkgs; };
+            skill-tools = import ./programs/collections/skill-tools { inherit pkgs; };
+            aws-access-portal = import ./programs/aws-access-portal { inherit pkgs; };
+            slack-session = import ./programs/slack-session { inherit pkgs; };
+            prompt-capture-mitm = import ./programs/prompt-capture { inherit pkgs; };
+            # Existing package entry points remain compatible with scripts and callers.
+            github-watch = config.packages.github-notification-watch;
+            daily-workflow = config.packages.daily-launcher;
+            greeter-select = config.packages.login-theme-apply;
+            hermes-tools = config.packages.hermes-config;
+            darwin-tools = config.packages.darwin-deployment;
+            telegram-login = import ./programs/telegram-login {
               inherit pkgs;
               interpreter = (pkgs.callPackage ./home/user/mcp-packages/telegram-mcp.nix { }).passthru.interpreter;
             };
+          }
+          // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+            memscope = pkgs.callPackage ./programs/memscope { };
+            pi-voice-client = import ./programs/pi-voice-client { inherit pkgs; };
+            herdr-sleep-inhibit = import ./programs/herdr-sleep-inhibit { inherit pkgs; };
           }
           //
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)

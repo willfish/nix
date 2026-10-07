@@ -13,6 +13,7 @@ A Nix flake for William's NixOS workstations and NAS, a headless macOS node, and
 
 ```text
 flake.nix
+├── programs/                    Owned C/Rust source, packages and local checks
 ├── system/
 │   ├── modules/base.nix          Shared NixOS foundation
 │   ├── modules/workstation.nix   Base + graphical services
@@ -25,6 +26,10 @@ flake.nix
     ├── user/                     Packages, programs, shell and service modules
     └── config/                   Managed configuration, scripts and LLM harness
 ```
+
+Owned utilities and services live in [programs/](programs/README.md), with their
+package definitions beside the source. Static configuration remains in
+`home/config`; Home Manager and system modules choose how programs are deployed.
 
 ### System and home boundaries
 

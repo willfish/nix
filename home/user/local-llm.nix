@@ -71,8 +71,8 @@ let
   };
   workspace = "${config.home.homeDirectory}/LocalAssistant";
   chatUi = import ./local-llm-ui.nix { inherit pkgs; };
-  hermesTools = import ./hermes-tools-package.nix { inherit pkgs; };
-  tailscaleProxy = import ./tailscale-proxy-package.nix { inherit pkgs; };
+  hermesTools = import ../../programs/hermes-config { inherit pkgs; };
+  tailscaleProxy = import ../../programs/tailscale-proxy { inherit pkgs; };
   hermesOverlay = pkgs.writeText "local-qwen-hermes.json" (
     builtins.toJSON {
       model = {
@@ -178,7 +178,7 @@ let
   };
   # DDGS remains the third-party search provider, invoked on demand.
   toolsPython = assistantPackage.searchProvider;
-  assistantPackage = import ./assistant-tools-package.nix { inherit pkgs; };
+  assistantPackage = import ../../programs/assistant-tools { inherit pkgs; };
   uiConfig = pkgs.writeText "local-llm-ui.json" (
     builtins.toJSON {
       mcpServers = builtins.toJSON [

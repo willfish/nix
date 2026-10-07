@@ -1,2 +1,0 @@
-option('probe_python', type: 'string', value: 'python3', description: 'Interpreter for the unchanged model-generated token benchmark probe')
-option('fixtures', type: 'boolean', value: false, description: 'Build manual migration fixtures')

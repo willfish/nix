@@ -9,7 +9,7 @@ let
   credentials =
     config.sops.secrets.GOOGLE_CALENDAR_ICAL.path
       or "${config.xdg.configHome}/sops-nix/secrets/GOOGLE_CALENDAR_ICAL";
-  agendaPackage = import ./daily-agenda-package.nix { inherit pkgs; };
+  agendaPackage = import ../../programs/daily-agenda { inherit pkgs; };
   agenda = pkgs.writeShellApplication {
     name = "daily-agenda";
     text = ''
@@ -17,7 +17,7 @@ let
       exec ${agendaPackage}/bin/daily-agenda "$@"
     '';
   };
-  workflowPackage = import ./daily-workflow-package.nix { inherit pkgs; };
+  workflowPackage = import ../../programs/daily-launcher { inherit pkgs; };
   workflow = pkgs.writeShellApplication {
     name = "daily-workflow";
     runtimeInputs = [

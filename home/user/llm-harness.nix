@@ -29,7 +29,7 @@ let
   hermesSkillRoot = ".hermes/skills/personal";
 
   publicLlmRoot = "${configDir}/llm";
-  skillTools = import ./skill-tools-package.nix { inherit pkgs; };
+  skillTools = import ../../programs/collections/skill-tools { inherit pkgs; };
   nativeSkillScripts = {
     audiobook-library-import = [
       "qbittorrent-inventory"

@@ -8,9 +8,9 @@
 let
   enabled = hostName == "andromeda" && pkgs.stdenv.isLinux;
   runtime = import ./personaplex-package.nix { inherit pkgs; };
-  nativeVoice = import ./voice-c-package.nix { inherit pkgs; };
+  nativeVoice = import ../../programs/pi-voice-client { inherit pkgs; };
   dataDir = "${config.home.homeDirectory}/.local/share/pi-voice/personaplex";
-  tools = import ./personaplex-tools-package.nix { inherit pkgs; };
+  tools = import ../../programs/personaplex-tools { inherit pkgs; };
   models = pkgs.writeShellApplication {
     name = "personaplex-models";
     text = ''

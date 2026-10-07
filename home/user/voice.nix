@@ -20,8 +20,8 @@ let
   whisper = pkgs.whisper-cpp.override { vulkanSupport = true; };
   sttModel = "ggml-large-v3-turbo-q5_0.bin";
   vulkanDriver = "nvidia_icd.json";
-  nativeVoice = import ./voice-c-package.nix { inherit pkgs; };
-  voiceApi = import ./voice-api-package.nix { inherit pkgs; };
+  nativeVoice = import ../../programs/pi-voice-client { inherit pkgs; };
+  voiceApi = import ../../programs/voice-api { inherit pkgs; };
   makeVoice =
     harness:
     pkgs.writeShellApplication {
@@ -90,7 +90,7 @@ let
       exec ${nativeVoice}/bin/voice-menu-c --config ${menuConfig} "$@"
     '';
   };
-  modelHelper = import ./voice-models-package.nix { inherit pkgs; };
+  modelHelper = import ../../programs/voice-models { inherit pkgs; };
   modelSetup = pkgs.writeShellApplication {
     name = "pi-voice-models";
     text = ''

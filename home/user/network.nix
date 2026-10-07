@@ -34,7 +34,7 @@
 */
 lib.mkIf (isGraphicalLinux && config.dotfiles.privateEnabled) (
   let
-    nmAutoSecretAgent = import ./nm-auto-secret-agent-package.nix { inherit pkgs; };
+    nmAutoSecretAgent = import ../../programs/nm-auto-secret-agent { inherit pkgs; };
   in
   {
     systemd.user.services.nm-auto-secret-agent = {

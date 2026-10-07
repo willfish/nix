@@ -18,7 +18,7 @@ let
     rev = "15509fca18f14b9e7da5d7bf85cdf3d9da665bae";
     hash = "sha256-XfCeAmSyWltREKuDn9/6OdwyvjdtlQWH+9QLRnEOmlY=";
   };
-  panelSettings = import ./panel-settings-package.nix { inherit pkgs; };
+  panelSettings = import ../../programs/panel-settings { inherit pkgs; };
   calendarSettings = pkgs.writeShellApplication {
     name = "hypr-calendar-settings";
     text = ''
@@ -427,7 +427,7 @@ let
     chmod 600 "$usage"/*.json 2>/dev/null || true
     exit $status
   '';
-  agentUsage = import ./agent-usage-package.nix { inherit pkgs; };
+  agentUsage = import ../../programs/agent-usage { inherit pkgs; };
   agentCollectors =
     pkgs.runCommand "omarchy-agent-collectors" { nativeBuildInputs = [ pkgs.bash ]; }
       ''

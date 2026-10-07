@@ -6,7 +6,7 @@
   ...
 }:
 let
-  tools = import ./tools-package.nix { inherit pkgs; };
+  tools = import ../../programs/darwin-deployment { inherit pkgs; };
   appNames = builtins.attrNames homeConfiguration.dotfiles.darwinDaemons;
   logs = map (name: "/var/log/dotfiles/${name}.log") (
     appNames
