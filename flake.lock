@@ -617,11 +617,11 @@
     },
     "nix-config": {
       "locked": {
-        "lastModified": 1791209028,
-        "narHash": "sha256-Ajxj1/4o56tK0AuXhDMfj91j1mOmC+FoW60jcf2unVE=",
+        "lastModified": 1791365717,
+        "narHash": "sha256-Z4yvSz9f3/SWaHWbabUkUcZO+rb95VYE9LlZSvDjiCM=",
         "ref": "refs/heads/master",
-        "rev": "b196c5ca7a3cc55ba6c62fd5650befb83e2bca4e",
-        "revCount": 34,
+        "rev": "bbe109260afd87cf16e0745b72ddb3067f72aaca",
+        "revCount": 35,
         "type": "git",
         "url": "ssh://git@github.com/willfish/nix-config.git"
       },
