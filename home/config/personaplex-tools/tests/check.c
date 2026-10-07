@@ -720,8 +720,20 @@ static void handle_one(Server *s, int cfd) {
     char *loc = g_strconcat("Location: ", s->location, "\r\n", NULL);
     http_status(ssl, 302, loc, "", 0);
     g_free(loc);
-  } else if (s->kind == H_NEVER)
-    http_status(ssl, 200, NULL, "never read", 10);
+  } else if (s->kind == H_NEVER) {
+    if (!ssl_write_all(ssl, "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: 10\r\n\r\nnever read",
+                       strlen("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: 10\r\n\r\nnever read"))) {
+      g_mutex_lock(&s->mu);
+      if (s->nreqs) {
+        s->nreqs--;
+        g_free(s->reqs[s->nreqs].path);
+        g_free(s->reqs[s->nreqs].auth);
+        s->reqs[s->nreqs].path = NULL;
+        s->reqs[s->nreqs].auth = NULL;
+      }
+      g_mutex_unlock(&s->mu);
+    }
+  }
   else
     serve_blob(s, ssl, req_path, false);
   ssl_api.SSL_shutdown(ssl);

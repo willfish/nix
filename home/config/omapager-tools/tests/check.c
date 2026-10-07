@@ -639,11 +639,15 @@ static bool contains_file(const char *path, const char *text) {
   return ok;
 }
 static int count_text(const char *path, const char *needle) {
-  char *data = read_bytes(path, NULL);
+  size_t n = 0, m = strlen(needle);
+  char *data = read_bytes(path, &n);
   int count = 0;
-  if (data)
-    for (char *p = data; (p = strstr(p, needle)); p += strlen(needle))
-      count++;
+  if (data && m)
+    for (size_t i = 0; i + m <= n; i++)
+      if (!memcmp(data + i, needle, m)) {
+        count++;
+        i += m - 1;
+      }
   free(data);
   return count;
 }
@@ -994,15 +998,20 @@ static void test_allowed(void) {
   EXPECT(v && v->b);
   json_free(v);
   g_free(args);
-  args = g_strdup_printf("[%s,\"%s\"]", bytes->str, base);
+  GString *file_bytes = g_string_new("{\"$bytes\":[");
+  for (size_t i = 0; file[i]; i++)
+    g_string_append_printf(file_bytes, "%s%d", i ? "," : "", (unsigned char)file[i]);
+  g_string_append(file_bytes, "]}");
+  args = g_strdup_printf("[%s,[\"%s\"]]", file_bytes->str, base);
+  g_string_free(file_bytes, TRUE);
   v = pure_fn("allowed_icon", args, NULL);
   EXPECT(is_error(v, "TypeError"));
   json_free(v);
   g_free(args);
-  char *link = g_strdup_printf("%s/escape", base);
-  /* escape symlink already exists; create a bytes-named link if absent. */
-  if (access(link, F_OK))
-    EXPECT(!symlink(other, link));
+  char *outside_file = g_build_filename(root, "other-file", NULL);
+  save_bytes(outside_file, "svg", 3);
+  char *link = g_build_filename(base, "escape-bytes", NULL);
+  EXPECT(!symlink(outside_file, link));
   GString *link_bytes = g_string_new("{\"$bytes\":[");
   for (size_t i = 0; link[i]; i++)
     g_string_append_printf(link_bytes, "%s%d", i ? "," : "", (unsigned char)link[i]);
@@ -1016,6 +1025,7 @@ static void test_allowed(void) {
   g_string_free(bytes, TRUE);
   g_string_free(base_bytes, TRUE);
   g_free(link);
+  g_free(outside_file);
   g_free(raw_name);
   g_free(fifo);
   g_free(loop);
@@ -1135,8 +1145,7 @@ static void test_prepare(void) {
     {
       char *color_path = join_source(native, color_rel);
       int found = count_text(color_path, theme_anchor);
-      if (found != 1)
-        fprintf(stderr, "anchor count %d in %s\n", found, color_path);
+
       EXPECT(found == 1);
       g_free(color_path);
     }

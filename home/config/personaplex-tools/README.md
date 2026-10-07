@@ -29,14 +29,11 @@ Fixtures are off by default, never installed, and have no automatic test wiring.
 Only the fixture executable accepts custom model pins, endpoints and timeouts.
 
 ```sh
-direnv exec . nix develop .#personaplex-tools -c \
-  meson setup /tmp/personaplex-tools-build home/config/personaplex-tools -Dfixtures=true
-direnv exec . nix develop .#personaplex-tools -c ninja -C /tmp/personaplex-tools-build
-PERSONAPLEX_FIXTURE=/tmp/personaplex-tools-build/personaplex-fixture \
-PERSONAPLEX_MODELS_BIN=/tmp/personaplex-tools-build/personaplex-models \
-PERSONAPLEX_PATCH_BIN=/tmp/personaplex-tools-build/personaplex-patch \
-  direnv exec . nix shell nixpkgs#openssl -c \
-  node --experimental-strip-types --test home/config/personaplex-tools/tests/tools.test.ts
+direnv exec . nix develop .#personaplex-tools -c env NIX_HARDENING_ENABLE= \
+  meson setup /tmp/personaplex-tools-checks home/config/personaplex-tools \
+  -Dfixtures=true --buildtype=debugoptimized
+direnv exec . nix develop .#personaplex-tools -c ninja -C /tmp/personaplex-tools-checks
+/tmp/personaplex-tools-checks/personaplex-checks
 ```
 
 Fixtures use disposable TLS endpoints, small generated archives and fake tokens.

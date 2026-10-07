@@ -16,9 +16,11 @@ include captured content.
 Build and run the manual, program-local checks with synthetic local traffic:
 
 ```sh
-package=$(direnv exec . nix build .#prompt-capture-mitm --no-link --print-out-paths)
-direnv exec . env CAPTURE_MITM_BIN="$package/bin/prompt-capture-mitm" \
-  node --test --test-timeout=45000 home/config/prompt-capture/capture.test.ts
+nix develop .#prompt-capture-mitm --command env NIX_HARDENING_ENABLE= \
+  meson setup /tmp/prompt-capture-checks home/config/prompt-capture \
+  -Dfixtures=true --buildtype=debugoptimized
+nix develop .#prompt-capture-mitm --command meson compile -C /tmp/prompt-capture-checks
+/tmp/prompt-capture-checks/prompt-capture-checks
 ```
 
 These checks are not installed or registered with package builds or hooks. They

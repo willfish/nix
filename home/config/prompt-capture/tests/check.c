@@ -756,12 +756,39 @@ static void free_lines(char **lines, size_t count) {
     free(lines[i]);
   free(lines);
 }
+static const char *after_key(const char *json, const char *key) {
+  char needle[96];
+  snprintf(needle, sizeof needle, "\"%s\"", key);
+  size_t n = strlen(needle);
+  const char *p = json;
+  while (p && *p && (p = strstr(p, needle))) {
+    const char *q = p + n;
+    while (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r')
+      q++;
+    if (*q == ':') {
+      q++;
+      while (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r')
+        q++;
+      return q;
+    }
+    p += n;
+  }
+  return NULL;
+}
+static int kind_has(const char *json, const char *kind) {
+  const char *v = after_key(json, "kind");
+  size_t n = strlen(kind);
+  return v && *v == '"' && !strncmp(v + 1, kind, n) && v[1 + n] == '"';
+}
+static int kind_prefix(const char *json, const char *prefix) {
+  const char *v = after_key(json, "kind");
+  size_t n = strlen(prefix);
+  return v && *v == '"' && !strncmp(v + 1, prefix, n);
+}
 static const char *kind_line(char **lines, size_t count, const char *kind, size_t index) {
-  char needle[64];
-  snprintf(needle, sizeof needle, "\"kind\":\"%s\"", kind);
   size_t seen = 0;
   for (size_t i = 0; i < count; i++)
-    if (strstr(lines[i], needle) && seen++ == index)
+    if (kind_has(lines[i], kind) && seen++ == index)
       return lines[i];
   return NULL;
 }
@@ -785,12 +812,10 @@ static int hex_byte(const char *text, unsigned *out) {
   return 0;
 }
 static int string_field(const char *json, const char *key, unsigned char **out, size_t *len) {
-  char needle[96];
-  snprintf(needle, sizeof needle, "\"%s\":\"", key);
-  const char *start = json ? strstr(json, needle) : NULL;
-  if (!start)
+  const char *start = json ? after_key(json, key) : NULL;
+  if (!start || *start != '"')
     return -1;
-  start += strlen(needle);
+  start++;
   unsigned char *buf = malloc(strlen(start) + 1);
   size_t n = 0;
   for (const char *p = start; *p && *p != '"'; p++) {
@@ -824,14 +849,12 @@ static int string_field(const char *json, const char *key, unsigned char **out, 
   return 0;
 }
 static int number_field(const char *json, const char *key, double *out) {
-  char needle[96];
-  snprintf(needle, sizeof needle, "\"%s\":", key);
-  const char *start = json ? strstr(json, needle) : NULL;
+  const char *start = json ? after_key(json, key) : NULL;
   if (!start)
     return -1;
   char *end = NULL;
-  *out = strtod(start + strlen(needle), &end);
-  return end == start + strlen(needle) ? -1 : 0;
+  *out = strtod(start, &end);
+  return end == start ? -1 : 0;
 }
 static int near_field(const char *json, const char *key, double expected) {
   double got = 0;
@@ -864,7 +887,7 @@ static void utf8_stream(void) {
     unsigned char *joined = NULL;
     size_t jlen = 0, jcap = 0;
     for (size_t i = 0; i < count; i++) {
-      if (!strstr(lines[i], "\"kind\":\"response_chunk\""))
+      if (!kind_has(lines[i], "response_chunk"))
         continue;
       unsigned char *text = NULL;
       size_t n = 0;
@@ -919,10 +942,15 @@ static void large_request(void) {
     expect(stored && n == bytes && !memcmp(stored, body, bytes), "body");
     expect(near_field(record, "request_chars", (double)chars), "chars");
     expect(near_field(record, "request_bytes", (double)bytes), "bytes");
-    expect(strstr(record ? record : "", "\"model\":\"qwen\"") != NULL, "model");
+    unsigned char *model = NULL;
+    size_t mn = 0;
+    string_field(record, "model", &model, &mn);
+    expect(model && mn == 4 && !memcmp(model, "qwen", 4), "model");
+    free(model);
     expect(near_field(record, "message_count", 1), "messages");
     expect(near_field(record, "tool_count", 1), "tools");
-    expect(strstr(record ? record : "", "\"Authorization\":\"<redacted>\"") != NULL, "auth");
+    const char *auth = after_key(record, "Authorization");
+    expect(auth && !strncmp(auth, "\"<redacted>\"", 12), "auth");
     size_t raw_len = 0;
     unsigned char *raw = check_read(log, &raw_len);
     expect(raw && !contains_text(raw, raw_len, "fixture-secret"), "redacted");
@@ -1059,7 +1087,7 @@ static void early_sse(void) {
     unsigned char *joined = NULL;
     size_t jlen = 0, jcap = 0;
     for (size_t i = 0; i < count; i++) {
-      if (!strstr(lines[i], "\"kind\":\"response_chunk\""))
+      if (!kind_has(lines[i], "response_chunk"))
         continue;
       unsigned char *text = NULL;
       size_t n = 0;
@@ -1278,7 +1306,7 @@ static void websocket(void) {
       read_lines(log, &lines, &count);
       size_t ws = 0;
       for (size_t j = 0; j < count; j++)
-        if (strstr(lines[j], "\"kind\":\"ws_"))
+        if (kind_prefix(lines[j], "ws_"))
           ws++;
       if (ws >= 3)
         break;
@@ -1289,7 +1317,7 @@ static void websocket(void) {
     const char *want_data[] = {"hello", "world", "b'\\x00\\xff'"};
     size_t seen = 0;
     for (size_t i = 0; i < count; i++) {
-      if (!strstr(lines[i], "\"kind\":\"ws_"))
+      if (!kind_prefix(lines[i], "ws_"))
         continue;
       unsigned char *kind = NULL, *data = NULL;
       size_t kn = 0, dn = 0;

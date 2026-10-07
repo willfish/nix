@@ -417,6 +417,7 @@ static char *timed(const char *extra, const char *start) {
     return g_strdup_printf("UID:event\nDTSTART:%s\nDTEND:20261006T100000Z\nSUMMARY:Example\n%s", start, extra);
   return g_strdup_printf("UID:event\nDTSTART:%s\nDTEND:20261006T100000Z\nSUMMARY:Example", start);
 }
+static size_t last_ics_len;
 static char *ics_raw(const char *const *events, const size_t *lens, size_t n, const char *properties) {
   GString *s = g_string_new("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Fixtures//EN\r\n");
   if (properties)
@@ -433,6 +434,7 @@ static char *ics_raw(const char *const *events, const size_t *lens, size_t n, co
     g_string_append(s, "\r\nEND:VEVENT\r\n");
   }
   g_string_append(s, "END:VCALENDAR\r\n");
+  last_ics_len = s->len;
   return g_string_free(s, FALSE);
 }
 static char *ics1(const char *event) { return ics_raw(&event, NULL, 1, NULL); }
@@ -858,7 +860,6 @@ static void test_credentials(void) {
   yyjson_mut_doc_set_root(docs[2], o);
   char *long_key = g_strnfill(41, 'a');
   yyjson_mut_obj_add_strcpy(docs[2], o, long_key, feed);
-  g_free(long_key);
   docs[3] = yyjson_mut_doc_new(NULL);
   o = yyjson_mut_obj(docs[3]);
   yyjson_mut_doc_set_root(docs[3], o);
@@ -882,11 +883,13 @@ static void test_credentials(void) {
     size_t n = 0;
     char *json = yyjson_mut_write(docs[i], 0, &n);
     CHECK(write_file(path, json, n, 0600));
+    int got = fixture_status(feeds);
+    if (got != expect[i])
+      FAIL("json credentials %d got %d body %s", i, got, json ? json : "");
     free(json);
     yyjson_mut_doc_free(docs[i]);
-    if (fixture_status(feeds) != expect[i])
-      FAIL("json credentials %d", i);
   }
+  g_free(long_key);
   char *hash = replace_one(feed, "user%40example.com", "a%23b");
   char *ok_args[] = {"url", (char *)feed, NULL};
   char *hash_args[] = {"url", hash, NULL};
@@ -1195,7 +1198,7 @@ static void test_untrusted(void) {
   g_string_append_unichar(event, 0xe000);
   size_t len = event->len;
   char *text = ics_raw((const char *const *)&event->str, &len, 1, NULL);
-  yyjson_doc *doc = parity(text, strlen(text), NULL, 0);
+  yyjson_doc *doc = parity(text, last_ics_len, NULL, 0);
   yyjson_doc_free(doc);
   g_free(text);
   g_string_free(event, TRUE);
@@ -1451,7 +1454,9 @@ static void respond(Server *s, SSL *ssl, int call) {
     return;
   }
   if (s->mode == MODE_PROGRESS || s->mode == MODE_SLOW) {
-    if (!ssl_write_all(ssl, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n", 70))
+    const char *chunked =
+        "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n";
+    if (!ssl_write_all(ssl, chunked, strlen(chunked)))
       return;
     if (s->mode == MODE_SLOW) {
       size_t first = s->calendar_len < 50 ? s->calendar_len : 50;
@@ -1970,6 +1975,7 @@ static void test_http(void) {
 }
 
 int main(void) {
+  signal(SIGPIPE, SIG_IGN);
   OPENSSL_init_ssl(0, NULL);
   binary = sibling("DAILY_AGENDA_BIN", "daily-agenda");
   fixture = sibling("DAILY_AGENDA_FIXTURE", "agenda-fixture");
