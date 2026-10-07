@@ -18,8 +18,12 @@
   hardware.nvidia = {
     open = true; # Required for the RTX 5090 (Blackwell).
     modesetting.enable = true;
-    powerManagement.enable = true;
-    # Retain the previous systemd suspend path while testing the driver fix.
+    # Leave both NVIDIA suspend integrations off. The systemd path preserves every
+    # video-memory allocation and can stall suspend while that copy runs. The kernel
+    # notifier path has wedged nvidia-modeset after resume on this card. The default
+    # kernel power-management path discards those allocations; CUDA and Vulkan
+    # clients must recreate them after resume.
+    powerManagement.enable = false;
     powerManagement.kernelSuspendNotifier = false;
     nvidiaSettings = true;
     # 595.99.02 fixes DIFR resource handling across suspend/resume:

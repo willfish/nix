@@ -163,10 +163,12 @@ If a generation cannot boot, select an earlier generation from the systemd-boot 
 
 ### Andromeda RTX 5090 installation
 
-The driver is pinned to 595.99.02 for NVIDIA's DIFR suspend/resume fix. The
-previous systemd suspend/resume service configuration is retained. Repeated
-suspend/resume testing with the installed card is still required to confirm
-that the earlier freeze is resolved.
+The driver is pinned to 595.99.02 for NVIDIA's DIFR suspend/resume fix. Do not
+enable `hardware.nvidia.powerManagement` on this host. The systemd integration
+preserves every video-memory allocation and can stall suspend while that copy
+runs. The kernel suspend notifier has wedged `nvidia-modeset` after resume.
+The default kernel path discards GPU allocations, so CUDA and Vulkan clients
+must recreate them after resume. The module parameter applies only after reboot.
 
 Build and stage the configuration for the next boot before shutting down to
 install the card. Use `boot` so the running graphical session is not restarted:
