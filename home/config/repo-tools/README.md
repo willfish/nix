@@ -63,13 +63,9 @@ Supply GLib, yyjson, libxml2 (with HTML5 token mode), Meson, Ninja, pkg-config a
 Node from a direnv/ephemeral Nix environment:
 
 ```sh
-meson setup /tmp/repo-tools-build home/config/repo-tools
-meson compile -C /tmp/repo-tools-build
-LOCK_POLICY_BIN=/tmp/repo-tools-build/check-flake-lock-update \
-COMMUNITY_IMPORT_BIN=/tmp/repo-tools-build/import-omarchy-community \
-SKILL_AUDIT_BIN=/tmp/repo-tools-build/audit-skills \
-STORAGE_REPORT_BIN=/tmp/repo-tools-build/nix-storage-report \
-  node --experimental-strip-types --test home/config/repo-tools/*.test.ts
+meson setup /tmp/repo-tools-checks home/config/repo-tools -Dfixtures=true
+meson compile -C /tmp/repo-tools-checks
+/tmp/repo-tools-checks/repo-checks
 ```
 
 Fixtures are manual, noninstalled and unregistered. They use local lock data and

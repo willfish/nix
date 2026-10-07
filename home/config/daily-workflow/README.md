@@ -31,8 +31,7 @@ direnv exec . nix develop .#daily-workflow -c meson compile \
   -C /tmp/daily-workflow-build
 DAILY_WORKFLOW_BIN=/tmp/daily-workflow-build/daily-workflow \
 DAILY_WORKFLOW_PTY=/tmp/daily-workflow-build/daily-pty \
-  direnv exec . node --experimental-strip-types --test \
-  home/config/daily-workflow/tests/workflow.test.ts
+  /tmp/daily-workflow-build/daily-checks
 ```
 
 The driver uses disposable homes, stub calendar/cleanup commands and a compiled

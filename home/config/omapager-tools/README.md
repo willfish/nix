@@ -32,16 +32,19 @@ Meson, Ninja, pkg-config, GLib and the flake-pinned Python development headers.
 No temporary tooling belongs in project manifests.
 
 ```sh
-meson setup /tmp/omapager-build home/config/omapager-tools \
-  -Dfixtures=true -Dbuildtype=debugoptimized
-meson compile -C /tmp/omapager-build
-OMAPAGER_TOOLS_DIR=/tmp/omapager-build \
-OMAPAGER_ICON_FIXTURE=/tmp/omapager-build/icon-fixture \
+nix develop .#omapager-tools --command env NIX_HARDENING_ENABLE= \
+  meson setup /tmp/omapager-checks home/config/omapager-tools \
+  -Dfixtures=true --buildtype=debugoptimized
+nix develop .#omapager-tools --command meson compile -C /tmp/omapager-checks
 OMAPAGER_PLUGIN_SOURCE=/path/to/pinned/omapager \
 OMAPAGER_OMARCHY_SOURCE=/path/to/pinned/omarchy \
-  node --experimental-strip-types --test \
-    home/config/omapager-tools/tests/tools.test.ts
+  /tmp/omapager-checks/omapager-checks
 ```
+
+`OMAPAGER_TOOLS_DIR`, `OMAPAGER_ICONS_DIR` and `OMAPAGER_ICON_FIXTURE` still
+select those paths; otherwise the checks use the build directory and its
+`icon-fixture`. Configure once without `-Dfixtures=true` to confirm the package
+build does not create the check executable.
 
 `OMAPAGER_ICONS_DIR` may select a packaged module separately from the command
 folder. `OMAPAGER_LEGACY_DIR` enables optional parity against retained old sources

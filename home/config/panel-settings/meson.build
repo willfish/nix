@@ -11,4 +11,5 @@ endforeach
 if get_option('fixtures')
   shared_module('panel-failures', 'tests/failures.c', dependencies: meson.get_compiler('c').find_library('dl'), name_prefix: '')
   executable('panel-argv', 'tests/argv.c', link_args: exe_link)
+  executable('panel-settings-check', 'tests/check.c', 'src/json.c', dependencies: glib, include_directories: inc, link_args: exe_link)
 endif

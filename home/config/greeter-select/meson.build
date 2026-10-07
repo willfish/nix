@@ -9,4 +9,5 @@ executable('greeter-select', 'src/main.c', 'src/greeter.c', dependencies: deps, 
 if get_option('fixtures')
   executable('greeter-fixture', 'tests/fixture.c', 'src/greeter.c', dependencies: deps, include_directories: inc, link_args: link)
   shared_module('greeter-failures', 'tests/failures.c', dependencies: meson.get_compiler('c').find_library('dl'), name_prefix: '')
+  executable('greeter-check', 'tests/check.c', dependencies: deps, include_directories: inc)
 endif

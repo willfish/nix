@@ -10,4 +10,7 @@ foreach name : ['hypr-agent-status', 'omarchy-agent-usage-codex', 'omarchy-agent
 endforeach
 if get_option('fixtures')
   executable('usage-fixture', 'tests/fixture.c', dependencies: usage_dep)
+  executable('usage-checks', ['tests/check.c', 'tests/run.c'],
+    dependencies: [dependency('yyjson'), dependency('threads'), dependency('openssl')],
+    c_args: ['-D_DEFAULT_SOURCE'])
 endif

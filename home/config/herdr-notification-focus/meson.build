@@ -5,4 +5,7 @@ sources = files('src/json.c', 'src/resolve.c', 'src/cache.c', 'src/system.c', 's
 executable('herdr-notification-focus', sources, 'src/main.c', dependencies: deps, include_directories: inc, install: true)
 if get_option('fixtures')
   executable('focus-fixture', sources, 'tests/fixture.c', dependencies: deps, include_directories: inc)
+  executable('hyprfake', 'tests/hyprfake.c', dependencies: deps)
+  executable('focus-peer', 'tests/peer.c', dependencies: deps)
+  executable('focus-checks', 'tests/check.c', dependencies: deps)
 endif

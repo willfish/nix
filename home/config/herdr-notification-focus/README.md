@@ -37,14 +37,17 @@ Build with GLib/GIO, yyjson, Meson, Ninja and pkg-config in an ephemeral Nix she
 from the existing direnv checkout:
 
 ```sh
-meson setup /tmp/herdr-focus-build home/config/herdr-notification-focus \
-  -Dfixtures=true -Dbuildtype=debugoptimized
-meson compile -C /tmp/herdr-focus-build
-HERDR_FOCUS_BIN=/tmp/herdr-focus-build/herdr-notification-focus \
-HERDR_FOCUS_FIXTURE=/tmp/herdr-focus-build/focus-fixture \
-  node --experimental-strip-types --test \
-    home/config/herdr-notification-focus/tests/focus.test.ts
+nix develop .#herdr-notification-focus --command env NIX_HARDENING_ENABLE= \
+  meson setup /tmp/herdr-focus-checks home/config/herdr-notification-focus \
+  -Dfixtures=true --buildtype=debugoptimized
+nix develop .#herdr-notification-focus --command meson compile -C /tmp/herdr-focus-checks
+/tmp/herdr-focus-checks/focus-checks
 ```
+
+`HERDR_FOCUS_BIN` and `HERDR_FOCUS_FIXTURE` still select those executables;
+otherwise the checks use siblings from the same build. Configure once without
+`-Dfixtures=true` to confirm the package build does not create the check
+executables.
 
 Fixtures are default-off, noninstalled and never registered as automatic tests.
 They use disposable Unix peers, process metadata and a stub `hyprctl`; no test

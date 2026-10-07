@@ -5,4 +5,6 @@ theme_dep = declare_dependency(link_with: core, include_directories: 'include', 
 executable('theme-menu', 'src/main.c', dependencies: theme_dep, install: true)
 if get_option('fixtures')
   executable('theme-menu-fixture', 'tests/fixture.c', dependencies: theme_dep)
+  executable('theme-menu-fake', 'tests/fake.c', dependencies: deps)
+  executable('theme-menu-check', 'tests/check.c', dependencies: deps)
 endif

@@ -6,4 +6,5 @@ executable('personaplex-models', 'src/main.c', dependencies: pp_dep, install: tr
 executable('personaplex-patch', 'src/patch-main.c', dependencies: pp_dep, install: true)
 if get_option('fixtures')
   executable('personaplex-fixture', 'tests/fixture.c', dependencies: pp_dep)
+  executable('personaplex-checks', 'tests/check.c', dependencies: pp_dep)
 endif

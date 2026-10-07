@@ -29,17 +29,17 @@ Fixtures stay in this program root and never run from a package build, flake
 check or hook. From the repository root with its direnv environment active:
 
 ```sh
-nix develop .#voice-models -c bash -c '
-  meson setup /tmp/voice-models-build home/config/voice-models \
-    -Dfixtures=true --buildtype=debugoptimized
-  ninja -C /tmp/voice-models-build
-'
-package=$(nix build .#voice-models --no-link --print-out-paths)
-VOICE_MODELS_BIN="$package/bin/voice-model-setup" \
-VOICE_MODELS_FIXTURE=/tmp/voice-models-build/model-fixture \
-  nix shell nixpkgs#openssl -c node --experimental-strip-types --test \
-    home/config/voice-models/tests/models.test.ts
+nix develop .#voice-models --command env NIX_HARDENING_ENABLE= \
+  meson setup /tmp/voice-models-checks home/config/voice-models \
+  -Dfixtures=true --buildtype=debugoptimized
+nix develop .#voice-models --command meson compile -C /tmp/voice-models-checks
+nix shell nixpkgs#openssl -c /tmp/voice-models-checks/model-checks
 ```
+
+`VOICE_MODELS_BIN` and `VOICE_MODELS_FIXTURE` still select those executables;
+otherwise the checks use the siblings from the same build directory. OpenSSL is
+required only for the TLS trust case. Configure once without `-Dfixtures=true`
+to confirm the package build does not create the check executables.
 
 For ASan/UBSan, use a separate build directory with
 `-Db_sanitize=address,undefined -Db_lundef=false`, then point both executable

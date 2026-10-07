@@ -98,8 +98,8 @@ Rust dependencies and existing C libraries where practical.
 - [x] Verify each delivery's relevant complete check groups, reconcile retained
   dependencies, and release through commit, Home Manager activation and push.
 
-The `memscope` CLI, terminal and live-memory test driver is TypeScript/C and runs
-only through its explicit local `make check` target, not package builds.
+The `memscope` CLI, terminal and live-memory checks are C and run only through
+its explicit local `make check` target, not package builds.
 
 ## Retained dependencies and data
 

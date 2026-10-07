@@ -75,10 +75,9 @@ meson setup /tmp/pi-config-build home/config/pi-config \
 meson compile -C /tmp/pi-config-build
 PI_CONFIG_BIN_DIR=/tmp/pi-config-build \
 PI_CONFIG_FAILURES=/tmp/pi-config-build/pi-config-failures.so \
-  node --experimental-strip-types --test home/config/pi-config/tests/merge.test.ts
 PI_BUS_HOST_BIN=/tmp/pi-config-build/pi-capture-bus-host \
 PI_BUS_HOST_ARGV=/tmp/pi-config-build/pi-host-argv \
-  node --experimental-strip-types --test home/config/pi-config/tests/bus-host.test.ts
+  /tmp/pi-config-build/pi-config-check
 ```
 
 Fixtures default off, are not installed and have no automated registration.

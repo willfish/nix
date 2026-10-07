@@ -20,9 +20,10 @@ No fixture runs through the flake, package build or hooks. From the repository
 root, with its direnv environment active:
 
 ```sh
-package=$(nix build .#wallpaper-cycle --no-link --print-out-paths)
-WALLPAPER_CYCLE_BIN="$package/bin/wallpaper-cycle" \
-  node --experimental-strip-types --test home/config/wallpaper-cycle/cycle.test.ts
+meson setup /tmp/wallpaper-cycle-checks home/config/wallpaper-cycle \
+  -Dfixtures=true --buildtype=debugoptimized
+meson compile -C /tmp/wallpaper-cycle-checks
+/tmp/wallpaper-cycle-checks/wallpaper-checks
 ```
 
 For a separate sanitizer build:
@@ -30,9 +31,9 @@ For a separate sanitizer build:
 ```sh
 nix develop .#wallpaper-cycle -c bash -c '
   meson setup /tmp/wallpaper-cycle-asan home/config/wallpaper-cycle \
-    --buildtype=debugoptimized -Db_sanitize=address,undefined -Db_lundef=false
+    --buildtype=debugoptimized -Dfixtures=true \
+    -Db_sanitize=address,undefined -Db_lundef=false
   ninja -C /tmp/wallpaper-cycle-asan
 '
-WALLPAPER_CYCLE_BIN=/tmp/wallpaper-cycle-asan/wallpaper-cycle \
-  node --experimental-strip-types --test home/config/wallpaper-cycle/cycle.test.ts
+/tmp/wallpaper-cycle-asan/wallpaper-checks
 ```

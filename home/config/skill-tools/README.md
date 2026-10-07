@@ -32,13 +32,12 @@ From this checkout, use `nix shell .#skill-tools -c contrast ...` or
 
 ## Manual verification
 
-With Meson, Ninja, pkg-config, GLib/GIO, yyjson and Node available:
+With Meson, Ninja, pkg-config, GLib/GIO and yyjson available:
 
 ```sh
-meson setup /tmp/skill-tools-build home/config/skill-tools
-meson compile -C /tmp/skill-tools-build
-SKILL_TOOLS_BIN=/tmp/skill-tools-build \
-  node --test home/config/skill-tools/tests/*.test.ts
+meson setup /tmp/skill-tools-checks home/config/skill-tools -Dfixtures=true --buildtype=debugoptimized
+meson compile -C /tmp/skill-tools-checks
+/tmp/skill-tools-checks/skill-tools-checks
 ```
 
 Fixtures are program-local, noninstalled and unregistered. Downloader tests use

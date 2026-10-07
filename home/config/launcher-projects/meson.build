@@ -6,4 +6,6 @@ executable('launcher-projects', 'src/main.c', dependencies: projects_dep, instal
 if get_option('fixtures')
   fixture_link_args = host_machine.system() == 'linux' ? ['-Wl,--wrap=readdir64'] : []
   executable('projects-fixture', 'tests/fixture.c', dependencies: projects_dep, link_args: fixture_link_args)
+  executable('projects-fake', 'tests/fake.c', dependencies: deps)
+  executable('projects-checks', 'tests/check.c', dependencies: deps)
 endif

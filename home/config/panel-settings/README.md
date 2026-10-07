@@ -40,8 +40,7 @@ meson compile -C /tmp/panel-settings-build
 PANEL_SETTINGS_BIN_DIR=/tmp/panel-settings-build \
 PANEL_SETTINGS_FAILURES=/tmp/panel-settings-build/panel-failures.so \
 PANEL_SETTINGS_ARGV=/tmp/panel-settings-build/panel-argv \
-  node --experimental-strip-types --test \
-    home/config/panel-settings/tests/settings.test.ts
+  /tmp/panel-settings-build/panel-settings-check
 ```
 
 Fixtures default off, are never installed and have no automatic registration.

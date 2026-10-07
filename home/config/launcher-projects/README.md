@@ -21,16 +21,15 @@ Fixtures are default-off, noninstalled and not registered with Meson tests or Ni
 checks. Run them explicitly:
 
 ```sh
-direnv exec . nix develop .#launcher-projects -c meson setup \
-  /tmp/launcher-projects-build home/config/launcher-projects \
-  --buildtype=debugoptimized -Dfixtures=true
-direnv exec . nix develop .#launcher-projects -c meson compile \
-  -C /tmp/launcher-projects-build
-LAUNCHER_PROJECTS_BIN=/tmp/launcher-projects-build/launcher-projects \
-LAUNCHER_PROJECTS_FIXTURE=/tmp/launcher-projects-build/projects-fixture \
-  direnv exec . node --experimental-strip-types --test \
-  home/config/launcher-projects/tests/projects.test.ts
+nix develop .#launcher-projects --command env NIX_HARDENING_ENABLE= \
+  meson setup /tmp/launcher-projects-checks home/config/launcher-projects \
+  -Dfixtures=true --buildtype=debugoptimized
+nix develop .#launcher-projects --command meson compile -C /tmp/launcher-projects-checks
+/tmp/launcher-projects-checks/projects-checks
 ```
+
+`LAUNCHER_PROJECTS_BIN` and `LAUNCHER_PROJECTS_FIXTURE` override the sibling
+binaries. The detached-launch stand-in is a C program, not Node.
 
 The driver uses disposable homes and stub commands, not live graphical launches.
 For optional retired-implementation parity, set `LAUNCHER_PROJECTS_LEGACY` and

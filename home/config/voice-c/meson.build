@@ -87,4 +87,9 @@ test_exe = executable(
   'tests/test_osd_main.c',
   dependencies: voice_dep,
 )
+executable(
+  'voice-behavior',
+  'tests/behavior.c',
+  dependencies: [yyjson, threads, libm],
+)
 endif

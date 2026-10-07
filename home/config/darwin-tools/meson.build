@@ -12,4 +12,5 @@ foreach name : ['darwin-health', 'darwin-preflight', 'darwin-deploy']
 endforeach
 if get_option('fixtures')
   executable('darwin-fixture', 'tests/fixture.c', link_with: core, dependencies: deps, include_directories: '.', link_args: link)
+  executable('darwin-checks', 'tests/check.c', dependencies: deps, include_directories: '.', link_args: link)
 endif

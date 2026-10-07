@@ -42,17 +42,14 @@ Inputs and outputs are trusted build paths, not an untrusted filesystem boundary
 
 ## Manual fixtures
 
-Supply GLib, Meson, Ninja, pkg-config and Node in an ephemeral Nix environment
+Supply GLib, Meson, Ninja and pkg-config in an ephemeral Nix environment
 from the direnv checkout:
 
 ```sh
-meson setup /tmp/opencode-adapt-build home/config/opencode-adapt \
+meson setup /tmp/opencode-adapt-checks home/config/opencode-adapt \
   -Dfixtures=true -Dbuildtype=debugoptimized
-meson compile -C /tmp/opencode-adapt-build
-OPENCODE_ADAPT_BIN=/tmp/opencode-adapt-build/opencode-adapt-markdown \
-OPENCODE_ADAPT_FAILURES=/tmp/opencode-adapt-build/opencode-adapt-failures.so \
-  node --experimental-strip-types --test \
-    home/config/opencode-adapt/tests/adapter.test.ts
+meson compile -C /tmp/opencode-adapt-checks
+/tmp/opencode-adapt-checks/opencode-adapt-checks
 ```
 
 Fixtures default off, are not installed and have no automatic registration. They

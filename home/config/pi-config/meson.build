@@ -12,4 +12,5 @@ executable('pi-capture-bus-host', 'src/bus-host.c', dependencies: glib, include_
 if get_option('fixtures')
   executable('pi-host-argv', 'tests/host-argv.c', dependencies: glib, link_args: link)
   shared_module('pi-config-failures', 'tests/failures.c', dependencies: meson.get_compiler('c').find_library('dl'), name_prefix: '')
+  executable('pi-config-check', 'tests/check.c', 'src/json.c', dependencies: glib, include_directories: inc, link_args: link)
 endif

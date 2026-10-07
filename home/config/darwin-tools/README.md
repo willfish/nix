@@ -23,15 +23,13 @@ already-built store target, and never fetches inputs or bypasses preflight.
 
 These are opt-in, noninstalled and unregistered. They use disposable directories,
 command responses and account/platform identities, not live launchd or sudo.
-Run as an unprivileged user with Meson, Ninja, pkg-config, GLib/GIO, yyjson,
-libgit2 and Node available:
+Run as an unprivileged user with Meson, Ninja, pkg-config, GLib/GIO, yyjson
+and libgit2 available:
 
 ```sh
 meson setup /tmp/darwin-tools-build home/config/darwin-tools -Dfixtures=true
 meson compile -C /tmp/darwin-tools-build
-DARWIN_FIXTURE=/tmp/darwin-tools-build/darwin-fixture \
-DARWIN_BIN=/tmp/darwin-tools-build \
-  node --test home/config/darwin-tools/tests/tools.test.ts
+/tmp/darwin-tools-build/darwin-checks
 ```
 
 Use `-Db_sanitize=address,undefined -Dbuildtype=debugoptimized` for a separate

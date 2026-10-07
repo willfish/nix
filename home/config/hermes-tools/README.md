@@ -47,16 +47,13 @@ all-files transaction. Errors never print configuration or secret values.
 
 ## Manual verification
 
-With GLib/GIO, yyjson, libyaml, Meson, Ninja, pkg-config, Node, SOPS, age and yq-go supplied by the
+With GLib/GIO, yyjson, libyaml, Meson, Ninja, pkg-config, SOPS, age and yq-go supplied by the
 existing direnv/ephemeral Nix environment:
 
 ```sh
-meson setup /tmp/hermes-tools-build home/config/hermes-tools
-meson compile -C /tmp/hermes-tools-build
-HERMES_EXPORT_BIN=/tmp/hermes-tools-build/hermes-export \
-  node --experimental-strip-types --test home/config/hermes-tools/export.test.ts
-HERMES_MANAGED_BIN_DIR=/tmp/hermes-tools-build \
-  node --experimental-strip-types --test home/config/hermes-tools/managed.test.ts
+meson setup /tmp/hermes-tools-checks home/config/hermes-tools -Dfixtures=true
+meson compile -C /tmp/hermes-tools-checks
+/tmp/hermes-tools-checks/hermes-checks
 ```
 
 The fixtures use disposable directories, a fake SOPS process for failure and

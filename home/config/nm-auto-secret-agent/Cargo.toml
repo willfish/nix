@@ -17,6 +17,11 @@ name = "nm-agent-fixture"
 path = "tests/fixture.rs"
 required-features = ["fixtures"]
 
+[[test]]
+name = "agent"
+path = "tests/agent.rs"
+required-features = ["fixtures"]
+
 [profile.release]
 lto = true
 strip = true

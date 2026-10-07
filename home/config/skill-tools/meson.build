@@ -15,3 +15,12 @@ foreach pair : [['qbittorrent-inventory', 'inventory.c'], ['source-target-duplic
   executable(pair[0], [pair[1], 'audio.c', '../pi-config/src/json.c'] + common,
     dependencies: deps, include_directories: '../pi-config/include', link_args: link, install: true)
 endforeach
+if get_option('fixtures')
+  baseline = join_paths(meson.current_source_dir(), '../llm/skills/pi-token-mitm/scripts/baseline-2026-09-12.json')
+  executable('skill-tools-checks', ['tests/main.c', 'tests/run.c', 'tests/tools.c', 'tests/audio.c', 'tests/token.c'],
+    dependencies: [dependency('yyjson'), cc.find_library('m')],
+    c_args: ['-D_DEFAULT_SOURCE', '-DBASELINE="' + baseline + '"'])
+  executable('ytdlp-stub', 'tests/ytdlp_stub.c', c_args: ['-D_DEFAULT_SOURCE', '-DSTUB_PARTIAL=0'])
+  executable('ytdlp-partial', 'tests/ytdlp_stub.c', c_args: ['-D_DEFAULT_SOURCE', '-DSTUB_PARTIAL=1'])
+  executable('capture-stub', 'tests/capture_stub.c', c_args: ['-D_DEFAULT_SOURCE'])
+endif

@@ -40,29 +40,26 @@ addresses to their disposable daemon; no fixture connects to the real system bus
 ## Manual verification
 
 Use a direnv checkout and an ephemeral Nix shell containing Rust, Cargo, rustfmt,
-Clippy, pkg-config, a C compiler, GLib, NetworkManager development libraries,
-D-Bus and Node. There are no third-party Rust crates.
+Clippy, pkg-config, a C compiler, GLib, NetworkManager development libraries and
+D-Bus. There are no third-party Rust crates.
 
 ```sh
 export CARGO_TARGET_DIR=/tmp/nm-agent-target
 cargo test --manifest-path home/config/nm-auto-secret-agent/Cargo.toml --all-features
 cargo clippy --manifest-path home/config/nm-auto-secret-agent/Cargo.toml \
   --all-targets --all-features -- -D warnings
-cargo build --manifest-path home/config/nm-auto-secret-agent/Cargo.toml --features fixtures
-cc -std=c17 -Wall -Wextra -Werror \
-  home/config/nm-auto-secret-agent/tests/peer.c \
-  $(pkg-config --cflags --libs gio-2.0) -o /tmp/nm-agent-peer
-NM_AGENT_FIXTURE=$CARGO_TARGET_DIR/debug/nm-agent-fixture \
-NM_AGENT_PEER=/tmp/nm-agent-peer \
-  node --experimental-strip-types --test home/config/nm-auto-secret-agent/tests/agent.test.ts
 ```
 
 The `fixtures` feature defaults off; tests and fixture executables are manual
-and uninstalled. The
-peer exercises the actual libnm D-Bus interface with disposable connection data
-and a fake `nmcli`. This does not establish live Wi-Fi recovery. Optional
-`NM_AGENT_WIRING` and `NM_AGENT_PUBLIC_WIRING` JSON inputs verify evaluated host
-service boundaries without contacting those hosts.
+and uninstalled. `cargo test --all-features` runs the lookup tests and the D-Bus
+journey. That journey compiles `tests/peer.c` with `cc -std=c17 -Wall -Wextra
+-Werror` and `pkg-config --cflags --libs gio-2.0` unless `NM_AGENT_PEER` is set,
+then spawns that peer and the fixture binary. Set `NM_AGENT_FIXTURE` only to
+override the Cargo-built fixture. The peer exercises the actual libnm D-Bus
+interface with disposable connection data and a fake `nmcli`. This does not
+establish live Wi-Fi recovery. Optional `NM_AGENT_WIRING` and
+`NM_AGENT_PUBLIC_WIRING` JSON inputs verify evaluated host service boundaries
+without contacting those hosts.
 
 For the packaged binary, build `tests/route.c` as a shared library with `-fPIC
 -shared -ldl`, then set `NM_AGENT_BIN` and `NM_AGENT_ROUTE`. Routing interposition

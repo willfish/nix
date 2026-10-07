@@ -13,5 +13,6 @@ if get_option('icons')
   shared_module('icon_paths', 'src/icons.c', dependencies: python, name_prefix: '', install: true, install_dir: 'lib/omapager')
   if get_option('fixtures')
     executable('icon-fixture', 'tests/fixture.c', dependencies: [dependency('python3-embed'), glib], link_args: exe_link)
+    executable('omapager-checks', 'tests/check.c', dependencies: glib, link_args: exe_link)
   endif
 endif

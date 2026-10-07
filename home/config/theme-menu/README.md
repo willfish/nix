@@ -40,7 +40,7 @@ direnv exec . nix develop .#theme-menu -c \
 direnv exec . nix develop .#theme-menu -c ninja -C /tmp/theme-menu-build
 THEME_MENU_BIN=/tmp/theme-menu-build/theme-menu \
 THEME_MENU_FIXTURE=/tmp/theme-menu-build/theme-menu-fixture \
-  direnv exec . node --experimental-strip-types --test home/config/theme-menu/tests/menu.test.ts
+  /tmp/theme-menu-build/theme-menu-check
 ```
 
 Set `THEME_MENU_CATALOGUE` to a built host catalogue and `THEME_MENU_FUZZEL` to the

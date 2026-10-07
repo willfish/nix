@@ -43,19 +43,17 @@ existing direnv environment, with GLib/GIO, yyjson, libcurl, libical, Meson,
 Ninja and pkg-config supplied by an ephemeral Nix shell.
 
 ```sh
-meson setup /tmp/agenda-build home/config/daily-agenda -Dfixtures=true
-meson compile -C /tmp/agenda-build
-DAILY_AGENDA_BIN=/tmp/agenda-build/daily-agenda \
-DAILY_AGENDA_FIXTURE=/tmp/agenda-build/agenda-fixture \
-DAILY_AGENDA_LIMITS=/tmp/agenda-build/agenda-limits \
-DAILY_AGENDA_PTY=/tmp/agenda-build/agenda-pty \
-  node --experimental-strip-types --test home/config/daily-agenda/tests/agenda.test.ts
-
-# Linux only; provide OpenSSL for the disposable fixture certificate.
-DAILY_AGENDA_BIN=/tmp/agenda-build/daily-agenda \
-DAILY_AGENDA_NETWORK=/tmp/agenda-build/libagenda-network.so \
-  node --experimental-strip-types --test home/config/daily-agenda/tests/http.test.ts
+nix develop .#daily-agenda --command env NIX_HARDENING_ENABLE= \
+  meson setup /tmp/agenda-checks home/config/daily-agenda \
+  -Dfixtures=true --buildtype=debugoptimized
+nix develop .#daily-agenda --command meson compile -C /tmp/agenda-checks
+/tmp/agenda-checks/agenda-checks
 ```
+
+`DAILY_AGENDA_BIN`, `DAILY_AGENDA_FIXTURE`, `DAILY_AGENDA_LIMITS`,
+`DAILY_AGENDA_PTY` and `DAILY_AGENDA_NETWORK` override the sibling binaries.
+The Linux routing fixture still redirects only fixture processes to a disposable
+loopback HTTPS server. The check builds that certificate with OpenSSL.
 
 The Linux routing fixture redirects only fixture processes to a disposable
 loopback HTTPS server while retaining Google Host/SNI and certificate validation.

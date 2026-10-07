@@ -5,4 +5,7 @@ model_dep = declare_dependency(link_with: core, include_directories: 'include', 
 executable('voice-model-setup', 'src/main.c', dependencies: model_dep, install: true)
 if get_option('fixtures')
   executable('model-fixture', 'tests/fixture.c', dependencies: model_dep)
+  executable('model-http', 'tests/http.c', dependencies: dependency('openssl'))
+  executable('model-checks', 'tests/check.c', dependencies: dependency('glib-2.0'),
+    c_args: ['-DASSETS_JSON="' + join_paths(meson.current_source_dir(), 'tests/assets.json') + '"'])
 endif

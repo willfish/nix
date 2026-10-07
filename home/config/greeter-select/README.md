@@ -40,8 +40,7 @@ meson compile -C /tmp/greeter-build
 GREETER_SELECT_BIN=/tmp/greeter-build/greeter-select \
 GREETER_SELECT_FIXTURE=/tmp/greeter-build/greeter-fixture \
 GREETER_SELECT_FAILURES=/tmp/greeter-build/greeter-failures.so \
-  node --experimental-strip-types --test \
-    home/config/greeter-select/tests/greeter.test.ts
+  /tmp/greeter-build/greeter-check
 ```
 
 The fixtures are optional, noninstalled and unregistered. They use disposable

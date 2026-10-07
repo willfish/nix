@@ -11,4 +11,5 @@ if get_option('fixtures')
   if host_machine.system() == 'linux'
     shared_library('agenda-network', 'tests/network.c', dependencies: meson.get_compiler('c').find_library('dl'), install: false)
   endif
+  executable('agenda-checks', 'tests/check.c', dependencies: deps + [dependency('openssl')])
 endif

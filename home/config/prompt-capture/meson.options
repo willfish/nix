@@ -1,2 +1,3 @@
-option('python_executable', type: 'string', description: 'Pinned mitmproxy interpreter')
-option('site_packages', type: 'string', description: 'Pinned mitmproxy site-packages')
+option('python_executable', type: 'string', value: '', description: 'Pinned mitmproxy interpreter')
+option('site_packages', type: 'string', value: '', description: 'Pinned mitmproxy site-packages')
+option('fixtures', type: 'boolean', value: false, description: 'Build manual migration fixtures')
