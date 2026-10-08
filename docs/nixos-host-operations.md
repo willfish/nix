@@ -6,7 +6,7 @@ This is the short operational reference for the four NixOS hosts and the shared 
 
 | Host | Role | Notable host-specific configuration |
 |---|---|---|
-| `andromeda` | workstation | System76 hardware, RTX 5090 with NVIDIA 615.78.08 open driver, Steam, Linux 6.18 |
+| `andromeda` | workstation | System76 hardware, RTX 5090 with NVIDIA 595.99.02 open driver, Steam, Linux 6.18 |
 | `starfish` | workstation | Dell Precision laptop |
 | `foundation` | workstation | Framework AI 300 hardware |
 | `terminus` | headless server | ZFS media pool, Immich, Audiobookshelf |
@@ -163,18 +163,21 @@ If a generation cannot boot, select an earlier generation from the systemd-boot 
 
 ### Andromeda RTX 5090 installation
 
-The driver is pinned to 615.78.08 as a trial for display-memory and suspend
-failures; successful suspend/resume still needs runtime verification. Do not
+The driver is pinned to 595.99.02, which includes NVIDIA's DIFR suspend/resume
+fix. This is a diagnostic baseline, not a verified suspend fix: a 615.78.08 trial
+still hung with the local model loaded and crashed the desktop after an unloaded
+resume. Reliable suspend and desktop recovery remain unverified. Do not
 enable `hardware.nvidia.powerManagement` on this host. The systemd integration
 preserves every video-memory allocation and can stall suspend while that copy
 runs. The kernel suspend notifier has wedged `nvidia-modeset` after resume.
-An explicit `NVreg_UseKernelSuspendNotifiers=0` retains the existing kernel PM
-path despite 615's changed default. `PreserveVideoMemoryAllocations=2` means
-automatic: full preservation is off when kernel notifiers are off. Only select
+595 defaults to `UseKernelSuspendNotifiers=0`. Recheck this when changing driver
+branches: the NixOS false options omit the enabling parameters, and 615 defaults
+to notifiers enabled. `PreserveVideoMemoryAllocations=2` means automatic: full
+preservation is off when kernel notifiers are off. Only select
 allocations are preserved, so CUDA and Vulkan clients may need restarting after
 resume. Driver and module-parameter changes require a reboot.
 
-Stage this trial with `boot`, not `switch`, to leave the running GPU driver
+Stage driver changes with `boot`, not `switch`, to leave the running GPU driver
 untouched. After reboot, verify the driver version and notifier parameter before
 a planned suspend test with saved work and the local AI model unloaded. Keep the
 previous system generation available in the boot menu for rollback.

@@ -26,18 +26,16 @@
     powerManagement.enable = false;
     powerManagement.kernelSuspendNotifier = false;
     nvidiaSettings = true;
-    # 615 defaults to kernel suspend notifiers. The NixOS false option above
-    # emits no parameter, so explicitly retain the existing kernel PM path.
-    # PreserveVideoMemoryAllocations=2 (auto) follows this notifier setting.
-    moduleParams.nvidia.NVreg_UseKernelSuspendNotifiers = 0;
-    # Trial the new feature branch for display-memory and suspend failures.
-    # https://www.nvidia.com/en-us/drivers/details/280299/
+    # 595 defaults to kernel suspend notifiers off. PreserveVideoMemoryAllocations=2
+    # (auto) follows that setting. Recheck defaults before changing driver branches.
+    # 595.99.02 includes NVIDIA's DIFR suspend/resume fix:
+    # https://github.com/NVIDIA/open-gpu-kernel-modules/pull/1286#issuecomment-5442437574
     package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
-      version = "615.78.08";
-      sha256_64bit = "sha256-Pj9t3cLudnoIGFMAr3vjyyhuznZpjS3eNSRZl4LQf/4=";
-      openSha256 = "sha256-HBINiOjL0ZJLIAJeNIBYHBnwgUXtNwPPtnFpAI1YwF4=";
-      settingsSha256 = "sha256-inDRpG02sdDgHmlqgu/DsgK8OFdOt1fZIYyXdhlGC/c=";
-      persistencedSha256 = "sha256-RzeR6Ldct6MUxjnXRyThdh5Y3jjMehTVg85MtwuWNX4=";
+      version = "595.99.02";
+      sha256_64bit = "sha256-6HR3lYv3YwcFSTJL1a1slI66btIQ5EAFs+/4SUD24ew=";
+      openSha256 = "sha256-T36x/jx8yQ8l3LFp1rZIrTfcSwbGy8YSAvXOUSptpb4=";
+      settingsSha256 = "sha256-GYCcnxfKPrTCrsmd25sMyzfC5cqJQJx0c31haooyTYM=";
+      persistencedSha256 = "sha256-VyKtF/HdHPQrHHK6opSO69M72LmnGZtauuchj9uuje8=";
     };
   };
   services.xserver.videoDrivers = [ "nvidia" ];
