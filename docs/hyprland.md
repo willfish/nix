@@ -35,7 +35,9 @@ not the official desktop client. A new Brave window opens on workspace 1, Slack,
 Telegram and Discord on workspace 2, and CLIamp, Spotify on workspace 3.
 Super+Shift+T opens appearance and Ctrl+Shift+S takes a
 screenshot. Super+V records a selected region, Super+Alt+V adds a camera
-square, and Ctrl+Super+V records only the camera and microphone. Voice chords retain their host capability checks. Super+Shift+B
+square, and Ctrl+Super+V records only the camera and microphone. See
+[hypr-record](hypr-record.md) for the recorder itself and how to reproduce it on
+another machine. Voice chords retain their host capability checks. Super+Shift+B
 uses Hyprland DPMS to power the display. Dwindle tiling behaviour is configured
 explicitly in `settings.nix`.
 

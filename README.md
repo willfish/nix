@@ -145,6 +145,7 @@ Follow [AGENTS.md](AGENTS.md) when changing this repository: do not create branc
 | Build, activate, roll back or check NixOS and Terminus services | [NixOS host operations](docs/nixos-host-operations.md) |
 | Provision or operate Relay's paired system and home | [Headless macOS](docs/headless-darwin.md) |
 | Configure the desktop, login or recovery | [Hyprland](docs/hyprland.md) |
+| Reproduce screen recording with camera overlay elsewhere | [hypr-record](docs/hypr-record.md) |
 | Change shared themes and fonts | [Appearance](docs/appearance.md) |
 | Use Pi's coding workflow | [Pi workflow](docs/pi-workflow.md) |
 | Configure Pi's MCP integration | [Pi MCP](docs/pi-mcp.md) |
