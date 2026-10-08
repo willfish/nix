@@ -153,24 +153,39 @@ Soft residuals may remain with the user's awareness.
 Before copying anything from Andromeda, establish **transfer readiness**. An
 active or incomplete torrent must not be staged as if it were final.
 
-On Andromeda (or via SSH from another host):
+Inventory the fast-resume directory on the host where qBittorrent is running.
+That is Andromeda by default. If the client is on the machine you are on, do
+not SSH. When it is remote, use LAN SSH and fall back to Tailscale only if
+that host is off the LAN:
 
 ```bash
-~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
-  --format markdown
+ssh andromeda.fritz.box \
+  '~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
+     --format markdown'
 ```
 
 Interpret statuses:
 
 | Status | Meaning | Copy? |
 |---|---|---|
-| `complete` | `finished_time > 0` (or equivalent) and path exists | Yes — candidate |
+| `complete` | Path exists and a finish signal is set | Yes — candidate |
 | `incomplete` | Still downloading / unfinished pieces | **No** — wait |
 | `missing_path` | Fast-resume name no longer on disk | **No** — skip / re-check |
 | `unknown` | Ambiguous progress | Investigate before copy |
 
+Finish signals, any one of which is enough when the piece map is not clearly
+incomplete:
+
+- `finished_time > 0` (seconds spent seeding; often still `0` immediately
+  after download finishes);
+- `completed_time > 0` or `qBt-seedStatus` of `1`;
+- libtorrent 2.0 piece bytes all have the have bit (`1` have, `3` have and
+  verified). A `0` byte is missing. Do not require packed `0xFF` bitfields.
+
 Also note:
 
+- Reach Terminus the same way: `ssh terminus.fritz.box`. Do not prefer a
+  Tailscale hostname when the LAN name resolves.
 - qBittorrent may still be **seeding** after completion; that is fine to copy
   if status is `complete` and a checksum dry-run later matches.
 - Files can change during a long transfer even when complete if the user
@@ -216,7 +231,7 @@ pass.
 When working **from Terminus**, pull the list over SSH:
 
 ```bash
-ssh andromeda \
+ssh andromeda.fritz.box \
   '~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
      --transfer-ready-only --format nul' \
   > /tmp/andromeda-audiobooks.list0
@@ -283,7 +298,7 @@ Stage under a dated imports dir, **not** into watched roots:
 mkdir -p /srv/media/imports/andromeda-libation-YYYY-MM-DD
 
 rsync -a --info=progress2 \
-  andromeda:/home/william/Music/Libation/Books/ \
+  andromeda.fritz.box:/home/william/Music/Libation/Books/ \
   /srv/media/imports/andromeda-libation-YYYY-MM-DD/
 ```
 
@@ -341,10 +356,10 @@ names:
 Cross-host one-liner (run from a machine with SSH to both):
 
 ```bash
-ssh andromeda \
+ssh andromeda.fritz.box \
   '~/.agents/skills/audiobook-library-import/scripts/qbittorrent-inventory \
      --transfer-ready-only --format names' \
-  | ssh terminus \
+  | ssh terminus.fritz.box \
   '~/.agents/skills/audiobook-library-import/scripts/source-target-duplicate-check \
      --sources-file - \
      --targets /srv/media/audiobooks /srv/media/audiobooks-children \
@@ -380,9 +395,9 @@ mkdir -p /srv/media/imports/andromeda-audiobooks-YYYY-MM-DD
 Use the NUL-delimited inventory with `rsync`:
 
 ```bash
-ssh andromeda 'cd /home/william/Downloads && <emit-list0>' |
+ssh andromeda.fritz.box 'cd /home/william/Downloads && <emit-list0>' |
   rsync -a --info=progress2 --from0 --files-from=- --protect-args \
-    andromeda:/home/william/Downloads/ \
+    andromeda.fritz.box:/home/william/Downloads/ \
     /srv/media/imports/andromeda-audiobooks-YYYY-MM-DD/
 ```
 
@@ -397,10 +412,10 @@ copy:
 Example verification:
 
 ```bash
-ssh andromeda 'cd /home/william/Downloads && <emit-list0>' |
+ssh andromeda.fritz.box 'cd /home/william/Downloads && <emit-list0>' |
   rsync -a --checksum --dry-run --itemize-changes \
     --from0 --files-from=- --protect-args \
-    andromeda:/home/william/Downloads/ \
+    andromeda.fritz.box:/home/william/Downloads/ \
     /srv/media/imports/andromeda-audiobooks-YYYY-MM-DD/
 ```
 
@@ -954,6 +969,11 @@ and verify after every write.
 - Do not assume the remote source is static during a long transfer.
 - Do not use filename, bitrate, tags, or `ffprobe` alone as acceptance evidence.
 - Do not import into a watched root before the book layout is complete.
+- qBittorrent payloads are often mode `0600`. Before the watcher scans them,
+  make the live files group-readable (`0644`, owner `william:users`) so the
+  `audiobookshelf` user in group `users` can read them. Do not leave a
+  permission-denied scan in place; fix the mode, then use one scan if the
+  watcher does not retry.
 - Do not run watcher ingestion and explicit scans together.
 - Do not mutate Audiobookshelf's SQLite database directly.
 - Do not bulk-apply metadata using positional or stale item IDs.

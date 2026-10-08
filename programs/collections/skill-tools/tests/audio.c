@@ -190,7 +190,7 @@ static const char **inv_args(Inv *f, const char *const *extra, size_t *count) {
   return args;
 }
 static void inventory_status(void) {
-  check_begin("inventory statuses, bit padding, primary finished-time and transfer-ready filtering");
+  check_begin("inventory statuses, bit padding, libtorrent piece bytes and transfer-ready filtering");
   Inv f = inv();
   struct {
     const char *name;
@@ -204,8 +204,12 @@ static void inventory_status(void) {
       {"partial", "incomplete", (const unsigned char *)"\x00\xff", 2, 0, 10, 1, 1, 1},
       {"padding", "unknown", (const unsigned char *)"\xff\x80", 2, 0, 10, 1, 1, 1},
       {"empty", "incomplete", NULL, 0, 0, 0, 1, 1, 1},
-      {"missing.m4b", "missing_path", NULL, 0, 1, 10, 1, 1, 0}};
-  for (size_t i = 0; i < 6; i++) {
+      {"missing.m4b", "missing_path", NULL, 0, 1, 10, 1, 1, 0},
+      {"have.mp3", "complete", (const unsigned char *)"\x01\x01", 2, 0, 10, 1, 1, 1},
+      {"verified.mp3", "complete", (const unsigned char *)"\x03\x03", 2, 0, 10, 1, 1, 1},
+      {"gap.mp3", "incomplete", (const unsigned char *)"\x01\x00", 2, 0, 10, 1, 1, 1},
+      {"unverified.mp3", "incomplete", (const unsigned char *)"\x02\x02", 2, 0, 10, 1, 1, 1}};
+  for (size_t i = 0; i < sizeof rows / sizeof rows[0]; i++) {
     if (rows[i].write) {
       char *path = check_join(f.downloads, rows[i].name);
       check_write(path, "payload", 7);
@@ -223,9 +227,17 @@ static void inventory_status(void) {
     const char **args = inv_args(&f, NULL, NULL);
     yyjson_doc *doc = report(inventory, args, NULL, 0, NULL);
     yyjson_val *array = yyjson_doc_get_root(doc);
-    yyjson_val *last = yyjson_arr_get(array, yyjson_arr_size(array) - 1);
+    yyjson_val *row = NULL;
+    size_t count = yyjson_arr_size(array);
+    for (size_t j = 0; j < count; j++) {
+      yyjson_val *item = yyjson_arr_get(array, j);
+      size_t nlen = 0;
+      const char *name = jstr(jget(item, "name"), &nlen);
+      if (name && !strcmp(name, rows[i].name))
+        row = item;
+    }
     size_t len = 0;
-    const char *status = jstr(jget(last, "status"), &len);
+    const char *status = row ? jstr(jget(row, "status"), &len) : NULL;
     if (!status || strcmp(status, rows[i].status))
       check_fail("status %s got %s", rows[i].status, status ? status : "");
     yyjson_doc_free(doc);
@@ -234,7 +246,7 @@ static void inventory_status(void) {
   const char *ready[] = {"--transfer-ready-only", NULL};
   const char **args = inv_args(&f, ready, NULL);
   yyjson_doc *doc = report(inventory, args, NULL, 0, NULL);
-  expect(yyjson_arr_size(yyjson_doc_get_root(doc)) == 2, "transfer-ready");
+  expect(yyjson_arr_size(yyjson_doc_get_root(doc)) == 4, "transfer-ready");
   yyjson_doc_free(doc);
   free(args);
   const char *markdown[] = {"--format", "markdown", NULL};

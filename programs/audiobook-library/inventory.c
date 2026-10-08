@@ -226,26 +226,46 @@ static Record *parse(const char *fr, const char *fallback, bool *fatal) {
   for (size_t i = 0; i < G_N_ELEMENTS(keywords); i++)
     r->audio = r->audio || strstr(lower, keywords[i]);
   g_free(lower);
+  /* libtorrent 2.0 writes one byte per piece: bit 0 have, bit 1 verified.
+     Older packed bitfields use 0xFF bytes and are kept for those resumes. */
   Json *pieces = get(data, "pieces");
   int complete = -1;
   if (pieces && pieces->kind == J_STRING && pieces->string->len) {
-    complete = 1;
-    for (size_t i = 0; i < pieces->string->len; i++) {
-      unsigned char byte = (unsigned char)pieces->string->str[i];
-      if (i + 1 < pieces->string->len && byte != 255) {
-        complete = 0;
-        break;
+    const unsigned char *bytes = (const unsigned char *)pieces->string->str;
+    size_t n = pieces->string->len;
+    bool byte_per_piece = true;
+    for (size_t i = 0; i < n; i++)
+      if (bytes[i] > 3)
+        byte_per_piece = false;
+    if (byte_per_piece) {
+      complete = 1;
+      for (size_t i = 0; i < n; i++)
+        if ((bytes[i] & 1) == 0)
+          complete = 0;
+    } else {
+      complete = 1;
+      for (size_t i = 0; i < n; i++) {
+        if (i + 1 < n && bytes[i] != 255) {
+          complete = 0;
+          break;
+        }
+        if (i + 1 == n)
+          complete = bytes[i] == 255 ? 1 : bytes[i] == 0 ? 0 : -1;
       }
-      if (i + 1 == pieces->string->len)
-        complete = byte == 255 ? 1 : byte == 0 ? 0 : -1;
     }
   }
-  r->status =
-      !r->exists ? "missing_path"
-      : positive(r->finished) || (complete == 1 && positive(r->downloaded))
-          ? "complete"
-      : complete == 0 || !positive(r->downloaded) ? "incomplete"
-                                                  : "unknown";
+  char *completed = as_int(get(data, "completed_time"));
+  char *seed = as_int(get(data, "qBt-seedStatus"));
+  bool finished = positive(r->finished) || positive(completed) || !strcmp(seed, "1");
+  g_free(completed);
+  g_free(seed);
+  r->status = !r->exists ? "missing_path"
+              : positive(r->finished) ||
+                        (complete == 1 && positive(r->downloaded)) ||
+                        (finished && complete != 0 && positive(r->downloaded))
+                  ? "complete"
+              : complete == 0 || !positive(r->downloaded) ? "incomplete"
+                                                          : "unknown";
   r->fr = g_strdup(fr);
   json_free(data);
   return r;

@@ -48,6 +48,7 @@ Do not invent paths or skip safety rules when in a hurry.
 | Phone | `/srv/media/phone-audiobooks` |
 | ABS (on Terminus) | `http://127.0.0.1:13378` |
 | ABS SQLite (read-only / token only) | `/var/lib/audiobookshelf/config/absdatabase.sqlite` |
+| SSH | LAN first: `terminus.fritz.box`, `andromeda.fritz.box`. Tailscale only if that host is off the LAN. |
 
 Default destination for imports and new-library setup is **William** unless the
 user names another library. Do not put new books into Celine or Phone without
