@@ -119,7 +119,7 @@ let
     "tpope/vim-rhubarb" = vimPlugins.vim-rhubarb;
     "tpope/vim-unimpaired" = vimPlugins.vim-unimpaired;
     "xiyaowong/nvim-cursorword" = vimPlugins.vim-cursorword;
-    "github/copilot.vim" = vimPlugins.copilot-vim;
+    # "github/copilot.vim" = vimPlugins.copilot-vim; # Is this even necessary anymore?
     "b4winckler/vim-angry" = customPlugins.vim-angry;
     "bps/vim-textobj-python" = customPlugins.vim-textobj-python;
     "kana/vim-textobj-line" = vimPlugins.vim-textobj-line;
