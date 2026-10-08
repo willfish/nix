@@ -1,6 +1,6 @@
 {
-  "defaultProvider": "opencode-go",
-  "defaultModel": "glm-5.3-flash",
+  "defaultProvider": "andromeda",
+  "defaultModel": "qwen3.8-flash-next",
   "defaultThinkingLevel": "high",
   "modelThinkingLevels": {
     "andromeda/qwen3.8-flash-next": "high",

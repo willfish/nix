@@ -22,7 +22,7 @@ static bool old_pair(Json *provider, Json *model) {
           (is_string(model, "grok-4.6") || is_string(model, "grok-4.7"))) ||
          (is_string(provider, "opencode-go") &&
           (is_string(model, "deepseek-v4.1-flash") ||
-           is_string(model, "glm-5.3") ||
+           is_string(model, "glm-5.3") || is_string(model, "glm-5.3-flash") ||
            is_string(model, "space-bunny-free")));
 }
 int config_settings(const char *defaults_path, const char *settings_path) {

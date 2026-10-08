@@ -639,9 +639,10 @@ static void test_retarget(void) {
       {"xai", "grok-4.7"},
       {"opencode-go", "deepseek-v4.1-flash"},
       {"opencode-go", "glm-5.3"},
+      {"opencode-go", "glm-5.3-flash"},
       {"opencode-go", "space-bunny-free"},
   };
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < (int)(sizeof(pairs) / sizeof(pairs[0])); i++) {
     char *input = g_strdup_printf(
         "{\"defaultProvider\":\"%s\",\"defaultModel\":\"%s\",\"extra\":1}",
         pairs[i][0], pairs[i][1]);

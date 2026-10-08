@@ -14,8 +14,9 @@ pi-merge-auth AUTH [--drop PROVIDER]...
 
 Settings fill only missing top-level keys. Existing nested objects, null, false
 and unknown fields remain user-owned. The exact former xAI Grok 4.6/4.7 and
-OpenCode Go DeepSeek 4.1 Flash/GLM 5.3/Space Bunny defaults retarget to the declared
-provider/model pair, even when the declaration omits one of those fields.
+OpenCode Go DeepSeek 4.1 Flash/GLM 5.3/GLM 5.3 Flash/Space Bunny defaults
+retarget to the declared provider/model pair, even when the declaration omits
+one of those fields.
 
 When declared `observational-memory-jev.enabledByDefault` is boolean false and
 `.om-default-off-migrated` is absent, change an existing boolean true to false.
