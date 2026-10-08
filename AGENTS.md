@@ -5,7 +5,6 @@ William's flake-based NixOS/Home Manager repo. Follow `home/config/llm/AGENTS.md
 ## Layout and hosts
 
 - Andromeda: Thelio Major Threadripper desktop, main workstation.
-- Starfish: Dell Precision 5750 laptop.
 - Foundation: Framework 13 AMD AI-300 Series laptop.
 - Terminus: Beelink NAS/headless host.
 - `flake.nix`: inputs, outputs, hosts; `system/`: per-host NixOS.
@@ -26,7 +25,3 @@ Brave debugging is configured in programs.nix on port 9222; probe `/json/version
 Finish `~/.dotfiles` work before you stop: commit on master, run `hmswitch`, then push. Do this even when the session cwd is another repository. The same finish line is in `home/config/llm/AGENTS.md`, which every agent already has. Leaving the tree dirty, or waiting to be asked, is not done. Skip only when the user explicitly said not to commit, switch, or push.
 
 NEVER USE BRANCHES UNLESS EXPLICITLY INSTRUCTED
-
-ALWAYS FAST FORWARD MERGE BRANCHES INTO MASTER BEFORE PUSHING
-
-NEVER COMMIT PYTHON INTO THIS PROJECT. LEGACY TEST PYTHON IS BEING MIGRATED
