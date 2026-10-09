@@ -127,18 +127,12 @@ rec {
     modulesCenter = [ "clock" ];
     modulesRight = [
       "tray"
-      "mpris"
-      "pulseaudio"
       "pulseaudio#microphone"
       "network"
       "custom/tailscale"
-      "bluetooth"
       "custom/weather"
       "custom/arxiv"
-      "idle_inhibitor"
       "battery"
-      "custom/notifications"
-      "custom/session"
     ];
     # Native Waybar options override individual widget defaults.
     widgets = { };

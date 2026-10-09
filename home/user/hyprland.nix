@@ -837,7 +837,6 @@
                 critical = 10;
               };
               tooltip-format = "{capacity}% · {timeTo}";
-              on-click = settings.bar.commands.power;
             };
             "custom/notifications" = {
               exec = "hypr-notification-status";
