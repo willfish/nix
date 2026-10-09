@@ -4,6 +4,7 @@
   pkgs,
   hostName,
   isGraphicalLinux,
+  omarchy-local-ai,
   ...
 }:
 let
@@ -16,12 +17,8 @@ let
   isAndromeda = hostName == "andromeda";
   settings = import ../config/hyprland/settings.nix;
   omarchySource = import ./themes/omarchy-source.nix;
-  source = pkgs.fetchFromGitHub {
-    owner = "sybil-solutions";
-    repo = "omarchy-local-ai";
-    rev = "5b59355a5d19c200190d3bba6d970d0009fdbdb5";
-    hash = "sha256-EY8+G6svj6Qge9SRl9Q4PbmAbV/PtCBFvqndG+ARjH4=";
-  };
+  source = omarchy-local-ai;
+  manifest = builtins.fromJSON (builtins.readFile "${source}/manifest.json");
   terminal = pkgs.writeShellApplication {
     name = "omarchy-launch-tui";
     runtimeInputs = [
@@ -67,7 +64,7 @@ let
   ];
   backend = pkgs.stdenvNoCC.mkDerivation {
     pname = "omarchy-local-ai";
-    version = "6.12.7";
+    inherit (manifest) version;
     src = source;
     patches = [ ../config/hyprland/local-ai/nix.patch ];
     nativeBuildInputs = [ pkgs.makeWrapper ];

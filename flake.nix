@@ -69,6 +69,11 @@
     llm-agents.url = "github:numtide/llm-agents.nix";
     hermes-agent.url = "github:NousResearch/hermes-agent/bd0affe5e5f723579df8902852f5d0c47795f355";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+    # Upstream source for the Nix-adapted Local AI panel.
+    omarchy-local-ai = {
+      url = "github:sybil-solutions/omarchy-local-ai";
+      flake = false;
+    };
     # Data-only theme inputs. omarchy-theme-* inputs are discovered automatically.
     omarchy = {
       url = "github:basecamp/omarchy";
@@ -448,6 +453,7 @@
       pre-commit-check = mkPreCommitCheck linuxSystem pkgs;
       darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
       publicHomeModules = [
+        { _module.args.omarchy-local-ai = inputs.omarchy-local-ai; }
         stylix.homeModules.stylix
         nix-index-database.homeModules.default
         sops-nix.homeManagerModules.sops

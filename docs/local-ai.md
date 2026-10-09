@@ -32,6 +32,9 @@ A Home Manager switch alone does not enable GPU containers. Check
 `omarchy-local-ai readiness` before starting a catalogue model.
 
 Agents and plugin code update through Nix, never the plugin's imperative
-updaters. Catalogue refreshes remain enabled, scoped to the pinned plugin
-revision; weights and runtime state remain in writable user directories.
+updaters. To review a newer upstream plugin revision, run
+`nix flake update omarchy-local-ai`, inspect `flake.lock` and the source/patch
+compatibility, then build and activate. Catalogue refreshes remain enabled,
+scoped to the pinned plugin revision; weights and runtime state remain in
+writable user directories.
 For panel failures use `journalctl --user -u hyprland-local-ai.service`.

@@ -861,6 +861,22 @@
         "type": "github"
       }
     },
+    "omarchy-local-ai": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791545551,
+        "narHash": "sha256-EY8+G6svj6Qge9SRl9Q4PbmAbV/PtCBFvqndG+ARjH4=",
+        "owner": "sybil-solutions",
+        "repo": "omarchy-local-ai",
+        "rev": "5b59355a5d19c200190d3bba6d970d0009fdbdb5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sybil-solutions",
+        "repo": "omarchy-local-ai",
+        "type": "github"
+      }
+    },
     "omarchy-theme-aetheria": {
       "flake": false,
       "locked": {
@@ -1898,6 +1914,7 @@
         "nixpkgs": "nixpkgs_6",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "omarchy": "omarchy",
+        "omarchy-local-ai": "omarchy-local-ai",
         "omarchy-theme-aetheria": "omarchy-theme-aetheria",
         "omarchy-theme-arc-blueberry": "omarchy-theme-arc-blueberry",
         "omarchy-theme-archwave": "omarchy-theme-archwave",
