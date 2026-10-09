@@ -636,11 +636,6 @@
             launcher-projects = import ./programs/launcher-projects { inherit pkgs; };
             daily-launcher = import ./programs/daily-launcher { inherit pkgs; };
             daily-agenda = import ./programs/daily-agenda { inherit pkgs; };
-            herdr-notification-focus = import ./programs/herdr-notification-focus { inherit pkgs; };
-            omapager-tools = import ./programs/omapager-tools { inherit pkgs; };
-            panel-settings = import ./programs/panel-settings { inherit pkgs; };
-            login-theme-apply = import ./programs/login-theme-apply { inherit pkgs; };
-            nm-auto-secret-agent = import ./programs/nm-auto-secret-agent { inherit pkgs; };
             pi-config = import ./programs/pi-config { inherit pkgs; };
             opencode-adapt = import ./programs/opencode-adapt { inherit pkgs; };
             hermes-config = import ./programs/hermes-config { inherit pkgs; };
@@ -661,7 +656,6 @@
             # Existing package entry points remain compatible with scripts and callers.
             github-watch = config.packages.github-notification-watch;
             daily-workflow = config.packages.daily-launcher;
-            greeter-select = config.packages.login-theme-apply;
             hermes-tools = config.packages.hermes-config;
             darwin-tools = config.packages.darwin-deployment;
             telegram-login = import ./programs/telegram-login {
@@ -670,6 +664,12 @@
             };
           }
           // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+            herdr-notification-focus = import ./programs/herdr-notification-focus { inherit pkgs; };
+            omapager-tools = import ./programs/omapager-tools { inherit pkgs; };
+            panel-settings = import ./programs/panel-settings { inherit pkgs; };
+            login-theme-apply = import ./programs/login-theme-apply { inherit pkgs; };
+            nm-auto-secret-agent = import ./programs/nm-auto-secret-agent { inherit pkgs; };
+            greeter-select = config.packages.login-theme-apply;
             memscope = pkgs.callPackage ./programs/memscope { };
             pi-voice-client = import ./programs/pi-voice-client { inherit pkgs; };
             herdr-sleep-inhibit = import ./programs/herdr-sleep-inhibit { inherit pkgs; };
