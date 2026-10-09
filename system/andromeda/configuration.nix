@@ -18,17 +18,19 @@
   hardware.nvidia = {
     open = true; # Required for the RTX 5090 (Blackwell).
     modesetting.enable = true;
-    # Leave both NVIDIA suspend integrations off. The systemd path preserves every
-    # video-memory allocation and can stall suspend while that copy runs. The kernel
-    # notifier path has wedged nvidia-modeset after resume on this card. The default
-    # kernel power-management path preserves only select allocations; CUDA and
-    # Vulkan clients may need restarting after resume.
-    powerManagement.enable = false;
+    # Trial full VRAM preservation through NVIDIA's systemd/procfs integration.
+    # NixOS sets PreserveVideoMemoryAllocations=1 and installs the sleep units.
+    # Keep the notifier path separate; reliable resume remains unverified.
+    powerManagement.enable = true;
     powerManagement.kernelSuspendNotifier = false;
+    moduleParams.nvidia = {
+      # A false NixOS notifier option does not override the driver's default.
+      NVreg_UseKernelSuspendNotifiers = 0;
+      # Disk-backed ext4, with capacity for all 32 GB of VRAM plus margin.
+      NVreg_TemporaryFilePath = "/var/tmp";
+    };
     nvidiaSettings = true;
-    # 595 defaults to kernel suspend notifiers off. PreserveVideoMemoryAllocations=2
-    # (auto) follows that setting. Recheck defaults before changing driver branches.
-    # 595.99.02 includes NVIDIA's DIFR suspend/resume fix:
+    # Retain the diagnostic baseline with NVIDIA's DIFR sleep lifecycle change:
     # https://github.com/NVIDIA/open-gpu-kernel-modules/pull/1286#issuecomment-5442437574
     package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
       version = "595.99.02";

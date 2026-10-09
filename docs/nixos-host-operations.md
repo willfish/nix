@@ -163,38 +163,52 @@ If a generation cannot boot, select an earlier generation from the systemd-boot 
 
 ### Andromeda RTX 5090 installation
 
-The driver is pinned to 595.99.02, which includes NVIDIA's DIFR suspend/resume
-fix. This is a diagnostic baseline, not a verified suspend fix: a 615.78.08 trial
-still hung with the local model loaded and crashed the desktop after an unloaded
-resume. Reliable suspend and desktop recovery remain unverified. Do not
-enable `hardware.nvidia.powerManagement` on this host. The systemd integration
-preserves every video-memory allocation and can stall suspend while that copy
-runs. The kernel suspend notifier has wedged `nvidia-modeset` after resume.
-595 defaults to `UseKernelSuspendNotifiers=0`. Recheck this when changing driver
-branches: the NixOS false options omit the enabling parameters, and 615 defaults
-to notifiers enabled. `PreserveVideoMemoryAllocations=2` means automatic: full
-preservation is off when kernel notifiers are off. Only select
-allocations are preserved, so CUDA and Vulkan clients may need restarting after
-resume. Driver and module-parameter changes require a reboot.
+The driver remains pinned to 595.99.02 with Linux 6.18. This is a diagnostic
+baseline, not a verified suspend fix. The current trial enables full video-memory
+preservation through NVIDIA's systemd/procfs integration, with kernel suspend
+notifiers explicitly disabled. NixOS supplies `PreserveVideoMemoryAllocations=1`
+and the NVIDIA suspend/resume units. Do not add a duplicate preservation parameter.
+The explicit `UseKernelSuspendNotifiers=0` is necessary because the false NixOS
+option only omits its enabling parameter; upstream defaults can change.
 
-Stage driver changes with `boot`, not `switch`, to leave the running GPU driver
-untouched. After reboot, verify the driver version and notifier parameter before
-a planned suspend test with saved work and the local AI model unloaded. Keep the
-previous system generation available in the boot menu for rollback.
+Backing storage is explicitly `/var/tmp`, on this host's encrypted ext4 root.
+Before testing, check its filesystem and free space: NVIDIA recommends total GPU
+memory plus 5%, approximately 34 GiB for the 5090. A resident model can require a
+large copy before sleep; measure that phase rather than assuming every delay is
+a deadlock. The previous automatic-preservation/notifier-off path did not preserve
+all GPU memory and failed to restore a usable desktop. The older notifier-wedge
+and systemd-copy-delay reports do not establish that this trial will succeed.
+
+Stage driver or module-parameter changes with `boot`, not `switch`, to leave the
+running GPU driver untouched. A reboot is required. Keep the previous system
+generation available for rollback. After reboot, verify preservation `1`, notifier
+`0`, the backing path, and the NVIDIA sleep units before any suspend test.
+
+Save work and agree failure capture and recovery before testing. First stop the
+approved compute clients separately and verify released allocations, then test
+locking, S3 entry/exit, desktop and input recovery, and GPU errors. Do not use the
+launcher for a stop-then-inspect test: it stops the model and immediately requests
+suspend with `--ignore-inhibitors`. A separately approved resident-model test must
+avoid that auto-stop path, honour other inhibitors, and verify that the same model
+process answers requests after wake without restarting. Unloaded success alone
+is not evidence that resident CUDA contexts survive.
 
 Build and stage the configuration for the next boot before shutting down to
 install the card. Use `boot` so the running graphical session is not restarted:
 
 ```bash
 direnv exec . nix build -L .#nixosConfigurations.andromeda.config.system.build.toplevel --no-link
-sudo nixos-rebuild boot --flake .#andromeda
+direnv exec . sudo nixos-rebuild boot --flake .#andromeda
 ```
 
-After installing the card and booting, confirm the loaded driver:
+After booting, confirm the loaded driver and preservation integration:
 
 ```bash
 nvidia-smi --query-gpu=name,driver_version --format=csv
-cat /proc/driver/nvidia/version
+grep -E 'PreserveVideoMemoryAllocations|UseKernelSuspendNotifiers|TemporaryFilePath' /proc/driver/nvidia/params
+systemctl cat nvidia-suspend.service nvidia-resume.service
+findmnt -T /var/tmp
+df -h /var/tmp
 systemctl --failed
 ```
 
