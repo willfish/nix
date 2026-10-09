@@ -1,5 +1,6 @@
 #define _XOPEN_SOURCE 700
 #define _DEFAULT_SOURCE
+#define _DARWIN_C_SOURCE
 #include "tools.h"
 #include <errno.h>
 #include <fcntl.h>

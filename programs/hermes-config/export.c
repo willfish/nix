@@ -293,7 +293,7 @@ static gboolean capture(Capture *c, const char *home) {
   }
   return TRUE;
 }
-static gboolean encrypt(Capture *c, const char *output) {
+static gboolean encrypt_declaration(Capture *c, const char *output) {
   size_t length;
   char *json = yyjson_mut_write(
       c->doc, YYJSON_WRITE_ESCAPE_UNICODE | YYJSON_WRITE_ALLOW_INF_AND_NAN,
@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
   int status = 1;
   if (!capture(&c, home))
     fputs("Hermes export failed; no declaration written\n", stderr);
-  else if (!encrypt(&c, output))
+  else if (!encrypt_declaration(&c, output))
     fputs("SOPS encryption failed; no declaration written\n", stderr);
   else {
     printf("Encrypted %zu configuration files and %zu job definitions\n",
