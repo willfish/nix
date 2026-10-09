@@ -23,6 +23,21 @@
       ttfx = pkgs.callPackage ./ttfx.nix { };
       agentStatus = import ../../programs/agent-usage { inherit pkgs; };
       arxivStatus = import ../../programs/arxiv-status { inherit pkgs; };
+      # MPRIS leaves an empty widget when a player starts in Stopped state.
+      mediaStatus = pkgs.writeShellApplication {
+        name = "hypr-media-status";
+        runtimeInputs = [
+          pkgs.playerctl
+          pkgs.coreutils
+        ];
+        text = ''
+          case $(timeout 2 playerctl status 2>/dev/null || true) in
+            Playing) printf '%s\n' '{"text":"","tooltip":"Pause playback"}' ;;
+            Paused) printf '%s\n' '{"text":"","tooltip":"Resume playback"}' ;;
+            *) printf '%s\n' '{"text":""}' ;;
+          esac
+        '';
+      };
       tailscaleStatus = pkgs.writeShellApplication {
         name = "hypr-tailscale-status";
         runtimeInputs = [
@@ -491,6 +506,21 @@
         #idle_inhibitor.activated {
           color: @accent;
         }
+
+        #custom-controls {
+          font-size: 0;
+          min-height: 22px;
+          min-width: 22px;
+          background-image: -gtk-recolor(url("${../config/hyprland/controls/chevron-up-symbolic.svg}"));
+          background-size: 16px 16px;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+
+        /* Waybar marks a click-open drawer PRELIGHT until it is collapsed. */
+        #controls:hover #custom-controls {
+          background-image: -gtk-recolor(url("${../config/hyprland/controls/chevron-down-symbolic.svg}"));
+        }
       '';
     in
     assert lib.assertMsg (
@@ -772,15 +802,12 @@
               on-scroll-up = "wpctl set-volume -l 1 @DEFAULT_AUDIO_SOURCE@ 5%+";
               on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-";
             };
-            mpris = {
-              format = "{status_icon}";
-              format-paused = "{status_icon}";
-              status-icons = {
-                playing = "";
-                paused = "";
-                stopped = "";
-              };
-              tooltip-format = "{player}: {artist} · {title}";
+            "custom/media" = {
+              exec = "${mediaStatus}/bin/hypr-media-status";
+              return-type = "json";
+              format = "{}";
+              interval = 3;
+              hide-empty-text = true;
               on-click = "playerctl play-pause";
               on-click-middle = "playerctl next";
               on-click-right = settings.bar.commands.music;

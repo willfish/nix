@@ -126,6 +126,7 @@ rec {
     ];
     modulesCenter = [ "clock" ];
     modulesRight = [
+      "group/controls"
       "tray"
       "pulseaudio#microphone"
       "network"
@@ -135,7 +136,30 @@ rec {
       "battery"
     ];
     # Native Waybar options override individual widget defaults.
-    widgets = { };
+    widgets = {
+      "group/controls" = {
+        orientation = "inherit";
+        drawer = {
+          transition-duration = 200;
+          click-to-reveal = true;
+          transition-left-to-right = false;
+          children-class = "secondary-controls";
+        };
+        modules = [
+          "custom/controls"
+          "pulseaudio"
+          "bluetooth"
+          "custom/media"
+          "idle_inhibitor"
+          "custom/notifications"
+          "custom/session"
+        ];
+      };
+      "custom/controls" = {
+        format = "";
+        tooltip-format = "More controls · click to expand or collapse";
+      };
+    };
   };
 
   workspaces = 9;
