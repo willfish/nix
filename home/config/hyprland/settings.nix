@@ -221,6 +221,7 @@ rec {
 
   # New windows, not already-open ones. Super shortcuts still focus an app wherever it is.
   # Web apps stay floating; only the main Brave window is the browser.
+  # YouTube is the app-mode window and opens on workspace 3, not with Brave.
   workspace.rules = [
     {
       name = "browser";
@@ -241,6 +242,11 @@ rec {
       name = "discord";
       class = "^(discord|Discord)$";
       workspace = 2;
+    }
+    {
+      name = "youtube";
+      class = "^brave-www[.]youtube[.]com.*";
+      workspace = 3;
     }
     {
       name = "cliamp";

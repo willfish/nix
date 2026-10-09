@@ -31,8 +31,9 @@ Super+T, Super+E, Super+P and Super+O focus Brave, Slack, Telegram, Nautilus,
 CLIamp or Spotify if one is open, otherwise they launch it. Pressing the
 shortcut again focuses that window from any workspace. Discord and LibreOffice
 stay on the launcher. Spotify is the Quickshell player from the Omarchy plugin,
-not the official desktop client. A new Brave window opens on workspace 1, Slack,
-Telegram and Discord on workspace 2, and CLIamp, Spotify on workspace 3.
+not the official desktop client. A new Brave window opens on workspace 1. Slack,
+Telegram and Discord open on workspace 2. CLIamp, Spotify and the YouTube app
+open on workspace 3.
 Super+Shift+T opens appearance and Ctrl+Shift+S takes a
 screenshot. Super+V records a selected region, Super+Alt+V adds a camera
 square, and Ctrl+Super+V records only the camera and microphone. See
