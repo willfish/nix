@@ -22,8 +22,19 @@ run_action() {
   lock) exec hyprlock ;;
   display-off) exec hyprctl dispatch dpms off ;;
   display-toggle) exec hyprctl dispatch dpms toggle ;;
-  # Explicit menu suspend overrides a working-agent idle/sleep inhibitor.
-  suspend) exec systemctl suspend --ignore-inhibitors ;;
+  # Release the local model's GPU allocations before logind starts locking/sleep.
+  suspend)
+    if [ "${HYPR_SESSION_STOP_LOCAL_LLM:-0}" = 1 ]; then
+      notify-send 'Preparing to suspend' 'Stopping the local AI model first.' || true
+      if ! systemctl --user stop local-llm.service; then
+        printf 'hypr-session: could not stop local-llm.service; suspend cancelled\n' >&2
+        notify-send --urgency=critical 'Suspend cancelled' 'Could not stop the local AI model. Check local-llm.service before retrying.' || true
+        return 1
+      fi
+    fi
+    # Explicit menu suspend overrides a working-agent idle/sleep inhibitor.
+    exec systemctl suspend --ignore-inhibitors
+    ;;
   # A Waybar-launched helper shares its service cgroup. Let compositor exit
   # trigger cleanup, rather than killing this helper before it can dispatch.
   logout) exec hyprctl dispatch exit ;;

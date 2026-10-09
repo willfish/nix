@@ -63,8 +63,14 @@ Idle follows `idle` in `settings.nix`: the Nix snowflake screensaver, then lock,
 service watches Herdr and holds a logind block inhibitor for idle and sleep
 only while an agent is working. Blocked, idle, done and unknown agents do not
 hold the machine awake. If Herdr is not running, sleep stays allowed. The
-session menu suspend action ignores that inhibitor. Super+Escape still locks
-immediately.
+session menu suspend action ignores that inhibitor. On Andromeda, the existing
+launcher/session **Suspend** entry first stops `local-llm.service` and waits for
+it to finish, releasing the model's GPU allocations before locking and sleep.
+If stopping fails, suspend is cancelled with a notification. The model remains
+stopped after wake; restart it with `systemctl --user start local-llm.service`.
+This also applies to `hypr-session suspend`, but not to direct `systemctl suspend`
+or other sleep triggers. It does not fix the separate graphics-resume failure.
+Super+Escape still locks immediately.
 
 ## Screenshots
 

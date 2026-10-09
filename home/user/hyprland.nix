@@ -404,6 +404,7 @@
           pkgs.fuzzel
           pkgs.gawk
           pkgs.hyprlock
+          pkgs.libnotify
           pkgs.systemd
         ];
         text = ''
@@ -412,6 +413,7 @@
           export HYPR_SESSION_CONFIRM_NO=${lib.escapeShellArg settings.session.confirmNo}
           export HYPR_SESSION_CONFIRM_YES=${lib.escapeShellArg settings.session.confirmYes}
           export HYPR_SESSION_MENU_FILE=${sessionMenuFile}
+          export HYPR_SESSION_STOP_LOCAL_LLM=${if hostName == "andromeda" then "1" else "0"}
           ${builtins.readFile ../config/hyprland/session.sh}
         '';
       };
