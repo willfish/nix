@@ -252,13 +252,15 @@ Do not use `nh home switch '.#william-darwin'`; `nh` interprets that as a packag
 
 ### Relay: use native macOS SSH for switching
 
-Use `ssh william@relay.local` on the LAN for Relay Home Manager activation,
-not the Tailscale SSH route through `ssh relay`. macOS Remote Login and Tailscale
-SSH have different privacy-permission contexts. A successful build or earlier
-switch does not prove that application updates will work over Tailscale SSH.
+Use `ssh william@relay.fritz.box` on the LAN for all Relay operations, including
+job diagnostics, builds and Home Manager activation. Do not fall back to the
+Tailscale route through `ssh relay` when `relay.local` fails. macOS Remote Login
+and Tailscale SSH have different authentication and privacy-permission contexts.
+A successful build or earlier switch does not prove that application updates
+will work over Tailscale SSH.
 
 ```bash
-ssh william@relay.local 'bash -s' <<'SH'
+ssh william@relay.fritz.box 'bash -s' <<'SH'
 set -euo pipefail
 export PATH="/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:/etc/profiles/per-user/$USER/bin:$PATH"
 cd "$HOME/.dotfiles"

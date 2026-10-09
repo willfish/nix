@@ -98,8 +98,9 @@ maintenance; the legacy workstation updater retains its existing behaviour.
 
 ## Build without activation
 
-Use native macOS SSH: `ssh william@relay.local`, not Tailscale SSH. Verify an
-unfamiliar host key through a trusted connection or local console.
+Use native LAN SSH: `ssh william@relay.fritz.box` for diagnostics, builds and
+activation. Do not substitute `relay.local` or the Tailscale `relay` alias.
+Verify an unfamiliar host key through a trusted connection or local console.
 
 ```bash
 cd ~/.dotfiles
