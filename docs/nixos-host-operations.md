@@ -212,14 +212,12 @@ df -h /var/tmp
 systemctl --failed
 ```
 
-The shared voice services use CUDA for TTS and NVIDIA Vulkan for Whisper on
-Andromeda, and Radeon Vulkan on Foundation, configured in `home/user/voice.nix`.
-Run `hmswitch` after the GPU swap to activate the matching speech configuration.
-See [voice controls](voice.md) for setup and recovery. On supported hosts the
-controller starts at login, while speech backends warm on session attachment.
-Interactive Pi sessions in Herdr attach automatically; after installing, use
-`/reload` once in existing standard Pi sessions or restart Qwen sessions.
-Selection stays sticky: use Super+Shift+V to choose a destination.
+Voice on Andromeda and Foundation uses the Deepgram API, configured in
+`home/user/voice.nix`. It does not load local speech models or use the GPU.
+On supported hosts the controller starts at login. Interactive Pi sessions in
+Herdr attach automatically; after installing, use `/reload` once in existing
+standard Pi sessions or restart Qwen sessions. Selection stays sticky: use
+Super+Shift+V to choose a destination.
 
 ## Home Manager
 

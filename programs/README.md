@@ -16,12 +16,9 @@ is not a vendor tree.
 ## Voice client and service
 
 - [pi-voice-client](pi-voice-client) owns the desktop UI, recording/playback,
-  controls and Pi/Herdr session integration. Public commands remain `pi-voice`,
-  `pi-voice-osd` and the existing launchers. The `*-c` executables are private
-  implementation entry points behind those wrappers.
-- [voice-api](voice-api) exposes a local Deepgram-compatible REST API and manages
-  the underlying speech engines. The client can also use configured remote
-  providers, and the API can serve other compatible clients.
+  controls and Pi/Herdr session integration. Speech goes to Deepgram. Public
+  commands remain `pi-voice`, `pi-voice-osd` and the existing launchers. The
+  `*-c` executables are private implementation entry points behind those wrappers.
 
 ## Find a program
 
@@ -54,7 +51,6 @@ Read each program's README for its authorization boundary and manual checks.
 | [omapager-tools](omapager-tools) | Prepare and integrate the upstream desktop panel | Build helpers and native icon module | Linux desktop |
 | [opencode-adapt](opencode-adapt) | Adapt shared Markdown for OpenCode | `opencode-adapt-markdown` | Build helper |
 | [panel-settings](panel-settings) | Publish calendar and weather settings | `hypr-calendar-settings`, `hypr-weather-settings` | Desktop |
-| [personaplex-tools](personaplex-tools) | Prepare PersonaPlex models and upstream patches | `personaplex-models`, `personaplex-patch` | Voice setup |
 | [pi-config](pi-config) | Merge Pi configuration and validate capture bus hosts | `pi-merge-auth`, `pi-merge-settings`, `pi-capture-bus-host` | Unix |
 | [pi-token-report](pi-token-report) | Produce private token-usage reports from authorized captures | `pi-token-report` | Unix |
 | [pi-voice-client](pi-voice-client) | Voice UI and session integration | `pi-voice`, `pi-voice-osd` wrappers | Linux desktop |
@@ -63,8 +59,6 @@ Read each program's README for its authorization boundary and manual checks.
 | [tailscale-proxy](tailscale-proxy) | Tailnet-aware HTTP and WebSocket proxy | `tailscale-open-proxy` | Unix |
 | [telegram-login](telegram-login) | Interactive Telegram session setup | `telegram-mcp-login` | Unix |
 | [theme-menu](theme-menu) | Select and publish desktop themes | `theme-menu` | Linux desktop |
-| [voice-api](voice-api) | Local REST adapter for speech engines | `pi-voice-api` | Local speech host |
-| [voice-models](voice-models) | Install verified speech model assets | `voice-model-setup` | Voice setup |
 | [wallpaper-cycle](wallpaper-cycle) | Select and prepare the next wallpaper | `wallpaper-cycle` | Desktop |
 | [youtube-extract](youtube-extract) | Extract metadata and subtitle text without downloading media | `youtube-extract` | Unix |
 

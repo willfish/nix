@@ -446,7 +446,6 @@ int voice_menu_status_from_json(const char *json, VoiceMenuStatus **out, char **
     status->rebind_needed = json_truthy(yyjson_obj_get(root, "rebind_needed"));
     status->has_reply = json_truthy(yyjson_obj_get(root, "reply"));
     status->speech_backend = xstrdup(json_str(yyjson_obj_get(root, "speech_backend")));
-    status->conversation_available = json_truthy(yyjson_obj_get(root, "conversation_available"));
     if (add_named_obj(&status->voices, &status->voice_count, yyjson_obj_get(root, "voices"))
         || add_named_obj(&status->speech_backends, &status->speech_count, yyjson_obj_get(root, "speech_backends"))
         || add_named_obj(&status->stt_backends, &status->stt_count, yyjson_obj_get(root, "stt_backends"))) {

@@ -75,21 +75,6 @@ static int script_pick(void *user, const char *prompt, const VoiceMenuRow *rows,
     return 0;
 }
 
-static int personaplex_active(void *user, char **error) {
-    (void)user;
-    (void)error;
-    return 1;
-}
-
-static int start_calls;
-
-static int personaplex_start(void *user, char **error) {
-    (void)user;
-    (void)error;
-    start_calls++;
-    return 0;
-}
-
 static int has_row(const VoiceMenuRow *rows, size_t count, const char *action) {
     size_t i;
     for (i = 0; i < count; i++) if (strcmp(rows[i].action, action) == 0) return 1;
@@ -122,7 +107,7 @@ int test_menu(void) {
             Script script = { status, clone_basic(status), 0, NULL };
             Picker picker = { "team-toggle", NULL, 0 };
             script.second->show_team = status->show_team;
-            if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL, NULL, NULL)
+            if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL)
                 || strcmp(script.last, "team-toggle")) fail("team toggle dispatch");
             free(script.last);
             script.last = NULL;
@@ -144,7 +129,7 @@ int test_menu(void) {
         script.second = fresh;
         script.calls = 0;
         script.last = NULL;
-        if (voice_menu_run("sessions", script_request, &script, script_pick, &picker, NULL, NULL, &error) == 0
+        if (voice_menu_run("sessions", script_request, &script, script_pick, &picker, &error) == 0
             || !error || !strstr(error, "session changed")) fail("changed identity confirmation");
         free(error);
         free(script.last);
@@ -160,7 +145,7 @@ int test_menu(void) {
         char *error = NULL;
         free(fresh->sessions[1].id);
         fresh->sessions[1].id = strdup("replacement");
-        if (voice_menu_run("sessions", script_request, &script, script_pick, &picker, NULL, NULL, &error) == 0
+        if (voice_menu_run("sessions", script_request, &script, script_pick, &picker, &error) == 0
             || !error || !strstr(error, "session changed")) fail("replaced token identity");
         free(error);
         free(script.last);
@@ -173,7 +158,7 @@ int test_menu(void) {
         Picker picker = { "select:b", NULL, 0 };
         free(fresh->sessions[1].label);
         fresh->sessions[1].label = strdup("renamed");
-        if (voice_menu_run("sessions", script_request, &script, script_pick, &picker, NULL, NULL, NULL)
+        if (voice_menu_run("sessions", script_request, &script, script_pick, &picker, NULL)
             || strcmp(script.last, "select:b")) fail("label refresh keeps identity");
         free(script.last);
         script.last = NULL;
@@ -215,7 +200,7 @@ int test_menu(void) {
         old->selection_explicit = fresh->selection_explicit = 1;
         free(fresh->sessions[0].id);
         fresh->sessions[0].id = strdup("replacement");
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL, NULL, &error) == 0
+        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, &error) == 0
             || !error || !strstr(error, "session changed")) fail("stage rechecks identity");
         free(error);
         free(script.last);
@@ -231,7 +216,7 @@ int test_menu(void) {
         script.second = voice_menu_status_new();
         script.calls = 0;
         script.last = NULL;
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL, NULL, NULL)
+        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL)
             || script.calls != 2 || strcmp(script.last, "stop")) fail("stop skips fresh status");
         free(script.last);
         script.last = NULL;
@@ -246,7 +231,7 @@ int test_menu(void) {
         state->phase = strdup("recording");
         state->recording_label = strdup("pinned destination");
         state->session_label = strdup("new destination");
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL, NULL, NULL)
+        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL)
             || !picker.prompt || !strstr(picker.prompt, "pinned destination")
             || strstr(picker.prompt, "new destination") || script.calls != 1) fail("pinned prompt and cancel");
         free(picker.prompt);
@@ -279,7 +264,7 @@ int test_menu(void) {
         script.second = NULL;
         script.calls = 0;
         script.last = NULL;
-        if (voice_menu_run("dictation", script_request, &script, script_pick, &picker, NULL, NULL, &error) == 0
+        if (voice_menu_run("dictation", script_request, &script, script_pick, &picker, &error) == 0
             || !error || !strstr(error, "locked")) fail("locked dictation notice");
         free(error);
         free(script.last);
@@ -290,7 +275,7 @@ int test_menu(void) {
         script.first = status_new();
         script.second = NULL;
         script.calls = 0;
-        if (voice_menu_run("dictation", script_request, &script, script_pick, &picker, NULL, NULL, &error) == 0
+        if (voice_menu_run("dictation", script_request, &script, script_pick, &picker, &error) == 0
             || !error || !strstr(error, "No dictation backends")) fail("missing dictation notice");
         free(error);
         free(script.last);
@@ -327,7 +312,7 @@ int test_menu(void) {
         old->has_reply = fresh->has_reply = 1;
         free(fresh->sessions[0].id);
         fresh->sessions[0].id = strdup("different-thread");
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL, NULL, &error) == 0
+        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, &error) == 0
             || !error || !strstr(error, "session changed")) fail("stale read target");
         free(error);
         free(script.last);
@@ -342,7 +327,7 @@ int test_menu(void) {
         script.second = fresh;
         script.calls = 0;
         picker.action = "read";
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL, NULL, &error) == 0
+        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, &error) == 0
             || !error || !strstr(error, "no longer available")) fail("stale unavailable action");
         free(error);
         free(script.last);
@@ -355,7 +340,7 @@ int test_menu(void) {
         Picker picker = { "auto-toggle", NULL, 0 };
         char *error = NULL;
         fresh->auto_value = 0;
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL, NULL, &error) == 0
+        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, &error) == 0
             || !error || !strstr(error, "setting changed")) fail("stale auto toggle");
         free(error);
         free(script.last);
@@ -453,60 +438,8 @@ int test_menu(void) {
         VoiceMenuStatus *second = status_new();
         Script script = { first, second, 0, NULL };
         Picker picker = { "menu:voices", NULL, 0 };
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL, NULL, NULL)
+        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, NULL)
             || script.calls != 2 || script.first || script.second || strcmp(script.last, "status")) fail("submenu frees transferred status");
-        free(script.last);
-        free(picker.prompt);
-    }
-    {
-        VoiceMenuStatus *busy = status_new();
-        Script script = { busy, NULL, 0, NULL };
-        Picker picker = { "conversation:start", NULL, 0 };
-        VoiceMenuConversation ops;
-        char *error = NULL;
-        memset(&ops, 0, sizeof ops);
-        ops.active = NULL;
-        busy->conversation_available = 1;
-        free(busy->phase);
-        busy->phase = strdup("recording");
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, &ops, NULL, &error) == 0
-            || !error || !strstr(error, "Invalid voice menu action") || script.first) fail("personaplex busy blocks switch");
-        free(error);
-        free(script.last);
-        free(picker.prompt);
-    }
-    {
-        VoiceMenuStatus *held = status_new();
-        Script script = { held, NULL, 0, NULL };
-        Picker picker = { NULL, NULL, 0 };
-        VoiceMenuConversation ops;
-        char *error = NULL;
-        memset(&ops, 0, sizeof ops);
-        ops.active = personaplex_active;
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, &ops, NULL, &error) == 0
-            || !error || !strstr(error, "PersonaPlex menu is unavailable") || script.calls || !script.first)
-            fail("personaplex busy menu");
-        free(error);
-        voice_menu_status_free(script.first);
-        free(picker.prompt);
-    }
-    {
-        VoiceMenuStatus *ready = status_new();
-        VoiceMenuStatus *fresh = status_new();
-        Script script = { ready, fresh, 0, NULL };
-        Picker picker = { "conversation:start", NULL, 0 };
-        VoiceMenuConversation ops;
-        char *error = NULL;
-        memset(&ops, 0, sizeof ops);
-        ops.start = personaplex_start;
-        ready->conversation_available = 1;
-        free(fresh->phase);
-        fresh->phase = strdup("recording");
-        start_calls = 0;
-        if (voice_menu_run("menu", script_request, &script, script_pick, &picker, &ops, NULL, &error) == 0
-            || !error || !strstr(error, "Finish or discard") || start_calls || script.first || script.second)
-            fail("personaplex readiness failure");
-        free(error);
         free(script.last);
         free(picker.prompt);
     }

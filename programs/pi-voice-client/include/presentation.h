@@ -69,7 +69,6 @@ typedef struct VoiceMenuStatus {
     int rebind_needed;
     int has_reply; /* presence only */
     char *speech_backend;
-    int conversation_available;
     VoiceSessionRow *sessions;
     size_t session_count;
     VoiceNamed *voices;

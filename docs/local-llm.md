@@ -346,29 +346,14 @@ The Andromeda runtime is llama.cpp 9190 with CUDA 12.9, compiled for the RTX
 full layer offload, a 512-token logical batch and a 128-token physical batch.
 Automatic fitting is disabled so it cannot silently reduce context or move
 transformer layers to the CPU. The embedding service runs on eight CPU threads
-to reserve GPU memory for Qwen, speech and the desktop.
+to reserve GPU memory for Qwen and the desktop. Speech is Deepgram and does
+not use this GPU.
 
-Qwen shares VRAM with speech and the desktop. The previous Vulkan speech
-backend exhausted memory during concurrent and repeated requests, even when
-Qwen itself could run. Andromeda now uses CUDA for TTS and applies a small
-patch to release obsolete decoder graphs before allocating replacements.
-This avoids overlapping two decoder arenas and clears the old CUDA graph
-cache before its buffers are freed. Foundation retains its Vulkan runtime.
-Model weights and the voice reference remain pinned independently of backend.
-
-On 2026-09-08, Q5 decoded a short 128-token response at about 60 tokens/sec.
-With the fixed speech runtime, a 120,029-token synthetic prompt completed in
-75.6 seconds and retrieved a fact from its beginning while TTS and Whisper
-ran concurrently. That run left about 2.1 GiB at its sampled peak; the final
-extended speech checks reached 31,398 MiB used with 711 MiB free. Repeated
-speech generated 13-18 seconds of audio in about two seconds per chunk.
-160K was also tested but exhausted TTS memory, so 128K is the retained shared
-configuration. These are functional and memory tests, not a coding-quality
-benchmark or a guarantee for other GPU workloads.
-
-Large prompt ingestion saturates the GPU: concurrent speech chunks took
-19-25 seconds in these stress tests, including cold setup for the first chunk.
-Normal speech with Qwen resident but idle remains faster than playback.
+On 2026-09-08, while local speech still shared the card, Q5 decoded a short
+128-token response at about 60 tokens/sec. A 120,029-token synthetic prompt
+completed in 75.6 seconds and retrieved a fact from its beginning. 160K
+exhausted memory with that speech stack, so 128K remains the configured slot.
+That measurement is not the current memory budget.
 
 Pi compacts above 114,688 context tokens, reserves 16,384 output tokens and keeps
 8,192 recent tokens. Its provider is `andromeda` locally and `relay` on the Mac;

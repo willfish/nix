@@ -21,7 +21,6 @@ int test_harness(void);
 int test_controller(void);
 int test_presentation(void);
 int test_menu(void);
-int test_conversation(void);
 int test_osd_main(void);
 
 static void *concurrent_text(void *arg) {
@@ -67,7 +66,7 @@ int main(int argc, char **argv) {
         {"runtime-adapters", test_runtime_adapters}, {"harness", test_harness},
         {"controller", test_controller},
         {"presentation", test_presentation},
-        {"menu", test_menu}, {"conversation", test_conversation},
+        {"menu", test_menu},
         {"osd-main", test_osd_main},
     };
     fprintf(stderr, "voice-c test driver ready\n");

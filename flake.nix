@@ -390,8 +390,6 @@
             check-added-large-files = {
               enable = true;
               stages = lib.mkForce [ "pre-commit" ];
-              # Intentional 638 KiB voice reference with adjacent provenance.
-              excludes = [ "^home/config/voice/voices/samantha-reference\\.wav$" ];
             };
             check-case-conflicts.enable = true;
             check-json.enable = true;
@@ -629,15 +627,12 @@
               text = builtins.readFile ./scripts/probe-private-access;
             };
             mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix { };
-            voice-api = import ./programs/voice-api { inherit pkgs; };
             tailscale-proxy = import ./programs/tailscale-proxy { inherit pkgs; };
             assistant-tools = import ./programs/assistant-tools { inherit pkgs; };
             agent-usage = import ./programs/agent-usage { inherit pkgs; };
             arxiv-status = import ./programs/arxiv-status { inherit pkgs; };
             github-notification-watch = import ./programs/github-notification-watch { inherit pkgs; };
             wallpaper-cycle = import ./programs/wallpaper-cycle { inherit pkgs; };
-            voice-models = import ./programs/voice-models { inherit pkgs; };
-            personaplex-tools = import ./programs/personaplex-tools { inherit pkgs; };
             theme-menu = import ./programs/theme-menu { inherit pkgs; };
             launcher-projects = import ./programs/launcher-projects { inherit pkgs; };
             daily-launcher = import ./programs/daily-launcher { inherit pkgs; };

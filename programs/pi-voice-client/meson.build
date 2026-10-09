@@ -41,7 +41,6 @@ libpivoice = library(
   'src/selection.c',
   'src/presentation.c',
   'src/menu.c',
-  'src/conversation.c',
   'src/osd_main.c',
   include_directories: included,
   dependencies: core_deps,
@@ -57,8 +56,6 @@ voice_dep = declare_dependency(
 
 voice_cli = executable('pi-voice-c', 'src/main.c', dependencies: voice_dep, install: true)
 executable('voice-menu-c', 'src/menu.c', dependencies: voice_dep, install: true)
-executable('personaplex-open-c', 'src/conversation.c',
-  c_args: ['-DVOICE_CONVERSATION_MAIN'], dependencies: voice_dep, install: true)
 executable('pi-voice-osd-c', 'src/osd_main.c',
   dependencies: [voice_dep, gtk, layer_shell], install: true)
 if get_option('fixtures')
@@ -83,7 +80,6 @@ test_exe = executable(
   'tests/test_controller.c',
   'tests/test_presentation.c',
   'tests/test_menu.c',
-  'tests/test_conversation.c',
   'tests/test_osd_main.c',
   dependencies: voice_dep,
 )

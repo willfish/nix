@@ -10,7 +10,6 @@
 #define voice_menu_pick_fuzzel voice_menu_pick_fuzzel_exe
 #endif
 #include "menu.h"
-#include "conversation.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -533,7 +532,7 @@ static int known_root(const char *action) {
     static const char *names[] = {
         "stop", "append", "retry", "read", "rebind", "recover-stage", "recover-copy",
         "menu:sessions", "menu:speech", "menu:voices", "menu:dictation", "auto-toggle",
-        "team-toggle", "discard", "recover-discard", "conversation:start", NULL
+        "team-toggle", "discard", "recover-discard", NULL
     };
     size_t i;
     for (i = 0; names[i]; i++) if (strcmp(names[i], action) == 0) return 1;
@@ -570,7 +569,6 @@ static int order_root(const VoiceMenuStatus *status, VoiceMenuRow **rows, size_t
     if (!live) order[order_n++] = "stop";
     order[order_n++] = "discard";
     order[order_n++] = "recover-discard";
-    order[order_n++] = "conversation:start";
     if (primary && append_row(&ordered, &ordered_count, primary, row_label(*rows, *count, primary))) return -1;
     for (i = 0; i < order_n; i++) {
         if (primary && strcmp(order[i], primary) == 0) continue;
@@ -588,28 +586,6 @@ static int order_root(const VoiceMenuStatus *status, VoiceMenuRow **rows, size_t
             voice_menu_rows_free(extras, extra_count);
             return -1;
         }
-    }
-    if (extra_count && ordered_count && strcmp(ordered[ordered_count - 1].action, "conversation:start") == 0) {
-        VoiceMenuRow *merged = NULL;
-        size_t merged_count = 0;
-        for (i = 0; i + 1 < ordered_count; i++) {
-            if (append_row(&merged, &merged_count, ordered[i].action, ordered[i].label)) goto extra_fail;
-        }
-        for (i = 0; i < extra_count; i++) {
-            if (append_row(&merged, &merged_count, extras[i].action, extras[i].label)) goto extra_fail;
-        }
-        if (append_row(&merged, &merged_count, ordered[ordered_count - 1].action, ordered[ordered_count - 1].label)) goto extra_fail;
-        voice_menu_rows_free(ordered, ordered_count);
-        voice_menu_rows_free(extras, extra_count);
-        voice_menu_rows_free(*rows, *count);
-        *rows = merged;
-        *count = merged_count;
-        return 0;
-extra_fail:
-        voice_menu_rows_free(merged, merged_count);
-        voice_menu_rows_free(ordered, ordered_count);
-        voice_menu_rows_free(extras, extra_count);
-        return -1;
     }
     for (i = 0; i < extra_count; i++) {
         if (append_row(&ordered, &ordered_count, extras[i].action, extras[i].label)) {
@@ -698,8 +674,6 @@ int voice_menu_rows(const VoiceMenuStatus *status, const char *section, VoiceMen
             }
             free(clipped);
         }
-        if (status->conversation_available && voice_can_switch(status)
-            && append_row(&built, &built_count, "conversation:start", "Try PersonaPlex conversation (experimental)")) goto oom;
         if (order_root(status, &built, &built_count)) goto oom;
     }
     voice_presentation_free(view);
@@ -813,35 +787,11 @@ static int identities_same(const VoicePresentation *left, const VoicePresentatio
     return strcmp(a->token, b->token) == 0 && strcmp(a->id, b->id) == 0;
 }
 
-typedef struct {
-    voice_request_fn inner;
-    void *user;
-} StatusInject;
-
-static int inject_status(void *user, const char *action, VoiceMenuStatus **out, char **error) {
-    StatusInject *inject = user;
-    int rc = inject->inner(inject->user, action, out, error);
-    if (rc == 0 && action && strcmp(action, "status") == 0 && out && *out) (*out)->conversation_available = 1;
-    return rc;
-}
-
 int voice_menu_run(const char *section, voice_request_fn request, void *request_user,
-    voice_pick_fn pick, void *pick_user, const VoiceMenuConversation *conversation,
-    void *conversation_user, char **error) {
+    voice_pick_fn pick, void *pick_user, char **error) {
     VoiceMenuStatus *status = NULL;
-    StatusInject inject = { request, request_user };
     const char *current = section && section[0] ? section : "menu";
     if (!request || !pick) return fail(error, "Voice menu needs a controller and picker");
-    if (conversation && conversation->active) {
-        int active = conversation->active(conversation_user, error);
-        if (active < 0) return -1;
-        if (active) {
-            if (!conversation->menu) return fail(error, "PersonaPlex menu is unavailable");
-            return conversation->menu(conversation_user, pick, pick_user, error);
-        }
-        request = inject_status;
-        request_user = &inject;
-    }
     if (request(request_user, "status", &status, error)) return -1;
     for (;;) {
         VoicePresentation *view = NULL;
@@ -932,28 +882,6 @@ int voice_menu_run(const char *section, voice_request_fn request, void *request_
                 voice_presentation_free(view);
                 voice_menu_status_free(status);
                 return -1;
-            }
-            if (strcmp(action, "conversation:start") == 0) {
-                if (!conversation || !conversation->start || !voice_can_switch(fresh)) {
-                    fail(error, "Finish or discard dictation before switching voice modes");
-                    free(action);
-                    voice_presentation_free(fresh_view);
-                    voice_menu_status_free(fresh);
-                    voice_menu_rows_free(rows, count);
-                    voice_presentation_free(view);
-                    voice_menu_status_free(status);
-                    return -1;
-                }
-                {
-                    int rc = conversation->start(conversation_user, error);
-                    free(action);
-                    voice_presentation_free(fresh_view);
-                    voice_menu_status_free(fresh);
-                    voice_menu_rows_free(rows, count);
-                    voice_presentation_free(view);
-                    voice_menu_status_free(status);
-                    return rc;
-                }
             }
             enabled = voice_presentation_action(fresh_view, action);
             if (strncmp(action, "select:", 7) == 0 && fresh_view->selected_session
@@ -1345,20 +1273,11 @@ static int menu_pick(void *user, const char *prompt, const VoiceMenuRow *rows, s
     return voice_menu_pick_fuzzel(prompt, rows, count, user, spawn_ipc, NULL, action, error);
 }
 
-static int conv_active(void *user, char **error) { return voice_conversation_active(user, error); }
-static int conv_menu(void *user, voice_pick_fn pick, void *pick_user, char **error) {
-    return voice_conversation_menu(user, pick, pick_user, error);
-}
-static int conv_start(void *user, char **error) { return voice_conversation_start(user, error); }
-
 int main(int argc, char **argv) {
     const char *section = "menu";
     const char *config = NULL;
     int i;
     char *error = NULL;
-    VoiceConversation *conversation = NULL;
-    VoiceMenuConversation ops;
-    const char *enabled = getenv("PI_PERSONAPLEX_ENABLED");
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--config") == 0 && i + 1 < argc) config = argv[++i];
         else if (strncmp(argv[i], "--config=", 9) == 0) config = argv[i] + 9;
@@ -1377,23 +1296,15 @@ int main(int argc, char **argv) {
         fprintf(stderr, "voice-menu: unknown section\n");
         return 2;
     }
-    if (enabled && strcmp(enabled, "1") == 0) conversation = voice_conversation_new(NULL, NULL);
-    memset(&ops, 0, sizeof ops);
-    ops.active = conv_active;
-    ops.menu = conv_menu;
-    ops.start = conv_start;
-    if (voice_menu_run(section, menu_request, NULL, menu_pick, (void *)config,
-        conversation ? &ops : NULL, conversation, &error)) {
+    if (voice_menu_run(section, menu_request, NULL, menu_pick, (void *)config, &error)) {
         char detail[512];
         if (voice_public_label(error ? error : "Voice menu failed", 200, detail, sizeof detail))
             snprintf(detail, sizeof detail, "Voice menu failed");
         fprintf(stderr, "voice-menu: %s\n", detail);
         desktop_notice("Voice menu unavailable", detail);
         free(error);
-        voice_conversation_free(conversation);
         return 1;
     }
-    voice_conversation_free(conversation);
     return 0;
 }
 #endif

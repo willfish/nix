@@ -7,9 +7,8 @@ The public `pi-voice` and `qwen-pi-voice` wrappers retain configuration and
 credential loading before executing the native CLI.
 
 The Pi extension uses the client's local JSON socket protocol. Speech requests
-can go to the [local voice API](../voice-api) or a configured remote provider;
-the client is not tied to one backend. Model setup and inference engines remain
-separate programs.
+go to Deepgram. The client owns recording, playback and session integration;
+it does not install or run local speech models.
 
 ## Build and test
 

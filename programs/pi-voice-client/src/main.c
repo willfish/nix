@@ -921,8 +921,7 @@ int voice_main(int argc, char **argv) {
                "       pi-voice voice CHARACTER\n\n"
                "Super+Space: show the top dictation card and record, stop, or send the selected Pi session. "
                "Super+Shift+Space: send. Super+R: read/stop.\n"
-               "Run inside Herdr. Prefix conflicting options with --.\n"
-               "Stop the local backend: systemctl --user stop pi-voice-api.service\n");
+               "Run inside Herdr. Prefix conflicting options with --.\n");
         return 0;
     }
     int offset = argc > 1 && strcmp(argv[1], "--") == 0 ? 2 : 1;
