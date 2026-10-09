@@ -13,6 +13,7 @@
     ./launcher.nix
     ./omarchy-spotify.nix
     ./omapager.nix
+    ./omarchy-local-ai.nix
   ];
 
   config = lib.mkIf isGraphicalLinux (
@@ -685,7 +686,17 @@
             exclusive = true;
             modules-left = settings.bar.modulesLeft;
             modules-center = settings.bar.modulesCenter;
-            modules-right = settings.bar.modulesRight;
+            modules-right =
+              settings.bar.modulesRight
+              ++ lib.optional (builtins.elem hostName [
+                "andromeda"
+                "foundation"
+              ]) "custom/local-ai";
+            "custom/local-ai" = {
+              format = "󰧑";
+              tooltip-format = "Local AI";
+              on-click = "hypr-local-ai";
+            };
             "hyprland/workspaces" = {
               format = "{id}";
               on-click = "activate";

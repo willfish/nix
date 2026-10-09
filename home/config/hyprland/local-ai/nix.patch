@@ -1,0 +1,48 @@
+--- a/bin/omarchy-local-ai
++++ b/bin/omarchy-local-ai
+@@ -1427 +1427 @@
+-cmd_snapshot() {
++upstream_snapshot() {
+@@ -1500,0 +1501 @@
++. "$PANEL/lib/nix.sh"
+@@ -1505 +1506 @@
+-setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | share | pin | download | card) "cmd_$1" "${@:2}" ;;
++native | setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | share | pin | download | card) "cmd_$1" "${@:2}" ;;
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -185 +185 @@
+-    verb.operation = args[0]
++    verb.operation = args[0] === "native" ? "native-" + args[1] : args[0]
+@@ -209,0 +210 @@
++    case "native": run(["native", a[1]]); break
+@@ -256 +257 @@
+-    if (ok) { autoRefresh(s); autoOutdated(s) }
++    if (ok) autoRefresh(s) // Agent versions are owned by Nix, not mise/npm.
+@@ -299 +300 @@
+-    } else if (operation === "open") {
++    } else if (["open", "native-open", "native-prepare", "native-log"].indexOf(operation) >= 0) {
+--- a/Model.js
++++ b/Model.js
+@@ -107,2 +107 @@
+-  "needs-setup": { note: "Once per machine: Docker access for your account (Omarchy's Sudoless Docker) and, on NVIDIA, the container toolkit. A terminal opens; Omarchy asks for your password.",
+-    action: "setup" },
++  "needs-setup": { note: "Dependencies are managed by NixOS. Rebuild the host configuration to change Docker access or NVIDIA container support." },
+@@ -110 +109 @@
+-  unsupported: { note: "This Omarchy is too old for Local AI. It checks again by itself once Omarchy is updated." }
++  unsupported: { note: "Catalogue dependencies need NixOS configuration. Native Strata does not require Docker." }
+@@ -589,0 +589,15 @@
++  if ((ui.view === "home" || ui.view === "models") && s.nativeStrata) {
++    var n = s.nativeStrata, busy = n.state === "active" || n.state === "activating" || n.state === "deactivating"
++    var actions = [{ label: "Service log", action: "native|log" }]
++    if (n.healthy) actions.unshift({ label: "Open Pi", action: "native|open", primary: true })
++    if (busy) actions.push({ label: "Stop Strata", action: "native|stop" })
++    else if (n.prepared) actions.unshift({ label: "Start Strata", action: "native|start", primary: true })
++    else actions.unshift({ label: "Prepare weights (large download)", action: "native|prepare" })
++    v.rows = [
++      { type: "sec", label: "NATIVE STRATA · ANDROMEDA" },
++      { type: "field", label: "Qwen3.8 Flash-Next", value: n.healthy ? "ready" : n.state },
++      { type: "links", note: "UD-Q4_K_XL · 128K context. Existing Nix service and weights; not managed by the Docker catalogue. Usage charts below exclude Strata.", items: [] },
++      { type: "acts", items: actions }
++    ].concat(v.rows)
++  }
++  if (ui.view === "agents") v.rows.push({ type: "links", note: "Agent updates are managed through Nix and hmswitch.", items: [] })

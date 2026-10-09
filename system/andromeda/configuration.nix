@@ -41,4 +41,6 @@
     };
   };
   services.xserver.videoDrivers = [ "nvidia" ];
+  # Docker catalogue models use CDI; native Strata continues to run outside Docker.
+  hardware.nvidia-container-toolkit.enable = true;
 }
