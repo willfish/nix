@@ -26,9 +26,9 @@ run_action() {
   suspend)
     if [ "${HYPR_SESSION_STOP_LOCAL_LLM:-0}" = 1 ]; then
       notify-send 'Preparing to suspend' 'Stopping the local AI model first.' || true
-      if ! systemctl --user stop local-llm.service; then
-        printf 'hypr-session: could not stop local-llm.service; suspend cancelled\n' >&2
-        notify-send --urgency=critical 'Suspend cancelled' 'Could not stop the local AI model. Check local-llm.service before retrying.' || true
+      if ! omarchy-local-ai stop_all; then
+        printf 'hypr-session: could not stop local AI GPU models; suspend cancelled\n' >&2
+        notify-send --urgency=critical 'Suspend cancelled' 'Could not stop local AI GPU models. Check the Local AI panel before retrying.' || true
         return 1
       fi
     fi

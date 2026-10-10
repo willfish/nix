@@ -3,27 +3,23 @@
   lib,
   pkgs,
   contextSize,
-  apiKeyPath,
 }:
 let
   package = import ./strata-package.nix { inherit pkgs; };
   dataDir = "${config.xdg.dataHome}/strata";
-  stateDir = "${config.xdg.stateHome}/strata";
   quant = "UD-Q4_K_XL";
   alias = "qwen3.8-flash-next";
   modelDir = "${dataDir}/models/unsloth-ud-q4_k_xl";
-  firstShard = "${modelDir}/Qwen3.8-Flash-Next-${quant}-00001-of-00004.gguf";
-  pack = "${dataDir}/packs/unsloth-ud-q4_k_xl";
   mtp = "${dataDir}/mtp";
   runtimeConfig = pkgs.writeText "strata-config.json" (
     builtins.toJSON {
       exe = "${package}/bin/strata";
-      cwd = dataDir;
+      cwd = "/models/strata";
       args = [
         "--pack"
-        pack
+        "/models/strata/packs/unsloth-ud-q4_k_xl"
         "--native"
-        firstShard
+        "/models/strata/models/unsloth-ud-q4_k_xl/Qwen3.8-Flash-Next-${quant}-00001-of-00004.gguf"
         "--expert-profile"
         "${package}/share/strata/data/expert-profile.bin"
         "--expert-cache"
@@ -38,7 +34,7 @@ let
         "--spec-min-p"
         "0.5"
         "--mtp"
-        "${mtp}/rt"
+        "/models/strata/mtp/rt"
         "--mtp-draft-vocab"
         "${package}/share/strata/data/draft_vocab.bin"
         "--max-context"
@@ -48,13 +44,15 @@ let
         "--vram-reserve-mib"
         "2048"
       ];
-      tokenizer = "${pack}/tokenizer";
+      tokenizer = "/models/strata/packs/unsloth-ud-q4_k_xl/tokenizer";
       model_name = alias;
       # Shorten max_tokens to the room left instead of answering 400 (#545).
       fit_max_tokens = true;
       parallel = 2;
-      log = "${stateDir}/engine.log";
+      log = "/tmp/engine.log";
       host = "0.0.0.0";
+      # The authenticated gateway reaches the private engine by its Docker alias.
+      allowed_hosts = [ "engine" ];
       port = 8081;
       open_browser = false;
     }
@@ -82,6 +80,7 @@ let
     runtimeInputs = [
       pkgs.coreutils
       pkgs.curl
+      pkgs.docker_29
     ];
     text = ''
       umask 077
@@ -104,44 +103,75 @@ let
           fi
         ''
       ) shards}
+      image_id="$(< ${imageId})"
+      docker image inspect "$image_id" >/dev/null 2>&1 || docker load --input ${image} >/dev/null
+      docker run --rm --network bridge --security-opt no-new-privileges --cap-drop ALL \
+        --user "$(id -u):$(id -g)" --env HOME=/tmp \
+        --volume ${lib.escapeShellArg "${dataDir}:/models/strata:rw"} \
+        --entrypoint ${prepare}/bin/strata-prepare "$image_id"
+      echo 'Strata model prepared. Start it from Local AI.'
+    '';
+  };
+  prepare = pkgs.writeShellApplication {
+    name = "strata-prepare";
+    text = ''
       export STRATA_GGUF_PY=${package.llamaSource}/gguf-py
-      if [ ! -f ${lib.escapeShellArg "${pack}/native_experts.txt"} ] || [ ! -f ${lib.escapeShellArg "${pack}/tokenizer/vocab.json"} ]; then
+      cd /models/strata
+      if [[ ! -f packs/unsloth-ud-q4_k_xl/native_experts.txt || ! -f packs/unsloth-ud-q4_k_xl/tokenizer/vocab.json ]]; then
         ${package.python}/bin/python ${package}/share/strata/tools/iq_pack.py \
-          --gguf ${lib.escapeShellArg firstShard} --out ${lib.escapeShellArg pack} --compat-bf16
+          --gguf models/unsloth-ud-q4_k_xl/Qwen3.8-Flash-Next-${quant}-00001-of-00004.gguf \
+          --out packs/unsloth-ud-q4_k_xl --compat-bf16
       fi
-      if [ ! -f ${lib.escapeShellArg "${mtp}/rt/experts.bin"} ]; then
-        ${package.python}/bin/python ${package}/share/strata/tools/mtp_fetch.py fetch --out ${lib.escapeShellArg mtp}
+      if [[ ! -f mtp/rt/experts.bin ]]; then
+        ${package.python}/bin/python ${package}/share/strata/tools/mtp_fetch.py fetch --out mtp
         ${package.python}/bin/python ${package}/share/strata/tools/mtp_pack.py \
-          --src ${lib.escapeShellArg mtp} --experts q2_0 --out ${lib.escapeShellArg "${mtp}/mtp-q2_0.gguf"}
+          --src mtp --experts q2_0 --out mtp/mtp-q2_0.gguf
         ${package.python}/bin/python ${package}/share/strata/tools/mtp_rt.py \
-          --gguf ${lib.escapeShellArg "${mtp}/mtp-q2_0.gguf"} --out ${lib.escapeShellArg "${mtp}/rt"}
+          --gguf mtp/mtp-q2_0.gguf --out mtp/rt
       fi
-      echo 'Strata model prepared. Start local-llm.service to load it.'
     '';
   };
   server = pkgs.writeShellApplication {
-    name = "strata-server";
-    runtimeInputs = [ pkgs.coreutils ];
+    name = "strata-container-server";
     text = ''
-      umask 077
-      if [ ! -s ${lib.escapeShellArg apiKeyPath} ]; then
-        echo 'Local model API key missing; refusing to expose Strata.' >&2
-        exit 1
-      fi
-      export STRATA_API_KEY
-      STRATA_API_KEY="$(< ${lib.escapeShellArg apiKeyPath})"
-      mkdir -p ${lib.escapeShellArg stateDir}
+      export LD_LIBRARY_PATH="''${NVIDIA_CTK_LIBCUDA_DIR:-/run/opengl-driver/lib}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
       exec ${package}/bin/strata-serve --engine strata --port 8081 --config ${runtimeConfig} "$@"
     '';
   };
+  image = pkgs.dockerTools.buildLayeredImage {
+    name = "strata-andromeda";
+    contents = [
+      server
+      prepare
+      pkgs.glibc.bin
+      pkgs.cacert
+    ];
+    extraCommands = ''
+      mkdir -p tmp models
+      chmod 1777 tmp
+    '';
+    config = {
+      Entrypoint = [ "${server}/bin/strata-container-server" ];
+      Env = [
+        "HOME=/tmp"
+        "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+      ];
+    };
+  };
+  imageId = pkgs.runCommand "strata-image-id" { nativeBuildInputs = [ pkgs.jq ]; } ''
+    tar -xOf ${image} manifest.json | jq -er '.[0].Config | "sha256:" + (split("/")[-1] | sub("\\.json$"; ""))' > "$out"
+    grep -Eq '^sha256:[0-9a-f]{64}$' "$out"
+  '';
 in
 {
   inherit
     package
     fetch
-    server
+    image
+    imageId
     alias
     quant
+    dataDir
     ;
   readyPath = "${mtp}/rt/experts.bin";
 }

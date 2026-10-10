@@ -1,48 +1,94 @@
 --- a/bin/omarchy-local-ai
 +++ b/bin/omarchy-local-ai
-@@ -1427 +1427 @@
+@@ -96,3 +96,3 @@
+ policy() {
+-  jq -er --slurpfile all "${2:-$RECIPES}" '
++  jq -er --arg localImage "${STRATA_IMAGE_ID:-}" --slurpfile all "${2:-$RECIPES}" '
+     def name: test("^([A-Za-z0-9_-][A-Za-z0-9_.-]*)?$");
+@@ -108,3 +108,3 @@
+       and (if has("memorySwapBytes") then has("memoryBytes") and .memorySwapBytes >= .memoryBytes else true end);
+-    if (.image | test("^[a-z0-9./_:-]+@sha256:[0-9a-f]{64}$") | not) then "image is not pinned by digest"
++    if ((.image != $localImage or $localImage == "") and (.image | test("^[a-z0-9./_:-]+@sha256:[0-9a-f]{64}$") | not)) then "image is not pinned by digest"
+     elif ($all[0].gateway.image | test("^[a-z0-9./_:-]+@sha256:[0-9a-f]{64}$") | not) then "gateway is not pinned by digest"
+@@ -589,3 +589,3 @@
+ # each layer counts once, as the containerd store can announce a layer and then find it already there
+-pull() {
++upstream_pull() {
+   docker pull "$1" | awk -v what="$2" '/: (Pulling fs layer|Already exists)$/ && !($1 in all) { all[$1]; n++ }
+@@ -615,5 +615,6 @@
+   valid_id "$1" && [[ $2 =~ ^[0-9]+$ && $2 -ge 12434 && $2 -lt 12450 ]] || die "invalid request"
+-  local id=$1 port=$2 r g backend run a=() devices=() k v w
++  local id=$1 port=$2 r g backend run a=() devices=() gateway_options=() k v w
+   shift 2
+   r=$(jq -ce '.recipe // empty' "$(dir_of "$id")/config.json" 2>/dev/null || recipe "$id") || die "no recipe $id"
++  strata_check "$id"
+   v=$(policy "$r")
+@@ -662,3 +663,4 @@
+           die "could not read the UUID of NVIDIA GPU ${k#*:}"
+-        devices+=(--device "nvidia.com/gpu=$v")
++        v=$(nvidia_cdi_device "$v" "${k#*:}") || die "Cannot select NVIDIA CDI device"
++        devices+=(--device "$v")
+       done
+@@ -710,3 +711,3 @@
+     a+=("$v")
+-  done < <(launch_options "$r"; jq -j --arg run "$run" 'def o($f; $v): if ($v // "") != "" then "\($f)\u0000\($v)\u0000" else "" end;
++  done < <(launch_options "$r"; strata_engine_options "$id"; jq -j --arg run "$run" 'def o($f; $v): if ($v // "") != "" then "\($f)\u0000\($v)\u0000" else "" end;
+     o("--volume"; .asset | if . then "\($run)/\(.name):\(.mountPath):ro" else null end),
+@@ -720,2 +721,3 @@
+   [[ ! -e $(dir_of "$id")/cancel ]] || die "start cancelled"
++  while IFS= read -r -d '' v; do gateway_options+=("$v"); done < <(strata_gateway_options "$id")
+   if ! docker run -d --name "$(gateway "$id")" --restart unless-stopped --security-opt no-new-privileges \
+@@ -725,2 +727,3 @@
+     --env "UPSTREAM=http://engine:$(jq -r .launch.port <<<"$r")" --env "MODEL=$(jq -r '.servedName // ""' <<<"$r")" \
++    ${gateway_options[@]+"${gateway_options[@]}"} \
+     --env GATEWAY_KEY_FILE=/run/gateway.key --volume "$KEY:/run/gateway.key:ro" \
+@@ -861,2 +864,3 @@
+   r=$(recipe "$id") || die "no recipe $id"
++  strata_check "$id"
+   [[ $(policy "$r") == "ok" ]] || die "recipe refused: $(policy "$r")"
+@@ -945,3 +949,3 @@
+ # Remove only this recipe's managed download, never the user's Hugging Face cache.
+-cmd_forget() {
++upstream_forget() {
+   valid_id "${1:-}" || die "forget <recipe>"
+@@ -1024,3 +1028,3 @@
+ # kept once fetched. Full screen shows it.
+-cmd_card() {
++upstream_card() {
+   valid_id "${1:-}" || die "card <recipe>"
+@@ -1043,3 +1047,3 @@
+ # `downloaded`.
+-cmd_download() {
++upstream_download() {
+   valid_id "${1:-}" || die "download <recipe> [off]"
+@@ -1427,2 +1431,2 @@
 -cmd_snapshot() {
 +upstream_snapshot() {
-@@ -1500,0 +1501 @@
+   local deps=() d id port at st pid sat boot obj why rc code ts="" sa="" sf="" sfs="" v="" a rstate="" rmsg=""
+@@ -1500,2 +1504,3 @@
+ . "$PANEL/lib/access.sh"
 +. "$PANEL/lib/nix.sh"
-@@ -1505 +1506 @@
+ mkdir -p "$STATE"
+@@ -1504,3 +1509,3 @@
+ case ${1:-} in
 -setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | share | pin | download | card) "cmd_$1" "${@:2}" ;;
-+native | setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | share | pin | download | card) "cmd_$1" "${@:2}" ;;
++stop_all | setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | share | pin | download | card) "cmd_$1" "${@:2}" ;;
+ # the stale NVIDIA device list, if any, as "<spec>\t<why>" (setup rewrites it)
 --- a/Panel.qml
 +++ b/Panel.qml
-@@ -185 +185 @@
--    verb.operation = args[0]
-+    verb.operation = args[0] === "native" ? "native-" + args[1] : args[0]
-@@ -209,0 +210 @@
-+    case "native": run(["native", a[1]]); break
-@@ -256 +257 @@
+@@ -255,3 +255,3 @@
+     ui = Object.assign({}, ui, { pollProblem: ok ? "" : "Could not refresh Local AI; retrying." })
 -    if (ok) { autoRefresh(s); autoOutdated(s) }
-+    if (ok) autoRefresh(s) // Agent versions are owned by Nix, not mise/npm.
-@@ -299 +300 @@
--    } else if (operation === "open") {
-+    } else if (["open", "native-open", "native-prepare", "native-log"].indexOf(operation) >= 0) {
++    if (ok) autoRefresh(s) // Agent versions are owned by Nix.
+   }
 --- a/Model.js
 +++ b/Model.js
-@@ -107,2 +107 @@
+@@ -106,6 +106,5 @@
+ var READINESS = {
 -  "needs-setup": { note: "Once per machine: Docker access for your account (Omarchy's Sudoless Docker) and, on NVIDIA, the container toolkit. A terminal opens; Omarchy asks for your password.",
 -    action: "setup" },
 +  "needs-setup": { note: "Dependencies are managed by NixOS. Rebuild the host configuration to change Docker access or NVIDIA container support." },
-@@ -110 +109 @@
+   "docker-down": { note: "Docker is not ready. Local AI checks again by itself." },
 -  unsupported: { note: "This Omarchy is too old for Local AI. It checks again by itself once Omarchy is updated." }
-+  unsupported: { note: "Catalogue dependencies need NixOS configuration. Native Strata does not require Docker." }
-@@ -589,0 +589,15 @@
-+  if ((ui.view === "home" || ui.view === "models") && s.nativeStrata) {
-+    var n = s.nativeStrata, busy = n.state === "active" || n.state === "activating" || n.state === "deactivating"
-+    var actions = [{ label: "Service log", action: "native|log" }]
-+    if (n.healthy) actions.unshift({ label: "Open Pi", action: "native|open", primary: true })
-+    if (busy) actions.push({ label: "Stop Strata", action: "native|stop" })
-+    else if (n.prepared) actions.unshift({ label: "Start Strata", action: "native|start", primary: true })
-+    else actions.unshift({ label: "Prepare weights (large download)", action: "native|prepare" })
-+    v.rows = [
-+      { type: "sec", label: "NATIVE STRATA · ANDROMEDA" },
-+      { type: "field", label: "Qwen3.8 Flash-Next", value: n.healthy ? "ready" : n.state },
-+      { type: "links", note: "UD-Q4_K_XL · 128K context. Existing Nix service and weights; not managed by the Docker catalogue. Usage charts below exclude Strata.", items: [] },
-+      { type: "acts", items: actions }
-+    ].concat(v.rows)
-+  }
-+  if (ui.view === "agents") v.rows.push({ type: "links", note: "Agent updates are managed through Nix and hmswitch.", items: [] })
++  unsupported: { note: "Catalogue dependencies need NixOS configuration." }
+ }

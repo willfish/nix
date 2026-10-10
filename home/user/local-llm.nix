@@ -66,7 +66,6 @@ let
       lib
       pkgs
       contextSize
-      apiKeyPath
       ;
   };
   workspace = "${config.home.homeDirectory}/LocalAssistant";
@@ -364,7 +363,6 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     server
   ]
   ++ lib.optionals isAndromeda [
-    strata.server
     strata.fetch
   ]
   ++ lib.optionals isAutomationDarwin [
@@ -437,22 +435,5 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
       fi
     ''
   );
-
-  systemd.user.services.local-llm = lib.mkIf isAndromeda {
-    Unit = {
-      Description = "Local Qwen3.8 Flash-Next ${strata.quant} with Strata (128K context)";
-      After = [ "graphical-session.target" ];
-      ConditionPathExists = strata.readyPath;
-    };
-    Service = {
-      ExecStart = "${strata.server}/bin/strata-server";
-      Restart = "on-failure";
-      RestartSec = 5;
-      TimeoutStopSec = 30;
-      UMask = "0077";
-      NoNewPrivileges = true;
-    };
-    Install.WantedBy = [ "default.target" ];
-  };
 
 }

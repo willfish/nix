@@ -1,12 +1,27 @@
 # shellcheck shell=bash
-# NixOS host integration, sourced after upstream definitions and access.sh.
-# Never run Omarchy's installer or an agent's imperative updater.
-# Child shells expand their own arguments after the terminal opens.
-# shellcheck disable=SC2016
+# NixOS owns dependencies and agent updates; the plugin owns Docker deployments.
 cmd_setup() { die "Dependencies are managed by NixOS. Rebuild this host's configuration; no installer was run."; }
 cmd_update() { die "Agents are managed by Nix. Update the dotfiles inputs and run hmswitch."; }
 cmd_outdated() { :; }
 docker_group_reexec() { :; }
+
+STRATA_ID=qwen3.8-flash-next.strata.128k.rtx-5090-32gb
+STRATA_IMAGE_ID=""
+if [[ ${LOCAL_AI_STRATA:-0} == 1 ]]; then
+  STRATA_IMAGE_ID=$(<"$LOCAL_AI_STRATA_IMAGE_ID")
+  [[ $STRATA_IMAGE_ID =~ ^sha256:[0-9a-f]{64}$ ]] || die "Invalid Nix Strata image identity"
+  # Keep refreshed upstream recipes, but never let a registry replace the local recipe.
+  mkdir -p "$STATE/catalogues"
+  merged="$STATE/catalogues/$(sha256sum "$RECIPES" "$PANEL/strata-recipe.json" | sha256sum | cut -c1-64).json"
+  if [[ ! -f $merged ]]; then
+    jq --slurpfile local "$PANEL/strata-recipe.json" --arg id "$STRATA_ID" '
+      .hardware["rtx-5090-32gb"].recipes |= ([$local[0]] + map(select(.id != $id)))' "$RECIPES" >"$merged.$$"
+    mv -f "$merged.$$" "$merged"
+  fi
+  RECIPES=$merged
+  # All gateways on this host use the existing key. It never enters the image or argv.
+  KEY=$LOCAL_AI_STRATA_KEY
+fi
 
 readiness() {
   command -v docker >/dev/null || {
@@ -21,55 +36,93 @@ readiness() {
     readiness_line docker-down "Docker is not answering"
     return
   }
-  if [[ ${LOCAL_AI_NATIVE_STRATA:-0} == 1 ]] && ! nvidia_ready; then
-    readiness_line unsupported "Activate hardware.nvidia-container-toolkit.enable on Andromeda for catalogue models. Native Strata is independent of Docker."
+  if [[ ${LOCAL_AI_STRATA:-0} == 1 ]] && ! nvidia_ready; then
+    readiness_line unsupported "Activate hardware.nvidia-container-toolkit.enable on Andromeda for GPU containers."
     return
   fi
   readiness_line ready
 }
 
-native_healthy() {
-  [[ -s $LOCAL_AI_STRATA_KEY ]] || return 1
-  curl --fail --silent --max-time 2 --output /dev/null \
-    -H @<(printf 'Authorization: Bearer %s\n' "$(<"$LOCAL_AI_STRATA_KEY")") \
-    http://127.0.0.1:8081/v1/models
+is_strata() { [[ ${LOCAL_AI_STRATA:-0} == 1 && ${1%--*} == "$STRATA_ID" ]]; }
+
+nvidia_cdi_device() {
+  local uuid=$1 index=$2 devices
+  devices=$(docker info --format '{{json .DiscoveredDevices}}') || die "Cannot inspect NVIDIA CDI devices"
+  if jq -e --arg id "nvidia.com/gpu=$uuid" 'any(.[]; .ID == $id)' <<<"$devices" >/dev/null; then
+    printf 'nvidia.com/gpu=%s' "$uuid"
+  elif [[ $index == 0 && $(nvidia-smi --query-gpu=uuid --format=csv,noheader) == "$uuid" ]] &&
+    jq -e 'any(.[]; .ID == "nvidia.com/gpu=0")' <<<"$devices" >/dev/null; then
+    # NixOS defaults to indexed CDI names. A single GPU makes index zero unambiguous.
+    printf 'nvidia.com/gpu=0'
+  else
+    die "Enable UUID device names in NixOS NVIDIA container toolkit configuration"
+  fi
 }
 
-native_snapshot() {
-  local state prepared=false healthy=false
-  state=$(systemctl --user show local-llm.service --property=ActiveState --value) || state=unknown
-  [[ ! -f $LOCAL_AI_STRATA_READY ]] || prepared=true
-  if [[ $state == active ]] && native_healthy; then healthy=true; fi
-  jq -nc --arg state "$state" --argjson prepared "$prepared" --argjson healthy "$healthy" \
-    '{state: $state, prepared: $prepared, healthy: $healthy}'
+pull() {
+  if [[ -n $STRATA_IMAGE_ID && $1 == "$STRATA_IMAGE_ID" ]]; then
+    docker load --input "$LOCAL_AI_STRATA_IMAGE" >/dev/null
+    docker image inspect "$STRATA_IMAGE_ID" >/dev/null || die "Nix Strata image did not load"
+  else
+    upstream_pull "$@"
+  fi
+}
+
+# The imported weights are not catalogue downloads and must never be deleted by Forget.
+cmd_forget() {
+  if is_strata "${1:-}"; then die "Strata reuses your existing weights; catalogue removal cannot delete them."; fi
+  upstream_forget "$@"
+}
+cmd_download() {
+  if is_strata "${1:-}"; then
+    [[ ${2:-} != off ]] || return 0
+    [[ -f $LOCAL_AI_STRATA_READY ]] || die "Prepare Strata's weights with strata-fetch first (large download)."
+    pull "$STRATA_IMAGE_ID" engine
+  else
+    upstream_download "$@"
+  fi
+}
+cmd_card() {
+  if is_strata "${1:-}"; then
+    printf '# Qwen3.8 Flash-Next with Strata\n\nReuses the existing UD-Q4_K_XL weights and MTP pack.\n128K context, RTX 5090, 80 GiB resident expert budget.\nPrepare missing weights with strata-fetch. Catalogue removal keeps these weights.\n'
+  else
+    upstream_card "$@"
+  fi
+}
+
+strata_check() {
+  is_strata "$1" || return 0
+  [[ -s $KEY ]] || die "Existing local model API key missing"
+  [[ -f $LOCAL_AI_STRATA_READY && -f $LOCAL_AI_STRATA_DATA/packs/unsloth-ud-q4_k_xl/native_experts.txt ]] ||
+    die "Prepare Strata's weights with strata-fetch first"
+  owned "$LOCAL_AI_STRATA_DATA"
+}
+
+# Called only for the locally pinned recipe, after upstream's policy and allocation checks.
+strata_engine_options() {
+  is_strata "$1" || return 0
+  printf '%s\0' --volume "$LOCAL_AI_STRATA_DATA:/models/strata:ro" \
+    --user "$(id -u):$(id -g)" --cap-drop ALL --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m
+}
+strata_gateway_options() {
+  is_strata "$1" || return 0
+  # Preserve the authenticated endpoint used by the Andromeda Pi provider.
+  printf '%s\0' --publish 8081:12434
 }
 
 cmd_snapshot() {
-  local native=null
-  if [[ ${LOCAL_AI_NATIVE_STRATA:-0} == 1 ]]; then native=$(native_snapshot); fi
-  upstream_snapshot | jq --argjson native "$native" '. + {nativeStrata: $native, updates: {}, updatesAt: ""}'
+  upstream_snapshot | jq --arg id "$STRATA_ID" --argjson prepared "$([[ ${LOCAL_AI_STRATA:-0} == 1 && -f ${LOCAL_AI_STRATA_READY:-/nonexistent} ]] && echo true || echo false)" '
+    . + {updates: {}, updatesAt: ""} |
+    (.kinds[].models[] | select(.id == $id)) |= (.downloaded = $prepared |
+      if $prepared then . else .unfit = "prepare weights with strata-fetch first" end)'
 }
 
-cmd_native() {
-  [[ ${LOCAL_AI_NATIVE_STRATA:-0} == 1 ]] || die "Native Strata is configured only on Andromeda"
-  case ${1:-} in
-  start)
-    [[ -f $LOCAL_AI_STRATA_READY ]] || die "Prepare Strata's weights first"
-    if ! systemctl --user is-active --quiet local-llm.service; then
-      local used
-      used=$(nvidia-smi --id=0 --query-gpu=memory.used --format=csv,noheader,nounits) || die "Cannot check GPU memory"
-      [[ $used =~ ^[0-9]+$ ]] || die "Cannot read GPU memory usage"
-      ((used <= 2048)) || die "GPU already in use. Stop its current model explicitly before starting Strata."
-    fi
-    systemctl --user start --no-block local-llm.service || die "Could not start Strata"
-    ;;
-  stop) systemctl --user stop --no-block local-llm.service || die "Could not stop Strata" ;;
-  prepare) omarchy-launch-tui --app-id=org.local-ai.strata-prepare bash -c 'strata-fetch; result=$?; read -r -p "Press Enter to close"; exit "$result"' ;;
-  open)
-    native_healthy || die "Strata is not answering yet. Check its service log."
-    omarchy-launch-tui --app-id=org.local-ai.strata bash -c 'cd -- "$1" && exec pi --provider andromeda --model qwen3.8-flash-next' local-ai "$(get folder)"
-    ;;
-  log) omarchy-launch-tui --app-id=org.local-ai.strata-log journalctl --user -u local-llm.service -f ;;
-  *) die "Unknown native Strata action" ;;
-  esac
+# Suspend must release all catalogue GPU models, not just the former native service.
+cmd_stop_all() {
+  local id
+  local deployments
+  deployments=$(cmd_snapshot) || die "Cannot inspect running models; suspend cancelled"
+  while IFS= read -r id; do
+    cmd_stop "$id" || die "Could not stop $id; suspend cancelled"
+  done < <(jq -r '.deployments[] | select(any(.keys[]; startswith("cpu:") | not)) | .id' <<<"$deployments")
 }
