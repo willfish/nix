@@ -212,6 +212,33 @@ let
     rev = "5f4e8db6590a96743aea271365a49439919e18c5";
     hash = "sha256-g9972zsbtZ9PEtBAsEprmsiWb8ec0M2GaUICgQorNec=";
   };
+  # Same private-use flask the idle bar draws. The -mono name tells the
+  # notification card to paint it in the theme text colour.
+  arxivNotifyIcon =
+    let
+      python = pkgs.python3.withPackages (ps: [ ps.pillow ]);
+    in
+    pkgs.runCommand "arxiv-scanner-mono.png" { nativeBuildInputs = [ python ]; } ''
+      font=$(find ${pkgs.nerd-fonts.jetbrains-mono}/share/fonts -name 'JetBrainsMonoNerdFont-Regular.ttf' -print -quit)
+      test -n "$font"
+      python3 - "$font" "$out" <<'PY'
+      import sys
+      from PIL import Image, ImageDraw, ImageFont
+      font = ImageFont.truetype(sys.argv[1], 420)
+      image = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+      draw = ImageDraw.Draw(image)
+      glyph = "\uf0c3"
+      bbox = draw.textbbox((0, 0), glyph, font=font)
+      width = bbox[2] - bbox[0]
+      height = bbox[3] - bbox[1]
+      if width < 32 or height < 32:
+          raise SystemExit("flask glyph did not draw")
+      x = (512 - width) / 2 - bbox[0]
+      y = (512 - height) / 2 - bbox[1]
+      draw.text((x, y), glyph, font=font, fill=(255, 255, 255, 255))
+      image.save(sys.argv[2])
+      PY
+    '';
   arxivScripts =
     pkgs.runCommand "arxiv-scanner-scripts"
       {
@@ -225,7 +252,7 @@ let
         substituteInPlace "$out/bin/poll.py" \
           --replace-fail '["claude", "-p"' '["${pkgs.claude-code}/bin/claude", "-p"' \
           --replace-fail '["omarchy", "notification", "send", "--app-name", "arXiv Scanner", "-u", "normal", title, body],' \
-          '["${pkgs.libnotify}/bin/notify-send", "-a", "arXiv Scanner", "-u", "normal", "--", title, body],'
+          '["${pkgs.libnotify}/bin/notify-send", "-a", "arXiv Scanner", "-i", "arxiv-scanner-mono", "-u", "normal", "--", title, body],'
         patch --batch -d "$out/bin" -p1 < ${../config/hyprland/arxiv/timer-dropin.patch}
         patch --batch -d "$out/bin" -p1 < ${../config/hyprland/arxiv/pi-backend.patch}
         # The agents panel's Codex ready flag is a Pi login, not a Codex binary.
@@ -631,6 +658,7 @@ in
   config = lib.mkIf isGraphicalLinux {
     # Keep nm-applet out of the profile's XDG autostart directories. The
     # connection editor remains available to the panel through its wrapper.
+    xdg.dataFile."icons/hicolor/512x512/apps/arxiv-scanner-mono.png".source = arxivNotifyIcon;
     home.packages = [
       launcher
       keybindings
