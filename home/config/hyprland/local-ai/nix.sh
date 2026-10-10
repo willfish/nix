@@ -84,7 +84,7 @@ cmd_download() {
 }
 cmd_card() {
   if is_strata "${1:-}"; then
-    printf '# Qwen3.8 Flash-Next with Strata\n\nReuses the existing UD-Q4_K_XL weights and MTP pack.\n128K context, RTX 5090, 80 GiB resident expert budget.\nPrepare missing weights with strata-fetch. Catalogue removal keeps these weights.\n'
+    printf '# Qwen3.8 Flash-Next with Strata\n\nUses the Huihui abliterated UD-Q4_K_XL weights and the existing MTP pack.\n128K context, RTX 5090, 80 GiB resident expert budget.\nPrepare missing weights with strata-fetch. Catalogue removal keeps these weights.\n'
   else
     upstream_card "$@"
   fi

@@ -26,9 +26,9 @@ let
   strataRecipe = pkgs.writeText "strata-recipe.json" (
     builtins.toJSON {
       id = "qwen3.8-flash-next.strata.128k.rtx-5090-32gb";
-      name = "Qwen3.8 Flash-Next (Strata)";
+      name = "Qwen3.8 Flash-Next abliterated (Strata)";
       family = "qwen";
-      format = "GGUF · UD-Q4_K_XL + MTP";
+      format = "GGUF · UD-Q4_K_XL abliterated + MTP";
       engine = "strata";
       servedName = strata.alias;
       sizeGb = 111.6;

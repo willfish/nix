@@ -15,8 +15,10 @@ Docker access is root-equivalent.
 
 **Qwen3.8 Flash-Next (Strata)** is a recipe in the same catalogue, with the
 standard Start, Stop, Open and usage display. Its Nix-built Docker image uses
-the existing UD-Q4_K_XL weights and MTP pack, with 128K context. The weights
-are mounted read-only, not copied into the image or downloaded again.
+the Huihui abliterated UD-Q4_K_XL weights and the existing MTP pack, with 128K
+context. The weights are mounted read-only, not copied into the image or
+downloaded again. The previous official Unsloth shards remain on disk with a
+.official suffix.
 
 If weights are missing, run `strata-fetch`: it checks/downloads the pinned
 GGUF shards and prepares the packs inside Docker. This is a large download

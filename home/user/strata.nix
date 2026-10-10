@@ -7,6 +7,9 @@
 let
   package = import ./strata-package.nix { inherit pkgs; };
   dataDir = "${config.xdg.dataHome}/strata";
+  # Huihui abliterated UD-Q4_K_XL in Unsloth's shard layout. Shard 1 matches
+  # upstream Unsloth; shards 2-4 are the ablation. The previous official shards
+  # and pack remain beside these directories with a .official suffix.
   quant = "UD-Q4_K_XL";
   alias = "qwen3.8-flash-next";
   modelDir = "${dataDir}/models/unsloth-ud-q4_k_xl";
@@ -64,15 +67,15 @@ let
     }
     {
       number = "00002";
-      sha256 = "3f342f1c1580473f1ee94ddd5b28206e8c07a70fa1a366f59d1d6c922919a6c9";
+      sha256 = "b6b52d0c156217efc06bcf06c6906e93b552eb24327abb076a90e02397820432";
     }
     {
       number = "00003";
-      sha256 = "56758f40269cad5cd9b0d3d6fbae0f40f6d5be6de49e4ab392dbe83157d9cbd3";
+      sha256 = "ab7d9af2f3b824218fe460de0703b6b349ea83fe51f480f48e0107beb986b0a7";
     }
     {
       number = "00004";
-      sha256 = "753bda48b98ba4f1636134a90a967de1b2d3908a236c026e464777342e53510a";
+      sha256 = "b8cc1e386c6dc8e92b3e420f839239c2a595598518b179b7a88a4c430b3fc973";
     }
   ];
   fetch = pkgs.writeShellApplication {
@@ -95,7 +98,7 @@ let
           if [ ! -f ${lib.escapeShellArg path} ]; then
             curl --fail --location --retry 3 --continue-at - \
               --output ${lib.escapeShellArg "${path}.partial"} \
-              'https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/38bb39ee97821de2c9009abb7e93950eec396e66/${quant}/${name}'
+              'https://huggingface.co/huihui-ai/Huihui-Qwen3.8-Flash-Next-abliterated-GGUF/resolve/main/unsloth-UD-Q4_K_XL/${name}'
             printf '%s  %s\n' '${shard.sha256}' ${lib.escapeShellArg "${path}.partial"} | sha256sum --check
             mv ${lib.escapeShellArg "${path}.partial"} ${lib.escapeShellArg path}
           else
