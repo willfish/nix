@@ -5,11 +5,6 @@ This directory contains high-quality reference material and best practices for t
 ## Active References
 
 - `superpowers/` — Agent workflow discipline, debugging, planning, verification, etc.
-- `plugin-eval/` — Framework for evaluating and improving skills.
-
-## Archived
-
-- `_archive/build-web-apps/` — Old React/Next.js and Supabase Postgres best practices (not relevant to current stack).
 
 ## Current Stack Best Practices
 

@@ -190,13 +190,7 @@
     "kind": "shared",
     "invocation": "user-invoked router/orchestrator",
     "hermes": false,
-    "references": {
-      "plugin-eval.md": "references/plugin-eval/README.md",
-      "plugin-eval-chat-first-workflows.md": "references/plugin-eval/references/chat-first-workflows.md",
-      "plugin-eval-evaluation-result-schema.md": "references/plugin-eval/references/evaluation-result-schema.md",
-      "plugin-eval-observed-usage.md": "references/plugin-eval/references/observed-usage.md",
-      "plugin-eval-technical-design.md": "references/plugin-eval/references/technical-design.md"
-    }
+    "references": {}
   },
   {
     "name": "skill-router",

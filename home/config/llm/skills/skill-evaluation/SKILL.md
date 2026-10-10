@@ -1,6 +1,6 @@
 ---
 name: skill-evaluation
-description: Skill harness evaluation and maintenance. Use for auditing skills, checking token/disclosure drift, running audit-skills, reviewing plugin-eval references, or planning richer skill/plugin evaluation.
+description: Skill harness evaluation and maintenance. Use for auditing skills, checking token/disclosure drift, running audit-skills, or planning skill evaluation.
 disable-model-invocation: true
 ---
 
@@ -25,15 +25,6 @@ direnv exec . nix shell .#repo-tools -c audit-skills --root "$PWD"
 - Add contents sections to long references or split them by branch.
 - Review trigger overlap before widening descriptions.
 - Check freshness metadata when external guidance is involved.
-
-3. Use plugin-eval references only as design material unless a real
-   `plugin-eval` CLI is installed or vendored:
-
-- `references/plugin-eval.md` for what is retained locally.
-- `references/plugin-eval-chat-first-workflows.md` for chat-first workflow design.
-- `references/plugin-eval-technical-design.md` for evaluator architecture.
-- `references/plugin-eval-observed-usage.md` for observed usage input shapes.
-- `references/plugin-eval-evaluation-result-schema.md` for result JSON shape.
 
 ## Completion
 

@@ -275,8 +275,9 @@ in
   options.dotfiles.llmScriptRoot = lib.mkOption {
     type = lib.types.path;
     readOnly = true;
-    default = ../config/llm/scripts;
-    description = "Public LLM helper scripts consumed by private overlay modules.";
+    # Retain the optional fallback path without requiring an empty directory.
+    default = "${../config/llm}/scripts";
+    description = "Optional public LLM helper script fallback for private overlay modules.";
   };
 
   config.home.file =
