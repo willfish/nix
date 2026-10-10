@@ -195,6 +195,26 @@ let
         script
       ];
     };
+  # Text carrying derivation outputs cannot go through builtins.toFile, and
+  # pkgs.writeText would pull stdenv into the greeter closure. Same contract as
+  # toolDrv: bash writes content handed over in the build environment. Linux
+  # caps one environment string at 128 KiB, so keep headroom for new themes.
+  textFile =
+    name: text:
+    assert lib.assertMsg (
+      builtins.stringLength text < 65536
+    ) "textFile ${name} must stay under 64 KiB for the build environment";
+    derivation {
+      inherit name;
+      system = pkgs.stdenv.hostPlatform.system;
+      builder = bash;
+      args = [
+        "-c"
+        ''printf '%s\n' "$content" > "$out"''
+      ];
+      content = text;
+    };
+
   unlockFor =
     theme:
     if theme.unlock != null then
@@ -264,4 +284,5 @@ in
   sddmPackage = name: packages.${name};
   plymouthPackage = name: packages.${name};
   greeterThemePath = name: "${packages.${name}}/share/sddm/themes/omarchy";
+  inherit textFile;
 }

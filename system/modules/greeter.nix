@@ -13,7 +13,9 @@ let
   selectionFile = "${selectionDir}/${selectionName}";
   runtimeDir = "/run/desktop-login";
   fallback = hostDefaults.forHost config.networking.hostName;
-  manifest = builtins.toFile "sddm-themes.json" (
+  # The manifest lists built theme packages, so it must be a derivation output
+  # rather than builtins.toFile. See rendered.textFile in greeter-themes.nix.
+  manifest = rendered.textFile "sddm-themes.json" (
     builtins.toJSON {
       inherit
         fallback
