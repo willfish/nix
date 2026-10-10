@@ -227,6 +227,10 @@ let
           --replace-fail '["omarchy", "notification", "send", "--app-name", "arXiv Scanner", "-u", "normal", title, body],' \
           '["${pkgs.libnotify}/bin/notify-send", "-a", "arXiv Scanner", "-u", "normal", "--", title, body],'
         patch --batch -d "$out/bin" -p1 < ${../config/hyprland/arxiv/timer-dropin.patch}
+        patch --batch -d "$out/bin" -p1 < ${../config/hyprland/arxiv/pi-backend.patch}
+        # The agents panel's Codex ready flag is a Pi login, not a Codex binary.
+        substituteInPlace "$out/bin/poll.py" \
+          --replace-fail '"__ARXIV_PI__"' '"${pkgs.pi-coding-agent}/bin/pi"'
         rm -f "$out/bin/"*.orig
         patchShebangs "$out/bin"
       '';
@@ -244,7 +248,9 @@ let
       "watchedAuthors": [],
       "maxAreaMatches": 4,
       "maxWatchedMatches": 3,
-      "pollTime": "07:30"
+      "pollTime": "07:30",
+      "aiBackend": "pi",
+      "piModel": "openai-codex/gpt-6-astra"
     }
   '';
   # The first shared seed. Activation replaces this exact file and nothing else.
@@ -282,6 +288,7 @@ let
       'function close() { popupOpen = false } function closeForPopoutSwitch() { close() }' \
       --replace-fail 'readonly property string pluginDir: Quickshell.env("HOME") + "/.config/omarchy/plugins/prometheus.arxiv-scanner/"' \
       'readonly property string pluginDir: "${arxivScripts}/"'
+    patch --batch -d "$out/shell/plugins/arxiv" -p1 < ${../config/hyprland/arxiv/pi-widget.patch}
     mkdir -p "$out/shell/plugins/emojis"
     cp ${emojiPlugin}/BetterEmojis.qml ${emojiPlugin}/EmojiData.js ${emojiPlugin}/emojis.json \
       ${emojiPlugin}/LICENSE "$out/shell/plugins/emojis/"

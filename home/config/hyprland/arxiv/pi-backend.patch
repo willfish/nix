@@ -1,0 +1,222 @@
+--- a/poll.py
++++ b/poll.py
+@@ -5,7 +5,7 @@
+ demand from the bar widget's Refresh button).
+
+ Fetches arXiv's new-submissions digest for a configurable category, asks a
+-headless AI CLI call (Claude Code or Codex — see run_agent/pick_agent_backend)
++headless Pi call (see run_agent/pick_agent_backend; Claude and Codex remain optional)
+ to rank it against the user's interest areas (and to write a short summary
+ for each pick), and separately checks every candidate's author list against
+ a watched-authors list — those get a second, smaller call just for
+@@ -86,16 +86,22 @@
+     # maxWatchedMatches ceiling applies.
+     "maxWatchedPerAuthor": None,
+     "watchedAuthors": [],
+-    # "auto" picks the first of KNOWN_AGENT_BACKENDS the omarchy.agents
+-    # widget reports as ready (see detect_ready_agent_backends), falling
+-    # back to "claude" if that widget isn't installed or finds nothing —
+-    # matches this plugin's behavior from before other backends existed.
+-    "aiBackend": "auto",
++    # "pi" uses the installed Pi CLI and its existing provider login.
++    # "auto" is accepted from older panel saves and resolves to Pi too:
++    # the agents widget's ready flag means a Pi login, not a Codex binary.
++    "aiBackend": "pi",
++    # Blank keeps DEFAULT_PI_MODEL. provider/id, for example
++    # openai-codex/gpt-6-astra or xai/grok-4.7.
++    "piModel": "",
+     # Blank = codex's own built-in default model. Only consulted when
+-    # aiBackend resolves to "codex".
++    # aiBackend is explicitly "codex".
+     "codexModel": "",
+ }
+
++# Pinned so an unset panel does not follow whatever model an interactive
++# Pi session last used. Thinking stays off in run_pi; this id has no suffix.
++DEFAULT_PI_MODEL = "openai-codex/gpt-6-astra"
++
+ RSS_NS = {
+     "arxiv": "http://arxiv.org/schemas/atom",
+     "dc": "http://purl.org/dc/elements/1.1/",
+@@ -127,7 +133,8 @@
+         pass
+
+
+-def _run_agent_subprocess(argv: list[str], prompt: str, timeout: float, max_bytes: int) -> subprocess.CompletedProcess:
++def _run_agent_subprocess(argv: list[str], prompt: str, timeout: float, max_bytes: int,
++                           env: dict | None = None, cwd: str | None = None) -> subprocess.CompletedProcess:
+     """
+     subprocess.run(argv, capture_output=True) but:
+
+@@ -152,8 +159,8 @@
+     if either stream exceeds max_bytes, and subprocess.TimeoutExpired if
+     the whole exchange doesn't finish within timeout seconds.
+
+-    Shared by every backend (run_claude, run_codex, ...) — argv is the only
+-    thing that differs between them. Each backend wrapper is responsible
++    Shared by every backend (run_pi, run_claude, run_codex). argv, env, and
++    cwd are the only things that differ. Each backend wrapper is responsible
+     for its own lockdown flags against prompt injection; this function just
+     owns the subprocess-safety mechanics, not the security policy.
+     """
+@@ -162,6 +169,8 @@
+         argv,
+         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+         start_new_session=True,
++        env=env,
++        cwd=cwd,
+     )
+     try:
+         stdin_fd, stdout_fd, stderr_fd = proc.stdin.fileno(), proc.stdout.fileno(), proc.stderr.fileno()
+@@ -317,7 +326,47 @@
+         shutil.rmtree(scratch_dir, ignore_errors=True)
+
+
+-AGENT_BACKENDS = {"claude": run_claude, "codex": run_codex}
++def run_pi(prompt: str, timeout: float, max_bytes: int = MAX_AGENT_OUTPUT_CHARS,
++           model: str | None = None) -> subprocess.CompletedProcess:
++    """
++    Rank through Pi so the call uses Pi's provider login instead of a
++    separate Claude or Codex CLI. The prompt contains untrusted abstracts.
++    Tools, extensions (including MCP), skills, themes, and project context
++    are off, and the session is not saved. Thinking is off so the reply
++    stays inside the scan timeout and is the requested JSON rather than a
++    reasoning trace. The binary path is substituted at package build time.
++    """
++    chosen = (model or "").strip() or DEFAULT_PI_MODEL
++    scratch_dir = tempfile.mkdtemp(prefix="arxiv-scanner-pi-")
++    try:
++        argv = [
++            "__ARXIV_PI__",
++            "--print",
++            "--mode", "text",
++            "--no-tools",
++            "--no-extensions",
++            "--no-skills",
++            "--no-prompt-templates",
++            "--no-context-files",
++            "--no-themes",
++            "--no-session",
++            "--no-approve",
++            "--thinking", "off",
++            "--model", chosen,
++            "--system-prompt",
++            "You filter arXiv submissions. You have no tools. Follow the user message exactly and return only the requested JSON.",
++            "--",
++            "Follow the task in the preceding stdin text.",
++        ]
++        env = os.environ.copy()
++        env["PI_AGENT_BUS_ENABLED"] = "0"
++        env.pop("CAPTURE_PROMPTS", None)
++        return _run_agent_subprocess(argv, prompt, timeout, max_bytes, env=env, cwd=scratch_dir)
++    finally:
++        shutil.rmtree(scratch_dir, ignore_errors=True)
++
++
++AGENT_BACKENDS = {"pi": run_pi, "claude": run_claude, "codex": run_codex}
+
+
+ def detect_ready_agent_backends() -> list[str]:
+@@ -342,11 +391,12 @@
+
+
+ def pick_agent_backend(config: dict) -> str:
+-    configured = config.get("aiBackend", "auto")
+-    if configured in AGENT_BACKENDS:
++    # Explicit Claude or Codex still work. auto, pi, and anything unknown
++    # use Pi: the agents-widget ready file is a Pi login, not a CLI on PATH.
++    configured = config.get("aiBackend", "pi")
++    if configured in ("claude", "codex"):
+         return configured
+-    ready = detect_ready_agent_backends()
+-    return ready[0] if ready else "claude"
++    return "pi"
+
+
+ def run_agent(prompt: str, timeout: float, max_bytes: int = MAX_AGENT_OUTPUT_CHARS) -> subprocess.CompletedProcess:
+@@ -354,18 +404,22 @@
+     backend = pick_agent_backend(config)
+     if backend == "codex":
+         return run_codex(prompt, timeout, max_bytes, model=config.get("codexModel") or None)
+-    return run_claude(prompt, timeout, max_bytes)
++    if backend == "claude":
++        return run_claude(prompt, timeout, max_bytes)
++    return run_pi(prompt, timeout, max_bytes, model=config.get("piModel") or None)
+
+
+ def describe_agent_backend(config: dict) -> str:
+-    """One line for the bar widget's header, e.g. "Claude Code" or "Codex
+-    (gpt-5-codex)" — whatever run_agent() would actually pick/use for this
+-    config right now."""
++    """One line for the bar widget's header, e.g. "Pi (openai-codex/gpt-6-astra)".
++    This is whatever run_agent() would actually pick for this config right now."""
+     backend = pick_agent_backend(config)
+     if backend == "codex":
+         model = config.get("codexModel") or ""
+         return f"Codex ({model})" if model else "Codex (default model)"
+-    return "Claude Code"
++    if backend == "claude":
++        return "Claude Code"
++    model = (config.get("piModel") or "").strip() or DEFAULT_PI_MODEL
++    return f"Pi ({model})"
+
+
+ def load_state() -> dict:
+@@ -506,6 +560,8 @@
+         config["watchedAuthors"] = [a.strip() for a in data["watchedAuthors"] if isinstance(a, str) and a.strip()]
+     if data.get("aiBackend") in ("auto", *AGENT_BACKENDS):
+         config["aiBackend"] = data["aiBackend"]
++    if isinstance(data.get("piModel"), str) and data["piModel"].strip():
++        config["piModel"] = data["piModel"].strip()
+     if isinstance(data.get("codexModel"), str):
+         config["codexModel"] = data["codexModel"].strip()
+     return config
+--- a/save-settings.sh
++++ b/save-settings.sh
+@@ -5,9 +5,9 @@
+ #
+ # Usage: save-settings.sh --category quant-ph --interests "Area one, Area two" \
+ #          --authors "Author One, Author Two" --max-area 3 --max-watched 3 \
+-#          --max-watched-per-author 2 --poll-time 07:00 --ai-backend auto \
+-#          --codex-model ""
+-# --max-watched-per-author and --codex-model may be empty.
++#          --max-watched-per-author 2 --poll-time 07:00 --ai-backend pi \
++#          --pi-model "" --codex-model ""
++# --max-watched-per-author, --pi-model, and --codex-model may be empty.
+
+ set -euo pipefail
+
+@@ -29,7 +29,8 @@
+ MAX_WATCHED="3"
+ MAX_WATCHED_PER_AUTHOR=""
+ POLL_TIME="07:00"
+-AI_BACKEND="auto"
++AI_BACKEND="pi"
++PI_MODEL=""
+ CODEX_MODEL=""
+
+ while [[ $# -gt 0 ]]; do
+@@ -42,6 +43,7 @@
+     --max-watched-per-author) MAX_WATCHED_PER_AUTHOR="$2"; shift 2 ;;
+     --poll-time) POLL_TIME="$2"; shift 2 ;;
+     --ai-backend) AI_BACKEND="$2"; shift 2 ;;
++    --pi-model) PI_MODEL="$2"; shift 2 ;;
+     --codex-model) CODEX_MODEL="$2"; shift 2 ;;
+     *) shift ;;
+   esac
+@@ -63,6 +65,7 @@
+   --arg pollTime "$POLL_TIME" \
+   --arg maxPerAuthor "$MAX_WATCHED_PER_AUTHOR" \
+   --arg aiBackend "$AI_BACKEND" \
++  --arg piModel "$PI_MODEL" \
+   --arg codexModel "$CODEX_MODEL" \
+   --argjson maxArea "${MAX_AREA:-3}" \
+   --argjson maxWatched "${MAX_WATCHED:-3}" \
+@@ -79,6 +82,7 @@
+       maxWatchedPerAuthor: (if ($maxPerAuthorTrimmed | length) > 0 then ($maxPerAuthorTrimmed | tonumber) else null end),
+       pollTime: $pollTime,
+       aiBackend: $aiBackend,
++      piModel: $piModel,
+       codexModel: $codexModel
+     }
+   ' > "$TMP_FILE"

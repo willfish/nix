@@ -1,0 +1,96 @@
+--- a/BarWidget.qml
++++ b/BarWidget.qml
+@@ -4,11 +4,11 @@
+ import qs.Ui
+ import qs.Commons
+
+-// Bar indicator for the daily arXiv scan: shows a count of papers Claude
+-// ranked as relevant plus papers by watched authors, and opens a two-column
++// Bar indicator for the daily arXiv scan: shows a count of papers ranked
++// as relevant plus papers by watched authors, and opens a two-column
+ // popup (relevant left, watched authors right). All data comes from
+-// state.json, written by bin/poll.py — this widget never talks to the
+-// network or to Claude itself.
++// state.json, written by bin/poll.py. This widget never talks to the
++// network or to the ranking model itself.
+ BarWidget {
+   id: root
+   moduleName: "prometheus.arxiv-scanner"
+@@ -97,7 +97,8 @@
+   // slots, rather than guaranteeing each watched author some visibility.
+   readonly property var maxWatchedPerAuthor: (config.maxWatchedPerAuthor !== undefined && config.maxWatchedPerAuthor !== null) ? config.maxWatchedPerAuthor : null
+   readonly property string pollTime: config.pollTime || "07:00"
+-  readonly property string aiBackend: config.aiBackend || "auto"
++  readonly property string aiBackend: config.aiBackend || "pi"
++  readonly property string piModel: config.piModel || "openai-codex/gpt-6-astra"
+   readonly property string codexModel: config.codexModel || ""
+
+   // KeyboardPanel's own close() (outside click, Escape, popout-switch to
+@@ -579,8 +580,8 @@
+                   maxWatchedField.text = String(root.maxWatchedMatches)
+                   maxWatchedPerAuthorField.text = root.maxWatchedPerAuthor !== null ? String(root.maxWatchedPerAuthor) : ""
+                   pollTimeField.text = root.pollTime
+-                  aiBackendDropdown.value = root.aiBackend
+-                  codexModelField.text = root.codexModel
++                  aiBackendDropdown.value = root.aiBackend === "auto" ? "pi" : root.aiBackend
++                  codexModelField.text = root.aiBackend === "codex" ? root.codexModel : root.piModel
+                   root.saveStatus = ""
+                 }
+               }
+@@ -609,7 +610,7 @@
+
+           Text {
+             textFormat: Text.PlainText
+-            text: "Interest areas (comma-separated) — Claude ranks new papers against these"
++            text: "Interest areas (comma-separated). Pi ranks new papers against these"
+             color: Qt.darker(root.bar.foreground, 1.3)
+             font.family: root.bar.fontFamily
+             font.pixelSize: Style.font.caption
+@@ -785,7 +786,7 @@
+                 label: "AI backend"
+                 foreground: root.bar.foreground
+                 options: [
+-                  { value: "auto", label: "Auto (first signed-in agent found)" },
++                  { value: "pi", label: "Pi" },
+                   { value: "claude", label: "Claude Code" },
+                   { value: "codex", label: "Codex" }
+                 ]
+@@ -797,7 +798,7 @@
+               spacing: Style.space(4)
+               Text {
+                 textFormat: Text.PlainText
+-                text: "Codex model (blank = codex's default)"
++                text: "Model (Pi provider/id, or a Codex model if that backend is selected)"
+                 color: Qt.darker(root.bar.foreground, 1.3)
+                 font.family: root.bar.fontFamily
+                 font.pixelSize: Style.font.caption
+@@ -806,7 +807,7 @@
+               TextField {
+                 id: codexModelField
+                 width: parent.width
+-                placeholderText: "e.g. openai/gpt-5-codex"
++                placeholderText: "openai-codex/gpt-6-astra or xai/grok-4.7"
+               }
+             }
+           }
+@@ -819,6 +820,8 @@
+               foreground: root.bar.foreground
+               onClicked: {
+                 if (root.bar) {
++                  var backend = aiBackendDropdown.value || "pi"
++                  var model = codexModelField.text
+                   var cmd = root.pluginDir + "bin/save-settings.sh"
+                     + " --category " + root.shQuote(categoryField.text)
+                     + " --interests " + root.shQuote(interestsField.text)
+@@ -827,8 +830,9 @@
+                     + " --max-watched " + root.shQuote(maxWatchedField.text || "3")
+                     + " --max-watched-per-author " + root.shQuote(maxWatchedPerAuthorField.text)
+                     + " --poll-time " + root.shQuote(pollTimeField.text || "07:00")
+-                    + " --ai-backend " + root.shQuote(aiBackendDropdown.value || "auto")
+-                    + " --codex-model " + root.shQuote(codexModelField.text)
++                    + " --ai-backend " + root.shQuote(backend)
++                    + " --pi-model " + root.shQuote(backend === "codex" ? root.piModel : model)
++                    + " --codex-model " + root.shQuote(backend === "codex" ? model : root.codexModel)
+                   root.bar.run(cmd)
+                 }
+                 root.saveStatus = "Saved — applies on the next scan (scan time takes effect immediately)."
