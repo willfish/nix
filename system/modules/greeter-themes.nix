@@ -1,6 +1,8 @@
 # Immutable Omarchy SDDM and Plymouth packages from the pin used by
 # home/user/themes/omarchy.nix. The caller selects the boot palette. Built
 # packages contain only store paths; they do not read home or user files.
+# The builder depends on bash, coreutils, gnused and ImageMagick, not stdenv,
+# so a nixpkgs bump rebuilds a theme only when one of those outputs changes.
 {
   lib,
   pkgs,
@@ -8,11 +10,11 @@
 let
   source = import ../../home/user/themes/omarchy-source.nix;
   catalogue = import ../../home/user/themes/palettes.nix;
-  themes = import ../../home/user/themes/omarchy.nix { inherit lib pkgs; };
   configuredAppearance = (import ../../home/config/hyprland/settings.nix).appearance;
   sddmSource = "${source}/default/sddm/omarchy";
   plymouthSource = "${source}/default/plymouth";
   license = "${source}/LICENSE";
+  fallbackUnlock = "${source}/default/plymouth/logo.png";
   failedHex = "f7768e";
 
   applyOverrides =
@@ -176,7 +178,32 @@ let
     in
     assert lib.assertMsg (lib.hasInfix "QtVersion=6" text) "SDDM metadata must declare QtVersion=6";
     text;
-  metadataFile = pkgs.writeText "omarchy-sddm-metadata.desktop" metadataText;
+  metadataFile = builtins.toFile "omarchy-sddm-metadata.desktop" metadataText;
+  bash = "${pkgs.bash}/bin/bash";
+  install = "${pkgs.coreutils}/bin/install";
+  mkdir = "${pkgs.coreutils}/bin/mkdir";
+  sed = "${pkgs.gnused}/bin/sed";
+  magick = "${pkgs.imagemagick}/bin/magick";
+  toolDrv =
+    name: script:
+    derivation {
+      inherit name;
+      system = pkgs.stdenv.hostPlatform.system;
+      builder = bash;
+      args = [
+        "-c"
+        script
+      ];
+    };
+  unlockFor =
+    theme:
+    if theme.unlock != null then
+      theme.unlock
+    else
+      toolDrv "omarchy-unlock-${theme.name}" ''
+        ${magick} ${fallbackUnlock} -channel RGB +level-colors \
+          '#${theme.palette.base05},#${theme.palette.base05}' "$out"
+      '';
 
   packageFor =
     name: theme:
@@ -185,52 +212,48 @@ let
       background = palette.base00;
       foreground = palette.base05;
       rgb = rgbOf background;
-      qmlFile = pkgs.writeText "omarchy-${name}-Main.qml" (colorize background foreground);
-      scriptFile = pkgs.writeText "omarchy-${name}.script" (patchScript rgb);
+      qmlFile = builtins.toFile "omarchy-${name}-Main.qml" (colorize background foreground);
+      scriptFile = builtins.toFile "omarchy-${name}.script" (patchScript rgb);
+      unlock = unlockFor theme;
     in
     assert lib.assertMsg (builtins.match "[0-9a-fA-F]{6}" background != null) "invalid background";
     assert lib.assertMsg (builtins.match "[0-9a-fA-F]{6}" foreground != null) "invalid foreground";
-    pkgs.runCommandLocal "omarchy-greeter-${name}"
-      {
-        nativeBuildInputs = [ pkgs.imagemagick ];
-        omarchyForeground = foreground;
+    toolDrv "omarchy-greeter-${name}" ''
+      set -euo pipefail
+      sddm=$out/share/sddm/themes/omarchy
+      ply=$out/share/plymouth/themes/omarchy
+      ${mkdir} -p "$sddm" "$ply"
+
+      recolor() {
+        ${magick} "$1" -channel RGB +level-colors '#${foreground},#${foreground}' "$2"
       }
-      ''
-        set -euo pipefail
-        sddm=$out/share/sddm/themes/omarchy
-        ply=$out/share/plymouth/themes/omarchy
-        mkdir -p "$sddm" "$ply"
 
-        recolor() {
-          magick "$1" -channel RGB +level-colors "#$omarchyForeground","#$omarchyForeground" "$2"
-        }
+      recolor ${plymouthSource}/bullet.png "$ply/bullet.png"
+      recolor ${plymouthSource}/entry.png "$ply/entry.png"
+      recolor ${plymouthSource}/lock.png "$ply/lock.png"
+      recolor ${plymouthSource}/progress_bar.png "$ply/progress_bar.png"
+      ${install} -m 0644 ${plymouthSource}/progress_box.png "$ply/progress_box.png"
+      ${install} -m 0644 ${unlock} "$ply/logo.png"
 
-        recolor ${plymouthSource}/bullet.png "$ply/bullet.png"
-        recolor ${plymouthSource}/entry.png "$ply/entry.png"
-        recolor ${plymouthSource}/lock.png "$ply/lock.png"
-        recolor ${plymouthSource}/progress_bar.png "$ply/progress_bar.png"
-        install -m 0644 ${plymouthSource}/progress_box.png "$ply/progress_box.png"
-        install -m 0644 ${themes.packages.${name}}/unlock.png "$ply/logo.png"
+      ${install} -m 0644 "$ply/bullet.png" "$sddm/bullet.png"
+      ${install} -m 0644 "$ply/entry.png" "$sddm/entry.png"
+      ${install} -m 0644 "$ply/lock.png" "$sddm/lock.png"
+      ${install} -m 0644 "$ply/logo.png" "$sddm/logo.png"
+      ${magick} "$ply/entry.png" -channel RGB +level-colors '#${failedHex},#${failedHex}' "$sddm/entry-failed.png"
+      ${magick} "$ply/lock.png" -channel RGB +level-colors '#${failedHex},#${failedHex}' "$sddm/lock-failed.png"
 
-        install -m 0644 "$ply/bullet.png" "$sddm/bullet.png"
-        install -m 0644 "$ply/entry.png" "$sddm/entry.png"
-        install -m 0644 "$ply/lock.png" "$sddm/lock.png"
-        install -m 0644 "$ply/logo.png" "$sddm/logo.png"
-        magick "$ply/entry.png" -channel RGB +level-colors "#${failedHex}","#${failedHex}" "$sddm/entry-failed.png"
-        magick "$ply/lock.png" -channel RGB +level-colors "#${failedHex}","#${failedHex}" "$sddm/lock-failed.png"
+      ${install} -m 0644 ${qmlFile} "$sddm/Main.qml"
+      ${install} -m 0644 ${metadataFile} "$sddm/metadata.desktop"
+      ${install} -m 0644 ${sddmSource}/theme.conf "$sddm/theme.conf"
+      ${install} -m 0644 ${scriptFile} "$ply/omarchy.script"
+      ${install} -m 0644 ${license} "$sddm/LICENSE"
+      ${install} -m 0644 ${license} "$ply/LICENSE"
 
-        install -m 0644 ${qmlFile} "$sddm/Main.qml"
-        install -m 0644 ${metadataFile} "$sddm/metadata.desktop"
-        install -m 0644 ${sddmSource}/theme.conf "$sddm/theme.conf"
-        install -m 0644 ${scriptFile} "$ply/omarchy.script"
-        install -m 0644 ${license} "$sddm/LICENSE"
-        install -m 0644 ${license} "$ply/LICENSE"
-
-        sed \
-          -e "s|^ImageDir=.*|ImageDir=$ply|" \
-          -e "s|^ScriptFile=.*|ScriptFile=$ply/omarchy.script|" \
-          ${plymouthSource}/omarchy.plymouth > "$ply/omarchy.plymouth"
-      '';
+      ${sed} \
+        -e "s|^ImageDir=.*|ImageDir=$ply|" \
+        -e "s|^ScriptFile=.*|ScriptFile=$ply/omarchy.script|" \
+        ${plymouthSource}/omarchy.plymouth > "$ply/omarchy.plymouth"
+    '';
 
   packages = lib.mapAttrs packageFor catalogue;
 in

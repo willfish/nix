@@ -676,8 +676,9 @@
             herdr-sleep-inhibit = import ./programs/herdr-sleep-inhibit { inherit pkgs; };
           }
           //
+            # Theme trees are locked git fetches, not nixpkgs builds.
             lib.mapAttrs' (name: package: lib.nameValuePair "theme-${name}" package)
-              (import ./home/user/themes/omarchy.nix { inherit lib pkgs; }).packages;
+              (import ./home/user/themes/omarchy.nix { inherit lib; }).packages;
 
           treefmt = {
             flakeCheck = false;

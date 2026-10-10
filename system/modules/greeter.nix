@@ -13,7 +13,7 @@ let
   selectionFile = "${selectionDir}/${selectionName}";
   runtimeDir = "/run/desktop-login";
   fallback = hostDefaults.forHost config.networking.hostName;
-  manifest = pkgs.writeText "sddm-themes.json" (
+  manifest = builtins.toFile "sddm-themes.json" (
     builtins.toJSON {
       inherit
         fallback

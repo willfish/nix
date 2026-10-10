@@ -189,18 +189,41 @@ static int advance(const char *state, const char *catalogue_path,
   if (!package)
     goto done;
   meta_path = g_build_filename(package, "theme.json", NULL);
-  meta = yyjson_read_file(meta_path, YYJSON_READ_ALLOW_INF_AND_NAN, NULL, NULL);
   current = exists(current_path) ? read_text(current_path) : g_strdup("");
   if (!current) {
     result = 1;
     goto done;
   }
-  yyjson_val *preferred_value = field(yyjson_doc_get_root(meta), "preferred");
-  const char *preferred = yyjson_get_str(preferred_value);
-  if (preferred && yyjson_get_len(preferred_value) != strlen(preferred))
-    preferred = NULL;
-  chosen = next_name(field(yyjson_doc_get_root(meta), "backgrounds"), current,
-                     preferred, step);
+  // A rendered package still carries theme.json. A locked theme fetch does
+  // not; the catalogue lists the same names without rooting the images.
+  yyjson_val *names = NULL;
+  const char *preferred = NULL;
+  if (g_file_test(meta_path, G_FILE_TEST_IS_REGULAR)) {
+    meta = yyjson_read_file(meta_path, YYJSON_READ_ALLOW_INF_AND_NAN, NULL, NULL);
+    if (meta && yyjson_is_obj(yyjson_doc_get_root(meta))) {
+      yyjson_val *preferred_value = field(yyjson_doc_get_root(meta), "preferred");
+      preferred = yyjson_get_str(preferred_value);
+      if (preferred && yyjson_get_len(preferred_value) != strlen(preferred))
+        preferred = NULL;
+      names = field(yyjson_doc_get_root(meta), "backgrounds");
+    }
+  } else {
+    yyjson_val *palette =
+        field(field(yyjson_doc_get_root(catalogue), "palettes"), theme);
+    yyjson_val *listed = palette ? field(palette, "backgrounds") : NULL;
+    if (listed && yyjson_is_arr(listed)) {
+      yyjson_val *preferred_value = field(palette, "preferred");
+      if (preferred_value && !yyjson_is_null(preferred_value)) {
+        preferred = yyjson_get_str(preferred_value);
+        if (!preferred || yyjson_get_len(preferred_value) != strlen(preferred)) {
+          result = 1;
+          goto done;
+        }
+      }
+      names = listed;
+    }
+  }
+  chosen = next_name(names, current, preferred, step);
   if (!chosen)
     goto done;
   background_path = g_build_filename(package, "backgrounds", NULL);

@@ -24,17 +24,19 @@ let
       ;
   };
   render = import ./themes/render.nix { inherit lib; };
-  btopTheme = import ./themes/btop.nix { inherit lib pkgs; };
-  btopFile = btopTheme theme.herdr.name theme.${theme.nativeMode or "dark"};
+  btopTheme = import ./themes/btop.nix { inherit lib; };
+  btopFile = builtins.toFile "host.theme" (
+    btopTheme theme.herdr.name theme.${theme.nativeMode or "dark"}
+  );
   batThemes = lib.genAttrs [ "light" "dark" ] (mode: render.tmTheme "host-${mode}" theme.${mode});
   batFile =
     mode:
     if isGraphicalLinux then
       runtime.file "bat-${mode}"
     else
-      pkgs.writeText "host-bat-${mode}.tmTheme" batThemes.${mode};
+      builtins.toFile "host-bat-${mode}.tmTheme" batThemes.${mode};
   piThemes = lib.genAttrs [ "light" "dark" ] (
-    mode: pkgs.writeText "host-${mode}.json" (builtins.toJSON (render.pi "host-${mode}" theme.${mode}))
+    mode: builtins.toFile "host-${mode}.json" (builtins.toJSON (render.pi "host-${mode}" theme.${mode}))
   );
   piFile = mode: if isGraphicalLinux then runtime.file "host-${mode}.json" else piThemes.${mode};
 in

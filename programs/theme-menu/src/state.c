@@ -1,7 +1,9 @@
 #include "theme.h"
 #include <errno.h>
+#include <glib/gstdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 typedef struct {
   char *path;
   GBytes *content, *previous;
@@ -87,6 +89,93 @@ char *current_mode(Themes *t) {
 yyjson_val *session(yyjson_val *palette, const char *mode) {
   return field(field(palette, "session"), mode);
 }
+static bool plain_id(const char *name) {
+  return name && *name && !strchr(name, '/') && !strstr(name, "..") &&
+         !strchr(name, ' ');
+}
+static bool base_file(const char *name) {
+  return name && *name && strcmp(name, ".") && strcmp(name, "..") &&
+         !strchr(name, '/');
+}
+static bool hex6(const char *text) {
+  if (!text || strlen(text) != 6)
+    return false;
+  for (size_t i = 0; i < 6; i++)
+    if (!g_ascii_isxdigit(text[i]))
+      return false;
+  return true;
+}
+static bool png_name(const char *name) {
+  size_t n = strlen(name);
+  return n > 4 && !g_ascii_strcasecmp(name + n - 4, ".png");
+}
+static const char *magick_bin(void) {
+  const char *magick = g_getenv("THEME_MAGICK");
+  return magick && *magick ? magick : "magick";
+}
+static GBytes *magick_file(Themes *t, const char *const *argv, char *out) {
+  Command *c = command(argv, NULL, 120000, false);
+  bool ok = checked(t, c);
+  command_free(c);
+  GBytes *bytes = ok ? read_bytes(t, out) : NULL;
+  if (unlink(out) && errno != ENOENT && !t->error)
+    fail(t, "Could not remove converted wallpaper");
+  g_free(out);
+  return bytes;
+}
+static GBytes *wallpaper_from_tree(Themes *t, const char *id, const char *root) {
+  yyjson_val *palette = field(field(t->catalogue, "palettes"), id);
+  yyjson_val *preferred = palette ? field(palette, "preferred") : NULL;
+  const char *file = NULL;
+  if (preferred && !yyjson_is_null(preferred)) {
+    file = string(t, preferred);
+    if (!file)
+      return NULL;
+    if (!base_file(file)) {
+      fail(t, "Invalid wallpaper file: %s", file);
+      return NULL;
+    }
+  }
+  char *out = path_join(t->state, ".wallpaper-convert.png");
+  char *dest = g_strdup_printf("PNG:%s", out);
+  const char *magick = magick_bin();
+  GBytes *bytes = NULL;
+  if (!file) {
+    const char *color =
+        palette ? string(t, field(palette, "wallpaperColor")) : NULL;
+    if (!hex6(color)) {
+      fail(t, "Theme %s has no wallpaper", id);
+      g_free(dest);
+      g_free(out);
+      return NULL;
+    }
+    char *solid = g_strdup_printf("xc:#%s", color);
+    const char *argv[] = {magick, "-size", "1x1", solid, dest, NULL};
+    bytes = magick_file(t, argv, out);
+    g_free(solid);
+  } else {
+    char *backgrounds = path_join(root, "backgrounds"),
+         *source = path_join(backgrounds, file);
+    g_free(backgrounds);
+    if (!g_file_test(source, G_FILE_TEST_IS_REGULAR)) {
+      fail(t, "Missing wallpaper %s", file);
+      g_free(source);
+      g_free(dest);
+      g_free(out);
+      return NULL;
+    }
+    if (png_name(file)) {
+      bytes = read_bytes(t, source);
+      g_free(out);
+    } else {
+      const char *argv[] = {magick, source, dest, NULL};
+      bytes = magick_file(t, argv, out);
+    }
+    g_free(source);
+  }
+  g_free(dest);
+  return bytes;
+}
 static GBytes *session_asset(Themes *t, yyjson_val *value) {
   const char *source = string(t, value);
   if (!source)
@@ -95,8 +184,7 @@ static GBytes *session_asset(Themes *t, yyjson_val *value) {
     if (g_strcmp0(g_getenv("THEME_MENU_PUBLISH"), "1"))
       return NULL;
     const char *name = source + 10;
-    if (!*name || strchr(name, '/') || strstr(name, "..") ||
-        strchr(name, ' ')) {
+    if (!plain_id(name)) {
       fail(t, "Invalid theme wallpaper id: %s", name);
       return NULL;
     }
@@ -113,11 +201,16 @@ static GBytes *session_asset(Themes *t, yyjson_val *value) {
       char *output = trim(c->out), **rows = lines(output);
       size_t n = g_strv_length(rows);
       if (!n)
-        fail(t, "Wallpaper build returned no output path");
+        fail(t, "Wallpaper fetch returned no output path");
       else {
-        char *path = path_join(rows[n - 1], "wallpaper.png");
-        bytes = read_bytes(t, path);
-        g_free(path);
+        // Older packages put a rendered PNG at the root. Current packages are
+        // the locked theme tree; the catalogue names the image inside it.
+        char *rendered = path_join(rows[n - 1], "wallpaper.png");
+        if (g_file_test(rendered, G_FILE_TEST_IS_REGULAR))
+          bytes = read_bytes(t, rendered);
+        else
+          bytes = wallpaper_from_tree(t, name, rows[n - 1]);
+        g_free(rendered);
       }
       g_strfreev(rows);
       g_free(output);

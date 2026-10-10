@@ -10,9 +10,52 @@ let
   controller = import ../../../programs/theme-menu { inherit pkgs; };
   render = import ./render.nix { inherit lib; };
   herdrTheme = import ./herdr.nix { };
-  btopTheme = import ./btop.nix { inherit lib pkgs; };
+  btopTheme = import ./btop.nix { inherit lib; };
   hyprland = import ./hyprland.nix { inherit lib; };
-  omarchy = import ./omarchy.nix { inherit lib pkgs; };
+  omarchy = import ./omarchy.nix { inherit lib; };
+  # Rendered theme text is content-addressed. A nixpkgs bump must not rebuild it.
+  textFile = name: text: builtins.toFile name text;
+  tomlString =
+    value: if builtins.isBool value then (if value then "true" else "false") else builtins.toJSON value;
+  tomlPairs =
+    attrs:
+    lib.concatMapStringsSep "\n" (name: "${name} = ${tomlString attrs.${name}}") (
+      lib.sort builtins.lessThan (lib.attrNames attrs)
+    );
+  herdrToml =
+    config:
+    let
+      flat = lib.filterAttrs (name: _: name != "custom") config;
+      custom = mode: ''
+        [theme.custom.${mode}]
+        ${tomlPairs config.custom.${mode}}
+      '';
+    in
+    ''
+      [theme]
+      ${tomlPairs flat}
+
+      ${custom "dark"}
+      ${custom "light"}
+    '';
+  spliceTheme =
+    text: replacement:
+    let
+      lines = lib.splitString "\n" text;
+      start = lib.lists.findFirstIndex (line: line == "[theme]") null lines;
+      rest = if start == null then [ ] else lib.sublist (start + 1) (builtins.length lines) lines;
+      end =
+        if start == null then
+          null
+        else
+          lib.lists.findFirstIndex (line: lib.hasPrefix "[" line && !lib.hasPrefix "[theme" line) null rest;
+    in
+    assert lib.assertMsg (start != null && end != null) "herdr config is missing a [theme] section";
+    lib.concatStringsSep "\n" (
+      lib.sublist 0 start lines
+      ++ lib.splitString "\n" (lib.removeSuffix "\n" replacement)
+      ++ lib.sublist (start + 1 + end) (builtins.length lines) lines
+    );
   wallpaperSettings = (import ../../config/hyprland/settings.nix).wallpaper;
   configuredAppearance = (import ../../config/hyprland/settings.nix).appearance;
   preferredPalette = configuredAppearance.palette;
@@ -53,18 +96,18 @@ let
       herdrConfig = herdrTheme.configTheme theme (
         lib.genAttrs [ "light" "dark" ] (mode: render.herdr theme.${mode})
       );
-      herdr = (pkgs.formats.toml { }).generate "${host}-herdr.toml" (
-        lib.recursiveUpdate (builtins.fromTOML (builtins.readFile ../../config/herdr/config.toml)) {
-          theme = herdrConfig;
-        }
+      herdr = textFile "${host}-herdr.toml" (
+        spliceTheme (builtins.readFile ../../config/herdr/config.toml) (herdrToml herdrConfig)
       );
       nvim = lib.genAttrs [ "light" "dark" ] (mode: lib.mapAttrs (_: c: "#${c}") theme.${mode});
+      artwork = omarchy.selection theme;
     in
     {
       inherit (theme) label;
       nativeMode = theme.nativeMode or null;
       id = theme.herdr.name;
       inherit nvim;
+      inherit (artwork) backgrounds preferred wallpaperColor;
       herdrTheme = herdrConfig;
       session = lib.genAttrs [ "light" "dark" ] (
         mode:
@@ -80,22 +123,22 @@ let
         assert lib.assertMsg (
           lib.subtractLists (builtins.attrNames rendered) hyprland.assets == [ ]
         ) "Hyprland theme render is missing a seed asset";
-        lib.mapAttrs (_: text: toString (pkgs.writeText "${host}-${mode}-hyprland-theme" text)) rendered
+        lib.mapAttrs (name: text: textFile "${host}-${mode}-${name}" text) rendered
         // {
           # A store path would root every theme image in the Home Manager
-          # generation. theme-menu builds flake package theme-<id> on apply.
+          # generation. theme-menu materialises the locked theme fetch on apply.
           "wallpaper.png" = wallpaperSettings.overrides.${theme.herdr.name}.${mode} or "nix-theme:${host}";
         }
       );
       files = {
-        "herdr.toml" = toString herdr;
-        "host-palettes.json" = toString (pkgs.writeText "${host}-nvim.json" (builtins.toJSON nvim));
-        "btop.theme" = toString (btopTheme theme.herdr.name theme.${theme.nativeMode or "dark"});
-        "delta" = toString (pkgs.writeText "${host}-delta" (render.deltaFragment theme));
-        "bat-${theme.nativeMode or "dark"}" = toString (
-          pkgs.writeText "${host}-bat-native.tmTheme" (
-            render.tmTheme "host-${theme.nativeMode or "dark"}" theme.${theme.nativeMode or "dark"}
-          )
+        "herdr.toml" = herdr;
+        "host-palettes.json" = textFile "${host}-nvim.json" (builtins.toJSON nvim);
+        "btop.theme" = textFile "btop-${host}.theme" (
+          btopTheme theme.herdr.name theme.${theme.nativeMode or "dark"}
+        );
+        "delta" = textFile "${host}-delta" (render.deltaFragment theme);
+        "bat-${theme.nativeMode or "dark"}" = textFile "${host}-bat-native.tmTheme" (
+          render.tmTheme "host-${theme.nativeMode or "dark"}" theme.${theme.nativeMode or "dark"}
         );
       }
       // lib.listToAttrs (
@@ -103,21 +146,19 @@ let
           (mode: [
             {
               name = "ghostty-${mode}";
-              value = toString (pkgs.writeText "${host}-ghostty-${mode}" (render.ghostty theme.${mode}));
+              value = textFile "${host}-ghostty-${mode}" (render.ghostty theme.${mode});
             }
             {
               name = "host-${mode}.json";
-              value = toString (
-                pkgs.writeText "${host}-pi-${mode}.json" (builtins.toJSON (render.pi "host-${mode}" theme.${mode}))
+              value = textFile "${host}-pi-${mode}.json" (
+                builtins.toJSON (render.pi "host-${mode}" theme.${mode})
               );
             }
             {
               # bat/delta reads the active syntax theme from BAT_THEME. Ships
               # both modes so light/dark swaps never need a rebuild.
               name = "bat-${mode}";
-              value = toString (
-                pkgs.writeText "${host}-bat-${mode}.tmTheme" (render.tmTheme "host-${mode}" theme.${mode})
-              );
+              value = textFile "${host}-bat-${mode}.tmTheme" (render.tmTheme "host-${mode}" theme.${mode});
             }
           ])
           [
@@ -127,7 +168,7 @@ let
       );
     }
   ) themedCatalogue;
-  manifest = pkgs.writeText "theme-catalogue.json" (
+  manifest = textFile "theme-catalogue.json" (
     builtins.toJSON {
       default = defaultPalette;
       appearance = configuredAppearance;
@@ -147,9 +188,11 @@ let
       pkgs.mako
       pkgs.herdr
       pkgs.libnotify
+      pkgs.imagemagick
     ];
     text = ''
       export THEME_MENU_PUBLISH=1
+      export THEME_MAGICK=${lib.escapeShellArg "${pkgs.imagemagick}/bin/magick"}
       export THEME_WALLPAPER_FLAKE=${lib.escapeShellArg config.dotfiles.sourceDirectory}
       # Schemas live under share/gsettings-schemas/<name>, not share/.
       # dconf.lib supplies the GIO backend; dconf is the user database tool.

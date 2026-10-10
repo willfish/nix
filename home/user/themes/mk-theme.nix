@@ -1,70 +1,33 @@
-# Package only supported data files, never arbitrary repository contents.
-{
-  lib,
-  pkgs,
-  fallbackUnlock,
-  fallbackLicense,
-}:
+# Content-addressed copy of supported theme files. The store path follows the
+# locked git tree, not nixpkgs. Image conversion stays with the tool that
+# needs it, so a nixpkgs bump does not rebuild this path.
+{ lib }:
 theme:
 let
-  # These themes sort a solid-colour image before their illustrated wallpapers.
-  preferredWallpaper =
-    {
-      community-midnight = "2-hand-of-adam.png";
-      community-oxo-carbon = "BG3.jpg";
-    }
-    .${theme.name} or "";
-  wallpaper = lib.findFirst (
-    file: builtins.baseNameOf file == preferredWallpaper
-  ) (builtins.head theme.backgrounds) theme.backgrounds;
-  metadata = pkgs.writeText "${theme.name}-metadata.json" (
-    builtins.toJSON {
-      inherit (theme)
-        name
-        label
-        nativeMode
-        palette
-        ;
-      backgrounds = map builtins.baseNameOf theme.backgrounds;
-      preferred = if theme.backgrounds == [ ] then null else builtins.baseNameOf wallpaper;
-    }
-  );
-  colours = (pkgs.formats.toml { }).generate "${theme.name}-colors.toml" theme.colours;
-  copy = destination: file: "install -m 0644 ${lib.escapeShellArg file} \"$out/${destination}/\"";
+  root = theme.source;
+  relative = path: lib.removePrefix "${toString root}/" (toString path);
+  image = file: builtins.match ".*\\.(png|jpg|jpeg|webp|PNG|JPG|JPEG|WEBP)" file != null;
+  license = file: builtins.match "(LICENSE|COPYING|NOTICE)(\\..*)?" file != null;
 in
-pkgs.runCommand "omarchy-theme-${theme.name}"
-  {
-    nativeBuildInputs = [ pkgs.imagemagick ];
-  }
-  ''
-    mkdir -p "$out/backgrounds" "$out/licenses"
-    install -m 0644 ${metadata} "$out/theme.json"
-    install -m 0644 ${colours} "$out/colors.toml"
-    ${lib.concatMapStringsSep "\n" (copy "backgrounds") theme.backgrounds}
-    ${lib.concatMapStringsSep "\n" (copy "licenses") theme.licenses}
-    ${lib.optionalString (theme.btop != null) ''
-      install -m 0644 ${lib.escapeShellArg theme.btop} "$out/btop.theme"
-    ''}
-    ${
-      if theme.backgrounds == [ ] then
-        ''
-          magick -size 1x1 xc:${lib.escapeShellArg "#${theme.palette.base00}"} "$out/wallpaper.png"
-        ''
-      else
-        ''
-          magick ${lib.escapeShellArg wallpaper} PNG:"$out/wallpaper.png"
-        ''
-    }
-    ${
-      if theme.unlock != null then
-        ''
-          install -m 0644 ${lib.escapeShellArg theme.unlock} "$out/unlock.png"
-        ''
-      else
-        ''
-          install -m 0644 ${fallbackLicense} "$out/licenses/omarchy-LICENSE"
-          magick ${fallbackUnlock} -channel RGB +level-colors \
-            ${lib.escapeShellArg "#${theme.palette.base05},#${theme.palette.base05}"} "$out/unlock.png"
-        ''
-    }
-  ''
+builtins.path {
+  name = "omarchy-theme-${theme.name}";
+  path = root;
+  filter =
+    path: type:
+    let
+      base = baseNameOf path;
+      rel = relative path;
+    in
+    toString path == toString root
+    || (type == "directory" && rel == "backgrounds")
+    || (
+      type == "regular"
+      && (
+        rel == "colors.toml"
+        || rel == "unlock.png"
+        || rel == "btop.theme"
+        || (license base && !lib.hasInfix "/" rel)
+        || (lib.hasPrefix "backgrounds/" rel && image base)
+      )
+    );
+}

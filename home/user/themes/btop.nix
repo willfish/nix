@@ -1,7 +1,8 @@
-# btop theme for one palette. A theme that ships btop.theme keeps that file;
-# every other theme is rendered from the shared colour roles, with upstream
-# blue kept distinct from accent.
-{ lib, pkgs }:
+# btop theme text for one palette. A theme that ships btop.theme keeps that
+# file; every other theme is rendered from the shared colour roles, with
+# upstream blue kept distinct from accent. Returns text, not a derivation, so
+# the result does not follow nixpkgs.
+{ lib }:
 let
   catalogue = import ./palettes.nix;
   render = import ./render.nix { inherit lib; };
@@ -18,7 +19,7 @@ let
     lib.removePrefix "#" blueValue;
 in
 if custom != null then
-  # Copy the text only. Referencing the theme package roots its wallpapers.
-  pkgs.writeText "btop-${name}.theme" (builtins.readFile custom)
+  # Copy the text only. Referencing the theme tree would root its wallpapers.
+  builtins.readFile custom
 else
-  pkgs.writeText "btop-${name}.theme" (render.btop (palette // { inherit blue; }))
+  render.btop (palette // { inherit blue; })

@@ -1,9 +1,9 @@
 # Desktop appearance
 
 The theme menu discovers built-in themes from the `omarchy` flake input and
-community themes from data-only inputs named `omarchy-theme-*`. Each theme is
-packaged as a Nix derivation with its native colours and supplied artwork.
-Colour roles feed the shared application renderers; upstream installation
+community themes from data-only inputs named `omarchy-theme-*`. Each theme
+tree is a content-addressed fetch of its locked git commit, not a nixpkgs
+build. Colour roles feed the shared application renderers; upstream installation
 scripts, application configurations and keybindings are not executed or installed.
 
 Host defaults live in `home/user/themes/host-defaults.nix`: Rosé Pine on
@@ -65,7 +65,10 @@ hmswitch
 theme-menu community-sakura
 ```
 
-A full `nix flake update` updates all declared theme inputs too. New upstream
+A full `nix flake update` updates all declared theme inputs too. Updating
+nixpkgs alone does not. A nixpkgs bump rebuilds a theme only when a tool that
+theme actually runs, such as ImageMagick for login artwork, has a new store
+path. The theme fetch itself stays put until its git commit changes. New upstream
 built-in directories are discovered automatically; new community repositories
 must first be declared as inputs. There is no live website crawl during a build.
 All revisions and content hashes live in `flake.lock`.
@@ -88,23 +91,25 @@ diff and the unavailable list, then build and activate Home Manager. Remove an
 unavailable entry before regenerating if its repository becomes public again.
 The helper does not fetch theme contents or run their scripts.
 
-Theme packages retain supplied licences and all supported background images.
+Theme fetches retain supplied licences and all supported background images.
 The desktop uses the first sorted image, or a solid native background if none
 exists. Missing login artwork falls back to Omarchy's logo recoloured with the
-palette's foreground. Adding themes to the desktop needs only Home Manager
+palette's foreground. That recolour depends on ImageMagick, not on the theme
+fetch. Adding themes to the desktop needs only Home Manager
 activation. The system greeter's allowlist and boot artwork still require a
 system rebuild; desktop activation does not restart the display manager.
 
 ## Wallpapers and applications
 
-In Hyprland, each theme package keeps every upstream image in `backgrounds/`.
+In Hyprland, each theme fetch keeps every upstream image in `backgrounds/`.
 The session starts on the first sorted image, or the theme's preferred image
 when one is named, matching Omarchy's default selection. Every five minutes
 the session advances to the next image in that directory. Super+Shift+Left
 and Super+Shift+Right step through the same list. A theme with one
 image stays put. The catalogue records a theme id, not a store path. Applying
-a theme builds `.#theme-<id>` and copies the starting image into the session
-state. Swaybg displays the current image on all outputs and follows the
+a theme materialises `.#theme-<id>` and copies the starting image into the session
+state. That build does not run ImageMagick. The selected image is converted to
+PNG only if it is not one already. Swaybg displays the current image on all outputs and follows the
 Hyprland session only. Changing the theme replaces the wallpaper and starts
 the rotation again from that theme's first image.
 
@@ -163,8 +168,8 @@ precedence. Remote hosts retain their own palettes.
 - `home/user/themes/palettes.nix` discovers the catalogue; `normalize-colours.nix`
   resolves current and legacy palette data, and `import-theme.nix` validates and
   maps native colour roles into Base16 without evaluating repo code.
-- `home/user/themes/mk-theme.nix` packages supported assets as derivations.
-- `home/user/themes/omarchy.nix` exposes packages and the upstream licence. Wallpaper paths are not part of the Home Manager closure.
+- `home/user/themes/mk-theme.nix` copies supported assets into a content-addressed store path.
+- `home/user/themes/omarchy.nix` exposes those fetches and the upstream licence. Wallpaper paths are not part of the Home Manager closure.
   The licence is installed at `~/.local/share/theme-menu/omarchy-LICENSE`.
 - `home/user/themes/host-defaults.nix` defines the host default theme IDs.
 - `home/user/appearance.nix` wires application config from that default unless a

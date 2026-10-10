@@ -42,7 +42,7 @@ package definitions beside the source. Static configuration remains in
 
 - `lib.mkHome` constructs a home for a supplied identity and is public by default. `homeModules.default` exposes the public module composition for reuse. See [public installation and reuse](docs/public-install.md).
 - `overlays.default` supplies the repository's tool packages and selected overrides to NixOS and Home Manager. It is distinct from the exported `packages` set.
-- `packages.<system>` exposes runtime adapters/helpers, `activation-dbus`, `private-access-probe`, `mcp-dap-server` and generated `theme-*` packages. No `apps` output or automated test checks are declared.
+- `packages.<system>` exposes runtime adapters/helpers, `activation-dbus`, `private-access-probe`, `mcp-dap-server` and content-addressed `theme-*` fetches. No `apps` output or automated test checks are declared.
 - `formatter.<system>` uses treefmt. `devShells.<system>.default` supplies development tools and installs formatting, syntax and secret-protection hooks, not test runners. These per-platform outputs are wired under `perSystem` in `flake.nix`.
 
 ## Hosts and roles

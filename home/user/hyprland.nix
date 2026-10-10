@@ -19,7 +19,7 @@
   config = lib.mkIf isGraphicalLinux (
     let
       settings = import ../config/hyprland/settings.nix;
-      omarchy = import ./themes/omarchy.nix { inherit lib pkgs; };
+      omarchy = import ./themes/omarchy.nix { inherit lib; };
       ttfx = pkgs.callPackage ./ttfx.nix { };
       agentStatus = import ../../programs/agent-usage { inherit pkgs; };
       arxivStatus = import ../../programs/arxiv-status { inherit pkgs; };
