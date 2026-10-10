@@ -190,9 +190,22 @@ in
   home.file.".pi/agent/prompts/review.md".source = ../config/pi/prompts/review.md;
   home.file.".pi/agent/prompts/design.md".source = ../config/pi/prompts/design.md;
 
-  # Credentials remain in the shared runtime MCP wrappers.
+  # Credentials resolve at connection time, never into the Nix store.
   home.file.".config/mcp/mcp.json".text = builtins.toJSON {
-    mcpServers = llmMcps.piServers;
+    mcpServers =
+      llmMcps.piServers
+      // lib.optionalAttrs config.dotfiles.privateEnabled {
+        huggingface = {
+          url = "https://huggingface.co/mcp";
+          auth = "bearer";
+          bearerToken = sopsApiKey "HF_TOKEN";
+          lifecycle = "lazy";
+          directTools = false;
+          protocolVersion = "legacy";
+          requestTimeoutMs = 120000;
+          description = "Search Hugging Face models, datasets, papers and documentation, and use Spaces tools.";
+        };
+      };
     settings = {
       hostConfigDiscovery = "off";
       directTools = false;
