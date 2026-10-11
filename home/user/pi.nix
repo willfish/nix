@@ -140,7 +140,7 @@ in
     ../config/pi/extensions/reading-policy.ts;
   home.file.".pi/agent/extensions/orchestrator-addendum.ts".source =
     ../config/pi/extensions/orchestrator-addendum.ts;
-  # /nuke deletes one local session after exit when it is the open session.
+  # /nuke hands the open session to the agent, which deletes its artifacts and then exits.
   home.file.".pi/agent/extensions/nuke-session.ts".source = ../config/pi/extensions/nuke-session.ts;
   home.file.".pi/agent/ORCHESTRATOR.md".source = ../config/llm/ORCHESTRATOR.md;
   home.file.".pi/agent/extensions/goal.ts".text = ''

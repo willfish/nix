@@ -1,6 +1,6 @@
-// /nuke deletes one Pi session's local file and the local indexes that copy it.
-// /nuke [id|path] [!]  Add ! to skip the confirmation.
-// The current session is deleted after this process exits, then Pi exits.
+// /nuke asks the current agent to delete temp files and logs it created, then
+// call nuke_session. That tool erases the session after exit and leaves Pi.
+// /nuke [id|path] [!] deletes another session immediately. ! skips confirmation.
 // Forks, provider logs, and shared channel posts are separate and are not removed.
 
 import { spawn, spawnSync } from "node:child_process";
@@ -17,6 +17,20 @@ import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const SESSION_ID = /^[A-Za-z0-9_-]{8,128}$/;
+export const NUKE_CONFIRM = "nuke";
+
+export const NUKE_GUIDANCE = `If the user asks to nuke or erase this session, first delete temporary files, logs, and scratch artifacts you created. Do not delete project source, credentials, git history, or unrelated files. If unsure, leave the file. Then call nuke_session with confirm "${NUKE_CONFIRM}" and artifacts set to what you removed, or "none". Do not call nuke_session for any other reason.`;
+
+export function cleanupInstruction(): string {
+  return `The user is erasing this session. Before it is erased:
+
+1. Delete temporary files, logs, scratch directories, and other artifacts you created during this session. Include files under the system temp directory and this working directory that exist only because of this session.
+2. Do not delete project source, git history, credentials, or unrelated files. If you are unsure, leave the file.
+3. Do not delete the Pi session file yourself.
+4. When that cleanup is finished, call nuke_session with confirm set to "${NUKE_CONFIRM}" and artifacts set to the paths you removed, or "none". That erases this session and exits. There is no further turn after that tool.
+
+If you created no external artifacts, say so and still call nuke_session.`;
+}
 
 export type SessionCandidate = {
   path: string;
@@ -50,6 +64,7 @@ type CommandCtx = {
     confirm: (title: string, message?: string) => Promise<boolean>;
     notify: (message: string, level?: string) => void;
   };
+  isIdle?: () => boolean;
   shutdown: () => void;
   sessionManager: {
     getSessionFile?: () => string | null | undefined;
@@ -420,10 +435,87 @@ process.on("exit", () => {
   }
 });
 
-export default function nukeSession(pi: {
-  on: (name: string, handler: () => void) => void;
+type ExtensionPi = {
+  on: (name: string, handler: (...args: any[]) => unknown) => void;
   registerCommand: (name: string, spec: Record<string, unknown>) => void;
-}) {
+  registerTool: (tool: Record<string, unknown>) => void;
+  sendUserMessage: (message: string, options?: { deliverAs?: "steer" | "followUp" }) => void;
+};
+
+function armCurrentWipe(ctx: CommandCtx): { ok: boolean; error?: string } {
+  const current = ctx.sessionManager.getSessionFile?.() || undefined;
+  if (!current) {
+    ctx.shutdown();
+    return { ok: true };
+  }
+  try {
+    const header = readHeader(current);
+    const spec = buildWipeSpec({
+      sessionFile: current,
+      sessionsRoot: sessionsRoot(ctx),
+      currentFile: current,
+      cwd: header.cwd ?? ctx.cwd,
+      sessionId: header.id ?? ctx.sessionManager.getSessionId?.() ?? undefined,
+      dbPath: historyDbPath(),
+    });
+    exitUnlinks = spec.unlink;
+    const armed = armReaper(spec);
+    ctx.shutdown();
+    return armed.ok ? { ok: true } : { ok: false, error: armed.error };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Could not erase this session." };
+  }
+}
+
+function handoffCleanup(pi: ExtensionPi, ctx: CommandCtx) {
+  const text = cleanupInstruction();
+  try {
+    if (ctx.isIdle && !ctx.isIdle()) pi.sendUserMessage(text, { deliverAs: "followUp" });
+    else pi.sendUserMessage(text);
+    ctx.ui.notify("The agent will remove artifacts it created, then erase this session and exit.", "info");
+  } catch (error) {
+    ctx.ui.notify(error instanceof Error ? error.message : "Could not hand off. Erasing without artifact cleanup.", "warning");
+    const wiped = armCurrentWipe(ctx);
+    if (!wiped.ok) ctx.ui.notify(wiped.error ?? "Could not arm session cleanup.", "error");
+  }
+}
+
+export default function nukeSession(pi: ExtensionPi) {
+  pi.on("before_agent_start", (event: { systemPrompt?: string }) => {
+    const prompt = event.systemPrompt ?? "";
+    if (prompt.includes(NUKE_GUIDANCE)) return;
+    return { systemPrompt: `${prompt}\n\n${NUKE_GUIDANCE}` };
+  });
+
+  pi.registerTool({
+    name: "nuke_session",
+    label: "Nuke session",
+    description: "Erase the current Pi session and exit. Call only after the user asked to nuke this session and after you deleted temporary files and logs you created. Pass confirm \"nuke\" and artifacts describing what you removed, or \"none\".",
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      required: ["confirm", "artifacts"],
+      properties: {
+        confirm: { type: "string", description: "Must be nuke" },
+        artifacts: { type: "string", minLength: 1, description: "Paths removed, or none" },
+      },
+    },
+    async execute(_id: string, params: { confirm?: string; artifacts?: string }, _signal: AbortSignal, _onUpdate: unknown, ctx: CommandCtx) {
+      if (params?.confirm !== NUKE_CONFIRM) {
+        throw new Error('Refused. Pass confirm "nuke" only after artifact cleanup and only when the user asked to erase this session.');
+      }
+      if (typeof params.artifacts !== "string" || !params.artifacts.trim()) {
+        throw new Error('List the temp files and logs you deleted, or "none".');
+      }
+      const wiped = armCurrentWipe(ctx);
+      if (!wiped.ok) throw new Error(wiped.error ?? "Could not erase this session.");
+      return {
+        content: [{ type: "text", text: "Session wipe armed. Exiting." }],
+        details: { artifacts: params.artifacts.trim() },
+      };
+    },
+  });
+
   pi.on("session_shutdown", () => {
     for (const path of exitUnlinks) {
       try {
@@ -435,7 +527,7 @@ export default function nukeSession(pi: {
   });
 
   pi.registerCommand("nuke", {
-    description: "Delete a session file and its local index. Exits when the target is current. /nuke [id|path] [!]",
+    description: "Erase a session. The open session is handed to the agent, which deletes its temp files and then calls nuke_session. /nuke [id|path] [!]",
     getArgumentCompletions: (prefix: string) => {
       const needle = prefix.trim().toLowerCase();
       const values: { value: string; label: string }[] = [];
@@ -468,10 +560,10 @@ export default function nukeSession(pi: {
               ctx.ui.notify("Refusing to exit without confirmation. Re-run with !", "error");
               return;
             }
-            const ok = await ctx.ui.confirm("Nuke session", "This session has no file. Exit anyway?");
+            const ok = await ctx.ui.confirm("Nuke session", "This session has no file. The agent will remove artifacts it created, then exit.");
             if (!ok) return;
           }
-          ctx.shutdown();
+          handoffCleanup(pi, ctx);
           return;
         }
         ctx.ui.notify(selector ? "No matching session." : "This session has no file to delete.", "error");
@@ -497,10 +589,15 @@ export default function nukeSession(pi: {
           return;
         }
         const message = currentTarget
-          ? `Delete this session and exit? Its file, prompt history, and local observational memory will be removed.${forkNote}`
+          ? `The agent will delete temporary files and logs it created, then erase this session and exit.${forkNote}`
           : `Delete that session's local file and index? This Pi stays open.${forkNote}`;
         const ok = await ctx.ui.confirm("Nuke session", message);
         if (!ok) return;
+      }
+
+      if (currentTarget) {
+        handoffCleanup(pi, ctx);
+        return;
       }
 
       let spec: WipeSpec;
@@ -515,14 +612,6 @@ export default function nukeSession(pi: {
         });
       } catch (error) {
         ctx.ui.notify(error instanceof Error ? error.message : "Refusing to delete that path.", "error");
-        return;
-      }
-
-      if (currentTarget) {
-        exitUnlinks = spec.unlink;
-        const armed = armReaper(spec);
-        if (!armed.ok) ctx.ui.notify(armed.error ?? "Post-exit cleanup was not armed.", "warning");
-        ctx.shutdown();
         return;
       }
 
