@@ -187,7 +187,7 @@ runs. General-purpose roles under `home/config/pi/agents/` include:
 Each role pins a default `model` and `thinking` in agent frontmatter. Those
 are not advertised to the coordinator; dispatch uses the role, then the
 session. The capability is meant for
-cloud models (Grok, OpenAI): a subagent is a second live model conversation,
+cloud models (OpenCode Go, Codex): a subagent is a second live model conversation,
 and in the local Qwen profile a concurrent request would double the KV cache
 memory the GPU does not have. `qwen-pi` passes `--no-extensions` plus an
 explicit list that omits the extension, so its tool set and memory footprint

@@ -2,7 +2,7 @@
 name: reviewer
 description: Code review specialist for quality and security analysis
 tools: read, grep, find, ls, bash, skill_catalog
-model: openai-codex/gpt-6-astra
+model: openai-codex/gpt-6.1-sol
 thinking: high
 ---
 

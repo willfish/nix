@@ -32,8 +32,8 @@ Existing scout, planner, worker and reviewer definitions still work. The latter 
 Each role pins defaults in agent frontmatter. Those are not listed in the coordinator prompt or `subagent` tool schema. Dispatch uses the role, then the coordinator session. Thinking values are `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and `max`. YAML 1.1 treats unquoted `off` as false; the loader accepts that spelling.
 
 ```yaml
-model: xai/grok-4.7
-thinking: medium
+model: opencode-go/glm-5.3
+thinking: high
 ```
 
 ## Skills
