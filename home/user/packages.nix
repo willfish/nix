@@ -310,6 +310,7 @@ in
     ++ lib.optionals (stdenv.isLinux && capabilities.desktop) [
       cliamp # Terminal music player (nixpkgs-unstable; 26.05 is 1.50.0)
       evince # Omarchy's PDF reader
+      loupe # Omarchy's image viewer; the MIME defaults point image/* at org.gnome.Loupe.desktop
       nautilus # Omarchy's file manager; GVfs is provided by the desktop service
       sushi # Nautilus file previews
       (mpv.override { scripts = [ mpvScripts.mpris ]; })
