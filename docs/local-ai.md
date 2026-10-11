@@ -17,8 +17,9 @@ Docker access is root-equivalent.
 standard Start, Stop, Open and usage display. Its Nix-built Docker image uses
 the Huihui abliterated UD-Q4_K_XL weights and the existing MTP pack, with 128K
 context. The weights are mounted read-only, not copied into the image or
-downloaded again. The previous official Unsloth shards remain on disk with a
-.official suffix.
+downloaded again. A 105 GB `.official` copy of the upstream Unsloth shards and
+pack was deleted in October 2026, so switching back to them means downloading
+them again.
 
 If weights are missing, run `strata-fetch`: it checks/downloads the pinned
 GGUF shards and prepares the packs inside Docker. This is a large download

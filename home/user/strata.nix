@@ -8,8 +8,9 @@ let
   package = import ./strata-package.nix { inherit pkgs; };
   dataDir = "${config.xdg.dataHome}/strata";
   # Huihui abliterated UD-Q4_K_XL in Unsloth's shard layout. Shard 1 matches
-  # upstream Unsloth; shards 2-4 are the ablation. The previous official shards
-  # and pack remain beside these directories with a .official suffix.
+  # upstream Unsloth; shards 2-4 are the ablation. The .official copy of the
+  # upstream shards and pack was deleted to reclaim 105 GB; rolling back means
+  # re-downloading them from unsloth/Qwen3.8-Flash-Next-GGUF.
   quant = "UD-Q4_K_XL";
   alias = "qwen3.8-flash-next";
   modelDir = "${dataDir}/models/unsloth-ud-q4_k_xl";
