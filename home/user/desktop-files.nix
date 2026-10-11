@@ -95,6 +95,22 @@ in
   };
 
   home.activation = {
+    reloadDesktopServices = lib.mkIf isGraphicalLinux (
+      lib.hm.dag.entryAfter
+        [
+          "installPackages"
+          "linkGeneration"
+        ]
+        ''
+          # Profile switches add D-Bus-activated apps, but the session bus can
+          # retain the old service list across the profile symlink change.
+          if ${pkgs.systemd}/bin/busctl --user --timeout=5 status org.freedesktop.DBus >/dev/null 2>&1; then
+            run ${pkgs.systemd}/bin/busctl --user --timeout=5 call \
+              org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig
+          fi
+        ''
+    );
+
     installHerdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       herdrBin="${pkgs.herdr}/bin/herdr"
       if [ -x "$herdrBin" ]; then
