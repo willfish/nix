@@ -2189,11 +2189,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1791787104,
-        "narHash": "sha256-Nxoy3c41oA9VRwwyGmJwI0nA5P1frAkrfPU91TzceO8=",
+        "lastModified": 1791794876,
+        "narHash": "sha256-zU9q5usAbC867dYWsNKugbunbciQ4bFtYr2uMomUBCA=",
         "ref": "master",
-        "rev": "cd9392ff6db0f419b8121b79ad3c8150b5b30373",
-        "revCount": 2,
+        "rev": "b3a49844a648639bfbc745263bb297ea25efea8f",
+        "revCount": 3,
         "type": "git",
         "url": "ssh://git@github.com/willfish/tor-mcp"
       },
