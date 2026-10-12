@@ -59,6 +59,8 @@
       url = "github:willfish/himalaya-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Keep the tested Tor Browser runtime pin independent of this flake's nixpkgs.
+    tor-mcp.url = "git+ssh://git@github.com/willfish/tor-mcp?ref=master";
     # Official release binary. Do not follow nixpkgs: store paths must match herdr.cachix.org.
     herdr.url = "github:herdrdev/herdr-nix";
     # Source for the Pi integration asset. Keep this on the same stable tag as herdr-nix.
@@ -332,28 +334,33 @@
         linuxSystem
         darwinSystem
       ];
-      mkOverlay = system: _final: _prev: {
-        mux = mux.packages.${system}.default;
-        himalaya-mcp = himalaya-mcp.packages.${system}.default;
-        arxiv-mcp = arxiv-mcp.packages.${system}.default;
-        arxiv-library = arxiv-mcp.packages.${system}.maintenance;
-        herdr = herdr.packages.${system}.default;
-        herdr-source = herdr-source.outPath;
-        # Agent CLIs come from llm-agents, not the nixpkgs pin.
-        pi-coding-agent = llm-agents.packages.${system}.pi;
-        opencode = llm-agents.packages.${system}.opencode;
-        hermes-agent = import ./home/user/hermes-package.nix {
-          hermesInput = inputs.hermes-agent;
-          inherit system;
+      mkOverlay =
+        system: _final: _prev:
+        {
+          mux = mux.packages.${system}.default;
+          himalaya-mcp = himalaya-mcp.packages.${system}.default;
+          arxiv-mcp = arxiv-mcp.packages.${system}.default;
+          arxiv-library = arxiv-mcp.packages.${system}.maintenance;
+          herdr = herdr.packages.${system}.default;
+          herdr-source = herdr-source.outPath;
+          # Agent CLIs come from llm-agents, not the nixpkgs pin.
+          pi-coding-agent = llm-agents.packages.${system}.pi;
+          opencode = llm-agents.packages.${system}.opencode;
+          hermes-agent = import ./home/user/hermes-package.nix {
+            hermesInput = inputs.hermes-agent;
+            inherit system;
+          };
+          # Pull from unstable while nixos-26.05 lags.
+          # tailscale: 26.05 is still on 1.98.x.
+          # cliamp: 26.05 is 1.50.0; unstable has 2.0.1 (taller visualizer, more modes).
+          inherit (nixpkgs-unstable.legacyPackages.${system})
+            cliamp
+            tailscale
+            ;
+        }
+        // lib.optionalAttrs (system == linuxSystem) {
+          tor-mcp = inputs.tor-mcp.packages.${system}.default;
         };
-        # Pull from unstable while nixos-26.05 lags.
-        # tailscale: 26.05 is still on 1.98.x.
-        # cliamp: 26.05 is 1.50.0; unstable has 2.0.1 (taller visualizer, more modes).
-        inherit (nixpkgs-unstable.legacyPackages.${system})
-          cliamp
-          tailscale
-          ;
-      };
       mkPkgs =
         system:
         import nixpkgs {

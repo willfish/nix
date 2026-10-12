@@ -1,4 +1,4 @@
-{ config }:
+{ config, pkgs }:
 let
   mcpCommand = name: "${config.home.homeDirectory}/.local/bin/${name}";
   serverDefaults = {
@@ -33,6 +33,15 @@ rec {
         name = "browser";
         enabled = config.dotfiles.capabilities.playwright;
         wrapper = "mcp-agent-browser";
+      }
+      {
+        name = "tor-mcp";
+        enabled =
+          config.dotfiles.privateEnabled
+          && config.dotfiles.capabilities.desktop
+          && pkgs.stdenv.hostPlatform.system == "x86_64-linux";
+        wrapper = "mcp-tor";
+        toolTimeout = 360;
       }
       {
         name = "terraform";

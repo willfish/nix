@@ -9,7 +9,7 @@ let
   braveCdpEndpoint = "http://127.0.0.1:9222";
   awsAccessPortal = import ../../programs/aws-access-portal { inherit pkgs; };
   slackSession = import ../../programs/slack-session { inherit pkgs; };
-  inherit (import ./llm-mcps.nix { inherit config; }) servers;
+  inherit (import ./llm-mcps.nix { inherit config pkgs; }) servers;
   enabled = name: builtins.any (server: server.name == name) servers;
   agentBrowserVersion = "0.38.2";
   agentBrowserRelease =
@@ -84,6 +84,7 @@ in
           arxiv = pkgs.openssh;
           "web-search" = braveSearchMcpServer;
           browser = agentBrowser;
+          "tor-mcp" = pkgs.tor-mcp;
           terraform = pkgs.terraform-mcp-server;
           nixos = pkgs.mcp-nixos;
           filesystem = pkgs.mcp-server-filesystem;
@@ -162,6 +163,15 @@ in
       export AGENT_BROWSER_NO_AUTO_DIALOG=1
 
       exec ${agentBrowser}/bin/agent-browser mcp --tools core
+    '';
+  };
+
+  home.file.".local/bin/mcp-tor" = lib.mkIf (enabled "tor-mcp") {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+      exec ${pkgs.tor-mcp}/bin/tor-mcp mcp
     '';
   };
 

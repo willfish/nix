@@ -7,7 +7,7 @@
   ...
 }:
 let
-  llmMcps = import ./llm-mcps.nix { inherit config; };
+  llmMcps = import ./llm-mcps.nix { inherit config pkgs; };
   piModels = builtins.fromJSON (builtins.readFile ../config/pi/models.json);
   adapt = lib.getExe (import ../../programs/opencode-adapt { pkgs = pkgs.buildPackages; });
   qwenBaseUrl =

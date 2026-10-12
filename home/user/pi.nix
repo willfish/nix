@@ -10,7 +10,7 @@
 let
   piConfig = import ../../programs/pi-config { inherit pkgs; };
   voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
-  llmMcps = import ./llm-mcps.nix { inherit config; };
+  llmMcps = import ./llm-mcps.nix { inherit config pkgs; };
   mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
   promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
   # Preserve sibling imports in the store, not just in Home Manager's symlink tree.

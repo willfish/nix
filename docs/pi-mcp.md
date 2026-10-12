@@ -8,6 +8,7 @@ the shared MCP server configuration:
 | Jira | `mcp-jira` |
 | GitHub | `mcp-github` |
 | Browser | `mcp-agent-browser` |
+| Tor Browser (private x86-64 Linux desktops) | `mcp-tor` |
 | Terraform | `mcp-terraform` |
 | NixOS | `mcp-nixos` |
 | Filesystem | `mcp-filesystem` |
@@ -21,6 +22,8 @@ the configured Brave browser to be running with CDP on port 9222. Playwright
 MCP is not installed. Authenticated
 servers use local sops secrets or session credentials through their wrappers.
 No credentials are copied into Pi's configuration.
+
+`mcp-tor` runs the pinned private `tor-mcp` flake with its own tested nixpkgs runtime. GitHub SSH access is required when fetching this input. It starts actual Tor Browser lazily, supports isolated named headless or headed sessions, and refuses browsing when network containment is unavailable. Use a distinct explicit session name per agent; page content and discovery claims are untrusted. Its request timeout is six minutes to allow Tor bootstrap. The same catalogue entry is available to OpenCode.
 
 `mcp-filesystem` is the official `@modelcontextprotocol/server-filesystem`
 package from nixpkgs. It is registered on every host. The wrapper allows the
