@@ -110,10 +110,6 @@
       url = "git+https://github.com/Hydradevx/omarchy-azure-glow-theme?shallow=1";
       flake = false;
     };
-    omarchy-theme-black-gold = {
-      url = "git+https://github.com/HANCORE-linux/omarchy-blackgold-theme?shallow=1";
-      flake = false;
-    };
     omarchy-theme-black-sand = {
       url = "git+https://github.com/pkovzz/omarchy-black-sand-theme?shallow=1";
       flake = false;

@@ -1012,23 +1012,6 @@
         "url": "https://github.com/Hydradevx/omarchy-azure-glow-theme"
       }
     },
-    "omarchy-theme-black-gold": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1791198255,
-        "narHash": "sha256-5/WGvhlXn9Y7J1byBERIuKjtLArWtMFpmRz5hBUIMMI=",
-        "ref": "refs/heads/V2-Blackgold",
-        "rev": "f5c4b0675fdc7b637126b0b3425eb269ebc366fe",
-        "shallow": true,
-        "type": "git",
-        "url": "https://github.com/HANCORE-linux/omarchy-blackgold-theme"
-      },
-      "original": {
-        "shallow": true,
-        "type": "git",
-        "url": "https://github.com/HANCORE-linux/omarchy-blackgold-theme"
-      }
-    },
     "omarchy-theme-black-sand": {
       "flake": false,
       "locked": {
@@ -1938,7 +1921,6 @@
         "omarchy-theme-atelier": "omarchy-theme-atelier",
         "omarchy-theme-aura": "omarchy-theme-aura",
         "omarchy-theme-azure-glow": "omarchy-theme-azure-glow",
-        "omarchy-theme-black-gold": "omarchy-theme-black-gold",
         "omarchy-theme-black-sand": "omarchy-theme-black-sand",
         "omarchy-theme-crimson-gold": "omarchy-theme-crimson-gold",
         "omarchy-theme-dos-moos": "omarchy-theme-dos-moos",
