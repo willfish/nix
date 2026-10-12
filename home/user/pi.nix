@@ -128,6 +128,9 @@ in
     "${pkgs.herdr-source}/src/integration/assets/pi/herdr-agent-state.ts";
   home.file.".pi/agent/extensions/herdr-ui.ts".source = ../config/pi/extensions/herdr-ui.ts;
   home.file.".pi/agent/extensions/herdr-model.ts".source = ../config/pi/extensions/herdr-model.ts;
+  # Ctrl+T selects the thinking level without aborting the run. The block
+  # toggle moves to Ctrl+Shift+T so this shortcut is not rejected as reserved.
+  home.file.".pi/agent/extensions/thinking-level".source = ../config/pi/extensions/thinking-level;
   home.file.".pi/agent/extensions/context-window.ts".source =
     ../config/pi/extensions/context-window.ts;
   home.file.".pi/agent/extensions/usage.ts".source = ../config/pi/extensions/usage.ts;
