@@ -32,11 +32,18 @@ let
         "80"
         "--prefill"
         "auto"
-        # --batch-mtp kills this pack: "mtp: unsupported native MMVQ GGML type".
+        # Keep batch MTP off until re-tested: this pack failed on 0.1.40 with
+        # "mtp: unsupported native MMVQ GGML type".
         "--spec"
         "4"
         "--spec-min-p"
         "0.5"
+        # Upstream calibration on Andromeda's 7960X / RTX 5090, with this pack.
+        # Leave the adaptive tier at its defaults: more frequent swaps were slower.
+        "--pcie-frac"
+        "0.35"
+        "--pool-workers"
+        "15"
         "--mtp"
         "/models/strata/mtp/rt"
         "--mtp-draft-vocab"
@@ -116,6 +123,41 @@ let
       echo 'Strata model prepared. Start it from Local AI.'
     '';
   };
+  # Run upstream's setup --calibrate measurements without its imperative installer.
+  # Results are printed for review, not written over the declarative configuration.
+  calibrate = pkgs.writeShellApplication {
+    name = "strata-calibrate";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.docker_29
+    ];
+    text = ''
+      if [[ $# -gt 0 ]]; then
+        echo 'Usage: strata-calibrate (stop GPU models first; prints proposed settings without applying them)'
+        if [[ $# -eq 1 && ( $1 == --help || $1 == -h ) ]]; then exit 0; fi
+        exit 2
+      fi
+      running=$(docker ps --filter label=io.omarchy.local-ai=1 --format '{{.Names}}' --filter name=-engine)
+      if [[ -n $running ]]; then
+        echo 'Stop Local AI models before calibrating Strata.' >&2
+        exit 1
+      fi
+      image_id="$(< ${imageId})"
+      docker image inspect "$image_id" >/dev/null 2>&1 || docker load --input ${image} >/dev/null
+      exec docker run --rm --name strata-calibrate --network none \
+        --device nvidia.com/gpu=all --security-opt no-new-privileges --cap-drop ALL \
+        --user "$(id -u):$(id -g)" --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+        --volume ${lib.escapeShellArg "${dataDir}:/models/strata:ro"} \
+        --entrypoint ${calibrateContainer}/bin/strata-container-calibrate "$image_id"
+    '';
+  };
+  calibrateContainer = pkgs.writeShellApplication {
+    name = "strata-container-calibrate";
+    text = ''
+      export LD_LIBRARY_PATH="''${NVIDIA_CTK_LIBCUDA_DIR:-/run/opengl-driver/lib}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+      exec ${package.python}/bin/python -u ${package}/share/strata/tools/calibrate.py ${runtimeConfig}
+    '';
+  };
   prepare = pkgs.writeShellApplication {
     name = "strata-prepare";
     text = ''
@@ -147,6 +189,7 @@ let
     contents = [
       server
       prepare
+      calibrateContainer
       pkgs.glibc.bin
       pkgs.cacert
     ];
@@ -171,6 +214,7 @@ in
   inherit
     package
     fetch
+    calibrate
     image
     imageId
     alias

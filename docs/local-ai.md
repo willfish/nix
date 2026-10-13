@@ -36,6 +36,27 @@ models after reboot unless they were stopped. The suspend launcher stops all
 widget-managed GPU models before requesting sleep. Foundation can still use
 Andromeda's provider in Pi, but its widget is not a remote service manager.
 
+### Calibrate for Andromeda
+
+Upstream's `./setup.sh --calibrate` tunes PCIe offload, draft confidence, CPU
+workers and adaptive expert-cache settings. Here, `strata-calibrate` runs that
+same measurement routine from the pinned Nix image, without running upstream's
+installer or changing the weights. Stop all GPU models first:
+
+```sh
+omarchy-local-ai stop qwen3.8-flash-next.strata.128k.rtx-5090-32gb
+strata-calibrate
+omarchy-local-ai run qwen3.8-flash-next.strata.128k.rtx-5090-32gb nvidia:0
+```
+
+Allow about 15-30 minutes, potentially longer. It repeatedly loads the model;
+keep other GPU and CPU workloads idle. The command prints a report and proposed
+`settings`, but does not apply them. Retain measured improvements in
+`home/user/strata.nix`, build and run `hmswitch`, then stop/start the recipe to
+load the new image. Upstream requires a gain above 3% before keeping a candidate;
+its short decode prompts do not guarantee faster long-context or concurrent use.
+The model mount stays read-only and calibration has no network access.
+
 ## Deployment and maintenance
 
 Build each host's Home Manager configuration and activate with `hmswitch` on

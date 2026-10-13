@@ -364,6 +364,7 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
   ]
   ++ lib.optionals isAndromeda [
     strata.fetch
+    strata.calibrate
   ]
   ++ lib.optionals isAutomationDarwin [
     pkgs.llama-cpp

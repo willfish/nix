@@ -23,12 +23,12 @@ in
 pkgs.stdenv.mkDerivation {
   pname = "strata";
   passthru = { inherit python llamaSource; };
-  version = "0.1.40";
+  version = "0.1.43.1";
   src = pkgs.fetchFromGitHub {
     owner = "Niko1221";
     repo = "Strata";
-    rev = "1735d6471df29b42c26170efaac1f1446a58640f";
-    sha256 = "152c38qnr5g5q631misrh1x9bpc72i0l89mh4v1a6824pyhc0zc2";
+    rev = "a0116b2782a5b82622358c04a06496485d12b2d6"; # v0.1.43.1
+    sha256 = "185604whgpxqimr6xpf13yllvqy65w7izq01qqb2vf9431w6rqm2";
   };
   nativeBuildInputs = [
     pkgs.cmake
@@ -59,7 +59,7 @@ pkgs.stdenv.mkDerivation {
     runHook preInstall
     install -Dm755 strata $out/bin/strata
     mkdir -p $out/share/strata
-    cp -r ../serve ../tools ../data $out/share/strata/
+    cp -r ../serve ../tools ../data ../setup.py $out/share/strata/
     makeWrapper ${python}/bin/python $out/bin/strata-serve \
       --add-flags "-m serve.server" \
       --prefix PYTHONPATH : $out/share/strata \
