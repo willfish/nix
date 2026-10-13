@@ -15,13 +15,6 @@ in
   };
 
   home.activation = {
-    createDiagramDirectories = lib.mkIf config.dotfiles.capabilities.documents (
-      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        mkdir -p "$HOME/diagrams/generated"
-        mkdir -p "$HOME/diagrams/architecture"
-      ''
-    );
-
     configureYarn = lib.mkIf config.dotfiles.capabilities.development (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         if [ -L "$HOME/.yarnrc" ]; then
