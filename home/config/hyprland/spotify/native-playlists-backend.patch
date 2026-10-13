@@ -1,0 +1,440 @@
+--- a/backend/Cargo.lock
++++ b/backend/Cargo.lock
+@@ -1788,6 +1788,7 @@
+  "clap",
+  "env_logger",
+  "hex",
++ "http",
+  "librespot-connect",
+  "librespot-core",
+  "librespot-metadata",
+@@ -1795,6 +1796,7 @@
+  "librespot-playback",
+  "log",
+  "mpris-server",
++ "protobuf",
+  "serde",
+  "serde_json",
+  "sha1",
+--- a/backend/Cargo.toml
++++ b/backend/Cargo.toml
+@@ -11,6 +11,8 @@
+ clap = { version = "4.5", features = ["derive"] }
+ env_logger = { version = "0.11", default-features = false }
+ hex = "0.4"
++http = "1"
++protobuf = "3"
+ librespot-connect = { git = "https://github.com/stappmus/librespot", rev = "6d3ecd76115c08a5e606d6f6d2181932314afed2", default-features = false }
+ librespot-core = { git = "https://github.com/stappmus/librespot", rev = "6d3ecd76115c08a5e606d6f6d2181932314afed2", default-features = false, features = ["native-tls"] }
+ librespot-metadata = { git = "https://github.com/stappmus/librespot", rev = "6d3ecd76115c08a5e606d6f6d2181932314afed2", default-features = false }
+--- a/backend/src/engine.rs
++++ b/backend/src/engine.rs
+@@ -124,7 +124,8 @@
+     });
+
+     let (commands, command_rx) = mpsc::channel(ENGINE_QUEUE_CAPACITY);
+-    let (current_spirc_tx, current_spirc_rx) = watch::channel(Some(Arc::clone(&spirc)));
++    let (current_spirc_tx, current_spirc_rx) =
++        watch::channel(Some((Arc::clone(&spirc), session.clone())));
+     tokio::spawn(run_commands(
+         command_rx,
+         current_spirc_rx,
+@@ -172,7 +173,7 @@
+     mut session: Session,
+     mut spirc: Arc<Spirc>,
+     mut spirc_task: tokio::task::JoinHandle<()>,
+-    current_spirc: watch::Sender<Option<Arc<Spirc>>>,
++    current_spirc: watch::Sender<Option<(Arc<Spirc>, Session)>>,
+     state: StateStore,
+     mut shutdown: watch::Receiver<bool>,
+ ) -> Result<()> {
+@@ -233,7 +234,7 @@
+
+         spirc = Arc::new(next_spirc);
+         spirc_task = tokio::spawn(next_task);
+-        current_spirc.send_replace(Some(Arc::clone(&spirc)));
++        current_spirc.send_replace(Some((Arc::clone(&spirc), session.clone())));
+         state.update(|current| {
+             current.lifecycle = Lifecycle::Ready;
+             current.error_code.clear();
+@@ -303,12 +304,48 @@
+
+ async fn run_commands(
+     mut receiver: mpsc::Receiver<EngineRequest>,
+-    current_spirc: watch::Receiver<Option<Arc<Spirc>>>,
++    current_spirc: watch::Receiver<Option<(Arc<Spirc>, Session)>>,
+     player: Arc<Player>,
+ ) {
++    let reads = Arc::new(tokio::sync::Semaphore::new(2));
+     while let Some(request) = receiver.recv().await {
+-        let result = match current_spirc.borrow().clone() {
+-            Some(spirc) => execute(&spirc, &player, request.command)
++        let connection = current_spirc.borrow().clone();
++        if let Command::GetPlaylist { uri, offset } = request.command {
++            let Some(reply) = request.reply else { continue };
++            let Some((_, session)) = connection else {
++                let _ = reply.send(Err(ProtocolError::new(
++                    "engine_reconnecting",
++                    "Playback is reconnecting to Spotify",
++                )));
++                continue;
++            };
++            let Ok(permit) = reads.clone().try_acquire_owned() else {
++                let _ = reply.send(Err(ProtocolError::new(
++                    "library_busy",
++                    "Playlist loading is busy; try again",
++                )));
++                continue;
++            };
++            // Network reads must not hold up the playback command FIFO.
++            tokio::spawn(async move {
++                let _permit = permit;
++                let result = tokio::time::timeout(
++                    Duration::from_secs(20),
++                    crate::library::playlist_page(&session, &uri, offset),
++                )
++                .await
++                .unwrap_or_else(|_| {
++                    Err(ProtocolError::new(
++                        "playlist_timeout",
++                        "Playlist loading timed out; try again",
++                    ))
++                });
++                let _ = reply.send(result);
++            });
++            continue;
++        }
++        let result = match connection {
++            Some((spirc, _)) => execute(&spirc, &player, request.command)
+                 .map(|()| serde_json::json!({}))
+                 .map_err(|error| ProtocolError::new("engine_error", error.to_string())),
+             None => Err(ProtocolError::new(
+@@ -394,7 +431,7 @@
+             let uri = SpotifyUri::from_uri(&uri).context("invalid Spotify URI")?;
+             spirc.add_to_queue(uri)?;
+         }
+-        Command::Hello | Command::Ping | Command::GetState => {
++        Command::Hello | Command::Ping | Command::GetState | Command::GetPlaylist { .. } => {
+             bail!("command is handled by the protocol server")
+         }
+     }
+--- /dev/null
++++ b/backend/src/library.rs
+@@ -0,0 +1,191 @@
++//! Read-only playlist browsing through the authenticated playback session.
++use http::Method;
++use librespot_core::{Session, SpotifyUri};
++use librespot_metadata::{Episode, Metadata, Playlist, Track, image::Images};
++use protobuf::Message;
++use serde_json::{Value, json};
++use tokio::task::JoinSet;
++
++use crate::protocol::ProtocolError;
++
++const PAGE_SIZE: usize = 50;
++const METADATA_CONCURRENCY: usize = 4;
++
++fn error(message: &str) -> ProtocolError {
++    ProtocolError::new("playlist_error", message)
++}
++
++fn playlist_uri(uri: &str) -> Result<SpotifyUri, ProtocolError> {
++    match SpotifyUri::from_uri(uri) {
++        Ok(uri @ SpotifyUri::Playlist { .. }) => Ok(uri),
++        _ => Err(ProtocolError::new(
++            "invalid_request",
++            "Expected a Spotify playlist URI",
++        )),
++    }
++}
++
++fn next_offset(offset: usize, count: usize, total: usize) -> Result<Option<usize>, ProtocolError> {
++    let end = offset.saturating_add(count);
++    if count == 0 && offset < total {
++        return Err(error(
++            "Spotify returned an incomplete playlist page; try refreshing",
++        ));
++    }
++    Ok((end < total).then_some(end))
++}
++
++pub async fn playlist_page(
++    session: &Session,
++    uri: &str,
++    offset: usize,
++) -> Result<Value, ProtocolError> {
++    let uri = playlist_uri(uri)?;
++    let SpotifyUri::Playlist { id, .. } = &uri else {
++        unreachable!()
++    };
++    let endpoint = format!(
++        "/playlist/v2/playlist/{}?from={offset}&length={PAGE_SIZE}",
++        id.to_base62()
++    );
++    let bytes = session
++        .spclient()
++        .request(&Method::GET, &endpoint, None, None)
++        .await
++        .map_err(|_| error("Spotify could not read this playlist through the playback session"))?;
++    let message = <Playlist as Metadata>::Message::parse_from_bytes(&bytes)
++        .map_err(|_| error("Spotify returned an invalid playlist response"))?;
++    let playlist = Playlist::parse(&message, &uri)
++        .map_err(|_| error("Spotify returned unsupported playlist data"))?;
++    if playlist.contents.position < 0 || playlist.contents.position as usize != offset {
++        return Err(error(
++            "Spotify returned the wrong playlist page; try refreshing",
++        ));
++    }
++    let total = playlist.length.max(0) as usize;
++    // Some service versions ignore length. Never hydrate an unbounded response.
++    let items = &playlist.contents.items[..playlist.contents.items.len().min(PAGE_SIZE)];
++    let next = next_offset(offset, items.len(), total)?;
++    let mut rows = Vec::with_capacity(items.len());
++    for chunk in items.chunks(METADATA_CONCURRENCY) {
++        let mut pending = JoinSet::new();
++        for (index, item) in chunk.iter().enumerate() {
++            let session = session.clone();
++            let uri = item.id.clone();
++            pending.spawn(async move { (index, metadata(&session, &uri).await) });
++        }
++        let mut ordered = vec![Value::Null; chunk.len()];
++        while let Some(result) = pending.join_next().await {
++            let (index, row) = result.map_err(|_| error("Playlist metadata loading failed"))?;
++            let added = chunk[index].attributes.timestamp;
++            let added_at = format!(
++                "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
++                added.year(),
++                added.month() as u8,
++                added.day(),
++                added.hour(),
++                added.minute(),
++                added.second()
++            );
++            ordered[index] = json!({"item": row, "added_at": added_at});
++        }
++        rows.extend(ordered);
++    }
++    Ok(json!({
++        "items": rows, "offset": offset, "total": total, "next_offset": next,
++        "name": playlist.attributes.name, "description": playlist.attributes.description,
++        "source": "librespot"
++    }))
++}
++
++fn images(covers: &Images) -> Vec<Value> {
++    covers
++        .iter()
++        .map(|image| {
++            json!({
++                "url": format!("https://i.scdn.co/image/{}", image.id.to_base16()),
++                "width": image.width, "height": image.height
++            })
++        })
++        .collect()
++}
++
++fn identity(uri: &SpotifyUri, kind: &str, name: &str) -> Value {
++    let uri = uri.to_uri();
++    json!({"type": kind, "id": uri.rsplit(':').next().unwrap_or(""), "uri": uri, "name": name})
++}
++
++async fn metadata(session: &Session, uri: &SpotifyUri) -> Value {
++    match uri {
++        SpotifyUri::Track { .. } => {
++            if let Ok(track) = Track::get(session, uri).await {
++                let mut result = identity(uri, "track", &track.name);
++                let mut album = identity(&track.album.id, "album", &track.album.name);
++                album["images"] = json!(images(&track.album.covers));
++                result["album"] = album;
++                result["artists"] = track
++                    .artists
++                    .iter()
++                    .map(|artist| identity(&artist.id, "artist", &artist.name))
++                    .collect();
++                result["duration_ms"] = json!(track.duration);
++                result["explicit"] = json!(track.is_explicit);
++                result["track_number"] = json!(track.number);
++                result["disc_number"] = json!(track.disc_number);
++                return result;
++            }
++        }
++        SpotifyUri::Episode { .. } => {
++            if let Ok(episode) = Episode::get(session, uri).await {
++                let mut result = identity(uri, "episode", &episode.name);
++                result["show"] = json!({"name": episode.show_name});
++                result["images"] = json!(images(&episode.covers));
++                result["duration_ms"] = json!(episode.duration);
++                result["explicit"] = json!(episode.is_explicit);
++                return result;
++            }
++        }
++        _ => {}
++    }
++    // Keep the original position, including duplicates and unavailable/local
++    // entries, so scrolling and playlist offset controls never shift tracks.
++    let kind = if matches!(uri, SpotifyUri::Episode { .. }) {
++        "episode"
++    } else {
++        "track"
++    };
++    let mut result = identity(uri, kind, "Unavailable item");
++    result["is_playable"] = json!(false);
++    result
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn pagination_keeps_positions_and_detects_missing_pages() {
++        assert_eq!(next_offset(0, 50, 100).unwrap(), Some(50));
++        assert_eq!(next_offset(50, 50, 100).unwrap(), None);
++        assert_eq!(next_offset(100, 3, 103).unwrap(), None);
++        assert_eq!(next_offset(0, 0, 0).unwrap(), None);
++        assert!(next_offset(50, 0, 100).is_err());
++    }
++
++    #[test]
++    fn only_playlist_uris_can_reach_the_playlist_service() {
++        assert!(playlist_uri("spotify:playlist:37i9dQZF1DWSXMERUaiq9M").is_ok());
++        assert!(playlist_uri("spotify:track:14XWXWv5FoCbFzLksawpEe").is_err());
++        assert!(playlist_uri("https://example.invalid").is_err());
++    }
++
++    #[tokio::test]
++    async fn unsupported_items_keep_their_original_uri() {
++        let session = Session::new(Default::default(), None);
++        let uri = SpotifyUri::from_uri("spotify:album:37i9dQZF1DWSXMERUaiq9M").unwrap();
++        let row = metadata(&session, &uri).await;
++        assert_eq!(row["uri"], uri.to_uri());
++        assert_eq!(row["name"], "Unavailable item");
++        assert_eq!(row["is_playable"], false);
++    }
++}
+--- a/backend/src/main.rs
++++ b/backend/src/main.rs
+@@ -1,6 +1,7 @@
+ mod config;
+ mod engine;
+ mod failure;
++mod library;
+ mod mpris;
+ mod protocol;
+ mod socket;
+--- a/backend/src/protocol.rs
++++ b/backend/src/protocol.rs
+@@ -16,6 +16,11 @@
+     Hello,
+     Ping,
+     GetState,
++    GetPlaylist {
++        uri: String,
++        #[serde(default)]
++        offset: usize,
++    },
+     Activate,
+     Play,
+     Pause,
+--- a/backend/src/socket.rs
++++ b/backend/src/socket.rs
+@@ -86,13 +86,31 @@
+         })
+     })?;
+     write_encoded(&mut writer, &initial).await?;
++    let mut reads = tokio::task::JoinSet::new();
+
+     loop {
+         tokio::select! {
+             line = lines.next_line() => {
+                 let Some(line) = line? else { break };
+-                let message = handle_line(&line, &state, &commands).await;
+-                write_message(&mut writer, &message).await?;
++                let playlist_request = serde_json::from_str::<Request>(&line).ok()
++                    .filter(|request| matches!(request.command, crate::protocol::Command::GetPlaylist { .. }));
++                if let Some(request) = playlist_request {
++                    if reads.len() >= 2 {
++                        write_message(&mut writer, &ServerMessage::failure(request.id,
++                            ProtocolError::new("library_busy", "Playlist loading is busy; try again"))).await?;
++                    } else {
++                        let state = state.clone();
++                        let commands = commands.clone();
++                        reads.spawn(async move { handle_line(&line, &state, &commands).await });
++                    }
++                } else {
++                    // Keep transport controls ordered, even while browsing.
++                    let message = handle_line(&line, &state, &commands).await;
++                    write_message(&mut writer, &message).await?;
++                }
++            }
++            Some(result) = reads.join_next(), if !reads.is_empty() => {
++                write_message(&mut writer, &result?).await?;
+             }
+             changed = states.changed() => {
+                 if changed.is_err() { break; }
+@@ -181,3 +199,65 @@
+         .context("failed to write backend message")?;
+     Ok(())
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::protocol::{BackendState, Command};
++    use tokio::sync::mpsc;
++
++    #[tokio::test]
++    async fn playlist_reads_do_not_block_playback_controls() {
++        let (server, client) = UnixStream::pair().unwrap();
++        let (commands, mut requests) = mpsc::channel(8);
++        let task = tokio::spawn(client_loop(
++            server,
++            StateStore::new(BackendState::default()),
++            commands,
++        ));
++        let (reader, mut writer) = client.into_split();
++        let mut lines = BufReader::new(reader).lines();
++        lines.next_line().await.unwrap(); // Initial state.
++        writer.write_all(b"{\"v\":1,\"id\":1,\"command\":\"get_playlist\",\"uri\":\"spotify:playlist:37i9dQZF1DWSXMERUaiq9M\"}\n").await.unwrap();
++        let read = requests.recv().await.unwrap();
++        assert!(matches!(
++            read.command,
++            Command::GetPlaylist { offset: 0, .. }
++        ));
++        writer.write_all(b"{\"v\":1,\"id\":2,\"command\":\"ping\"}\n{\"v\":1,\"id\":3,\"command\":\"pause\"}\n").await.unwrap();
++        let control = tokio::time::timeout(std::time::Duration::from_secs(1), requests.recv())
++            .await
++            .unwrap()
++            .unwrap();
++        assert_eq!(control.command, Command::Pause);
++        control
++            .reply
++            .unwrap()
++            .send(Ok(serde_json::json!({})))
++            .unwrap();
++        for id in [2, 3] {
++            let line = tokio::time::timeout(std::time::Duration::from_secs(1), lines.next_line())
++                .await
++                .unwrap()
++                .unwrap()
++                .unwrap();
++            let reply: serde_json::Value = serde_json::from_str(&line).unwrap();
++            assert_eq!(reply["id"], id);
++            assert_eq!(reply["ok"], true);
++        }
++        read.reply
++            .unwrap()
++            .send(Ok(serde_json::json!({"items": []})))
++            .unwrap();
++        let line = tokio::time::timeout(std::time::Duration::from_secs(1), lines.next_line())
++            .await
++            .unwrap()
++            .unwrap()
++            .unwrap();
++        assert_eq!(
++            serde_json::from_str::<serde_json::Value>(&line).unwrap()["id"],
++            1
++        );
++        task.abort();
++    }
++}

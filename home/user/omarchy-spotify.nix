@@ -16,13 +16,18 @@ let
     rev = "e7371f38f79e3bf52bd6e3542ea54859f6dc082b";
     hash = "sha256-vw5WhTQxlyXf0YWiubIWnT2IXaVQ5Hl4ANKB1qQZXXA=";
   };
+  nativePlaylistSrc = pkgs.applyPatches {
+    name = "omarchy-spotify-native-playlists";
+    src = pluginSrc;
+    patches = [ ../config/hyprland/spotify/native-playlists-backend.patch ];
+  };
   backend = pkgs.rustPlatform.buildRustPackage {
     pname = "omarchy-spotify-backend";
     version = "1.0.4";
-    src = pluginSrc;
-    sourceRoot = "source/backend";
+    src = nativePlaylistSrc;
+    sourceRoot = "omarchy-spotify-native-playlists/backend";
     cargoLock = {
-      lockFile = "${pluginSrc}/backend/Cargo.lock";
+      lockFile = "${nativePlaylistSrc}/backend/Cargo.lock";
       outputHashes."librespot-audio-0.8.0" = "sha256-aSddkiUgbr5LeALSePVkK/NYoCwMqNjrr13QV5X/Rm0=";
     };
     nativeBuildInputs = [ pkgs.pkg-config ];
@@ -30,7 +35,7 @@ let
       pkgs.libpulseaudio
       pkgs.openssl
     ];
-    doCheck = false;
+    doCheck = true;
   };
   bash = "${pkgs.bash}/bin/bash";
   mkdir = "${pkgs.coreutils}/bin/mkdir";
@@ -55,8 +60,9 @@ let
         chmod -R u+w "$out/shell"
         patch --batch -d "$out" -p1 < ${../config/hyprland/spotify/color.patch}
         cp ${../config/hyprland/spotify/shell.qml} "$out/shell/shell.qml"
-        cp -a ${pluginSrc}/. "$out/shell/spotify/"
+        cp -a ${nativePlaylistSrc}/. "$out/shell/spotify/"
         chmod -R u+w "$out/shell/spotify"
+        patch --batch -d "$out/shell/spotify" -p1 < ${../config/hyprland/spotify/native-playlists-ui.patch}
         rm -rf "$out/shell/spotify/docs" "$out/shell/spotify/tests" "$out/shell/spotify/preview.png" "$out/shell/spotify/.git"
         substituteInPlace "$out/shell/spotify/DaemonManager.qml" \
           --replace-fail '/usr/bin/bash' '${bash}'

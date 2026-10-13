@@ -1,0 +1,276 @@
+--- a/BackendClient.qml
++++ b/BackendClient.qml
+@@ -40,7 +40,7 @@
+     pending = ({})
+     var message = String(reason || "Playback on this computer is unavailable")
+     for (var id in waiters) {
+-      var callback = waiters[id]
++      var callback = waiters[id].callback
+       if (typeof callback === "function") callback(false, null, message)
+     }
+   }
+@@ -57,11 +57,44 @@
+     Api.assign(payload, fields || {})
+     var nextPending = ({})
+     for (var existing in pending) nextPending[existing] = pending[existing]
+-    nextPending[String(id)] = typeof callback === "function" ? callback : null
++    nextPending[String(id)] = {
++      callback: typeof callback === "function" ? callback : null,
++      deadline: Date.now() + (name === "get_playlist" ? 25000 : 10000)
++    }
+     pending = nextPending
+     socket.write(JSON.stringify(payload) + "\n")
+     socket.flush()
+     return id
++  }
++
++  function expirePending(now) {
++    var expired = []
++    var nextPending = ({})
++    for (var id in pending) {
++      if (pending[id].deadline <= now) expired.push(pending[id])
++      else nextPending[id] = pending[id]
++    }
++    pending = nextPending
++    for (var i = 0; i < expired.length; i++)
++      if (typeof expired[i].callback === "function")
++        expired[i].callback(false, null, "Backend request timed out; try again")
++  }
++
++  function playlistPage(playlistId, offset, callback) {
++    if (!ready) {
++      callback(503, null, "The native Spotify backend is not ready; try again shortly")
++      return
++    }
++    sendCommand("get_playlist", {
++      uri: "spotify:playlist:" + playlistId, offset: offset
++    }, function(ok, result, error) {
++      if (!ok) { callback(503, null, error); return }
++      // Local continuation marker in the UI's existing page format. The service
++      // routes it back here, never to the developer Web API.
++      result.next = result.next_offset === null ? ""
++        : "/playlists/" + playlistId + "/items?offset=" + result.next_offset
++      callback(200, result, "")
++    })
+   }
+
+   function loadPlayback(body, callback) {
+@@ -88,8 +121,9 @@
+     }
+     if (message.type !== "response") return
+     var id = String(message.id || "")
+-    var callback = pending[id]
+-    if (callback === undefined) return
++    var waiter = pending[id]
++    if (waiter === undefined) return
++    var callback = waiter.callback
+     var nextPending = ({})
+     for (var key in pending) if (key !== id) nextPending[key] = pending[key]
+     pending = nextPending
+@@ -115,7 +149,17 @@
+     resetPending("Playback on this computer stopped")
+   }
+
+-  onConnectedChanged: if (connected) reconnectAttempt = 0
++  onConnectedChanged: {
++    if (connected) reconnectAttempt = 0
++    else resetPending("The native Spotify backend disconnected; try again")
++  }
++
++  Timer {
++    interval: 500
++    repeat: true
++    running: Object.keys(root.pending).length > 0
++    onTriggered: root.expirePending(Date.now())
++  }
+
+   Component {
+     id: socketComponent
+--- a/Service.qml
++++ b/Service.qml
+@@ -1735,6 +1735,12 @@
+     loadPlaylistItems(false)
+   }
+
++  function requestPlaylistItems(path, callback) {
++    var match = String(path || "").match(/^(?:https:\/\/api\.spotify\.com\/v1)?\/playlists\/([A-Za-z0-9]{22})\/items(?:\?offset=(\d+))?$/)
++    if (!match) { callback(400, null, "Invalid native playlist page"); return }
++    backendClient.playlistPage(match[1], Number(match[2] || 0), callback)
++  }
++
+   function loadPlaylistItems(append) {
+     if (!selectedPlaylist || !selectedPlaylist.id || playlistItemsLoading) return
+     var path = append ? playlistItemsNext
+@@ -1744,7 +1750,7 @@
+     var expected = dataSerial
+     var requestSerial = playlistItemsSerial
+     playlistItemsLoading = true
+-    spotifyApi.request("GET", path, append ? null : { limit: 50 }, null,
++    requestPlaylistItems(path,
+       function(status, payload, error) {
+         if (expected !== root.dataSerial) return
+         if (requestSerial !== root.playlistItemsSerial) return
+@@ -2114,6 +2120,10 @@
+     detailLoading = true
+     activeView = "detail"
+     checkSavedItems([item])
++    if (type === "playlist") {
++      loadNativePlaylistDetail(false)
++      return
++    }
+
+     var metadataPath = "/" + (type === "show" ? "shows" : type === "audiobook"
+       ? "audiobooks" : type + "s") + "/" + encodeURIComponent(String(item.id))
+@@ -2294,6 +2304,38 @@
+       detailItem)
+   }
+
++  function loadNativePlaylistDetail(append) {
++    var parent = detailItem
++    var serial = detailSerial
++    var expected = dataSerial
++    var path = append ? detailNext : "/playlists/" + parent.id + "/items"
++    if (!path) return
++    detailLoading = true
++    requestPlaylistItems(path, function(status, payload, error) {
++      if (serial !== root.detailSerial || expected !== root.dataSerial) return
++      root.detailLoading = false
++      if (error) {
++        root.detailRestoreTargetCount = 0
++        root.detailMessage = error
++        root.fail(error)
++        return
++      }
++      root.detailMessage = ""
++      var updated = Api.assign({}, parent)
++      updated.total = payload.total
++      updated.name = payload.name || parent.name
++      updated.description = payload.description || parent.description
++      root.detailItem = updated
++      var page = root.detailPageFromPayload({ tracks: payload }, "playlist", updated)
++      root.detailItems = append ? root.detailItems.concat(page.items) : page.items
++      root.detailNext = page.next
++      root.checkSavedItems(page.items)
++      if (Api.playlistRestoreShouldContinue(root.detailItems.length,
++          root.detailRestoreTargetCount, root.detailNext)) root.loadMoreDetail()
++      else root.detailRestoreTargetCount = 0
++    })
++  }
++
+   function loadMoreDetail() {
+     var path = detailNext
+     var parent = detailItem
+@@ -2301,6 +2343,7 @@
+     var serial = detailSerial
+     var type = String(parent.type || "")
+     if (type === "artist") return
++    if (type === "playlist") { loadNativePlaylistDetail(true); return }
+     detailLoading = true
+     spotifyApi.request("GET", path, null, null, function(status, payload, error) {
+       if (serial !== root.detailSerial) return
+@@ -4171,6 +4214,13 @@
+   BackendClient {
+     id: backendClient
+     wanted: daemonManager.running && !daemonManager.usingFallbackRuntime
++    onReadyChanged: {
++      if (!ready) return
++      if (root.selectedPlaylist && !root.playlistItemsLoading
++          && root.playlistItemsStatus === 503) root.loadPlaylistItems(false)
++      if (root.detailItem && root.detailItem.type === "playlist"
++          && !root.detailLoading && root.detailMessage) root.loadNativePlaylistDetail(false)
++    }
+     onErrorCodeChanged: if (errorCode === "audio_key_unavailable")
+       root.fail(errorMessage || "Spotify could not play this track on this computer")
+   }
+--- /dev/null
++++ b/tests/integration/NativePlaylistBackend.qml
+@@ -0,0 +1,66 @@
++import QtQuick
++import Quickshell
++import "../.." as Plugin
++
++// Run with quickshell, whose Quickshell modules are statically linked.
++ShellRoot {
++  id: root
++  Plugin.BackendClient { id: client }
++
++  function check(value, message) {
++    if (!value) throw new Error(message)
++  }
++
++  Timer {
++    interval: 10
++    running: true
++    onTriggered: {
++      var calls = 0
++      client.pending = { "7": { deadline: 100, callback: function(ok, result, error) {
++        calls++
++        root.check(ok && result.source === "librespot" && error === "", "Native response")
++      } } }
++      var line = JSON.stringify({type: "response", id: 7, ok: true,
++        result: {source: "librespot"}})
++      client.handleLine(line)
++      client.handleLine(line)
++      root.check(calls === 1 && Object.keys(client.pending).length === 0,
++        "Late replies must not call waiters twice")
++
++      calls = 0
++      client.pending = {
++        "1": { deadline: 100, callback: function(ok, result, error) {
++          calls++
++          root.check(!ok && error.indexOf("timed out") >= 0, "Timeout error")
++        } },
++        "2": { deadline: 200, callback: null }
++      }
++      client.expirePending(100)
++      root.check(calls === 1 && Object.keys(client.pending).length === 1,
++        "Only expired waiters should finish")
++      client.expirePending(200)
++      root.check(calls === 1 && Object.keys(client.pending).length === 0,
++        "Empty callbacks must also expire")
++
++      calls = 0
++      client.pending = { "1": { deadline: 100, callback: function(ok, result, error) {
++        calls++
++        root.check(!ok && error === "disconnected", "Disconnect error")
++      } } }
++      client.resetPending("disconnected")
++      root.check(calls === 1 && Object.keys(client.pending).length === 0,
++        "Disconnect must finish waiters")
++
++      calls = 0
++      client.playlistPage("37i9dQZF1DWSXMERUaiq9M", 0, function(status, result, error) {
++        calls++
++        root.check(status === 503 && result === null
++          && error.indexOf("native Spotify backend") >= 0,
++          "Unavailable backend must report an error, not fall back to the Web API")
++      })
++      root.check(calls === 1, "Unavailable callback")
++      console.log("NATIVE_PLAYLIST_BACKEND_PASS: response, timeout, disconnect, unavailable")
++      Qt.quit()
++    }
++  }
++}
+--- a/scripts/test-quickshell.sh
++++ b/scripts/test-quickshell.sh
+@@ -16,6 +16,20 @@
+   exit 1
+ }
+ echo 'Quickshell authorization integration passed.'
++
++cp "$source_root/BackendClient.qml" "$test_root/"
++sed 's|import "../.." as Plugin|import "." as Plugin|' \
++  "$source_root/tests/integration/NativePlaylistBackend.qml" > "$test_root/shell.qml"
++env -u WAYLAND_DISPLAY QT_QPA_PLATFORM=offscreen timeout 15s \
++  qs --no-color -p "$test_root" > "$test_root/native-output" 2>&1 || {
++  cat "$test_root/native-output"
++  exit 1
++}
++rg -q NATIVE_PLAYLIST_BACKEND_PASS "$test_root/native-output" || {
++  cat "$test_root/native-output"
++  exit 1
++}
++echo 'Quickshell native playlist integration passed.'
+
+ mkdir -p "$test_root/app/plugin" "$test_root/state"
+ cp "$source_root/"*.qml "$source_root/"*.js "$test_root/app/plugin/"
