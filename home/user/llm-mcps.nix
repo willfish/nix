@@ -64,6 +64,12 @@ rec {
         wrapper = "mcp-dap";
       }
       {
+        name = "rea";
+        enabled = config.dotfiles.capabilities.development;
+        wrapper = "mcp-rea";
+        toolTimeout = 360;
+      }
+      {
         name = "slack";
         enabled = config.dotfiles.capabilities.work;
         wrapper = "mcp-slack";

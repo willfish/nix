@@ -63,6 +63,7 @@ let
   braveSearchMcpServer = pkgs.callPackage ./mcp-packages/brave-search-mcp-server.nix { };
   telegramMcpServer = pkgs.callPackage ./mcp-packages/telegram-mcp.nix { };
   mcpDapServer = pkgs.callPackage ./mcp-packages/mcp-dap-server.nix { };
+  reaAgents = pkgs.callPackage ./mcp-packages/rea-agents.nix { };
   # Native login glue; Telethon remains the unchanged upstream runtime.
   telegramLogin = import ../../programs/telegram-login {
     inherit pkgs;
@@ -89,6 +90,7 @@ in
           nixos = pkgs.mcp-nixos;
           filesystem = pkgs.mcp-server-filesystem;
           dap = mcpDapServer;
+          rea = reaAgents;
           slack = slackMcpServer;
           telegram = telegramMcpServer;
           gmail = pkgs.himalaya-mcp;
@@ -240,6 +242,16 @@ in
 
       export PATH=${lib.escapeShellArg "${pkgs.delve}/bin"}:"$PATH"
       exec ${mcpDapServer}/bin/mcp-dap-server
+    '';
+  };
+
+  home.file.".local/bin/mcp-rea" = lib.mkIf (enabled "rea") {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      exec ${reaAgents}/bin/rea mcp
     '';
   };
 
