@@ -57,7 +57,7 @@
          state.update(|current| {
              current.lifecycle = Lifecycle::Ready;
              current.error_code.clear();
-@@ -303,12 +304,48 @@
+@@ -303,12 +304,58 @@
 
  async fn run_commands(
      mut receiver: mpsc::Receiver<EngineRequest>,
@@ -70,7 +70,10 @@
 -        let result = match current_spirc.borrow().clone() {
 -            Some(spirc) => execute(&spirc, &player, request.command)
 +        let connection = current_spirc.borrow().clone();
-+        if let Command::GetPlaylist { uri, offset } = request.command {
++        if matches!(
++            &request.command,
++            Command::GetPlaylist { .. } | Command::GetPlaylists { .. }
++        ) {
 +            let Some(reply) = request.reply else { continue };
 +            let Some((_, session)) = connection else {
 +                let _ = reply.send(Err(ProtocolError::new(
@@ -89,10 +92,17 @@
 +            // Network reads must not hold up the playback command FIFO.
 +            tokio::spawn(async move {
 +                let _permit = permit;
-+                let result = tokio::time::timeout(
-+                    Duration::from_secs(20),
-+                    crate::library::playlist_page(&session, &uri, offset),
-+                )
++                let result = tokio::time::timeout(Duration::from_secs(20), async {
++                    match request.command {
++                        Command::GetPlaylist { uri, offset } => {
++                            crate::library::playlist_page(&session, &uri, offset).await
++                        }
++                        Command::GetPlaylists { offset } => {
++                            crate::library::playlists_page(&session, offset).await
++                        }
++                        _ => unreachable!(),
++                    }
++                })
 +                .await
 +                .unwrap_or_else(|_| {
 +                    Err(ProtocolError::new(
@@ -109,18 +119,22 @@
                  .map(|()| serde_json::json!({}))
                  .map_err(|error| ProtocolError::new("engine_error", error.to_string())),
              None => Err(ProtocolError::new(
-@@ -394,7 +431,7 @@
+@@ -394,7 +441,11 @@
              let uri = SpotifyUri::from_uri(&uri).context("invalid Spotify URI")?;
              spirc.add_to_queue(uri)?;
          }
 -        Command::Hello | Command::Ping | Command::GetState => {
-+        Command::Hello | Command::Ping | Command::GetState | Command::GetPlaylist { .. } => {
++        Command::Hello
++        | Command::Ping
++        | Command::GetState
++        | Command::GetPlaylist { .. }
++        | Command::GetPlaylists { .. } => {
              bail!("command is handled by the protocol server")
          }
      }
 --- /dev/null
 +++ b/backend/src/library.rs
-@@ -0,0 +1,191 @@
+@@ -0,0 +1,296 @@
 +//! Read-only playlist browsing through the authenticated playback session.
 +use http::Method;
 +use librespot_core::{Session, SpotifyUri};
@@ -221,6 +235,68 @@
 +    }))
 +}
 +
++pub async fn playlists_page(session: &Session, offset: usize) -> Result<Value, ProtocolError> {
++    let bytes = session
++        .spclient()
++        .get_rootlist(offset, Some(PAGE_SIZE))
++        .await
++        .map_err(|_| error("Spotify could not read your playlist library"))?;
++    let message = <Playlist as Metadata>::Message::parse_from_bytes(&bytes)
++        .map_err(|_| error("Spotify returned an invalid playlist library"))?;
++    rootlist_page(&message, offset)
++}
++
++fn rootlist_page(
++    message: &<Playlist as Metadata>::Message,
++    offset: usize,
++) -> Result<Value, ProtocolError> {
++    let contents = message
++        .contents
++        .as_ref()
++        .ok_or_else(|| error("Spotify returned no playlist library page"))?;
++    if contents.pos() < 0 || contents.pos() as usize != offset {
++        return Err(error("Spotify returned the wrong playlist library page"));
++    }
++    let total = message.length().max(0) as usize;
++    // Folder markers occupy rootlist positions but are not playable playlists.
++    // Advance by raw entries, not by the number of visible playlist rows.
++    let count = contents.items.len().min(PAGE_SIZE);
++    let next = next_offset(offset, count, total)?;
++    let mut rows = Vec::new();
++    for (index, item) in contents.items.iter().take(PAGE_SIZE).enumerate() {
++        let Ok(SpotifyUri::Playlist { id, .. }) = SpotifyUri::from_uri(item.uri()) else {
++            continue;
++        };
++        let meta = contents
++            .meta_items
++            .get(index)
++            .ok_or_else(|| error("Spotify returned incomplete playlist library metadata"))?;
++        let attributes = meta.attributes.get_or_default();
++        // Unavailable decorations still occupy rootlist pagination positions.
++        if attributes.name().is_empty()
++            || attributes.deleted_by_owner()
++            || meta.status_code() >= 400
++        {
++            continue;
++        }
++        let images: Vec<Value> = attributes
++            .picture_size
++            .iter()
++            .map(|picture| json!({"url": picture.url()}))
++            .collect();
++        rows.push(json!({
++            "type": "playlist", "id": id.to_base62(),
++            "uri": format!("spotify:playlist:{}", id.to_base62()),
++            "name": attributes.name(), "description": attributes.description(),
++            "owner": {"id": meta.owner_username(), "display_name": meta.owner_username()},
++            "collaborative": attributes.collaborative(),
++            "images": images, "tracks": {"total": meta.length().max(0)}
++        }));
++    }
++    Ok(json!({"items": rows, "offset": offset, "total": total,
++        "next_offset": next, "source": "librespot"}))
++}
++
 +fn images(covers: &Images) -> Vec<Value> {
 +    covers
 +        .iter()
@@ -296,6 +372,49 @@
 +    }
 +
 +    #[test]
++    fn rootlist_skips_folders_without_losing_continuation_positions() {
++        let mut message = <Playlist as Metadata>::Message::new();
++        message.set_length(100);
++        let contents = message.contents.mut_or_insert_default();
++        contents.set_pos(0);
++        contents.set_truncated(true);
++        for uri in [
++            "spotify:start-group:folder",
++            "spotify:playlist:37i9dQZF1DWSXMERUaiq9M",
++            "spotify:end-group:folder",
++        ] {
++            contents.items.push(Default::default());
++            contents.items.last_mut().unwrap().set_uri(uri.into());
++            contents.meta_items.push(Default::default());
++        }
++        let meta = &mut contents.meta_items[1];
++        meta.set_owner_username("spotify".into());
++        meta.set_length(100);
++        meta.attributes
++            .mut_or_insert_default()
++            .set_name("Example playlist".into());
++        let page = rootlist_page(&message, 0).unwrap();
++        assert_eq!(page["items"].as_array().unwrap().len(), 1);
++        assert_eq!(page["items"][0]["name"], "Example playlist");
++        assert_eq!(page["items"][0]["tracks"]["total"], 100);
++        assert_eq!(page["next_offset"], 3);
++        assert!(rootlist_page(&message, 50).is_err());
++        message.contents.mut_or_insert_default().meta_items[1]
++            .attributes
++            .mut_or_insert_default()
++            .clear_name();
++        let page = rootlist_page(&message, 0).unwrap();
++        assert!(page["items"].as_array().unwrap().is_empty());
++        assert_eq!(page["next_offset"], 3);
++    }
++
++    #[test]
++    fn rootlist_rejects_a_response_without_contents() {
++        let message = <Playlist as Metadata>::Message::new();
++        assert!(rootlist_page(&message, 0).is_err());
++    }
++
++    #[test]
 +    fn only_playlist_uris_can_reach_the_playlist_service() {
 +        assert!(playlist_uri("spotify:playlist:37i9dQZF1DWSXMERUaiq9M").is_ok());
 +        assert!(playlist_uri("spotify:track:14XWXWv5FoCbFzLksawpEe").is_err());
@@ -324,10 +443,14 @@
  mod socket;
 --- a/backend/src/protocol.rs
 +++ b/backend/src/protocol.rs
-@@ -16,6 +16,11 @@
+@@ -16,6 +16,15 @@
      Hello,
      Ping,
      GetState,
++    GetPlaylists {
++        #[serde(default)]
++        offset: usize,
++    },
 +    GetPlaylist {
 +        uri: String,
 +        #[serde(default)]
@@ -351,7 +474,7 @@
 -                let message = handle_line(&line, &state, &commands).await;
 -                write_message(&mut writer, &message).await?;
 +                let playlist_request = serde_json::from_str::<Request>(&line).ok()
-+                    .filter(|request| matches!(request.command, crate::protocol::Command::GetPlaylist { .. }));
++                    .filter(|request| matches!(request.command, crate::protocol::Command::GetPlaylist { .. } | crate::protocol::Command::GetPlaylists { .. }));
 +                if let Some(request) = playlist_request {
 +                    if reads.len() >= 2 {
 +                        write_message(&mut writer, &ServerMessage::failure(request.id,

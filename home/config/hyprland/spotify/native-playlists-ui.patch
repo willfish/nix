@@ -9,14 +9,14 @@
        if (typeof callback === "function") callback(false, null, message)
      }
    }
-@@ -57,11 +57,44 @@
+@@ -57,11 +57,57 @@
      Api.assign(payload, fields || {})
      var nextPending = ({})
      for (var existing in pending) nextPending[existing] = pending[existing]
 -    nextPending[String(id)] = typeof callback === "function" ? callback : null
 +    nextPending[String(id)] = {
 +      callback: typeof callback === "function" ? callback : null,
-+      deadline: Date.now() + (name === "get_playlist" ? 25000 : 10000)
++      deadline: Date.now() + (name === "get_playlist" || name === "get_playlists" ? 25000 : 10000)
 +    }
      pending = nextPending
      socket.write(JSON.stringify(payload) + "\n")
@@ -52,10 +52,23 @@
 +        : "/playlists/" + playlistId + "/items?offset=" + result.next_offset
 +      callback(200, result, "")
 +    })
++  }
++
++  function playlistsPage(offset, callback) {
++    if (!ready) {
++      callback(503, null, "The native Spotify backend is not ready; try again shortly")
++      return
++    }
++    sendCommand("get_playlists", { offset: offset }, function(ok, result, error) {
++      if (!ok) { callback(503, null, error); return }
++      result.next = result.next_offset === null ? ""
++        : "/me/playlists?offset=" + result.next_offset
++      callback(200, result, "")
++    })
    }
 
    function loadPlayback(body, callback) {
-@@ -88,8 +121,9 @@
+@@ -88,8 +134,9 @@
      }
      if (message.type !== "response") return
      var id = String(message.id || "")
@@ -67,7 +80,7 @@
      var nextPending = ({})
      for (var key in pending) if (key !== id) nextPending[key] = pending[key]
      pending = nextPending
-@@ -115,7 +149,17 @@
+@@ -115,7 +162,17 @@
      resetPending("Playback on this computer stopped")
    }
 
@@ -88,7 +101,38 @@
      id: socketComponent
 --- a/Service.qml
 +++ b/Service.qml
-@@ -1735,6 +1735,12 @@
+@@ -355,6 +355,7 @@
+   property bool homeLoaded: false
+   property int homeRequestsPending: 0
+   readonly property bool homeLoading: homeRequestsPending > 0
++  property string homeError: ""
+
+   property var discoverPlaylists: []
+   property var discoverCandidates: []
+@@ -1466,8 +1467,7 @@
+     }
+     var expected = serial === undefined ? dataSerial : serial
+     root[spec.loading] = true
+-    spotifyApi.request("GET", path, append ? null : spec.query, null,
+-      function(status, payload, error) {
++    var completed = function(status, payload, error) {
+         if (expected !== root.dataSerial) return
+         root[spec.loading] = false
+         if (error) root.fail(error)
+@@ -1489,7 +1489,11 @@
+             root.mergeDiscoverCandidates(page.items)
+         }
+         if (typeof callback === "function") callback()
+-      })
++      }
++    if (kind === "playlists") {
++      var offset = append ? String(path).match(/[?&]offset=(\d+)/) : null
++      backendClient.playlistsPage(offset ? Number(offset[1]) : 0, completed)
++    } else spotifyApi.request("GET", path, append ? null : spec.query, null, completed)
+   }
+
+   function loadPlaylists(append, callback, serial) {
+@@ -1735,6 +1739,12 @@
      loadPlaylistItems(false)
    }
 
@@ -101,7 +145,7 @@
    function loadPlaylistItems(append) {
      if (!selectedPlaylist || !selectedPlaylist.id || playlistItemsLoading) return
      var path = append ? playlistItemsNext
-@@ -1744,7 +1750,7 @@
+@@ -1744,7 +1754,7 @@
      var expected = dataSerial
      var requestSerial = playlistItemsSerial
      playlistItemsLoading = true
@@ -110,7 +154,7 @@
        function(status, payload, error) {
          if (expected !== root.dataSerial) return
          if (requestSerial !== root.playlistItemsSerial) return
-@@ -2114,6 +2120,10 @@
+@@ -2114,6 +2124,10 @@
      detailLoading = true
      activeView = "detail"
      checkSavedItems([item])
@@ -121,7 +165,7 @@
 
      var metadataPath = "/" + (type === "show" ? "shows" : type === "audiobook"
        ? "audiobooks" : type + "s") + "/" + encodeURIComponent(String(item.id))
-@@ -2294,6 +2304,38 @@
+@@ -2294,6 +2308,38 @@
        detailItem)
    }
 
@@ -160,7 +204,7 @@
    function loadMoreDetail() {
      var path = detailNext
      var parent = detailItem
-@@ -2301,6 +2343,7 @@
+@@ -2301,6 +2347,7 @@
      var serial = detailSerial
      var type = String(parent.type || "")
      if (type === "artist") return
@@ -168,12 +212,94 @@
      detailLoading = true
      spotifyApi.request("GET", path, null, null, function(status, payload, error) {
        if (serial !== root.detailSerial) return
-@@ -4171,6 +4214,13 @@
+@@ -2383,19 +2430,25 @@
+
+   function finishHomeRequest(error) {
+     homeRequestsPending = Math.max(0, homeRequestsPending - 1)
+-    if (error) fail(error)
++    if (error) { homeError = error; fail(error) }
+     if (homeRequestsPending === 0) {
+       homeLoaded = true
+       checkSavedItems(recentTracks.concat(topTracks).concat(topArtists))
+     }
++  }
++
++  function requestHome(path, query, callback) {
++    spotifyApi.request("GET", path, query, null, callback,
++      { timeoutMs: 15000, retryRateLimit: false })
+   }
+
+   function loadHome() {
+     if (homeLoading) return
+     var expected = dataSerial
+     homeLoaded = false
++    homeError = ""
+     homeRequestsPending = 3
+-    spotifyApi.request("GET", "/me/player/recently-played", { limit: 30 }, null,
++    requestHome("/me/player/recently-played", { limit: 30 },
+       function(status, payload, error) {
+         if (expected !== root.dataSerial) return
+         if (!error) {
+@@ -2406,9 +2459,9 @@
+         }
+         root.finishHomeRequest(error)
+       })
+-    spotifyApi.request("GET", "/me/top/tracks", {
++    requestHome("/me/top/tracks", {
+       limit: 30, time_range: "medium_term"
+-    }, null, function(status, payload, error) {
++    }, function(status, payload, error) {
+       if (expected !== root.dataSerial) return
+       if (!error) {
+         var page = Api.normalizePage(payload, function(value) {
+@@ -2418,9 +2471,9 @@
+       }
+       root.finishHomeRequest(error)
+     })
+-    spotifyApi.request("GET", "/me/top/artists", {
++    requestHome("/me/top/artists", {
+       limit: 30, time_range: "medium_term"
+-    }, null, function(status, payload, error) {
++    }, function(status, payload, error) {
+       if (expected !== root.dataSerial) return
+       if (!error) {
+         var page = Api.normalizePage(payload, function(value) {
+@@ -3525,8 +3578,9 @@
+     deviceProbeTimer.restart()
+   }
+
+-  function stopEngine() {
+-    localPlaybackStopped = true
++  function stopEngine(automatic) {
++    // Idle shutdown is not a user request to keep the receiver stopped.
++    localPlaybackStopped = automatic !== true
+     cancelVisibleLocalDeviceRefresh()
+     clearPendingPlayback()
+     deviceProbeTimer.stop()
+@@ -3682,6 +3736,7 @@
+     topTracks = []
+     topArtists = []
+     homeLoaded = false
++    homeError = ""
+     homeRequestsPending = 0
+     discoverSerial++
+     discoverPlaylists = []
+@@ -4101,7 +4156,7 @@
+       root.uiVisible, root.idleShutdownMinutes)
+     onTriggered: {
+       if (Date.now() - root.lastActivityAt >= root.idleShutdownMinutes * 60000)
+-        root.stopEngine()
++        root.stopEngine(true)
+     }
+   }
+
+@@ -4171,6 +4226,14 @@
    BackendClient {
      id: backendClient
      wanted: daemonManager.running && !daemonManager.usingFallbackRuntime
 +    onReadyChanged: {
 +      if (!ready) return
++      if (root.uiVisible) root.loadSidebarPlaylists()
 +      if (root.selectedPlaylist && !root.playlistItemsLoading
 +          && root.playlistItemsStatus === 503) root.loadPlaylistItems(false)
 +      if (root.detailItem && root.detailItem.type === "playlist"
@@ -182,6 +308,20 @@
      onErrorCodeChanged: if (errorCode === "audio_key_unavailable")
        root.fail(errorMessage || "Spotify could not play this track on this computer")
    }
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -4618,8 +4618,9 @@
+           stateKey: "home:" + root.homeType
+           emptyMessage: root.service && root.service.homeLoading
+             ? "Loading your listening history…"
+-            : (root.homeFilter.trim() ? "No matches in " + root.activeSearchScope.label + "."
+-              : "No listening history is available yet.")
++            : (root.service && root.service.homeError ? root.service.homeError
++              : (root.homeFilter.trim() ? "No matches in " + root.activeSearchScope.label + "."
++                : "No listening history is available yet."))
+           onActivated: function(item, items, uri) {
+             root.activateMedia(item, items, uri)
+           }
 --- /dev/null
 +++ b/tests/integration/NativePlaylistBackend.qml
 @@ -0,0 +1,66 @@
@@ -251,6 +391,29 @@
 +    }
 +  }
 +}
+--- a/tests/integration/AppSmoke.qml
++++ b/tests/integration/AppSmoke.qml
+@@ -18,6 +18,20 @@
+         throw new Error("Search navigation is missing")
+       spotifyService.clearSearch()
+       if (spotifyService.searchQuery !== "") throw new Error("Search state did not clear")
++      var now = Date.now()
++      spotifyService.api.rateLimitedUntil = now + 3600000
++      spotifyService.loadHome()
++      if (!spotifyService.homeLoading) throw new Error("Home requests did not enter the cooldown queue")
++      spotifyService.api.expireTimedOutRequests(now + 16000)
++      if (spotifyService.homeLoading || !spotifyService.homeError)
++        throw new Error("Home cooldown must finish with a visible error")
++      spotifyService.daemon.busy = true // Do not run a real stop command.
++      spotifyService.stopEngine(true)
++      if (spotifyService.localPlaybackStopped)
++        throw new Error("Idle shutdown must allow automatic restart")
++      spotifyService.stopEngine()
++      if (!spotifyService.localPlaybackStopped)
++        throw new Error("Explicit stop must remain stopped")
+       console.log("APP_SMOKE_PASS")
+       Qt.quit()
+     }
 --- a/scripts/test-quickshell.sh
 +++ b/scripts/test-quickshell.sh
 @@ -16,6 +16,20 @@
