@@ -465,7 +465,9 @@ let
   agentCollectors =
     pkgs.runCommand "omarchy-agent-collectors" { nativeBuildInputs = [ pkgs.bash ]; }
       ''
-        mkdir -p "$out/bin" "$out/libexec"
+        mkdir -p "$out/bin" "$out/libexec" "$out/default"
+        # The shell resolves its translation catalogs through OMARCHY_PATH too.
+        cp -r ${source}/default/i18n "$out/default/"
         for name in codex grok opencode; do
           ln -s ${agentUsage}/bin/omarchy-agent-usage-"$name" "$out/bin/omarchy-agent-usage-$name"
         done

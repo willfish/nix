@@ -129,7 +129,7 @@ index 87f160c1..59e60b7e 100644
 @@ -138,7 +138,7 @@ Panel {
    readonly property bool speedHeaderHasCursor: cursorActive && focusSection === "header" && headerIndex === speedHeaderIndex
    readonly property bool toggleHeaderHasCursor: cursorActive && focusSection === "header" && headerIndex === toggleHeaderIndex
-   readonly property string toggleHint: Networking.wifiEnabled ? "Turn Wi-Fi off" : "Turn Wi-Fi on"
+   readonly property string toggleHint: Networking.wifiEnabled ? Commons.I18n.t("network.turnWifiOff") : Commons.I18n.t("network.turnWifiOn")
 -  readonly property var dnsProviders: ["DHCP", "Cloudflare", "Google", "Custom"]
 +  readonly property var dnsProviders: ["Advanced settings"]
    property int dnsIndex: 0
@@ -210,7 +210,7 @@ index 87f160c1..59e60b7e 100644
          spacing: Style.space(10)
 
          PanelSectionHeader {
--          text: "DNS PROVIDER"
+-          text: Commons.I18n.t("network.dnsProvider")
 +          text: "NETWORK PROFILES"
            foreground: root.bar.foreground
            fontFamily: root.bar.fontFamily
@@ -226,7 +226,7 @@ index 87f160c1..59e60b7e 100644
 -            provider: "DHCP"
 +            provider: "Advanced settings"
              index: 0
--            tooltipText: "Use DNS from DHCP"
+-            tooltipText: Commons.I18n.t("network.dnsFromDhcp")
 -            width: dnsRow.cellWidth
 -            onClicked: root.setDns(provider)
 -          }
@@ -234,7 +234,7 @@ index 87f160c1..59e60b7e 100644
 -          DnsProviderPill {
 -            provider: "Cloudflare"
 -            index: 1
--            tooltipText: "Set DNS to Cloudflare"
+-            tooltipText: Commons.I18n.t("network.setDnsTo").arg("Cloudflare")
 -            width: dnsRow.cellWidth
 -            onClicked: root.setDns(provider)
 -          }
@@ -242,7 +242,7 @@ index 87f160c1..59e60b7e 100644
 -          DnsProviderPill {
 -            provider: "Google"
 -            index: 2
--            tooltipText: "Set DNS to Google"
+-            tooltipText: Commons.I18n.t("network.setDnsTo").arg("Google")
 -            width: dnsRow.cellWidth
 -            onClicked: root.setDns(provider)
 -          }
@@ -250,7 +250,7 @@ index 87f160c1..59e60b7e 100644
 -          DnsProviderPill {
 -            provider: "Custom"
 -            index: 3
--            tooltipText: "Set custom DNS servers"
+-            tooltipText: Commons.I18n.t("network.setCustomDns")
 -            width: dnsRow.cellWidth
 +            tooltipText: "Edit DNS, VPN and enterprise connection profiles"
 +            width: dnsRow.width
