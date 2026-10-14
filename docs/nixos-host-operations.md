@@ -48,6 +48,17 @@ nix build --no-link '.#homeConfigurations."william@foundation".activationPackage
 There is no repository-wide behavioral test gate. Program-local migration
 fixtures are optional manual tools; package builds and commit hooks do not run them.
 
+## Pi source builds
+
+`pi-source` follows upstream Pi's `main` branch. `flake.lock` pins the source
+revision. The upstream derivation uses Pi's dependency lockfiles, so updates do
+not require separate dependency hashes. These builds can include unreleased changes.
+
+Update Pi alone with `nix flake update pi-source`, or include it in a full
+`nix flake update`. Build with `nix build .#pi`, then run `hmswitch` and restart
+Pi. The existing post-build hook sends local builds to the Terminus binary cache.
+Other hosts can reuse cached builds for the same locked inputs and platform.
+
 ## Home capabilities
 
 `home/user/capabilities.nix` assigns a purpose to each host and exposes typed

@@ -1800,6 +1800,23 @@
         "type": "github"
       }
     },
+    "pi-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791984939,
+        "narHash": "sha256-hi3fm2dSRob9eITzQcmjFnW5bIdLwNwkE+VB6wYoIYY=",
+        "owner": "earendil-works",
+        "repo": "pi",
+        "rev": "9fe3f371622cad9cc1a3cbf044288abd0252192f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "earendil-works",
+        "ref": "main",
+        "repo": "pi",
+        "type": "github"
+      }
+    },
     "pre-commit-hooks": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -1966,6 +1983,7 @@
         "omarchy-theme-vesper": "omarchy-theme-vesper",
         "omarchy-theme-vulkanite": "omarchy-theme-vulkanite",
         "omarchy-theme-white-gold": "omarchy-theme-white-gold",
+        "pi-source": "pi-source",
         "pre-commit-hooks": "pre-commit-hooks_2",
         "sops-nix": "sops-nix",
         "stylix": "stylix",

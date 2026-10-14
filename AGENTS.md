@@ -12,7 +12,7 @@ William's flake-based NixOS/Home Manager repo. Follow `home/config/llm/AGENTS.md
 - `programs/`: owned C/Rust program source, colocated `default.nix` packages and manual local checks. Keep deployment wiring in `home/user/` or `system/`.
 - `home/config/`: static home/config symlinks. Hyprland settings live under `home/config/hyprland/`.
 - `home/config/llm/`: canonical shared AGENTS, `skills/`, `guides/`, `process-skills/`, `references/`; deployed via Home Manager.
-- `~/Repositories/nixpkgs` is ONLY for overlaid packages (e.g. variety). Pi uses the `llm-agents.nix` input. Local tools include mux.
+- `~/Repositories/nixpkgs` is ONLY for overlaid packages (e.g. variety). Pi builds from the `pi-source` input with its upstream Nix derivation; other agent CLIs use `llm-agents.nix`. Local tools include mux.
 
 ## Development
 

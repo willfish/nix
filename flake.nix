@@ -69,6 +69,10 @@
       flake = false;
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
+    pi-source = {
+      url = "github:earendil-works/pi/main";
+      flake = false;
+    };
     hermes-agent.url = "github:NousResearch/hermes-agent/bd0affe5e5f723579df8902852f5d0c47795f355";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # Upstream source for the Nix-adapted Local AI panel.
@@ -339,8 +343,10 @@
           arxiv-library = arxiv-mcp.packages.${system}.maintenance;
           herdr = herdr.packages.${system}.default;
           herdr-source = herdr-source.outPath;
-          # Agent CLIs come from llm-agents, not the nixpkgs pin.
-          pi-coding-agent = llm-agents.packages.${system}.pi;
+          pi-coding-agent = _final.callPackage ./home/user/pi-package.nix {
+            source = inputs.pi-source;
+          };
+          # Other agent CLIs come from llm-agents, not the nixpkgs pin.
           opencode = llm-agents.packages.${system}.opencode;
           hermes-agent = import ./home/user/hermes-package.nix {
             hermesInput = inputs.hermes-agent;
@@ -614,6 +620,7 @@
           _module.args.pkgs = mkPkgs system;
 
           packages = {
+            pi = pkgs.pi-coding-agent;
             activation-dbus = pkgs.symlinkJoin {
               name = "home-activation-dbus";
               paths = [
