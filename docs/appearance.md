@@ -125,7 +125,9 @@ Herdr only accepts its built-in theme names. A palette it does not know keeps
 those colours as overrides on Catppuccin, or Catppuccin Latte when the palette
 is light. The menu and wallpaper still use the palette's own name. In
 Hyprland, the picker also updates Waybar, Fuzzel, Hyprlock, Mako and GTK
-appearance. Default Fuzzel and the voice menu include
+appearance, including context menus. It publishes the GTK theme name.
+Home Manager does not pin that name, because a static theme would replace
+the selection on activation. Default Fuzzel and the voice menu include
 `~/.local/state/theme-menu/active/fuzzel.ini`. Voice menu width and lines come
 from `menus.voice` in `home/config/hyprland/settings.nix`.
 
@@ -178,7 +180,8 @@ precedence. Remote hosts retain their own palettes.
   selection live under `~/.local/state/theme-menu/`.
 - C `programs/theme-menu` publishes selected files and writes
   native mode to `~/.local/state/theme-menu/mode`, the only light/dark
-  authority. Writes are individually atomic with rollback on failure, not a
+  authority. It also publishes the GTK theme name. Writes are individually
+  atomic with rollback on failure, not a
   cross-app transaction; applications may update at slightly different times.
   When desktop publishing is enabled and `/var/lib/desktop-theme/william`
   already exists, the menu overwrites that regular file in place with the

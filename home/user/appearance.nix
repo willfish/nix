@@ -49,7 +49,13 @@ in
     else
       "--theme ${piThemes.light} --theme ${piThemes.dark} --use-theme host-light/host-dark";
 
-  home.packages = lib.optionals isGraphicalLinux [ runtime.package ];
+  # adw-gtk3 and adw-gtk3-dark both come from this package. theme-menu
+  # chooses the name. Pinning it in gtk.theme writes settings.ini and dconf
+  # after publication, so menus stay on the light theme.
+  home.packages = lib.optionals isGraphicalLinux [
+    runtime.package
+    pkgs.adw-gtk3
+  ];
 
   programs.btop = {
     enable = true;
@@ -163,10 +169,7 @@ in
       inherit (config.stylix.fonts.sansSerif) package name;
       size = config.stylix.fonts.sizes.applications;
     };
-    theme = {
-      package = pkgs.adw-gtk3;
-      name = "adw-gtk3";
-    };
+    theme = null;
     gtk4.theme = null;
     iconTheme = {
       package = pkgs.yaru-theme;
@@ -191,16 +194,18 @@ in
     rebuildBatCache = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       run ${pkgs.bat}/bin/bat cache --build
     '';
+    # dconfSettings clears keys this generation no longer manages, including
+    # a previously pinned gtk-theme. Publish after that, or the light theme
+    # returns and context menus ignore the selection.
     applySelectedPalette = lib.mkIf isGraphicalLinux (
-      lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      lib.hm.dag.entryAfter [ "dconfSettings" ] ''
         run ${runtime.package}/bin/theme-menu --reapply
       ''
     );
-    # GTK file dialogs keep the previous interface font for the life of
-    # xdg-desktop-portal-gtk. Restart it after a font switch so it cannot
-    # keep requesting a family whose files are gone.
+    # GTK file dialogs keep the previous interface font, and the portal keeps
+    # the previous theme, for the life of xdg-desktop-portal-gtk.
     reloadGtkPortal = lib.mkIf isGraphicalLinux (
-      lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      lib.hm.dag.entryAfter [ "applySelectedPalette" ] ''
         if [ -n "''${XDG_RUNTIME_DIR:-}" ] && [ -S "''${XDG_RUNTIME_DIR}/bus" ]; then
           run ${pkgs.systemd}/bin/systemctl --user try-restart xdg-desktop-portal-gtk.service || true
         fi

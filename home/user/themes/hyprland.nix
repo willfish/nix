@@ -449,6 +449,53 @@ in
             color: @theme_fg_color;
         }
 
+        /* Named colours above do not rewrite the theme's own menu rules.
+           Right-click and tray menus are menu widgets, not windows. */
+        menu,
+        .menu,
+        .context-menu {
+            background-color: @popover_bg_color;
+            color: @popover_fg_color;
+            border-color: @accent_color;
+            border-radius: ${rounding}px;
+        }
+
+        menu menuitem,
+        .menu menuitem,
+        .context-menu menuitem {
+            background-color: transparent;
+            color: @popover_fg_color;
+        }
+
+        menu menuitem:hover,
+        .menu menuitem:hover,
+        .context-menu menuitem:hover {
+            background-color: @theme_selected_bg_color;
+            color: @theme_selected_fg_color;
+        }
+
+        menu menuitem:disabled,
+        .menu menuitem:disabled,
+        .context-menu menuitem:disabled {
+            color: alpha(@popover_fg_color, 0.45);
+        }
+
+        popover,
+        popover.background {
+            background-color: @popover_bg_color;
+            color: @popover_fg_color;
+        }
+
+        popover modelbutton {
+            background-color: transparent;
+            color: @popover_fg_color;
+        }
+
+        popover modelbutton:hover {
+            background-color: @theme_selected_bg_color;
+            color: @theme_selected_fg_color;
+        }
+
         * {
             font-family: "${font}", "${mono}";
         }

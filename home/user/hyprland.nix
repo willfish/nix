@@ -475,6 +475,20 @@
           color: @text;
         }
 
+        /* Right-click menus on tray widgets are GTK menus in this process. */
+        menu,
+        menuitem {
+          background-color: @background;
+          color: @text;
+          border-color: @border;
+        }
+
+        menu menuitem:hover,
+        menuitem:hover {
+          background-color: @selection;
+          color: @text;
+        }
+
         #workspaces button {
           padding: 4px 0;
           color: @muted;
