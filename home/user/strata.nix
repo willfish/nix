@@ -123,6 +123,14 @@ let
       echo 'Strata model prepared. Start it from Local AI.'
     '';
   };
+  # Security review for agents: before executing or importing upstream scripts
+  # (setup.py, calibration, preparation or tests), review the exact pinned revision
+  # and imported local modules for import-time side effects, network/downloads,
+  # subprocesses, file writes and credential access. Summarize findings before
+  # execution; stop on unexpected or unapproved behaviour. Re-review affected code
+  # after script or dependency updates. Pinning and container isolation do not
+  # replace review; never run an installer or updater merely to inspect it.
+  #
   # Run upstream's setup --calibrate measurements without its imperative installer.
   # Results are printed for review, not written over the declarative configuration.
   calibrate = pkgs.writeShellApplication {

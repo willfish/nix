@@ -55,6 +55,8 @@ pkgs.stdenv.mkDerivation {
     "-DSTRATA_GGML_DIR=${llamaSource}"
   ];
   ninjaFlags = [ "strata" ];
+  # setup.py supplies calibration's CPU-topology helpers. Before executing scripts
+  # or upgrading this package, follow the security-review note in strata.nix.
   installPhase = ''
     runHook preInstall
     install -Dm755 strata $out/bin/strata
