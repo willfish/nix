@@ -675,6 +675,7 @@
             };
           }
           // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+            discord-themed = import ./programs/discord-themed { inherit pkgs; };
             slack-themed = import ./programs/slack-themed { inherit pkgs; };
             telegram-themed = import ./programs/telegram-themed { inherit pkgs; };
             herdr-notification-focus = import ./programs/herdr-notification-focus { inherit pkgs; };

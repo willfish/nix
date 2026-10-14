@@ -147,6 +147,14 @@ boot image. Neither theme enables automatic login or changes disk encryption.
 In Brave, select **Settings → Appearance → Use GTK**. Explicit browser themes,
 extensions and website styling can override desktop colours.
 
+On Linux desktops, Discord uses a local CSS-only hook to follow the selected
+palette and fonts within two seconds. Restart Discord once after installation,
+then choose **User Settings → Appearance → Sync with computer** for its native
+light/dark behaviour. The hook does not change account settings, layout or paid
+features. It is an unofficial client modification subject to Discord's terms,
+and remotely delivered UI changes can break colour coverage. See
+[Themed Discord](../programs/discord-themed/README.md) for checks and rollback.
+
 btop reads `~/.config/btop/themes/host.theme`. On graphical Linux that file
 follows the selected theme, and a running btop reloads with it. Themes that
 ship their own `btop.theme` keep that file, so palette overrides do not retint

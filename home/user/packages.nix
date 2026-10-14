@@ -316,7 +316,7 @@ in
       (mpv.override { scripts = [ mpvScripts.mpris ]; })
       file-roller # Graphical archive manager for opening and extracting archives
       ghostty # GPU-accelerated terminal emulator (system package on NixOS; set as default via TERMINAL + xdg-terminal-exec)
-      discord # Team collaboration and messaging app
+      (import ../../programs/discord-themed { inherit pkgs; }) # Follow the active desktop palette
       libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
       pavucontrol # Graphical PulseAudio volume control
       qbittorrent # BitTorrent client with a user-friendly interface
