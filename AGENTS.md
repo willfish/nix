@@ -20,6 +20,8 @@ The dev shell installs commit checks. Pushes do not build NixOS or Home Manager 
 
 Use `hmswitch` for Home Manager activation. After module changes, build the selected host, activate and verify before committing, subject to authorization. Verify added packages exist in inputs/nixpkgs. Never commit secrets/private data.
 
+Before executing or importing Strata's upstream scripts, review the exact pinned revision and its imported local modules for security: import-time side effects, downloads/network access, subprocesses, file writes and credential access. This includes `setup.py`, calibration, preparation and test scripts. Summarize findings before execution; stop on unexpected or unapproved behaviour. Re-review affected code after script or dependency updates. Pinning and container isolation do not replace review; never run an installer or updater merely to inspect it.
+
 Brave debugging is configured in programs.nix on port 9222; probe `/json/version`. Use browser MCP first, prefer evaluate_script to snapshots for extraction. For GitHub use MCP first, then gh rather than scraping.
 
 Finish `~/.dotfiles` work before you stop: commit on master, run `hmswitch`, then push. Do this even when the session cwd is another repository. The same finish line is in `home/config/llm/AGENTS.md`, which every agent already has. Leaving the tree dirty, or waiting to be asked, is not done. Skip only when the user explicitly said not to commit, switch, or push.
