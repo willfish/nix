@@ -325,7 +325,9 @@ in
       wlopm # Wayland output power control used by toggle-display
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
     ]
-    ++ lib.optionals (capabilities.work && capabilities.desktop) [ slack ]
+    ++ lib.optionals (capabilities.work && capabilities.desktop) [
+      (if stdenv.isLinux then import ../../programs/slack-themed { inherit pkgs; } else slack)
+    ]
     ++ lib.optionals (stdenv.isLinux && capabilities.desktop && hostName == "andromeda") [
       gimp # Image editor; Andromeda only
       libation # Audible ripper; Andromeda only
