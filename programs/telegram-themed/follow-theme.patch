@@ -1,0 +1,73 @@
+--- a/Telegram/SourceFiles/window/themes/window_theme.cpp
++++ b/Telegram/SourceFiles/window/themes/window_theme.cpp
+@@ -44,6 +44,8 @@
+ #include <QtCore/QJsonDocument>
+ #include <QtCore/QJsonObject>
+ #include <QtCore/QFileSystemWatcher>
++#include <QtCore/QDir>
++#include <QtCore/QTimer>
+ #include <QtGui/QGuiApplication>
+ #include <QtGui/QStyleHints>
+
+@@ -601,6 +603,43 @@
+ 		ApplyDefaultWithPath(path);
+ 		KeepApplied();
+ 	}, _lifetime);
++
++	// The desktop owns this palette, independently of Telegram's day/night
++	// slots. Polling also handles a missing file and atomic replacement.
++	if (qgetenv("TELEGRAM_DOTFILES_THEME") != "0") {
++		auto state = qEnvironmentVariable("XDG_STATE_HOME");
++		if (state.isEmpty()) {
++			state = QDir::homePath() + u"/.local/state"_q;
++		}
++		const auto path = state
++			+ u"/theme-menu/active/telegram.tdesktop-theme"_q;
++		const auto refresh = [=] {
++			if (editingTheme() || AreTestingTheme()) {
++				return;
++			}
++			auto file = QFile(path);
++			if (!file.open(QIODevice::ReadOnly)
++				|| file.size() > kThemeFileSizeLimit) {
++				return;
++			}
++			const auto content = file.readAll();
++			file.close();
++			if (_themeObject.pathAbsolute == path
++				&& _themeObject.content == content) {
++				return;
++			}
++			if (Apply(path)) {
++				KeepApplied();
++			}
++		};
++		_desktopThemeTimer = std::make_unique<QTimer>();
++		QObject::connect(
++			_desktopThemeTimer.get(),
++			&QTimer::timeout,
++			refresh);
++		_desktopThemeTimer->start(2000);
++		QTimer::singleShot(0, _desktopThemeTimer.get(), refresh);
++	}
+ }
+
+ void ChatBackground::refreshThemeWatcher() {
+--- a/Telegram/SourceFiles/window/themes/window_theme.h
++++ b/Telegram/SourceFiles/window/themes/window_theme.h
+@@ -12,6 +12,7 @@
+ #include "ui/style/style_core_palette.h"
+
+ class QFileSystemWatcher;
++class QTimer;
+ struct FilePrepareResult;
+
+ namespace style {
+@@ -284,6 +285,7 @@
+ 	bool _themeTile = false;
+ 	std::optional<Data::CloudTheme> _editingTheme;
+ 	std::unique_ptr<QFileSystemWatcher> _themeWatcher;
++	std::unique_ptr<QTimer> _desktopThemeTimer;
+
+ 	Data::WallPaper _paperForRevert
+ 		= Data::details::UninitializedWallPaper();

@@ -669,6 +669,7 @@
           }
           // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
             slack-themed = import ./programs/slack-themed { inherit pkgs; };
+            telegram-themed = import ./programs/telegram-themed { inherit pkgs; };
             herdr-notification-focus = import ./programs/herdr-notification-focus { inherit pkgs; };
             omapager-tools = import ./programs/omapager-tools { inherit pkgs; };
             panel-settings = import ./programs/panel-settings { inherit pkgs; };

@@ -11,6 +11,7 @@ let
   render = import ./render.nix { inherit lib; };
   herdrTheme = import ./herdr.nix { };
   btopTheme = import ./btop.nix { inherit lib; };
+  telegramTheme = import ./telegram.nix { inherit lib pkgs; };
   hyprland = import ./hyprland.nix { inherit lib; };
   omarchy = import ./omarchy.nix { inherit lib; };
   # Rendered theme text is content-addressed. A nixpkgs bump must not rebuild it.
@@ -128,6 +129,9 @@ let
           # A store path would root every theme image in the Home Manager
           # generation. theme-menu materialises the locked theme fetch on apply.
           "wallpaper.png" = wallpaperSettings.overrides.${theme.herdr.name}.${mode} or "nix-theme:${host}";
+          # The patched Telegram client selects and watches this stable path.
+          # Publish atomically with the other mode assets; no extra daemon.
+          "telegram.tdesktop-theme" = telegramTheme theme.${mode};
         }
       );
       files = {
@@ -168,7 +172,9 @@ let
       );
     }
   ) themedCatalogue;
-  manifest = textFile "theme-catalogue.json" (
+  # Native Telegram archives are derivation outputs, so this manifest must carry
+  # their build dependencies (builtins.toFile cannot reference derivation outputs).
+  manifest = pkgs.writeText "theme-catalogue.json" (
     builtins.toJSON {
       default = defaultPalette;
       appearance = configuredAppearance;

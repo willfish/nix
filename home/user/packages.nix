@@ -320,7 +320,7 @@ in
       libreoffice-qt-fresh # Office suite with Qt interface (docs, spreadsheets, etc.)
       pavucontrol # Graphical PulseAudio volume control
       qbittorrent # BitTorrent client with a user-friendly interface
-      telegram-desktop # Desktop client for Telegram messaging
+      (import ../../programs/telegram-themed { inherit pkgs; }) # Follow the active desktop palette
       wl-clipboard # Wayland clipboard tools for Hyprland, voice and Neovim
       wlopm # Wayland output power control used by toggle-display
       xclip # Clipboard tool (macOS has native pbcopy/pbpaste)
