@@ -1,5 +1,0 @@
-# Opened from Local Playlists. cliamp expands this remote playlist on load.
-# The station names stay on Terminus.
-[[track]]
-path = "http://terminus:8085/playlists/index.m3u"
-title = "Radio archive"

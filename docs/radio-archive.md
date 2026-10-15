@@ -30,19 +30,16 @@ Playlist entries are `audio/<track id>.mp3`. cliamp refuses a plain M3U larger
 than 1 MiB, so `build-stations.py` trims to that size. `playlists/index.m3u`
 lists the stations. It does not contain their songs.
 
-cliamp calls a named list of tracks a playlist. It discovers every file in
-`~/.config/cliamp/playlists/` and shows them under Local Playlists. A provider
-is a whole source, such as Radio or Navidrome, and this archive does not need
-one. `radios.toml` is only an explicit station list, so these stations are not
-in it.
+cliamp calls a named list of tracks a playlist. Press `L` for local
+playlists. Each archive station is one playlist. Opening it expands the
+station into songs.
 
-`cliamp/playlists/radio-archive.toml` is one track, the live index. Opening that
-playlist fetches the current station list. cliamp expands a playlist once, so a
-station row stays a station URL. Open a station file itself to expand its songs:
+Do not play a row inside a list of station addresses. cliamp treats that
+row as a live stream and reconnects forever. Open the station playlist
+itself.
 
-```bash
-cliamp http://terminus:8085/playlists/official/<station>.m3u
-```
+Home Manager refreshes those playlists from the live index on switch.
+The station names are not stored in this repository.
 
 ## Refreshing
 

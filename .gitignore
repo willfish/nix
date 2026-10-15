@@ -18,5 +18,6 @@ sessions
 metadata
 *.py
 
-# Archive tooling deployed to Terminus is owned source, not scratch.
+# Archive tooling is owned source, not scratch.
 !system/terminus/radio-archive/*.py
+!home/config/cliamp/sync-radio-archive-playlists.py

@@ -111,6 +111,13 @@ in
         ''
     );
 
+    syncRadioArchivePlaylists = lib.mkIf isGraphicalLinux (
+      lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        ${pkgs.python3}/bin/python3 \
+          ${configDir}/cliamp/sync-radio-archive-playlists.py || true
+      ''
+    );
+
     installHerdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       herdrBin="${pkgs.herdr}/bin/herdr"
       if [ -x "$herdrBin" ]; then
@@ -160,10 +167,6 @@ in
     };
     "cliamp/playlists/forte-radio.m3u" = {
       text = builtins.readFile ../config/cliamp/playlists/forte-radio.m3u;
-      force = config.dotfiles.privateEnabled;
-    };
-    "cliamp/playlists/radio-archive.toml" = {
-      text = builtins.readFile ../config/cliamp/playlists/radio-archive.toml;
       force = config.dotfiles.privateEnabled;
     };
   };
