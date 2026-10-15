@@ -9,6 +9,9 @@ let
   isAutomationDarwin = pkgs.stdenv.isDarwin && config.dotfiles.role == "automation";
   isAndromeda = pkgs.stdenv.isLinux && hostName == "andromeda";
   isRelay = isAutomationDarwin && hostName == "relay";
+  # Relay's Hermes Qwen topic stays on 127.0.0.1:8081. Strata owns that port.
+  # Do not start llama-server or the chat-UI helper on this host.
+  serveRelayLlama = false;
   llamaCpp =
     if isAndromeda then
       (pkgs.llama-cpp.override {
@@ -397,12 +400,12 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     ''
   );
 
-  dotfiles.darwinDaemons = lib.mkIf (isAutomationDarwin && config.dotfiles.darwinSystemServices) {
+  dotfiles.darwinDaemons = lib.mkIf (serveRelayLlama && config.dotfiles.darwinSystemServices) {
     local-llm = config.launchd.agents.local-llm.config;
     local-assistant-tools = config.launchd.agents.local-assistant-tools.config;
   };
 
-  launchd.agents.local-llm = lib.mkIf isAutomationDarwin {
+  launchd.agents.local-llm = lib.mkIf serveRelayLlama {
     enable = !config.dotfiles.darwinSystemServices;
     config = {
       ProgramArguments = [ "${server}/bin/local-llm-server" ];
@@ -415,7 +418,7 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     };
   };
 
-  launchd.agents.local-assistant-tools = lib.mkIf isAutomationDarwin {
+  launchd.agents.local-assistant-tools = lib.mkIf serveRelayLlama {
     enable = !config.dotfiles.darwinSystemServices;
     config = {
       ProgramArguments = [ "${assistantTools}/bin/local-assistant-tools" ];

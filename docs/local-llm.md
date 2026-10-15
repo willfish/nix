@@ -1,14 +1,17 @@
-# Local Qwen on Relay and Andromeda
+# Local Qwen on Andromeda
 
-Home Manager manages a Metal-accelerated llama.cpp server on the M4 Pro Mac mini
-`relay` and a CUDA server on Andromeda's RTX 5090. Both use the lean `qwen-pi`
-launcher with separate pinned models: Huihui Qwen3.6-35B-A3B abliterated
-Q5_K_M on Relay and Huihui Qwen3.8-27B abliterated UD-Q5_K_XL on Andromeda. Configuration is in
-`home/user/local-llm.nix`. The browser UI and Hermes Telegram routing below apply
-to Relay. Andromeda's Tailscale API requires the login key. Relay's Tailscale
-clients do not: the tailnet is the login, and the key stays on the LAN.
+Home Manager manages a CUDA llama.cpp server on Andromeda's RTX 5090, using
+Huihui Qwen3.8-27B abliterated UD-Q5_K_XL. Configuration is in
+`home/user/local-llm.nix`. Relay does not start llama-server or the chat-UI
+helper. Its Hermes Qwen topic still uses `http://127.0.0.1:8081/v1`; Strata is
+the server intended for that port. Do not kickstart `org.nixos.local-llm` on
+Relay. Andromeda's Tailscale API requires the login key.
 
 ## Chat
+
+The Relay URLs below are the retired llama.cpp UI. Do not start that server.
+Port 8081 on Relay is reserved for the Hermes Qwen topic, which Strata is
+meant to serve.
 
 Run `local-chat` or open <http://127.0.0.1:8081>.
 From another device on the LAN, open <http://relay.fritz.box:8081>.
@@ -316,19 +319,8 @@ for the subscription/API distinction.
 
 ## Install and activate
 
-On Relay:
-
-```sh
-direnv exec . nix build .#homeConfigurations.william-darwin.activationPackage --no-link
-system=$(direnv exec . nix build .#darwinConfigurations.relay.system --no-link --print-out-paths)
-# With maintenance approval, deploy the matching system before Home Manager:
-sudo "$system/sw/bin/darwin-deploy" "$system"
-direnv exec . hmswitch
-local-llm-fetch
-sudo launchctl kickstart "system/org.nixos.local-llm"
-local-chat
-local-chat-key
-```
+Relay does not run this server. Leave `org.nixos.local-llm` and
+`org.nixos.local-assistant-tools` unloaded. Hermes and Tailscale stay up.
 
 On Andromeda:
 
