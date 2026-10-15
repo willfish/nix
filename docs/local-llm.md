@@ -3,15 +3,14 @@
 Home Manager manages a CUDA llama.cpp server on Andromeda's RTX 5090, using
 Huihui Qwen3.8-27B abliterated UD-Q5_K_XL. Configuration is in
 `home/user/local-llm.nix`. Relay does not start llama-server or the chat-UI
-helper. Its Hermes Qwen topic still uses `http://127.0.0.1:8081/v1`; Strata is
-the server intended for that port. Do not kickstart `org.nixos.local-llm` on
-Relay. Andromeda's Tailscale API requires the login key.
+helper. Its Hermes Qwen topic uses [native Strata](strata-relay.md) at
+`http://127.0.0.1:8081/v1`. Do not kickstart `org.nixos.local-llm` on Relay.
+Andromeda's Tailscale API requires the login key.
 
 ## Chat
 
 The Relay URLs below are the retired llama.cpp UI. Do not start that server.
-Port 8081 on Relay is reserved for the Hermes Qwen topic, which Strata is
-meant to serve.
+Port 8081 on Relay serves Strata for the Hermes Qwen topic.
 
 Run `local-chat` or open <http://127.0.0.1:8081>.
 From another device on the LAN, open <http://relay.fritz.box:8081>.

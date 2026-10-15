@@ -43,6 +43,7 @@
     ./git.nix
     ./llm-harness.nix
     ./local-llm.nix
+    ./strata-relay.nix
     ./hermes.nix
     ./mcp.nix
     ./arxiv-library.nix

@@ -11,7 +11,9 @@ let
   isRelay = isAutomationDarwin && hostName == "relay";
   # Relay's Hermes Qwen topic stays on 127.0.0.1:8081. Strata owns that port.
   # Do not start llama-server or the chat-UI helper on this host.
-  serveRelayLlama = false;
+  serveDarwinLlama = isAutomationDarwin && !isRelay;
+  hermesContextSize = if isRelay then 32768 else 65536;
+  hermesReasoning = if isRelay then "high" else "medium";
   llamaCpp =
     if isAndromeda then
       (pkgs.llama-cpp.override {
@@ -78,11 +80,11 @@ let
   hermesOverlay = pkgs.writeText "local-qwen-hermes.json" (
     builtins.toJSON {
       model = {
-        default = modelAlias;
+        default = if isRelay then "qwen3.8-flash-next-iq3_s" else modelAlias;
         provider = "qwen-local";
         base_url = "http://127.0.0.1:8081/v1";
         api_key = "";
-        context_length = 65536;
+        context_length = hermesContextSize;
       };
       custom_providers = [
         {
@@ -95,7 +97,7 @@ let
             chat_template_kwargs = {
               enable_thinking = true;
               preserve_thinking = true;
-              reasoning_effort = "medium";
+              reasoning_effort = hermesReasoning;
             };
             temperature = 1.0;
             top_p = 0.95;
@@ -108,7 +110,7 @@ let
       ];
       agent = {
         max_turns = "unlimited";
-        reasoning_effort = "medium";
+        reasoning_effort = hermesReasoning;
       };
       terminal = {
         backend = "local";
@@ -121,8 +123,8 @@ let
       compression = {
         enabled = true;
         threshold = 0.75;
-        # Hermes floors small-window percentage triggers; enforce 75% of 64K.
-        threshold_tokens = 49152;
+        # Keep room for reasoning and tools inside the served context window.
+        threshold_tokens = hermesContextSize * 3 / 4;
         progress_notices = true;
         abort_on_summary_failure = true;
       };
@@ -400,12 +402,12 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     ''
   );
 
-  dotfiles.darwinDaemons = lib.mkIf (serveRelayLlama && config.dotfiles.darwinSystemServices) {
+  dotfiles.darwinDaemons = lib.mkIf (serveDarwinLlama && config.dotfiles.darwinSystemServices) {
     local-llm = config.launchd.agents.local-llm.config;
     local-assistant-tools = config.launchd.agents.local-assistant-tools.config;
   };
 
-  launchd.agents.local-llm = lib.mkIf serveRelayLlama {
+  launchd.agents.local-llm = lib.mkIf serveDarwinLlama {
     enable = !config.dotfiles.darwinSystemServices;
     config = {
       ProgramArguments = [ "${server}/bin/local-llm-server" ];
@@ -418,7 +420,7 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
     };
   };
 
-  launchd.agents.local-assistant-tools = lib.mkIf serveRelayLlama {
+  launchd.agents.local-assistant-tools = lib.mkIf serveDarwinLlama {
     enable = !config.dotfiles.darwinSystemServices;
     config = {
       ProgramArguments = [ "${assistantTools}/bin/local-assistant-tools" ];
