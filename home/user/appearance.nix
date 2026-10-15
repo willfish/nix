@@ -49,11 +49,11 @@ in
     else
       "--theme ${piThemes.light} --theme ${piThemes.dark} --use-theme host-light/host-dark";
 
-  # adw-gtk3 and adw-gtk3-dark both come from this package. theme-menu
-  # chooses the name. Pinning it in gtk.theme writes settings.ini and dconf
-  # after publication, so menus stay on the light theme.
+  # theme-menu selects a content-addressed GTK theme so Brave also reloads
+  # same-mode palette changes. Do not pin gtk.theme in settings.ini or dconf.
   home.packages = lib.optionals isGraphicalLinux [
     runtime.package
+    runtime.gtkThemes
     pkgs.adw-gtk3
   ];
 

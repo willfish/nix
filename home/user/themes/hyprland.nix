@@ -36,6 +36,7 @@ in
       mode,
       palette,
       appearance,
+      gtkTheme ? (if mode == "dark" then "adw-gtk3-dark" else "adw-gtk3"),
     }:
     let
       inherit (appearance) font;
@@ -53,7 +54,6 @@ in
           rgb palette.base03
         else
           appearance.colors.inactiveBorder;
-      gtkTheme = if mode == "dark" then "adw-gtk3-dark" else "adw-gtk3";
       colorScheme = if mode == "dark" then "prefer-dark" else "prefer-light";
       cssString = value: builtins.replaceStrings [ "\\" "\"" "\n" ] [ "\\\\" "\\\"" " " ] value;
       subtextSize = toString (

@@ -13,6 +13,7 @@ let
   btopTheme = import ./btop.nix { inherit lib; };
   telegramTheme = import ./telegram.nix { inherit lib pkgs; };
   hyprland = import ./hyprland.nix { inherit lib; };
+  gtk = import ./gtk.nix { inherit lib pkgs; };
   omarchy = import ./omarchy.nix { inherit lib; };
   # Rendered theme text is content-addressed. A nixpkgs bump must not rebuild it.
   textFile = name: text: builtins.toFile name text;
@@ -91,6 +92,53 @@ let
       dark = theme.dark // paletteOverrides "dark";
     }
   ) catalogue;
+  sessionArgs = mode: palette: {
+    inherit mode palette;
+    appearance = configuredAppearance;
+  };
+  gtkArgs = mode: palette: {
+    inherit mode palette;
+    shared = (hyprland.render (sessionArgs mode palette))."gtk.css";
+  };
+  renderSession =
+    mode: palette:
+    hyprland.render (sessionArgs mode palette // { gtkTheme = gtk.name (gtkArgs mode palette); });
+  # A different GTK name invalidates Chromium's native colour cache even when
+  # both palettes are dark. Replacing user gtk.css alone cannot do that.
+  gtkThemes = pkgs.runCommand "desktop-gtk-themes" { } (
+    lib.concatMapStrings (
+      theme:
+      lib.concatMapStrings
+        (
+          mode:
+          let
+            palette = theme.${mode};
+            args = gtkArgs mode palette;
+            name = gtk.name args;
+          in
+          lib.concatMapStrings
+            (
+              version:
+              let
+                css = gtk.stylesheet (args // { inherit version; });
+              in
+              ''
+                mkdir -p "$out/share/themes/${name}/gtk-${version}"
+                printf '%s' ${lib.escapeShellArg css} > "$out/share/themes/${name}/gtk-${version}/gtk.css"
+                ln -s gtk.css "$out/share/themes/${name}/gtk-${version}/gtk-dark.css"
+              ''
+            )
+            [
+              "3.0"
+              "4.0"
+            ]
+        )
+        [
+          "light"
+          "dark"
+        ]
+    ) (lib.attrValues themedCatalogue)
+  );
   entries = lib.mapAttrs (
     host: theme:
     let
@@ -113,11 +161,7 @@ let
       session = lib.genAttrs [ "light" "dark" ] (
         mode:
         let
-          rendered = hyprland.render {
-            inherit mode;
-            palette = theme.${mode};
-            appearance = configuredAppearance;
-          };
+          rendered = renderSession mode theme.${mode};
         in
         # Seed and publish every desktop asset, including walker.css. Wallpaper
         # stays beside them; it is not a generated text asset.
@@ -209,7 +253,12 @@ let
   };
 in
 {
-  inherit state manifest package;
+  inherit
+    state
+    manifest
+    package
+    gtkThemes
+    ;
   inherit (omarchy) license;
   file = name: config.lib.file.mkOutOfStoreSymlink "${state}/active/${name}";
 }
