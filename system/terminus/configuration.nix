@@ -50,6 +50,7 @@ in
   imports = [
     ../modules/server.nix
     ./hardware-configuration.nix
+    ./media-http.nix
     ./storage.nix
   ];
 

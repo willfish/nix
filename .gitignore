@@ -17,3 +17,6 @@ sessions
 
 metadata
 *.py
+
+# Archive tooling deployed to Terminus is owned source, not scratch.
+!system/terminus/radio-archive/*.py

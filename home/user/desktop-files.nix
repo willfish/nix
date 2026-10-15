@@ -162,6 +162,10 @@ in
       text = builtins.readFile ../config/cliamp/playlists/forte-radio.m3u;
       force = config.dotfiles.privateEnabled;
     };
+    "cliamp/playlists/radio-archive.toml" = {
+      text = builtins.readFile ../config/cliamp/playlists/radio-archive.toml;
+      force = config.dotfiles.privateEnabled;
+    };
   };
 
   home.packages = lib.optional isGraphicalLinux cliampRadio;
