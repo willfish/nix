@@ -26,6 +26,21 @@ static int bad_identity(const char *value) {
     return !value || !value[0] || strlen(value) > 4096 || has_control_characters(value);
 }
 
+static int arg_ends_with(const char *arg, size_t len, const char *suffix) {
+    size_t slen = strlen(suffix);
+    return len >= slen && strcmp(arg + len - slen, suffix) == 0;
+}
+
+int controller_cmdline_arg_is_pi(const char *arg) {
+    if (!arg) return 0;
+    size_t len = strlen(arg);
+    return arg_ends_with(arg, len, "/pi")
+        || arg_ends_with(arg, len, "/pi/dist/cli.js")
+        || arg_ends_with(arg, len, "/pi/dist/bundle/cli.js")
+        || arg_ends_with(arg, len, "/pi-coding-agent/dist/cli.js")
+        || arg_ends_with(arg, len, "/pi-coding-agent/dist/bundle/cli.js");
+}
+
 static int cmdline_is_pi(int pid) {
     char path[64];
     snprintf(path, sizeof path, "/proc/%d/cmdline", pid);
@@ -41,10 +56,7 @@ static int cmdline_is_pi(int pid) {
         for (ssize_t j = 0; j < i; j++) {
             if (buf[j] == 0) arg = buf + j + 1;
         }
-        size_t len = strlen(arg);
-        if (len >= 3 && strcmp(arg + len - 3, "/pi") == 0) return 1;
-        if (len >= 14 && strcmp(arg + len - 14, "/pi/dist/cli.js") == 0) return 1;
-        if (len >= 28 && strcmp(arg + len - 28, "/pi-coding-agent/dist/cli.js") == 0) return 1;
+        if (controller_cmdline_arg_is_pi(arg)) return 1;
     }
     return 0;
 }

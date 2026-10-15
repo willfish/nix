@@ -465,6 +465,15 @@ int test_controller(void) {
     right = left;
     right.pid++;
     check(!controller_same_target(&left, &right), "target snapshot rejects a reused pid");
+    check(controller_cmdline_arg_is_pi("/nix/store/x/bin/pi"), "cmdline recognizes /pi binary");
+    check(controller_cmdline_arg_is_pi("/nix/store/x/lib/pi/dist/cli.js"), "cmdline recognizes /pi/dist/cli.js");
+    check(controller_cmdline_arg_is_pi("/nix/store/x/lib/pi/dist/bundle/cli.js"), "cmdline recognizes /pi/dist/bundle/cli.js");
+    check(controller_cmdline_arg_is_pi("/nix/store/x/lib/pi/node_modules/@earendil-works/pi-coding-agent/dist/cli.js"),
+        "cmdline recognizes unbundled pi-coding-agent cli.js");
+    check(controller_cmdline_arg_is_pi("/nix/store/x/lib/pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
+        "cmdline recognizes bundled pi-coding-agent cli.js");
+    check(!controller_cmdline_arg_is_pi("/nix/store/x/lib/node_modules/other/dist/bundle/cli.js"),
+        "cmdline rejects unrelated bundled cli.js");
     controller_free(app);
     late_audio audio = {0};
     deps = base_deps(&log);

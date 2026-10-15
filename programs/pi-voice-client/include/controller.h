@@ -426,6 +426,7 @@ int controller_recover_copy(voice_controller *app, char *err, size_t cap);
 int controller_recover_stage(voice_controller *app, char *err, size_t cap);
 int controller_recover_discard(voice_controller *app, char *err, size_t cap);
 void controller_set_activity(session_entry *entry, const char *state);
+int controller_cmdline_arg_is_pi(const char *arg);
 
 #endif
 
