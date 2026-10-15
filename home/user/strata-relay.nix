@@ -11,6 +11,7 @@ let
   revision = "296b59d2f73c8f04a805df29c2fa97655adace78";
   data = "${config.xdg.dataHome}/strata";
   keyFile = "${config.xdg.configHome}/local-llm/api-key";
+  runtimeConfig = "${config.xdg.stateHome}/strata/runtime.json";
   # Build against Apple's current SDK, not the Nix development shell's older SDK.
   cleanEnvironment = ''
     /usr/bin/env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" \
@@ -38,7 +39,7 @@ let
       fi
       cd "$source"
       exec ${cleanEnvironment} STRATA_SOURCE=huggingface PIP_ONLY_BINARY=:all: \
-        /bin/sh ./setup.sh --yes --model IQ3_S --context 32768 --vision no \
+        /bin/sh ./setup.sh --yes --model IQ3_S --context 65536 --vision no \
         --port 8081 --host 127.0.0.1 --no-browser --no-start \
         --data-dir ${lib.escapeShellArg data}
     '';
@@ -59,6 +60,17 @@ let
       echo 'The Hermes local-model API key is missing.' >&2
       exit 1
     fi
+    # Existing setup files may still say 32K. Enforce Hermes's 64K floor at
+    # every start without downloading or repacking the model again.
+    mkdir -p ${lib.escapeShellArg (builtins.dirOf runtimeConfig)}
+    runtime=$(mktemp ${lib.escapeShellArg "${runtimeConfig}.XXXXXX"})
+    trap 'rm -f "$runtime"' EXIT
+    ${pkgs.jq}/bin/jq '
+      (.args | index("--max-context")) as $i
+      | if $i == null then error("missing --max-context")
+        else .args[$i + 1] = "65536" end
+    ' "$source/strata-iq3_s.json" > "$runtime"
+    mv "$runtime" ${lib.escapeShellArg runtimeConfig}
     # Read after the environment reset: the key never appears in process arguments.
     export STRATA_API_KEY
     STRATA_API_KEY="$(< ${lib.escapeShellArg keyFile})"
@@ -66,7 +78,7 @@ let
     export STRATA_ROUTE_TAIL_SKIP=0
     cd "$source"
     exec "$source/.venv/bin/python" serve/server.py --engine strata \
-      --config "$source/strata-iq3_s.json" --host 127.0.0.1 --port 8081 --fit-max-tokens
+      --config ${lib.escapeShellArg runtimeConfig} --host 127.0.0.1 --port 8081 --fit-max-tokens
   '';
   server = pkgs.writeShellApplication {
     name = "strata-relay-server";

@@ -10,8 +10,11 @@ IQ3_S favors model quality over speed. On the 64 GiB M4 Pro its experts
 stream from the internal SSD into a bounded memory arena. The larger Unsloth
 4-bit model needs substantially more disk during repacking and streams more
 weights. No throughput figure is assumed for this hardware. The model uses
-a 32K context, high reasoning effort, and Hermes compression at 24K tokens.
-The optional expert-skipping speed shortcut is disabled.
+a 64K context, high reasoning effort, and Hermes compression at 48K tokens.
+Hermes rejects windows below 64,000 tokens, so the launcher enforces 65,536
+in a runtime copy of the setup config, including older 32K installations.
+The upstream streaming-memory limits remain enabled. The optional
+expert-skipping speed shortcut is disabled.
 
 ## Prepare and start
 

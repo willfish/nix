@@ -12,7 +12,8 @@ let
   # Relay's Hermes Qwen topic stays on 127.0.0.1:8081. Strata owns that port.
   # Do not start llama-server or the chat-UI helper on this host.
   serveDarwinLlama = isAutomationDarwin && !isRelay;
-  hermesContextSize = if isRelay then 32768 else 65536;
+  # Hermes rejects models serving fewer than 64,000 tokens.
+  hermesContextSize = 65536;
   hermesReasoning = if isRelay then "high" else "medium";
   llamaCpp =
     if isAndromeda then
