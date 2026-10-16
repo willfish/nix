@@ -304,11 +304,12 @@ rec {
   # Super+Escape locks without a confirmation. The session menu confirms
   # logout, reboot and power off.
   # Daily apps: Super+Enter opens a new Ghostty. Hyprland names that
-  # key Return. Super+B, Super+C, Super+T, Super+E, Super+P and Super+O
-  # focus Brave, Slack, Telegram, Nautilus, CLIamp or Spotify, or launch
-  # them when they are not open. A second press focuses the open window
-  # from any workspace. Discord and LibreOffice stay on the launcher.
-  # Spotify is the Quickshell player, not the official desktop client.
+  # key Return. Super+B, Super+C, Super+T, Super+E, Super+P, Super+O and
+  # Super+Y focus Brave, Slack, Telegram, Nautilus, CLIamp, Spotify or
+  # YouTube, or launch them when they are not open. A second press focuses
+  # the open window from any workspace. Discord and LibreOffice stay on the
+  # launcher. Spotify is the Quickshell player, not the official desktop
+  # client. YouTube is the Brave app window, so its class is matched by prefix.
   # bindd lines are described keybinds. Super+K reads those descriptions.
   # mainMod is $mainMod. Number keys use workspaceMod and workspaceMoveMod;
   # they are not hardcoded in the module.
@@ -339,6 +340,7 @@ rec {
       "SUPER CTRL, E, Emojis, exec, hypr-emojis"
       "SUPER, P, CLIamp, exec, ${cliampCommand}"
       "SUPER, O, Spotify, exec, hypr-spotify-focus"
+      "SUPER, Y, YouTube, exec, hypr-open 'brave-www.youtube.com*' brave --app=https://www.youtube.com/"
       "SUPER SHIFT, T, Theme menu, exec, theme-menu"
       "SUPER SHIFT, left, Previous wallpaper, exec, hypr-wallpaper-cycle previous"
       "SUPER SHIFT, right, Next wallpaper, exec, hypr-wallpaper-cycle next"

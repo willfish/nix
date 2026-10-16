@@ -27,11 +27,12 @@ Super+WASD focuses, Super+Shift+WASD moves windows, Super+1–9 switches
 workspaces and Super+Shift+1–9 moves windows between them. Super+Q closes,
 Super+F toggles fullscreen, Super+G toggles floating, Super+Shift+G toggles agent usage, and Super or Super+X
 opens the launcher. Super+K opens the keybindings menu. It is the pinned Omarchy menu: type to filter, Enter runs the selected shortcut, and Escape closes it. Super+Enter opens a new Ghostty. Super+B, Super+C,
-Super+T, Super+E, Super+P and Super+O focus Brave, Slack, Telegram, Nautilus,
-CLIamp or Spotify if one is open, otherwise they launch it. Pressing the
-shortcut again focuses that window from any workspace. Discord and LibreOffice
-stay on the launcher. Spotify is the Quickshell player from the Omarchy plugin,
-not the official desktop client. A new Brave window opens on workspace 1. Slack,
+Super+T, Super+E, Super+P, Super+O and Super+Y focus Brave, Slack, Telegram,
+Nautilus, CLIamp, Spotify or YouTube if one is open, otherwise they launch it.
+Pressing the shortcut again focuses that window from any workspace. Discord and
+LibreOffice stay on the launcher. Spotify is the Quickshell player from the
+Omarchy plugin, not the official desktop client. YouTube is the Brave app
+window, not a tab in the main browser. A new Brave window opens on workspace 1. Slack,
 Telegram and Discord open on workspace 2. CLIamp, Spotify and the YouTube app
 open on workspace 3.
 Super+Shift+T opens appearance and Ctrl+Shift+S takes a

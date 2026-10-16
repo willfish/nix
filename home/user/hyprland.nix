@@ -327,8 +327,10 @@
         '';
       };
       # Focus an existing window whose class is one of the :-separated names,
-      # otherwise launch the command. The separator is a colon because Hyprland
-      # runs bind commands through a shell, where a pipe would split the command.
+      # otherwise launch the command. A name ending in * matches that prefix,
+      # for Brave app windows whose class grows a profile suffix. The separator
+      # is a colon because Hyprland runs bind commands through a shell, where a
+      # pipe would split the command.
       openApp = pkgs.writeShellApplication {
         name = "hypr-open";
         runtimeInputs = [
@@ -345,7 +347,14 @@
           address="$(hyprctl clients -j | jq -r --arg alts "$class_alts" '
             ($alts | split(":")) as $want
             | first(.[] | select(
-                (.class as $c | $want | index($c))
+                (.class as $c | $want | any(
+                    . as $alt
+                    | if ($alt | endswith("*")) then
+                        $c | startswith($alt[0:-1])
+                      else
+                        $alt == $c
+                      end
+                  ))
                 or (
                   ($want | index("com.william.cliamp"))
                   and (
