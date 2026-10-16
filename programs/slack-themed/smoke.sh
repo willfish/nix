@@ -14,6 +14,7 @@ rm "$output/runtime/slack"
 cp --reflink=auto "$package/lib/slack/slack" "$output/runtime/slack"
 asar extract "$package/lib/slack/resources/app.asar" "$output/extracted"
 cp "$output/extracted/dist/dotfiles-theme.cjs" "$output/harness/"
+cp "$output/extracted/dist/dotfiles-keys.cjs" "$output/harness/"
 cp "$source_dir/smoke.cjs" "$output/harness/"
 printf '{"name":"slack-theme-smoke","version":"1.0.0","main":"smoke.cjs"}\n' >"$output/harness/package.json"
 rm -r "$output/runtime/resources"
@@ -24,5 +25,6 @@ export SLACK_THEME_SMOKE_OUTPUT="$output"
 export XDG_STATE_HOME="$output/state"
 export XDG_CONFIG_HOME="$output/config"
 unset SLACK_DOTFILES_THEME
-"$output/runtime/slack" --ozone-platform=wayland
+unset SLACK_DOTFILES_KEYS
+"$output/runtime/slack" --ozone-platform=wayland --force-prefers-reduced-motion
 printf 'Native-renderer screenshots: %s/active.png and %s/light.png\n' "$output" "$output"
