@@ -122,14 +122,117 @@ test("escape cancels hints, blurs the composer, and leaves menus alone", () => {
 
 test("gi uses the current pane composer and never search", () => {
   const composers = [
-    { id: "primary", pane: "primary", visible: true, ql: true, search: false },
-    { id: "thread", pane: "secondary", visible: true, ql: true, search: false },
-    { id: "search", pane: "primary", visible: true, ql: true, search: true },
+    { id: "primary", pane: "primary", visible: true, ql: true, search: false, message: true },
+    { id: "thread", pane: "secondary", visible: true, ql: true, search: false, message: true },
+    { id: "search", pane: "primary", visible: true, ql: true, search: true, message: false },
   ];
   assert.equal(keys.composerTarget({ focusPane: "secondary", composers }).id, "thread");
   assert.equal(keys.composerTarget({ focusPane: "primary", composers: [composers[2]] }), null);
   const focused = press(press(keys.initialState(), "g").state, "i", {}, { time: 20 });
   assert.equal(focused.effects[0].type, "focus-composer");
+});
+
+test("gi skips an earlier inline editor and fails closed when ambiguous", () => {
+  const panes = { primary: { id: "p" }, secondary: { id: "s" } };
+  const composers = [
+    { id: "inline", pane: "primary", visible: true, ql: true, search: false, message: false },
+    { id: "primary", pane: "primary", visible: true, ql: true, search: false, message: true },
+    { id: "later-inline", pane: "primary", visible: true, ql: true, search: false, message: false },
+    { id: "search", pane: "primary", visible: true, textbox: true, search: true, message: true },
+  ];
+  assert.equal(keys.composerTarget({ focusPane: "primary", panes, composers }).id, "primary");
+  assert.equal(keys.composerTarget({
+    focusPane: "primary",
+    panes,
+    composers: composers.concat([{ id: "other", pane: "primary", visible: true, ql: true, search: false, message: true }]),
+  }), null);
+  assert.equal(keys.composerTarget({ focusPane: "primary", panes, composers: [composers[3]] }), null);
+});
+
+test("current pane follows focus or last pane and drops a closed thread", () => {
+  const panes = { primary: { id: "p" }, secondary: { id: "s" } };
+  assert.equal(keys.currentPane({ lastPane: "secondary", panes }), "secondary");
+  assert.equal(keys.currentPane({ lastPane: "primary", panes }), "primary");
+  assert.equal(keys.currentPane({ focusPane: "secondary", lastPane: "primary", panes }), "secondary");
+  assert.equal(keys.currentPane({ focusPane: "secondary", lastPane: "secondary", panes: { primary: { id: "p" }, secondary: null } }), "primary");
+  assert.equal(keys.currentPane({ lastPane: "secondary", panes: { primary: null, secondary: null } }), null);
+});
+
+test("scroll target prefers a live hover scroller, then focus, and gg stays on the pane", () => {
+  const panes = { primary: { id: "pane" }, secondary: { id: "thread" } };
+  assert.equal(keys.selectScrollTarget({
+    panes,
+    pointerScrollers: { x: { id: "wide" }, y: { id: "tall" } },
+    activeScroller: { id: "focused" },
+  }, "j").id, "tall");
+  assert.equal(keys.selectScrollTarget({
+    panes,
+    pointerScrollers: { x: { id: "wide" }, y: { id: "tall" } },
+  }, "l").id, "wide");
+  assert.equal(keys.selectScrollTarget({
+    panes,
+    pointerScroller: { id: "gone", detached: true },
+    activeScroller: { id: "focused" },
+  }, "j").id, "focused");
+  assert.equal(keys.selectScrollTarget({
+    lastPane: "primary",
+    panes,
+    pointerScroller: { id: "hover" },
+  }, "gg").id, "pane");
+  assert.equal(keys.selectScrollTarget({
+    lastPane: "secondary",
+    panes: { primary: { id: "pane" }, secondary: null },
+    pointerScroller: { id: "hover" },
+  }, "G").id, "pane");
+});
+
+test("smooth scroll never wheel-falls-back before the animation moves", () => {
+  const native = { scrollHeight: 2000, clientHeight: 200, scrollWidth: 400, clientWidth: 400 };
+  const smooth = keys.scrollPlan(native, "j", 1, false);
+  const instant = keys.scrollPlan(native, "j", 1, true);
+  assert.equal(smooth.behavior, "smooth");
+  assert.equal(keys.needsWheelFallback(smooth, { top: 0, left: 0 }, { top: 0, left: 0 }), false);
+  assert.equal(instant.behavior, "auto");
+  assert.equal(keys.needsWheelFallback(instant, { top: 0, left: 0 }, { top: 0, left: 0 }), true);
+  assert.equal(keys.needsWheelFallback(instant, { top: 0, left: 0 }, { top: 100, left: 0 }), false);
+  assert.equal(keys.needsWheelFallback(keys.scrollPlan(native, "G", 1, true), { top: 0, left: 0 }, { top: 0, left: 0 }), false);
+});
+
+function lift(state, key, ctx = {}, extra = {}) {
+  return keys.reduce(state, {
+    type: "keyup",
+    key,
+    code: extra.code || (key.length === 1 ? `Key${key.toUpperCase()}` : key),
+    shift: false,
+    ctrl: false,
+    alt: false,
+    meta: false,
+    repeat: false,
+    composing: Boolean(extra.composing),
+    time: extra.time || 0,
+  }, { allowed: true, documentFocused: true, editable: false, menu: false, dialog: false, emoji: false, ...ctx });
+}
+
+test("one keyup releases repeated holds and does not swallow a later editable keyup", () => {
+  let state = press(keys.initialState(), "j").state;
+  state = press(state, "j", {}, { repeat: true, time: 10 }).state;
+  state = press(state, "j", {}, { repeat: true, time: 20 }).state;
+  assert.deepEqual(state.swallowed, ["KeyJ"]);
+  const released = lift(state, "j");
+  assert.equal(released.prevent, true);
+  assert.deepEqual(released.state.swallowed, []);
+  const editableUp = lift(released.state, "j", { editable: true });
+  assert.equal(editableUp.prevent, false);
+  assert.deepEqual(editableUp.state.swallowed, []);
+  const composing = press(keys.initialState(), "j", {}, { composing: true });
+  assert.equal(composing.prevent, false);
+  assert.deepEqual(composing.state.swallowed, []);
+  assert.equal(lift(composing.state, "j", {}, { composing: true }).prevent, false);
+  const held = press(keys.initialState(), "j").state;
+  const reset = press(held, "x", {}, { ctrl: true, code: "KeyX" });
+  assert.equal(reset.prevent, false);
+  assert.deepEqual(reset.state.swallowed, []);
+  assert.equal(lift(reset.state, "j").prevent, false);
 });
 
 test("hints are prefix-free, charset-only, and ordered sidebar then pane then send", () => {
@@ -168,7 +271,12 @@ test("native scroll plans never use wheel, home, or end", () => {
 test("page source embeds the reducer and the bridge token", () => {
   const sourceText = keys.pageSource("token-1");
   assert.equal(sourceText.includes(keys.reduce.toString()), true);
+  assert.equal(sourceText.includes(keys.needsWheelFallback.toString()), true);
   assert.equal(sourceText.includes(JSON.stringify("token-1")), true);
+  assert.equal(sourceText.includes('.closest(".p-message_input, .p-message_input_field")'), true);
+  assert.equal(sourceText.includes(".c-message_kit__background"), true);
+  assert.equal(sourceText.includes(".c-message_kit__text"), true);
+  assert.equal(sourceText.includes(".c-texty_input"), false);
   assert.equal(sourceText.includes("SLACK_DOTFILES_KEYS"), true);
   assert.equal(sourceText.includes("event.message"), false);
 });

@@ -3,6 +3,7 @@
 // Vimium-shaped keys for the desktop client. / is workspace search, not
 // find-in-page: Slack already has an index, and Ctrl+/ must stay help.
 // gg/G move the loaded pane, not the channel's full history.
+// hjkl/du use the innermost axis-scrollable ancestor under the pointer, then focus.
 
 const HINT_CHARS = "sadjklewcmpgh";
 
@@ -38,24 +39,37 @@ function cloneState(state) {
 }
 
 function swallow(state, input, effects) {
-  if (input.code) state.swallowed.push(input.code);
+  if (input.code && !state.swallowed.includes(input.code)) state.swallowed.push(input.code);
   return { state, prevent: true, effects };
 }
 
 function currentPane(ctx) {
   if (!ctx) return null;
-  if (ctx.focusPane === "primary" || ctx.focusPane === "secondary") return ctx.focusPane;
-  if (ctx.lastPane === "primary" || ctx.lastPane === "secondary") return ctx.lastPane;
+  const alive = (name) => {
+    if (name !== "primary" && name !== "secondary") return false;
+    if (!ctx.panes) return true;
+    return Boolean(ctx.panes[name]);
+  };
+  if (alive(ctx.focusPane)) return ctx.focusPane;
+  if (alive(ctx.lastPane)) return ctx.lastPane;
   if (ctx.panes && ctx.panes.primary) return "primary";
   return null;
+}
+
+function liveTarget(target) {
+  return target && !target.detached ? target : null;
 }
 
 function selectScrollTarget(ctx, motion) {
   const pane = currentPane(ctx);
   const paneTarget = pane && ctx && ctx.panes ? ctx.panes[pane] : null;
   if (motion === "gg" || motion === "G" || motion === "gi") return paneTarget || null;
-  if (ctx && ctx.pointerScroller) return ctx.pointerScroller;
-  if (ctx && ctx.activeScroller) return ctx.activeScroller;
+  if (!ctx) return paneTarget || null;
+  const axis = motion === "h" || motion === "l" ? "x" : "y";
+  const hovered = liveTarget(ctx.pointerScrollers && ctx.pointerScrollers[axis]) || liveTarget(ctx.pointerScroller);
+  if (hovered) return hovered;
+  const focused = liveTarget(ctx.activeScrollers && ctx.activeScrollers[axis]) || liveTarget(ctx.activeScroller);
+  if (focused) return focused;
   return paneTarget || null;
 }
 
@@ -89,11 +103,22 @@ function scrollPlan(target, motion, count, reducedMotion) {
   return { method: "scrollBy", top, left, behavior, keys };
 }
 
+function needsWheelFallback(plan, before, after) {
+  if (!plan || plan.method !== "scrollBy") return false;
+  if (plan.behavior === "smooth") return false;
+  const startTop = before && Number.isFinite(before.top) ? before.top : 0;
+  const startLeft = before && Number.isFinite(before.left) ? before.left : 0;
+  const endTop = after && Number.isFinite(after.top) ? after.top : 0;
+  const endLeft = after && Number.isFinite(after.left) ? after.left : 0;
+  return Math.abs(endTop - startTop) <= 1 && Math.abs(endLeft - startLeft) <= 1;
+}
+
 function composerTarget(ctx) {
   const pane = currentPane(ctx);
   if (!pane || !ctx || !ctx.composers) return null;
-  const list = ctx.composers.filter((item) => item && item.pane === pane && item.visible && !item.search);
-  return list.find((item) => item.ql) || list.find((item) => item.textbox || item.textarea) || null;
+  const list = ctx.composers.filter((item) => item && item.pane === pane && item.visible && !item.search && item.message && (item.ql || item.textbox || item.textarea));
+  if (list.length !== 1) return null;
+  return list[0];
 }
 
 function assignHints(count, chars) {
@@ -245,9 +270,8 @@ function reduce(state, input, ctx) {
     return { state: next, prevent: false, effects: [] };
   }
   if (input.type === "keyup") {
-    const index = next.swallowed.indexOf(input.code);
-    if (index === -1) return { state: next, prevent: false, effects: [] };
-    next.swallowed.splice(index, 1);
+    if (!input.code || !next.swallowed.includes(input.code)) return { state: next, prevent: false, effects: [] };
+    next.swallowed = next.swallowed.filter((code) => code !== input.code);
     return { state: next, prevent: true, effects: [] };
   }
   if (input.composing || input.ctrl || input.alt || input.meta) {
@@ -257,6 +281,7 @@ function reduce(state, input, ctx) {
     next.query = "";
     next.prefix = "";
     next.count = 0;
+    next.swallowed = [];
     return { state: next, prevent: false, effects };
   }
   if (next.mode === "hint") return reduceHint(next, input);
@@ -292,7 +317,7 @@ let seq = 0;
 let state = initialState();
 let assigned = [];
 let lastPane = null;
-let pointer = null;
+let pointerEl = null;
 let host = null;
 
 function report(payload) {
@@ -351,11 +376,39 @@ function overlayOpen(selector) {
   return [...document.querySelectorAll(selector)].some(visible);
 }
 
+function rootHost(node) {
+  const root = node && node.getRootNode ? node.getRootNode() : null;
+  return root && root.nodeType === 11 && root.host ? root.host : null;
+}
+
+function ancestor(node) {
+  if (!node) return null;
+  if (node.parentElement) return node.parentElement;
+  return rootHost(node);
+}
+
+function nodeInside(root, node) {
+  let current = node;
+  while (current) {
+    if (current === root) return true;
+    current = ancestor(current);
+  }
+  return false;
+}
+
 function paneOf(el) {
-  if (!el) return null;
-  if (el.closest(".p-workspace__secondary_view, .p-threads_view")) return "secondary";
-  if (el.closest(".p-workspace__primary_view, .p-message_pane")) return "primary";
+  let node = el;
+  while (node && node.nodeType === 1) {
+    if (node.closest(".p-workspace__secondary_view, .p-threads_view")) return "secondary";
+    if (node.closest(".p-workspace__primary_view, .p-message_pane")) return "primary";
+    node = rootHost(node);
+  }
   return null;
+}
+
+function rememberPane(el) {
+  const pane = paneOf(el);
+  if (pane) lastPane = pane;
 }
 
 function paneElement(name) {
@@ -371,15 +424,94 @@ function scrollerIn(root) {
   return marked || root;
 }
 
-function overflowAt(x, y) {
-  const el = document.elementFromPoint(x, y);
-  let node = el;
-  let best = null;
-  while (node && node !== document.documentElement) {
-    if (node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1) best = node;
-    node = node.parentElement;
+function canScroll(el, axis) {
+  if (!el || el.nodeType !== 1 || !el.isConnected) return false;
+  if (el === document.body || el === document.documentElement) return false;
+  if (el.hasAttribute("data-dotfiles-hints")) return false;
+  const style = getComputedStyle(el);
+  const overflow = axis === "x" ? style.overflowX : style.overflowY;
+  if (overflow !== "auto" && overflow !== "scroll" && overflow !== "overlay") return false;
+  if (axis === "x") return el.scrollWidth > el.clientWidth + 1;
+  return el.scrollHeight > el.clientHeight + 1;
+}
+
+function scrollerFrom(start, axis) {
+  if (!start || start.nodeType !== 1 || !start.isConnected) return null;
+  let node = start;
+  while (node && node !== document.body && node !== document.documentElement) {
+    if (canScroll(node, axis)) return node;
+    node = ancestor(node);
   }
-  return best;
+  return null;
+}
+
+function deepElementFromPoint(x, y) {
+  let hit = document.elementFromPoint(x, y);
+  const seen = new Set();
+  while (hit && hit.shadowRoot && !seen.has(hit)) {
+    seen.add(hit);
+    let inner = null;
+    try { inner = hit.shadowRoot.elementFromPoint(x, y); } catch { inner = null; }
+    if (!inner || inner === hit) break;
+    hit = inner;
+  }
+  return hit;
+}
+
+function interactive(el) {
+  if (!el || el.nodeType !== 1) return false;
+  const tagName = el.tagName;
+  if (tagName === "A" && el.hasAttribute("href")) return true;
+  if (tagName === "BUTTON" || tagName === "SUMMARY" || tagName === "LABEL" || tagName === "TEXTAREA" || tagName === "SELECT") return true;
+  if (tagName === "INPUT") return true;
+  if (el.isContentEditable) return true;
+  const role = el.getAttribute("role");
+  return ["button", "link", "menuitem", "tab", "option", "checkbox", "switch", "textbox", "searchbox"].includes(role);
+}
+
+function interactiveBetween(root, hit) {
+  let node = hit;
+  while (node && node !== root) {
+    if (interactive(node)) return true;
+    node = ancestor(node);
+  }
+  return false;
+}
+
+function ownEditingHost(el) {
+  if (!el || el.nodeType !== 1) return false;
+  if (el.classList.contains("ql-editor")) return true;
+  if (el.contentEditable === "true") return true;
+  const role = el.getAttribute("role");
+  return role === "textbox" || role === "searchbox";
+}
+
+function hardControl(el) {
+  if (!el || el.nodeType !== 1) return false;
+  const tagName = el.tagName;
+  if (tagName === "A" && el.hasAttribute("href")) return true;
+  if (tagName === "BUTTON" || tagName === "SUMMARY" || tagName === "LABEL" || tagName === "TEXTAREA" || tagName === "SELECT") return true;
+  if (tagName === "INPUT") return true;
+  const role = el.getAttribute("role");
+  return ["button", "link", "menuitem", "tab", "option", "checkbox", "switch"].includes(role);
+}
+
+function nestedAction(root, hit) {
+  let node = hit;
+  while (node && node !== root) {
+    if (hardControl(node) || ownEditingHost(node)) return true;
+    node = ancestor(node);
+  }
+  return false;
+}
+
+function insideEditor(node) {
+  let current = node;
+  while (current && current.nodeType === 1) {
+    if (current.isContentEditable || ownEditingHost(current)) return true;
+    current = ancestor(current);
+  }
+  return false;
 }
 
 function buildCtx() {
@@ -390,11 +522,15 @@ function buildCtx() {
   const composers = [];
   for (const el of document.querySelectorAll(".ql-editor, [role=textbox], textarea")) {
     const search = Boolean(el.closest(".p-top_nav, [role=search]")) || el.getAttribute("type") === "search";
+    const inComposer = Boolean(el.closest(".p-message_input, .p-message_input_field"));
+    const inMessage = Boolean(el.closest(".c-message_kit__background, .c-message_kit__text"));
+    const message = inComposer && !inMessage;
     composers.push({
       id: tag(el),
       pane: paneOf(el) || "primary",
       visible: visible(el),
       search,
+      message,
       ql: el.classList.contains("ql-editor"),
       textbox: el.getAttribute("role") === "textbox",
       textarea: el.tagName === "TEXTAREA",
@@ -414,7 +550,7 @@ function buildCtx() {
       secondary: secondary ? dims(scrollerIn(secondary)) : null,
     },
     composers,
-    pointerScroller: pointer ? dims(pointer) : null,
+    pointerScroller: null,
     hints: assigned.map((item) => item.hint),
     dialog,
   };
@@ -460,25 +596,50 @@ function hintable(el) {
 function groupOf(el, pane) {
   const label = (el.getAttribute("aria-label") || el.textContent || "").trim().toLowerCase();
   if (label === "send" || label.startsWith("send ")) return "send";
-  if (el.closest(".p-channel_sidebar, .p-tab_rail, .p-team_sidebar")) return "sidebar";
-  if (pane && pane.contains(el)) return "current";
+  let node = el;
+  while (node && node.nodeType === 1) {
+    if (node.closest(".p-channel_sidebar, .p-tab_rail, .p-team_sidebar")) return "sidebar";
+    node = rootHost(node);
+  }
+  if (pane && nodeInside(pane, el)) return "current";
   return "other";
+}
+
+function overlapRatio(outer, inner) {
+  const a = outer.getBoundingClientRect();
+  const b = inner.getBoundingClientRect();
+  const width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+  const height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+  const area = a.width * a.height;
+  if (!(area > 0)) return 0;
+  return (width * height) / area;
 }
 
 function collect(scope) {
   const dialog = scope === "dialog" ? openDialog() : null;
   const root = dialog || document.body;
-  const paneName = currentPane({ focusPane: paneOf(document.activeElement), lastPane, panes: { primary: true } });
+  const paneName = currentPane({
+    focusPane: paneOf(document.activeElement),
+    lastPane,
+    panes: { primary: Boolean(paneElement("primary")), secondary: Boolean(paneElement("secondary")) },
+  });
   const pane = paneElement(paneName) || paneElement("primary");
   const found = [];
   const walk = (node) => {
-    if (!node || node.nodeType !== 1) return;
+    if (!node) return;
+    if (node.nodeType === 11) {
+      for (const child of node.children || []) walk(child);
+      return;
+    }
+    if (node.nodeType !== 1) return;
     if (hintable(node)) found.push(node);
     if (node.shadowRoot) walk(node.shadowRoot);
     for (const child of node.children || []) walk(child);
   };
   walk(root);
-  const targets = found.map((el, index) => ({ el, group: groupOf(el, pane), index }));
+  const hittable = found.filter((el) => pointFor(el));
+  const pruned = hittable.filter((el) => !hittable.some((other) => other !== el && nodeInside(el, other) && overlapRatio(el, other) >= 0.8));
+  const targets = pruned.map((el, index) => ({ el, group: groupOf(el, pane), index }));
   const ordered = orderHintTargets(targets);
   const hints = assignHints(ordered.length, HINT_CHARS);
   assigned = ordered.map((item, index) => ({ el: item.el, hint: hints[index] }));
@@ -493,19 +654,43 @@ function collect(scope) {
 
 function pointFor(el) {
   const rect = el.getBoundingClientRect();
+  if (rect.width < 4 || rect.height < 4) return null;
+  const insetX = Math.min(12, rect.width / 2);
+  const insetY = Math.min(12, rect.height / 2);
   const points = [
     [rect.left + rect.width / 2, rect.top + rect.height / 2],
-    [rect.left + 12, rect.top + 12],
-    [rect.right - 12, rect.bottom - 12],
+    [rect.left + insetX, rect.top + insetY],
+    [rect.right - insetX, rect.bottom - insetY],
   ];
   for (const [x, y] of points) {
-    const hit = document.elementFromPoint(x, y);
-    if (hit && (hit === el || el.contains(hit))) return { x, y };
+    if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+    const hit = deepElementFromPoint(x, y);
+    if (!hit || !nodeInside(el, hit)) continue;
+    if (hit !== el && nestedAction(el, hit)) continue;
+    return { x, y };
+  }
+  return null;
+}
+
+function backgroundPoint(root) {
+  if (!root || !root.getBoundingClientRect) return null;
+  const rect = root.getBoundingClientRect();
+  if (rect.width < 8 || rect.height < 8) return null;
+  for (let row = 1; row <= 4; row += 1) {
+    for (let col = 1; col <= 4; col += 1) {
+      const x = rect.left + (rect.width * col) / 5;
+      const y = rect.top + (rect.height * row) / 5;
+      if (x < 1 || y < 1 || x >= innerWidth - 1 || y >= innerHeight - 1) continue;
+      const hit = deepElementFromPoint(x, y);
+      if (!hit || !nodeInside(root, hit) || insideEditor(hit) || interactive(hit) || interactiveBetween(root, hit)) continue;
+      return { x, y };
+    }
   }
   return null;
 }
 
 function click(el, reason) {
+  if (reason === "hint" || reason === "composer") rememberPane(el);
   const point = pointFor(el);
   clearOverlay();
   state.mode = "normal";
@@ -517,18 +702,32 @@ function click(el, reason) {
 
 function applyScroll(effect) {
   const ctx = buildCtx();
-  const target = selectScrollTarget(ctx, effect.motion);
-  const el = target && nodes.get(target.id);
-  if (!el) return;
+  const axis = effect.motion === "h" || effect.motion === "l" ? "x" : "y";
+  const hovered = scrollerFrom(pointerEl, axis);
+  const focused = scrollerFrom(document.activeElement, axis);
+  ctx.pointerScrollers = {};
+  ctx.activeScrollers = {};
+  ctx.pointerScrollers[axis] = hovered ? dims(hovered) : null;
+  ctx.activeScrollers[axis] = focused ? dims(focused) : null;
+  ctx.pointerScroller = null;
+  ctx.activeScroller = null;
+  let target = selectScrollTarget(ctx, effect.motion);
+  let el = target && nodes.get(target.id);
+  if (!el || !el.isConnected) {
+    ctx.pointerScrollers = null;
+    ctx.activeScrollers = null;
+    target = selectScrollTarget(ctx, effect.motion);
+    el = target && nodes.get(target.id);
+  }
+  if (!el || !el.isConnected) return;
   const pane = paneOf(el);
   if (pane) lastPane = pane;
   const plan = scrollPlan(target, effect.motion, effect.count, matchMedia("(prefers-reduced-motion: reduce)").matches);
   if (plan.method === "scrollTo" || plan.method === "scrollBy") {
-    const beforeTop = el.scrollTop;
-    const beforeLeft = el.scrollLeft;
+    const before = { top: el.scrollTop, left: el.scrollLeft };
     if (plan.method === "scrollTo") el.scrollTo({ top: plan.top, left: plan.left, behavior: plan.behavior });
     else el.scrollBy({ top: plan.top, left: plan.left, behavior: plan.behavior });
-    if (plan.method === "scrollBy" && Math.abs(el.scrollTop - beforeTop) <= 1 && Math.abs(el.scrollLeft - beforeLeft) <= 1) {
+    if (needsWheelFallback(plan, before, { top: el.scrollTop, left: el.scrollLeft })) {
       const rect = el.getBoundingClientRect();
       report({ type: "wheel", x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, deltaX: plan.left || 0, deltaY: plan.top || 0 });
     }
@@ -558,12 +757,13 @@ function apply(effect) {
     if (el) click(el, "composer");
   } else if (effect.type === "blur") {
     const el = document.activeElement;
+    rememberPane(el);
     if (el && el.blur) el.blur();
-    if (editable(document.activeElement)) {
-      const pane = paneElement(lastPane) || paneElement("primary");
-      const background = pane && pane.querySelector(".c-virtual_list__scroll_container, .p-message_pane");
-      if (background) click(background, "blur");
-    }
+    if (!editable(document.activeElement)) return;
+    const pane = paneElement(paneOf(el) || lastPane) || paneElement("primary");
+    const point = backgroundPoint(pane);
+    if (!point) return;
+    report({ type: "click", reason: "blur", x: point.x, y: point.y });
   }
 }
 
@@ -605,12 +805,17 @@ window.addEventListener("keydown", onKey, true);
 window.addEventListener("keyup", onKey, true);
 window.addEventListener("mousedown", () => { state.prefix = ""; state.count = 0; if (state.mode === "hint") cancelLocal(); }, true);
 window.addEventListener("blur", cancelLocal);
-window.addEventListener("mousemove", (event) => { pointer = overflowAt(event.clientX, event.clientY); }, true);
+window.addEventListener("focusin", (event) => {
+  if (editable(event.target)) rememberPane(event.target);
+}, true);
+window.addEventListener("mousemove", (event) => {
+  pointerEl = deepElementFromPoint(event.clientX, event.clientY);
+}, true);
 report({ type: "mode", mode: "normal", focusNormal: !editable(document.activeElement) });
 `;
 
 function pageSource(token) {
-  const embedded = [initialState, cloneState, swallow, currentPane, selectScrollTarget, scrollPlan, composerTarget, assignHints, matchHints, escAction, orderHintTargets, reduceHint, reduceNormal, reduce]
+  const embedded = [initialState, cloneState, swallow, currentPane, liveTarget, selectScrollTarget, scrollPlan, needsWheelFallback, composerTarget, assignHints, matchHints, escAction, orderHintTargets, reduceHint, reduceNormal, reduce]
     .map((fn) => fn.toString())
     .join("\n");
   return `"use strict";\n(() => {\nconst HINT_CHARS = ${JSON.stringify(HINT_CHARS)};\nconst TOKEN = ${JSON.stringify(String(token))};\n${embedded}\n${PAGE}\n})();\n`;
@@ -744,6 +949,7 @@ module.exports = {
   reduce,
   selectScrollTarget,
   scrollPlan,
+  needsWheelFallback,
   currentPane,
   composerTarget,
   assignHints,

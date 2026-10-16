@@ -26,5 +26,6 @@ export XDG_STATE_HOME="$output/state"
 export XDG_CONFIG_HOME="$output/config"
 unset SLACK_DOTFILES_THEME
 unset SLACK_DOTFILES_KEYS
-"$output/runtime/slack" --ozone-platform=wayland --force-prefers-reduced-motion
+# Motion is selected in the harness so both reduced and normal scrolling run.
+"$output/runtime/slack" --ozone-platform=wayland
 printf 'Native-renderer screenshots: %s/active.png and %s/light.png\n' "$output" "$output"
