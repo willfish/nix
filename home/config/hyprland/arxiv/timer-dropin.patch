@@ -1,6 +1,6 @@
 --- a/save-settings.sh
 +++ b/save-settings.sh
-@@ -77,13 +77,24 @@
+@@ -85,13 +85,24 @@
  mv -f "$TMP_FILE" "$CONFIG_FILE"
 
  # Only touch the timer if poll time is a valid HH:MM and actually differs —

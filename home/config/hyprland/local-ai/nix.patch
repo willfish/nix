@@ -1,21 +1,35 @@
 --- a/bin/omarchy-local-ai
 +++ b/bin/omarchy-local-ai
-@@ -96,3 +96,3 @@
+@@ -96,7 +96,7 @@
+
+ # Every string of a recipe that becomes a path, an argument or an image is checked before anything runs.
  policy() {
 -  jq -er --slurpfile all "${2:-$RECIPES}" '
 +  jq -er --arg localImage "${STRATA_IMAGE_ID:-}" --slurpfile all "${2:-$RECIPES}" '
      def name: test("^([A-Za-z0-9_-][A-Za-z0-9_.-]*)?$");
-@@ -108,3 +108,3 @@
+     # a comma-separated list of names or relative paths; no traversal
+     def names: test("^(([A-Za-z0-9_-][A-Za-z0-9_./-]*)(,([A-Za-z0-9_-][A-Za-z0-9_./-]*))*)?$")
+@@ -108,7 +108,7 @@
+       and all(to_entries[]; if (.key == "memoryBytes" or .key == "memorySwapBytes") then
+         (.value | type == "number" and . == floor and . > 0 and . <= 9007199254740991) else (.value | type == "boolean") end)
        and (if has("memorySwapBytes") then has("memoryBytes") and .memorySwapBytes >= .memoryBytes else true end);
 -    if (.image | test("^[a-z0-9./_:-]+@sha256:[0-9a-f]{64}$") | not) then "image is not pinned by digest"
 +    if ((.image != $localImage or $localImage == "") and (.image | test("^[a-z0-9./_:-]+@sha256:[0-9a-f]{64}$") | not)) then "image is not pinned by digest"
      elif ($all[0].gateway.image | test("^[a-z0-9./_:-]+@sha256:[0-9a-f]{64}$") | not) then "gateway is not pinned by digest"
-@@ -589,3 +589,3 @@
+     elif ((.cards // 1) | (. < 1 or . > 8)) then "invalid card count"
+     elif ([.weights[]? | select(
+@@ -768,7 +768,7 @@
+
+ # pull <image> <what>: a line each time a layer lands, from the per-layer lines docker prints when it has no terminal;
  # each layer counts once, as the containerd store can announce a layer and then find it already there
 -pull() {
 +upstream_pull() {
    docker pull "$1" | awk -v what="$2" '/: (Pulling fs layer|Already exists)$/ && !($1 in all) { all[$1]; n++ }
-@@ -615,5 +615,6 @@
+     /: (Pull complete|Already exists)$/ && !($1 in done) { done[$1]; printf "downloading the %s: %d of %d layers\n", what, ++d, n; fflush() }'
+ }
+@@ -834,9 +834,10 @@
+ # phase_start <id> <port> <key>: re-read the recipe here, check every path, build both containers
+ phase_start() (
    valid_id "$1" && [[ $2 =~ ^[0-9]+$ && $2 -ge 12434 && $2 -lt 12450 ]] || die "invalid request"
 -  local id=$1 port=$2 r g backend run a=() devices=() k v w
 +  local id=$1 port=$2 r g backend run a=() devices=() gateway_options=() k v w
@@ -23,67 +37,120 @@
    r=$(jq -ce '.recipe // empty' "$(dir_of "$id")/config.json" 2>/dev/null || recipe "$id") || die "no recipe $id"
 +  strata_check "$id"
    v=$(policy "$r")
-@@ -662,3 +663,4 @@
+   [[ $v == "ok" ]] || die "recipe refused: $v"
+   (($# == $(jq -r '.cards // 1' <<<"$r"))) || die "this recipe runs on $(jq -r '.cards // 1' <<<"$r") card(s)"
+@@ -881,7 +882,8 @@
+       for k in "$@"; do
+         v=$(nvidia-smi --query-gpu=uuid --format=csv,noheader -i "${k#*:}" 2>/dev/null) && [[ $v == GPU-* ]] ||
            die "could not read the UUID of NVIDIA GPU ${k#*:}"
 -        devices+=(--device "nvidia.com/gpu=$v")
 +        v=$(nvidia_cdi_device "$v" "${k#*:}") || die "Cannot select NVIDIA CDI device"
 +        devices+=(--device "$v")
        done
-@@ -710,3 +711,3 @@
+     else
+       v=$(printf '%s,' "${@#*:}")
+@@ -931,7 +933,7 @@
+   # the rest of the options, the image and its arguments; the cards are chosen above, never by the recipe
+   while IFS= read -r -d '' v; do
      a+=("$v")
 -  done < <(launch_options "$r"; jq -j --arg run "$run" 'def o($f; $v): if ($v // "") != "" then "\($f)\u0000\($v)\u0000" else "" end;
 +  done < <(launch_options "$r"; strata_engine_options "$id"; jq -j --arg run "$run" 'def o($f; $v): if ($v // "") != "" then "\($f)\u0000\($v)\u0000" else "" end;
      o("--volume"; .asset | if . then "\($run)/\(.name):\(.mountPath):ro" else null end),
-@@ -720,2 +721,3 @@
+     "\(.image)\u0000", (.launch.arguments[]? | "\(.)\u0000")' <<<"$r")
    [[ ! -e $(dir_of "$id")/cancel ]] || die "start cancelled"
+@@ -941,6 +943,7 @@
+   fi
+   [[ $backend == cpu ]] || settle "$(engine "$id")" "$@"
+
 +  while IFS= read -r -d '' v; do gateway_options+=("$v"); done < <(strata_gateway_options "$id")
-   if ! docker run -d --name "$(gateway "$id")" --restart unless-stopped --security-opt no-new-privileges \
-@@ -725,2 +727,3 @@
+   [[ ! -e $(dir_of "$id")/cancel ]] || die "start cancelled"
+   # The key goes only to the gateway's bridge address (gw_addr). The port published on 127.0.0.1 carries no key: the
+   # panel's keyless /health poll uses it, the check below that it refuses a request without the key, and it is the
+@@ -950,6 +953,7 @@
+     --network "$(network "$id")" --network "$(private "$id")" --user "$(id -u):$(id -g)" --publish "127.0.0.1:$port:12434" \
+     --label "$LABEL=1" --label "$LABEL.uid=$(id -u)" \
      --env "UPSTREAM=http://engine:$(jq -r .launch.port <<<"$r")" --env "MODEL=$(jq -r '.servedName // ""' <<<"$r")" \
 +    ${gateway_options[@]+"${gateway_options[@]}"} \
      --env GATEWAY_KEY_FILE=/run/gateway.key --volume "$KEY:/run/gateway.key:ro" \
-@@ -861,2 +864,3 @@
+     --env GATEWAY_USAGE_LOG=/var/lib/local-ai/usage.jsonl --volume "$STATE/usage/$id:/var/lib/local-ai" \
+     "$(jq -r .gateway.image "$RECIPES")" >/dev/null; then
+@@ -1107,6 +1111,7 @@
+   local id=${1%--*} keys=() k r d g port busy n=1
+   IFS=, read -ra keys <<<"$2"
    r=$(recipe "$id") || die "no recipe $id"
 +  strata_check "$id"
    [[ $(policy "$r") == "ok" ]] || die "recipe refused: $(policy "$r")"
-@@ -945,3 +949,3 @@
- # Remove only this recipe's managed download, never the user's Hugging Face cache.
+   ((${#keys[@]} == $(jq -r '.cards // 1' <<<"$r"))) || die "$(jq -r .name <<<"$r") here runs on $(jq -r '.cards // 1' <<<"$r") card(s)"
+   [[ $(printf '%s\n' "${keys[@]}" | sort -u | wc -l) == "${#keys[@]}" ]] || die "a card is named twice"
+@@ -1193,7 +1198,7 @@
+ # Remove only this recipe's managed download, never the user's Hugging Face cache. A recipe this version no longer
+ # offers is forgotten by what its deployment recorded (managedPaths), once it has stopped; with --folder, a folder of
+ # such a recipe that nothing uses any more (unoffered), so no download is stranded by an update.
 -cmd_forget() {
 +upstream_forget() {
-   valid_id "${1:-}" || die "forget <recipe>"
-@@ -1024,3 +1028,3 @@
+   [[ ${1:-} != --folder ]] || { forget_folder "${2:-}"; return; }
+   valid_id "${1:-}" || die "forget <recipe> | forget --folder <folder>"
+   local r w d other live target self="" paths=() busy=()
+@@ -1361,7 +1366,7 @@
+
+ # card <recipe>: the model card (README.md) of the recipe's first weights, at the pinned revision, from Hugging Face;
  # kept once fetched. Full screen shows it.
 -cmd_card() {
 +upstream_card() {
    valid_id "${1:-}" || die "card <recipe>"
-@@ -1043,3 +1047,3 @@
+   local r repo rev f
+   r=$(recipe "$1") || die "no recipe $1"
+@@ -1380,7 +1385,7 @@
+ # download <recipe> [off]: a model's weights and its engine image, without running it (Models tab); off cancels and
+ # forgets it. Its progress is in the snapshot's downloads until it finishes; a finished one is the recipe's
  # `downloaded`.
 -cmd_download() {
 +upstream_download() {
    valid_id "${1:-}" || die "download <recipe> [off]"
-@@ -1427,2 +1431,2 @@
+   local id=${1%--*} r d pid
+   d=$STATE/downloads/$id
+@@ -1852,7 +1857,7 @@
+   done | jq -sc .
+ }
+
 -cmd_snapshot() {
 +upstream_snapshot() {
-   local deps=() d id port at st pid sat boot obj why rc code ts="" sa="" sf="" sfs="" v="" a rstate="" rmsg=""
-@@ -1500,2 +1504,3 @@
+   local deps=() d id port at st pid sat boot obj why rc code gw ts="" sa="" sf="" sfs="" v="" a rstate="" rmsg=""
+   mkdir -p "$STATE/deploy"
+   adopt
+@@ -1962,6 +1967,7 @@
+ # Access is loaded here: the tests load every definition above this line and stub readiness.
+ # shellcheck source=../lib/access.sh
  . "$PANEL/lib/access.sh"
 +. "$PANEL/lib/nix.sh"
  mkdir -p "$STATE"
-@@ -1971,3 +1976,3 @@
+ if [[ $RECIPES == "$CATALOG" ]] && ! jq -e '.hardware | type == "object"' "$CATALOG" >/dev/null 2>&1; then
+   catalog_fallback "it does not load"
+@@ -1969,7 +1975,7 @@
+ # the verbs that use Docker run under the docker group, whatever groups this login began with
+ case ${1:-} in snapshot | run | stop | remove | readiness | download | open | share | forget) docker_group_reexec "$TARGET" "$@" ;; esac
  case ${1:-} in
 -setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | dirs | share | pin | download | card) "cmd_$1" "${@:2}" ;;
 +stop_all | setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | dirs | share | pin | download | card) "cmd_$1" "${@:2}" ;;
  # the stale NVIDIA device list, if any, as "<spec>\t<why>" (setup rewrites it)
+ cdi) cdi_stale ;;
+ log) exec omarchy-launch-tui --app-id=org.omarchy.local-ai-log less +G "$LOG" ;;
 --- a/Panel.qml
 +++ b/Panel.qml
-@@ -255,3 +255,3 @@
+@@ -252,7 +252,7 @@
+     var ok = s && Array.isArray(s.gpus) && Array.isArray(s.kinds) && Array.isArray(s.deployments)
+     if (ok) snap = s
      ui = Object.assign({}, ui, { pollProblem: ok ? "" : "Could not refresh Local AI; retrying." })
 -    if (ok) { autoRefresh(s); autoOutdated(s) }
 +    if (ok) autoRefresh(s) // Agent versions are owned by Nix.
    }
+   // agent updates are looked up when the last look is 6 hours old, at most once an hour, quietly
+   property real outdatedAt: 0
 --- a/Model.js
 +++ b/Model.js
-@@ -108,5 +108,4 @@
+@@ -106,10 +106,9 @@
+ // What the panel says and offers for each readiness state the backend reports (lib/access.sh). A state with no button
+ // clears by itself and says so; a state this table has never heard of does the same, so none is a dead end.
  var READINESS = {
 -  "needs-setup": { note: "Once per machine: Docker access for your account (Omarchy's Sudoless Docker) and, on NVIDIA, the container toolkit. A terminal opens; Omarchy asks for your password.",
 -    action: "setup" },
@@ -91,3 +158,6 @@
    "docker-down": { note: "Docker is not ready. Local AI checks again by itself." },
 -  unsupported: { note: "This Omarchy is too old for Local AI. It checks again by itself once Omarchy is updated." },
 +  unsupported: { note: "Catalogue dependencies need NixOS configuration." },
+   // only root can delete them, so the page that says how is the way out; the banner above says why
+   "legacy-polkit": { note: "Nothing starts until those files are gone. Local AI checks again by itself, and this clears once they are." }
+ }

@@ -6,7 +6,7 @@ diff --git a/tools/ui/src/lib/services/chat.service.ts b/tools/ui/src/lib/servic
  import { getJsonHeaders } from '$lib/utils/api-headers';
  import { formatAttachmentText } from '$lib/utils/formatters';
  import { isAbortError } from '$lib/utils/abort';
-@@ -180,7 +181,7 @@
+@@ -182,7 +183,7 @@
  			});
  		}
 
@@ -15,7 +15,7 @@ diff --git a/tools/ui/src/lib/services/chat.service.ts b/tools/ui/src/lib/servic
  			messages: normalizedMessages.map((msg: ApiChatMessageData) => {
  				const mapped: ApiChatCompletionRequest['messages'][0] = {
  					role: msg.role,
-@@ -264,6 +265,9 @@
+@@ -260,6 +261,9 @@
  		}
 
  		try {

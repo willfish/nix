@@ -42,7 +42,8 @@ let
   # The recognisable mark, without installing the official client.
   icons = pkgs.runCommand "spotify-client-icons" { } ''
     mkdir -p "$out/share/icons"
-    cp -a ${pkgs.spotify}/share/icons/hicolor "$out/share/icons/"
+    # Client-relative symlinks would break outside the original package.
+    cp -aL ${pkgs.spotify}/share/icons/hicolor "$out/share/icons/"
   '';
   bundle =
     pkgs.runCommand "omarchy-spotify-shell"
