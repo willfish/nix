@@ -125,8 +125,8 @@ let
       # Store mtimes are normalised. Scope mutable catalogues to the pinned source,
       # so an old refresh cannot override a newly installed plugin's recipes.
       substituteInPlace "$out/share/local-ai/bin/omarchy-local-ai" \
-        --replace-fail 'CATALOG=$HOME/.cache/omarchy/local-ai/v3/recipes.json' \
-          'CATALOG=$HOME/.cache/omarchy/local-ai/v3/${source.rev}/recipes.json'
+        --replace-fail 'CATALOG=$HOME/.cache/omarchy/local-ai/v4/recipes.json' \
+          'CATALOG=$HOME/.cache/omarchy/local-ai/v4/${source.rev}/recipes.json'
       makeWrapper "$out/share/local-ai/bin/omarchy-local-ai" "$out/bin/omarchy-local-ai" \
         --prefix PATH : ${lib.makeBinPath runtime} \
         --set LOCAL_AI_STRATA ${if isAndromeda then "1" else "0"} \

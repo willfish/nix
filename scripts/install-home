@@ -28,8 +28,14 @@ command -v nix >/dev/null || {
   echo 'Install Nix first: https://nixos.org/download/' >&2
   exit 1
 }
-export DOTFILES_SOURCE
+export DOTFILES_SOURCE DOTFILES_FLAKE
 DOTFILES_SOURCE=$(cd "${HMSWITCH_FLAKE:-$(dirname "${BASH_SOURCE[0]}")/..}" && pwd -P)
+DOTFILES_FLAKE="$DOTFILES_SOURCE"
+# getFlake treats absolute paths as plain directories, including .git sockets.
+# Select the Git fetcher explicitly for checkouts, including linked worktrees.
+if [ -e "$DOTFILES_SOURCE/.git" ]; then
+  DOTFILES_FLAKE="git+file://$DOTFILES_SOURCE"
+fi
 export DOTFILES_USER DOTFILES_HOME DOTFILES_HOST DOTFILES_PRIVATE
 DOTFILES_USER=$(id -un)
 DOTFILES_HOME="$HOME"
@@ -43,18 +49,18 @@ if [ "$public" = false ] && [ -r "$HOME/.ssh/id_ed25519" ]; then
   private_source=$(
     GIT_SSH_COMMAND='ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5' \
       "${nix_cmd[@]}" eval --impure --raw --expr \
-      '(builtins.getFlake (builtins.getEnv "DOTFILES_SOURCE")).inputs.nix-config.outPath' \
+      '(builtins.getFlake (builtins.getEnv "DOTFILES_FLAKE")).inputs.nix-config.outPath' \
       2>/dev/null
   ) || private_source=
   if [ -n "$private_source" ]; then
     if probe=$("${nix_cmd[@]}" build --no-link --print-out-paths \
-      "$DOTFILES_SOURCE#private-access-probe") &&
+      "$DOTFILES_FLAKE#private-access-probe") &&
       "$probe/bin/probe-private-access" "$HOME/.ssh/id_ed25519" "$private_source/secrets/env.yaml"; then
       # The authenticated composition needs both private sources. Do not select
       # it if one is inaccessible, even when the secret itself can be decrypted.
       if GIT_SSH_COMMAND='ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5' \
         "${nix_cmd[@]}" eval --impure --raw --expr \
-        '(builtins.getFlake (builtins.getEnv "DOTFILES_SOURCE")).inputs.agent-bus.outPath' \
+        '(builtins.getFlake (builtins.getEnv "DOTFILES_FLAKE")).inputs.agent-bus.outPath' \
         >/dev/null 2>&1; then
         DOTFILES_PRIVATE=true
       fi
@@ -72,7 +78,7 @@ build_dir=$(mktemp -d)
 trap 'rm -rf -- "$build_dir"' EXIT
 "${nix_cmd[@]}" build --impure --out-link "$build_dir/home" --expr '
   let
-    flake = builtins.getFlake (builtins.getEnv "DOTFILES_SOURCE");
+    flake = builtins.getFlake (builtins.getEnv "DOTFILES_FLAKE");
   in (flake.lib.mkHome {
     username = builtins.getEnv "DOTFILES_USER";
     homeDirectory = builtins.getEnv "DOTFILES_HOME";
@@ -91,7 +97,7 @@ if [ "$dry" = false ]; then
   if [ "$(uname -s)" = Linux ] && [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
     # dconf activation needs a session bus, even on a minimal fresh distro.
     # Use Nix's own configuration rather than assuming /etc/dbus-1 exists.
-    dbus=$("${nix_cmd[@]}" build --no-link --print-out-paths "$DOTFILES_SOURCE#activation-dbus^out")
+    dbus=$("${nix_cmd[@]}" build --no-link --print-out-paths "$DOTFILES_FLAKE#activation-dbus^out")
     XDG_DATA_DIRS="$dbus/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" \
       "$dbus/bin/dbus-run-session" --dbus-daemon="$dbus/bin/dbus-daemon" \
       --config-file "$dbus/share/dbus-1/session.conf" -- "$build_dir/home/activate"

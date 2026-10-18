@@ -69,10 +69,10 @@
  . "$PANEL/lib/access.sh"
 +. "$PANEL/lib/nix.sh"
  mkdir -p "$STATE"
-@@ -1504,3 +1509,3 @@
+@@ -1971,3 +1976,3 @@
  case ${1:-} in
--setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | share | pin | download | card) "cmd_$1" "${@:2}" ;;
-+stop_all | setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | share | pin | download | card) "cmd_$1" "${@:2}" ;;
+-setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | dirs | share | pin | download | card) "cmd_$1" "${@:2}" ;;
++stop_all | setup | registry | forget | snapshot | readiness | run | stop | open | update | outdated | set | dirs | share | pin | download | card) "cmd_$1" "${@:2}" ;;
  # the stale NVIDIA device list, if any, as "<spec>\t<why>" (setup rewrites it)
 --- a/Panel.qml
 +++ b/Panel.qml
@@ -83,12 +83,11 @@
    }
 --- a/Model.js
 +++ b/Model.js
-@@ -106,6 +106,5 @@
+@@ -108,5 +108,4 @@
  var READINESS = {
 -  "needs-setup": { note: "Once per machine: Docker access for your account (Omarchy's Sudoless Docker) and, on NVIDIA, the container toolkit. A terminal opens; Omarchy asks for your password.",
 -    action: "setup" },
 +  "needs-setup": { note: "Dependencies are managed by NixOS. Rebuild the host configuration to change Docker access or NVIDIA container support." },
    "docker-down": { note: "Docker is not ready. Local AI checks again by itself." },
--  unsupported: { note: "This Omarchy is too old for Local AI. It checks again by itself once Omarchy is updated." }
-+  unsupported: { note: "Catalogue dependencies need NixOS configuration." }
- }
+-  unsupported: { note: "This Omarchy is too old for Local AI. It checks again by itself once Omarchy is updated." },
++  unsupported: { note: "Catalogue dependencies need NixOS configuration." },
