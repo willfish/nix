@@ -23,6 +23,7 @@
           initialReviewDispatch = true;
           notifications = true;
           tracked = true;
+          concurrency = if hostName == "andromeda" then 5 else 3;
           menu = {
             enable = true;
             # Both desktops control one publisher and one persistent off switch.

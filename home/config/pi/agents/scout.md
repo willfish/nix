@@ -2,7 +2,7 @@
 name: scout
 description: Fast codebase recon that returns compressed context for handoff to other agents
 tools: read, grep, find, ls, bash, skill_catalog
-model: opencode-go/glm-5.3-flash
+model: xai/grok-4.7
 thinking: low
 ---
 
