@@ -8,6 +8,16 @@
   },
   "quietStartup": true,
   "editorPaddingX": 1,
+  "compaction": {
+    "modelOverrides": {
+      "xai/grok-4.7": { "reserveTokens": 310000 },
+      "xai/grok-4.6": { "reserveTokens": 310000 },
+      "openai-codex/gpt-6-astra": { "reserveTokens": 82000 },
+      "openai-codex/gpt-6.1-sol": { "reserveTokens": 82000 },
+      "openai/gpt-6-astra": { "reserveTokens": 82000 },
+      "opencode-go/gemini-4-argon-contributor": { "reserveTokens": 858576 }
+    }
+  },
   "extensions": ["-builtin:mcp"],
   "observational-memory-jev": {
     "enabledByDefault": false

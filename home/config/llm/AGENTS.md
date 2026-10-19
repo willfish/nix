@@ -32,6 +32,10 @@ Do not expand a port into an audit of every malformed input, Unicode case or run
 
 Run final verification once the implementation is stable. Repeat only affected checks after a relevant code, environment or extraction change; a status update or commit alone does not invalidate evidence. Once the bounded contract passes, commit, activate and push as required, then move on. Do not reopen completed work without a concrete defect or unmet requirement.
 
+## Context and tokens
+
+Long sessions re-send early context on every request, so keep context small. Reuse tool results already in context; do not re-read the same file or image unless it changed or was compacted away. After compaction, read only the needed section with offset/limit. Prefer text extraction over screenshots, and delegate large explorations or screenshot analysis to a subagent that returns a short summary. Start a fresh session when switching to an unrelated task.
+
 ## Verification
 
 Do not use TDD. Implement first, then verify with tests; regression tests while debugging are fine.
