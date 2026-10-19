@@ -1800,11 +1800,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792427809,
-        "narHash": "sha256-Zrmxa1KUcE6kJQKazuXfzEpwPD+8hbYeXaBG6zmtLJs=",
+        "lastModified": 1792430750,
+        "narHash": "sha256-RTUWGFJMVuiJf7XLZCwvQyHHQgGvoeIMY4FsYoTKMi4=",
         "ref": "master",
-        "rev": "c1f2dcc5f0670b086bd160e071ac53fa8816629a",
-        "revCount": 1,
+        "rev": "904ac1478d9443df6df3162dbb6f8c5fe6004d50",
+        "revCount": 2,
         "type": "git",
         "url": "ssh://git@github.com/willfish/outlook-mcp"
       },
