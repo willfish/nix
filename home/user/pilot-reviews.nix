@@ -16,14 +16,17 @@
           enable = true;
           piExecutable = "${config.home.homeDirectory}/.local/bin/pi";
           sshAuthSock = "${config.home.homeDirectory}/.config/herdr/herdr.sock.agent";
-          # Installing the unit never starts it. Manual starts and worker restarts
-          # keep new reviews paused until explicitly enabled through the menu.
-          startPaused = true;
-          initialReviewDispatch = false;
-          notifications = false;
+          # Enabled by default; the operator's saved off switch survives restart.
+          autoStart = true;
+          autoPublish = true;
+          startPaused = false;
+          initialReviewDispatch = true;
+          notifications = true;
           tracked = true;
           menu = {
             enable = true;
+            # Both desktops control one publisher and one persistent off switch.
+            controllerHost = if hostName == "foundation" then "andromeda" else null;
             keybinding = "CTRL, H";
             browserCommand = [
               "${config.home.profileDirectory}/bin/brave"
