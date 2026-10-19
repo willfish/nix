@@ -142,6 +142,8 @@ in
         [main]
         font=${mono}:size=${fontSize}
         icons-enabled=no
+        keyboard-focus=on-demand
+        exit-on-keyboard-focus-loss=no
         horizontal-pad=20
         vertical-pad=12
         inner-pad=8
@@ -149,6 +151,7 @@ in
         [colors]
         background=${plain palette.base00}
         text=${plain palette.base05}
+        message=${plain palette.base05}
         prompt=${plain palette.base0D}
         placeholder=${plain palette.base04}
         input=${plain palette.base05}
