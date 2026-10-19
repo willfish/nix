@@ -85,6 +85,12 @@ rec {
         wrapper = "mcp-himalaya";
       }
       {
+        name = "outlook";
+        enabled = config.dotfiles.capabilities.work && config.dotfiles.capabilities.playwright;
+        wrapper = "mcp-outlook";
+        toolTimeout = 360;
+      }
+      {
         name = "aws-access-portal";
         enabled = config.dotfiles.capabilities.work;
         wrapper = "mcp-aws-access-portal";

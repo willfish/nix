@@ -1793,6 +1793,27 @@
         "url": "https://github.com/HANCORE-linux/omarchy-whitegold-theme"
       }
     },
+    "outlook-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792427809,
+        "narHash": "sha256-Zrmxa1KUcE6kJQKazuXfzEpwPD+8hbYeXaBG6zmtLJs=",
+        "ref": "master",
+        "rev": "c1f2dcc5f0670b086bd160e071ac53fa8816629a",
+        "revCount": 1,
+        "type": "git",
+        "url": "ssh://git@github.com/willfish/outlook-mcp"
+      },
+      "original": {
+        "ref": "master",
+        "type": "git",
+        "url": "ssh://git@github.com/willfish/outlook-mcp"
+      }
+    },
     "pi-fixture": {
       "inputs": {
         "bun2nix": "bun2nix",
@@ -2018,6 +2039,7 @@
         "omarchy-theme-vesper": "omarchy-theme-vesper",
         "omarchy-theme-vulkanite": "omarchy-theme-vulkanite",
         "omarchy-theme-white-gold": "omarchy-theme-white-gold",
+        "outlook-mcp": "outlook-mcp",
         "pi-source": "pi-source",
         "pilot-reviews": "pilot-reviews",
         "pre-commit-hooks": "pre-commit-hooks_2",

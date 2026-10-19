@@ -94,6 +94,7 @@ in
           slack = slackMcpServer;
           telegram = telegramMcpServer;
           gmail = pkgs.himalaya-mcp;
+          outlook = pkgs.outlook-mcp;
         }
         .${server.name}
       )
@@ -198,6 +199,15 @@ in
 
       export PATH=${lib.escapeShellArg "${pkgs.fuzzel}/bin"}:"$PATH"
       exec ${awsAccessPortal}/bin/aws-access-portal
+    '';
+  };
+
+  home.file.".local/bin/mcp-outlook" = lib.mkIf (enabled "outlook") {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+      exec ${pkgs.outlook-mcp}/bin/outlook-mcp "$@"
     '';
   };
 
