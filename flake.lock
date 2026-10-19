@@ -1819,11 +1819,11 @@
     "pi-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1792289733,
-        "narHash": "sha256-ckXJ6hLOhPpJcJ+FJKxMvZXDmLrPAXkl5yqiZGLoM1g=",
+        "lastModified": 1792402534,
+        "narHash": "sha256-binD4dqxFgJRKapoiDlJh626P9GnSCvGJPtncHdOKCg=",
         "owner": "earendil-works",
         "repo": "pi",
-        "rev": "482c1381a00d8d00bc81697e4a980c593db6803e",
+        "rev": "d2e7d8b7c1d31d3661f769d5caef7ba8d50c3e03",
         "type": "github"
       },
       "original": {
