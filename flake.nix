@@ -61,6 +61,8 @@
     };
     # Keep the tested Tor Browser runtime pin independent of this flake's nixpkgs.
     tor-mcp.url = "git+ssh://git@github.com/willfish/tor-mcp?ref=master";
+    # Private reviewer/menu. Preserve its independently qualified native runtime pin.
+    pilot-reviews.url = "git+ssh://git@github.com/willfish/pilot-reviews?ref=main";
     # Official release binary. Do not follow nixpkgs: store paths must match herdr.cachix.org.
     herdr.url = "github:herdrdev/herdr-nix";
     # Source for the Pi integration asset. Keep this on the same stable tag as herdr-nix.
@@ -470,6 +472,8 @@
         nix-config.homeModules.default
         agent-bus.homeManagerModules.default
         ./home/private.nix
+        inputs.pilot-reviews.homeManagerModules.default
+        ./home/user/pilot-reviews.nix
       ];
       homeModules = publicHomeModules ++ privateHomeModules;
       mkHome =
