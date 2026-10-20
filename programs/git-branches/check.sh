@@ -64,7 +64,9 @@ if grep -F 'Remote branches' "$scratch/local"; then exit 1; fi
 if "$binary" --all --remotes >"$scratch/error" 2>&1; then exit 1; fi
 if "$binary" --color=invalid >"$scratch/error" 2>&1; then exit 1; fi
 "$binary" --color always >"$scratch/color"
-grep -Fq $'\033[' "$scratch/color"
+for style in '1;32' '36' '33' '1;31'; do
+  grep -Fq $'\033['"${style}m" "$scratch/color"
+done
 "$binary" --color=never >"$scratch/plain"
 if grep -Fq $'\033' "$scratch/plain"; then exit 1; fi
 git_cmd show-ref >"$scratch/refs-after"

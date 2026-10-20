@@ -8,8 +8,10 @@ branches; `--remotes` lists only those branches. Symbolic refs such as
 Wide terminals get a table. Narrow terminals get wrapped branch names and sync
 information. `--full` and redirected output include upstream names and retain
 all columns without clipping.
-Colour is optional: use `NO_COLOR=1` or `--color=never`. State labels do not rely
-on colour. `git branch` remains unchanged.
+Concept colours use the terminal theme's ANSI palette: green for current and
+in-sync, cyan for worktree use, yellow for ahead/behind, and red for a missing
+upstream. There are no fixed RGB colours. Use `NO_COLOR=1` or `--color=never`
+for plain output. State labels do not rely on colour. `git branch` is unchanged.
 
 The command only reads local Git metadata. It never fetches, checks out branches,
 scans worktree dirtiness or calls a hosting service. Sync uses stored upstream

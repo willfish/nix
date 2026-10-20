@@ -232,6 +232,18 @@ static const char *state_name(const Branch *branch) {
   return branch->state == 1 ? "current" : branch->state == 2 ? "worktree" : "";
 }
 
+static const char *state_style(const Branch *branch) {
+  return branch->state == 1 ? "1;32" : branch->state == 2 ? "36" : "0";
+}
+
+static const char *sync_style(const Branch *branch) {
+  if (!strcmp(branch->status, "upstream gone"))
+    return "1;31";
+  if (branch->warning)
+    return "33";
+  return !strcmp(branch->status, "in sync") ? "32" : "0";
+}
+
 static void row_values(const Branch *branch, bool remote, bool full,
                        const char **row) {
   size_t i = 0;
@@ -262,8 +274,8 @@ static void section(const View *view, const char *title, GPtrArray *items,
       g_autofree char *detail =
           remote ? g_strdup(branch->updated)
                  : g_strdup_printf("%s | %s", branch->status, branch->updated);
-      wrapped(view, name, 0, branch->state == 1 ? "1;7" : "1");
-      wrapped(view, detail, 2, branch->warning ? "1" : "0");
+      wrapped(view, name, 0, branch->state ? state_style(branch) : "1");
+      wrapped(view, detail, 2, remote ? "0" : sync_style(branch));
     }
   } else {
     const char *local_headers[] = {"BRANCH", "STATE", "UPDATED",
@@ -310,10 +322,10 @@ static void section(const View *view, const char *title, GPtrArray *items,
         const char *code = "0";
         if (col == 0)
           code = "1";
-        else if (!remote && col == 1 && branch->state == 1)
-          code = "7";
-        else if (!remote && col == 3 && branch->warning)
-          code = "1";
+        else if (!remote && col == 1)
+          code = state_style(branch);
+        else if (!remote && col == 3)
+          code = sync_style(branch);
         if (col)
           fputs("  ", stdout);
         cell(view, row[col], widths[col], code, col == columns - 1);

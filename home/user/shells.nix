@@ -120,6 +120,45 @@ let
       [ "$(commits_only_here "$rev" "$branch")" -eq 0 ]
     }
 
+    # Only query the origin repository, never gh's inferred parent/fork.
+    github_repo=""
+    origin_url="$(git remote get-url origin)"
+    case "$origin_url" in
+      git@github.com:*) github_repo="''${origin_url#git@github.com:}" ;;
+      https://github.com/*) github_repo="''${origin_url#https://github.com/}" ;;
+      ssh://git@github.com/*) github_repo="''${origin_url#ssh://git@github.com/}" ;;
+    esac
+    github_repo="''${github_repo%.git}"
+    if [[ ! "$github_repo" =~ ^[[:alnum:]_.-]+/[[:alnum:]_.-]+$ ]]; then
+      github_repo=""
+    fi
+    closed_branches=()
+
+    closed_pr_at_tip() {
+      local branch="$1" rev="$2" prs
+      [ -n "$github_repo" ] && [ -n "$branch" ] || return 1
+      command -v gh >/dev/null && command -v jq >/dev/null || return 1
+      if ! prs="$(gh pr list --repo "$github_repo" --head "$branch" \
+        --state all --limit 100 \
+        --json number,state,headRefName,headRefOid,isCrossRepository,baseRefName 2>/dev/null)"; then
+        echo "GitHub lookup failed for $branch; retaining its worktree" >&2
+        return 1
+      fi
+      # A full page is ambiguous. An open PR on a reused branch vetoes cleanup.
+      # Require one same-repository closed PR targeting the default branch,
+      # with exactly the commit checked out locally. CLOSED excludes MERGED.
+      printf '%s' "$prs" | jq -er --arg branch "$branch" --arg rev "$rev" \
+        --arg base "$default" '
+        select(type == "array" and length < 100)
+        | select(all(.[]; .state != "OPEN"))
+        | map(select(.state == "CLOSED" and .headRefName == $branch
+          and .headRefOid == $rev and .isCrossRepository == false
+          and .baseRefName == $base))
+        | select(length == 1) | .[0].number
+        | select(type == "number" and . > 0 and floor == .)
+      ' 2>/dev/null
+    }
+
     blocking_dirt() {
       local wt="$1" line code path
       while IFS= read -r line; do
@@ -144,13 +183,48 @@ let
     }
 
     remove_if_safe() {
-      local wt="$1" rev="$2" branch="$3" label="$branch"
+      local wt="$1" rev="$2" branch="$3" label="$3" closed_pr="" dirt
       [ "$wt" != "$current_root" ] && [ -d "$wt" ] || return 0
-      checkout_landed "$rev" "$branch" || return 0
+      [ "$branch" != "$default" ] || return 0
+      if ! checkout_landed "$rev" "$branch"; then
+        if ! closed_pr="$(closed_pr_at_tip "$branch" "$rev")"; then
+          echo "Kept worktree: $wt (not eligible for landed cleanup; no verified closed PR at this tip)"
+          return 0
+        fi
+        # Unlike landed-history cleanup, this path must not discard even
+        # tracked deletions. Failed status reads also retain the checkout.
+        if ! dirt="$(git -C "$wt" status --porcelain --untracked-files=all)"; then
+          echo "Kept worktree: $wt (could not check local changes)" >&2
+          return 0
+        fi
+        if [ -n "$dirt" ]; then
+          echo "Kept worktree: $wt (local changes)"
+          return 0
+        fi
+        if [ "$(git -C "$wt" symbolic-ref HEAD 2>/dev/null)" != "refs/heads/$branch" ] \
+          || [ "$(git -C "$wt" rev-parse HEAD)" != "$rev" ]; then
+          echo "Kept worktree: $wt (checkout changed during cleanup)"
+          return 0
+        fi
+      fi
       if blocking_dirt "$wt"; then
+        echo "Kept worktree: $wt (local changes or protected .envrc)"
         return 0
       fi
       [ -n "$label" ] || label="detached"
+
+      if [ -n "$closed_pr" ]; then
+        # Never force closed-PR removal. Git rechecks dirt and locks, and the
+        # local branch retains the unmerged commits even after the checkout goes.
+        if git worktree remove "$wt"; then
+          closed_branches+=("$branch")
+          echo "Removed worktree: $wt (closed PR #$closed_pr); retained branch $branch"
+        else
+          echo "Could not remove worktree $wt; retained its branch and remaining state" >&2
+          return 1
+        fi
+        return 0
+      fi
 
       # Force only after the dirt filter. Git otherwise keeps assume-unchanged
       # deletions and generated ignored files, which are not local work.
@@ -180,6 +254,8 @@ let
         "")
           if [ "$locked" -eq 0 ] && [ -n "$rev" ]; then
             remove_if_safe "$wt" "$rev" "$branch"
+          elif [ "$locked" -ne 0 ]; then
+            echo "Kept worktree: $wt (locked)"
           fi
           wt="" rev="" branch="" locked=0
           ;;
@@ -190,6 +266,9 @@ let
     # delete a branch that a retained worktree has checked out.
     while IFS= read -r branch; do
       [ "$branch" = "$default" ] && continue
+      for closed_branch in "''${closed_branches[@]}"; do
+        [ "$branch" != "$closed_branch" ] || continue 2
+      done
       no_live_upstream "$branch" || continue
       history_landed "refs/heads/$branch" || continue
       git branch -D "$branch" 2>/dev/null || true
