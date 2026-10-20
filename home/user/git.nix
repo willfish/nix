@@ -14,6 +14,13 @@ let
     "-o IdentitiesOnly=yes"
     "-o IdentityFile=${config.home.homeDirectory}/.ssh/id_ed25519"
   ];
+  gitBranches = pkgs.writeShellApplication {
+    name = "git-branches";
+    runtimeInputs = [ pkgs.git ];
+    text = ''
+      exec ${pkgs.python3}/bin/python3 ${../config/git-branches.py} "$@"
+    '';
+  };
   gitWithWorktreeDirenv = pkgs.writeShellScriptBin "git" ''
     set -euo pipefail
 
@@ -310,7 +317,7 @@ in
 
       alias = {
         add = "add -p";
-        branches = "for-each-ref --sort=-committerdate --format=\"%(color:blue)%(authordate:relative)\t%(color:red)%(authorname)\t%(color:white)%(color:bold)%(refname:short)\" refs/remotes";
+        branches = "!${gitBranches}/bin/git-branches";
         graph = "log --graph --all --decorate --date=relative --pretty=format:'%C(bold cyan)%h%C(reset) %C(bold yellow)%d%C(reset) %C(white)%s%C(reset) %C(dim white)- %an, %ar%C(reset)'";
         taginfo = "for-each-ref --format='%(color:blue)%(refname:short) %(color:green)%(color:bold)%(taggerdate:short)%(committerdate:short)' --sort=committerdate refs/tags";
       };

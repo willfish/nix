@@ -18,6 +18,9 @@ sessions
 metadata
 *.py
 
+# Git display helper is owned source, not scratch.
+!home/config/git-branches.py
+
 # Archive tooling is owned source, not scratch.
 !system/terminus/radio-archive/*.py
 !home/config/cliamp/sync-radio-archive-playlists.py
