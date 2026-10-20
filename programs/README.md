@@ -38,6 +38,7 @@ Read each program's README for its authorization boundary and manual checks.
 | [daily-agenda](daily-agenda) | Calendar fetching, recurrence and reminders | `daily-agenda` | Unix |
 | [daily-launcher](daily-launcher) | Launch workspace, notes, agenda and confirmed cleanup | `daily-workflow` | Linux desktop |
 | [darwin-deployment](darwin-deployment) | macOS deployment, preflight and health | `darwin-deploy`, `darwin-preflight`, `darwin-health` | macOS |
+| [git-branches](git-branches) | Read-only branch and worktree overview | `git branches` | Unix |
 | [github-notification-watch](github-notification-watch) | GitHub notification alerts | `github-notification-watch` | Desktop |
 | [herdr-notification-focus](herdr-notification-focus) | Focus the session associated with a notification | `herdr-notification-focus` | Linux desktop |
 | [herdr-sleep-inhibit](herdr-sleep-inhibit) | Prevent sleep while Herdr agents are working | `herdr-agent-awake` | Linux |

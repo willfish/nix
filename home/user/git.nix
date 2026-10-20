@@ -14,13 +14,7 @@ let
     "-o IdentitiesOnly=yes"
     "-o IdentityFile=${config.home.homeDirectory}/.ssh/id_ed25519"
   ];
-  gitBranches = pkgs.writeShellApplication {
-    name = "git-branches";
-    runtimeInputs = [ pkgs.git ];
-    text = ''
-      exec ${pkgs.python3}/bin/python3 ${../config/git-branches.py} "$@"
-    '';
-  };
+  gitBranches = import ../../programs/git-branches { inherit pkgs; };
   gitWithWorktreeDirenv = pkgs.writeShellScriptBin "git" ''
     set -euo pipefail
 
