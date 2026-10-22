@@ -26,24 +26,28 @@
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
 
+  # Sandisk Optimus GX Pro 8100 4TB: ESP plus LUKS2 holding LVM volume group
+  # "andromeda" (128 GiB swap for hibernation, root on the remainder).
+  # The previous Crucial T700 install stays bootable as a fallback.
+  boot.initrd.luks.devices.cryptroot.device =
+    "/dev/disk/by-id/nvme-Sandisk_Optimus_GX_Pro_8100_4TB_260956800373-part2";
+
   fileSystems."/" = {
-    device = "/dev/disk/by-uuid/115ed582-5ffb-45cd-aa95-79a713f15ca0";
+    device = "/dev/andromeda/root";
     fsType = "ext4";
   };
 
-  boot.initrd.luks.devices."luks-be1a4c83-1b0a-41f3-9ce9-5406c9d8429c".device =
-    "/dev/disk/by-uuid/be1a4c83-1b0a-41f3-9ce9-5406c9d8429c";
-
   fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/E720-E94D";
+    device = "/dev/disk/by-id/nvme-Sandisk_Optimus_GX_Pro_8100_4TB_260956800373-part1";
     fsType = "vfat";
     options = [
-      "fmask=0022"
-      "dmask=0022"
+      "fmask=0077"
+      "dmask=0077"
     ];
   };
 
-  swapDevices = [ ];
+  swapDevices = [ { device = "/dev/andromeda/swap"; } ];
+  boot.resumeDevice = "/dev/andromeda/swap";
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's
