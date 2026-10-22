@@ -204,9 +204,9 @@ Allowance parse_copilot(Doc *d, Val *p) {
       grouped(count, sizeof count, credits);
       if (credits > 0)
         snprintf(note, sizeof note,
-                 "Unlimited premium requests · %s credits used", count);
+                 "No premium request quota · %s credits used", count);
       else
-        snprintf(note, sizeof note, "%s", "Unlimited premium requests");
+        snprintf(note, sizeof note, "%s", "No premium request quota");
       continue;
     }
     if (number(get(q, "entitlement")) <= 0)

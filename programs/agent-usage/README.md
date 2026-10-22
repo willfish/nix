@@ -22,8 +22,9 @@ provider diagnostics never appear in display records or logs.
 
 Copilot reads the GitHub OAuth token Pi stores for `github-copilot` and asks
 GitHub's `copilot_internal/user` endpoint for monthly quotas. Limited quotas
-become meters; an unlimited premium allowance becomes a `usageNoteText` line
-with the credits used this cycle.
+become meters. GitHub reports metered seats as unlimited with no entitlement, so
+that case becomes a `usageNoteText` line with the credits used, not a meter.
+Unlimited means no seat quota, not free usage; billing budgets are not visible.
 
 Provider URLs are fixed, authenticated requests never follow redirects, TLS checks
 both certificate trust and hostname, and probes retain a 15-second connection/idle
