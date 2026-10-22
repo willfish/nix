@@ -7,7 +7,7 @@
 }:
 
 let
-  version = "6.4.0";
+  version = "6.7.0";
 in
 buildNpmPackage {
   pname = "rea-agents";
@@ -17,12 +17,12 @@ buildNpmPackage {
   # runtime dependencies in the lock; never run upstream setup or build scripts.
   src = fetchurl {
     url = "https://registry.npmjs.org/rea-agents/-/rea-agents-${version}.tgz";
-    hash = "sha256-WesWBLjbdfUi1Kl1w2zmtKKtRl5DutFl+aj3KDkdubg=";
+    hash = "sha256-IJWKZtuhoBHlCkhr65Rjo0MSjtNoyYT5QGU2LBP1H5A=";
   };
   sourceRoot = "package";
 
   npmDepsFetcherVersion = 2;
-  npmDepsHash = "sha256-rJD1sZkbopd1O+eQQ7o/jlk/0u9zEXvXvBBXFY91mkw=";
+  npmDepsHash = "sha256-ZeKg1n28dhI5i/jbGNEjgKtpRnl89GzfBueziyAWdbw=";
   npmFlags = [ "--ignore-scripts" ];
   dontNpmBuild = true;
 

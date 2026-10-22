@@ -8,20 +8,20 @@
 }:
 buildNpmPackage {
   pname = "pi-mcp-adapter";
-  version = "5.0.0-unstable-2026-10-03";
+  version = "5.4.0";
 
   src = fetchFromGitHub {
     owner = "nicobailon";
     repo = "pi-mcp-adapter";
-    rev = "d6ffcca34851dafe5278992f0284f5ab56479684";
-    hash = "sha256-HnnVWrbtyt4Y8uLyjL+h4IsazBXR4/5Z54qzDKhvK14=";
+    rev = "1c7a84d489c18c69fde3d6a6503cd051133dd9a9";
+    hash = "sha256-iRj+rdop8eBeZb9zFxFiKufEHJMqI0KylsNWeU7atb8=";
   };
 
   # Nested Pi packages omit registry integrity. Upstream already carries the
   # hono, nanoid, postcss, protobufjs and smol-toml advisory fixes, and
   # settings.namespaceProxyTools replaces the old gateway-only patch.
   patches = [ ./pi-mcp-adapter-lock.patch ];
-  npmDepsHash = "sha256-UHxcmehzUHMGqi0+ZLuqbq5C+ZvtlLSOCI8r0eiyHp4=";
+  npmDepsHash = "sha256-bIv/6toGIg1tbRtxqh7aoZoG2asg0IGhHwkTZ4EYasc=";
   # npm needs to update cache entries shared by nested Pi dev dependencies.
   makeCacheWritable = true;
   npmFlags = [ "--ignore-scripts" ];

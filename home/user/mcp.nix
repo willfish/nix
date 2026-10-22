@@ -11,24 +11,24 @@ let
   slackSession = import ../../programs/slack-session { inherit pkgs; };
   inherit (import ./llm-mcps.nix { inherit config pkgs; }) servers;
   enabled = name: builtins.any (server: server.name == name) servers;
-  agentBrowserVersion = "0.38.2";
+  agentBrowserVersion = "0.39.1";
   agentBrowserRelease =
     {
       x86_64-linux = {
         asset = "agent-browser-linux-musl-x64";
-        hash = "sha256-mT1GL03PwZhg2TplIaRS66RQK/xEn+ASAwPCzLmY5nU=";
+        hash = "sha256-dFB82rmKqRvcFDRsVFr/l0ZAoiXkP4w9bCMWT4wPm7k=";
       };
       aarch64-linux = {
         asset = "agent-browser-linux-musl-arm64";
-        hash = "sha256-6v7KnKD9svoqpgxFVHIzSMc5ZWsN26DYL/ZU1NMzEbE=";
+        hash = "sha256-xJWfPhk8W8jzM2EzY/JfLqzuyv4loIIYQ7JxkGR0og8=";
       };
       x86_64-darwin = {
         asset = "agent-browser-darwin-x64";
-        hash = "sha256-eHy0DghqGI0LsT/ympmgsjgK/zql6GALj4ExoLmMppw=";
+        hash = "sha256-M5y5qm39QEhWz5ON80zTtHecYd/Vf8JXvhGxT9Gohfk=";
       };
       aarch64-darwin = {
         asset = "agent-browser-darwin-arm64";
-        hash = "sha256-gWi4arXZS+j2cJkt/k/hRFAWUYqGS0i9oQXmQULny/k=";
+        hash = "sha256-zBj6xB2dyYIZGDQKE25kMobqBVRMTdNWcbeW8ah0ze8=";
       };
     }
     .${pkgs.stdenv.hostPlatform.system}

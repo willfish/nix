@@ -15,8 +15,8 @@ let
   calendarPlugin = pkgs.fetchFromGitHub {
     owner = "tmn73";
     repo = "omarchy-calendar";
-    rev = "15509fca18f14b9e7da5d7bf85cdf3d9da665bae";
-    hash = "sha256-XfCeAmSyWltREKuDn9/6OdwyvjdtlQWH+9QLRnEOmlY=";
+    rev = "a190d1bcc2e6eb1c0e6c9130e3872fcdd6a292c8";
+    hash = "sha256-FuJo2xSInXsx3zzNPeBCJaKmgOA2SEUZMh9HYfWwG8g=";
   };
   panelSettings = import ../../programs/panel-settings { inherit pkgs; };
   calendarSettings = pkgs.writeShellApplication {
@@ -209,8 +209,8 @@ let
   arxivPlugin = pkgs.fetchFromGitHub {
     owner = "linuskelsey";
     repo = "arxiv-scanner";
-    rev = "5f4e8db6590a96743aea271365a49439919e18c5";
-    hash = "sha256-g9972zsbtZ9PEtBAsEprmsiWb8ec0M2GaUICgQorNec=";
+    rev = "a7d6abc524b44e723d1bb8a259db24edbb72ba52";
+    hash = "sha256-TTASfjpGhSBjANeuZauEskGt7WcXND4nxqaTrQoPxos=";
   };
   # Same private-use flask the idle bar draws. The -mono name tells the
   # notification card to paint it in the theme text colour.
@@ -297,8 +297,8 @@ let
     for panel in audio bluetooth network tailscale; do
       cp -r ${source}/shell/plugins/panels/"$panel" "$out/shell/plugins/panels/"
     done
-    cp ${calendarPlugin}/LICENSE ${calendarPlugin}/Model.js ${calendarPlugin}/manifest.json \
-      ${calendarPlugin}/*.qml "$out/shell/plugins/panels/calendar/"
+    cp ${calendarPlugin}/LICENSE ${calendarPlugin}/manifest.json \
+      ${calendarPlugin}/*.qml ${calendarPlugin}/*.js "$out/shell/plugins/panels/calendar/"
     cp -r ${weatherPlugin}/ui ${weatherPlugin}/lib ${weatherPlugin}/data "$out/shell/plugins/panels/weather/"
     cp ${weatherPlugin}/LICENSE ${weatherPlugin}/manifest.json ${weatherPlugin}/Panel.qml \
       ${weatherPlugin}/Service.qml "$out/shell/plugins/panels/weather/"
@@ -308,11 +308,13 @@ let
     substituteInPlace "$out/shell/plugins/panels/weather/Service.qml" \
       --replace-fail '"omarchy-notification-send"' '"${weatherNotify}/bin/omarchy-weather-notify"'
     mkdir -p "$out/shell/plugins/arxiv"
-    cp ${arxivPlugin}/BarWidget.qml ${arxivPlugin}/LICENSE "$out/shell/plugins/arxiv/"
+    cp ${arxivPlugin}/BarWidget.qml ${arxivPlugin}/Backend.qml ${arxivPlugin}/HubConfig.qml \
+      ${arxivPlugin}/View.qml ${arxivPlugin}/SettingsForm.qml ${arxivPlugin}/LICENSE "$out/shell/plugins/arxiv/"
     chmod -R u+w "$out/shell/plugins/arxiv"
     substituteInPlace "$out/shell/plugins/arxiv/BarWidget.qml" \
       --replace-fail 'function close() { popupOpen = false }' \
-      'function close() { popupOpen = false } function closeForPopoutSwitch() { close() }' \
+      'function close() { popupOpen = false } function closeForPopoutSwitch() { close() }'
+    substituteInPlace "$out/shell/plugins/arxiv/Backend.qml" \
       --replace-fail 'readonly property string pluginDir: Quickshell.env("HOME") + "/.config/omarchy/plugins/prometheus.arxiv-scanner/"' \
       'readonly property string pluginDir: "${arxivScripts}/"'
     patch --batch -d "$out/shell/plugins/arxiv" -p1 < ${../config/hyprland/arxiv/pi-widget.patch}

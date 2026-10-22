@@ -71,7 +71,7 @@
     herdr.url = "github:herdrdev/herdr-nix";
     # Source for the Pi integration asset. Keep this on the same stable tag as herdr-nix.
     herdr-source = {
-      url = "github:herdrdev/herdr/v0.9.1";
+      url = "github:herdrdev/herdr/v0.9.5";
       flake = false;
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
@@ -79,7 +79,7 @@
       url = "github:earendil-works/pi/main";
       flake = false;
     };
-    hermes-agent.url = "github:NousResearch/hermes-agent/bd0affe5e5f723579df8902852f5d0c47795f355";
+    hermes-agent.url = "github:NousResearch/hermes-agent/4d04303818b61bf3aa09278af48356315515965b";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # Upstream source for the Nix-adapted Local AI panel.
     omarchy-local-ai = {
