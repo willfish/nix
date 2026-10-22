@@ -1,7 +1,7 @@
 # Agent usage helpers
 
 C replacements for `hypr-agent-status` and
-`omarchy-agent-usage-{codex,grok,opencode}`, built with Meson, yyjson, libcurl
+`omarchy-agent-usage-{codex,grok,opencode,copilot}`, built with Meson, yyjson, libcurl
 and GLib. The updater's `--force` and `--limits-only` flags remain accepted.
 
 Collectors read Pi assistant usage under `${PI_AGENT_DIR:-$HOME/.pi/agent}/sessions`
@@ -20,12 +20,17 @@ then Pi's models configuration, then its auth registry. A configured `!command`
 is trusted shell configuration, executed with a 20-second timeout. Keys and
 provider diagnostics never appear in display records or logs.
 
+Copilot reads the GitHub OAuth token Pi stores for `github-copilot` and asks
+GitHub's `copilot_internal/user` endpoint for monthly quotas. Limited quotas
+become meters; an unlimited premium allowance becomes a `usageNoteText` line
+with the credits used this cycle.
+
 Provider URLs are fixed, authenticated requests never follow redirects, TLS checks
 both certificate trust and hostname, and probes retain a 15-second connection/idle
 timeout without imposing a whole-response deadline. `SSL_CERT_FILE` selects the CA bundle; Nix supplies its
 public certificate store by default.
 
-`nix build .#agent-usage` compiles all four commands without running fixtures.
+`nix build .#agent-usage` compiles all five commands without running fixtures.
 For manual migration verification, configure Meson with `-Dfixtures=true`, then
 run `tests/usage.test.ts` with `AGENT_USAGE_FIXTURE` and `AGENT_USAGE_BIN_DIR`
 pointing at that build. The fixture executable is not installed. Fixtures never

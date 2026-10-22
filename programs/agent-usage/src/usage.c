@@ -159,6 +159,74 @@ Allowance parse_opencode(Doc *d, Val *p) {
   a.tier = yyjson_mut_get_str(yyjson_mut_strcpy(d, plan));
   return a;
 }
+static void grouped(char *out, size_t size, int64_t n) {
+  char digits[32];
+  snprintf(digits, sizeof digits, "%lld", (long long)(n < 0 ? 0 : n));
+  size_t len = strlen(digits), j = 0;
+  for (size_t i = 0; i < len && j + 2 < size; i++) {
+    if (i && (len - i) % 3 == 0)
+      out[j++] = ',';
+    out[j++] = digits[i];
+  }
+  out[j] = 0;
+}
+// GitHub's copilot_internal/user: monthly quota snapshots per feature. An
+// unlimited allowance has no meter, so the credits it consumed become a note.
+Allowance parse_copilot(Doc *d, Val *p) {
+  Allowance a = {.limits = yyjson_mut_arr(d), .tier = "", .status = ""};
+  char *plan = duplicate(text(get(p, "copilot_plan")));
+  bool start = true;
+  for (char *s = plan; *s; s++) {
+    if (*s == '_')
+      *s = ' ';
+    unsigned char c = (unsigned char)*s;
+    *s = (char)(start ? toupper(c) : tolower(c));
+    start = !isalpha(c);
+  }
+  a.tier = yyjson_mut_get_str(yyjson_mut_strcpy(d, strip_text(plan)));
+  free(plan);
+  const char *end = text(get(p, "quota_reset_date_utc"));
+  Val *snapshots = get(p, "quota_snapshots");
+  const char *keys[] = {"premium_interactions", "chat", "completions"};
+  const char *titles[] = {"Premium", "Chat", "Completions"};
+  const char *labels[] = {"Monthly premium requests", "Monthly chat",
+                          "Monthly completions"};
+  char note[160] = "";
+  for (size_t i = 0; i < 3; i++) {
+    Val *q = get(snapshots, keys[i]);
+    if (!yyjson_mut_is_obj(q))
+      continue;
+    if (truth(get(q, "unlimited"))) {
+      if (i)
+        continue;
+      int64_t credits = number(get(q, "credits_used"));
+      char count[40];
+      grouped(count, sizeof count, credits);
+      if (credits > 0)
+        snprintf(note, sizeof note,
+                 "Unlimited premium requests · %s credits used", count);
+      else
+        snprintf(note, sizeof note, "%s", "Unlimited premium requests");
+      continue;
+    }
+    if (number(get(q, "entitlement")) <= 0)
+      continue;
+    Val *left = get(q, "percent_remaining");
+    if (!yyjson_mut_is_num(left))
+      continue;
+    double used = 1 - yyjson_mut_get_num(left) / 100;
+    used = fmin(1, fmax(0, used));
+    yyjson_mut_arr_append(a.limits, limit(d, labels[i], titles[i], used, end));
+    int64_t over = number(get(q, "overage_count"));
+    if (!i && over > 0) {
+      char count[40];
+      grouped(count, sizeof count, over);
+      snprintf(note, sizeof note, "%s premium requests over quota", count);
+    }
+  }
+  a.note = yyjson_mut_get_str(yyjson_mut_strcpy(d, note));
+  return a;
+}
 const char *grok_tier(Doc *d, Val *p) {
   const char *named =
       text(either(get(p, "subscription_tier"),
@@ -647,6 +715,8 @@ Val *record(Doc *d, const char *id, const char *name, Val *stats, Allowance a,
   strput(d, v, "usageStatusText", a.status);
   strput(d, v, "authHelpText", help);
   put(d, v, "limits", a.limits ? a.limits : yyjson_mut_arr(d));
+  if (a.note && *a.note)
+    strput(d, v, "usageNoteText", a.note);
   if (retry)
     put(d, v, "retryAdvised", yyjson_mut_bool(d, true));
   return v;

@@ -11,6 +11,7 @@ typedef struct {
   Val *limits;
   const char *tier;
   const char *status;
+  const char *note;
 } Allowance;
 typedef struct {
   Val *body;
@@ -60,6 +61,8 @@ Val *scan_opencode(Doc *d, const char *root, double now);
 Allowance parse_codex(Doc *d, Val *payload, double now);
 Allowance parse_opencode(Doc *d, Val *payload);
 Val *parse_grok(Doc *d, Val *payload);
+Allowance parse_copilot(Doc *d, Val *payload);
+Val *collect_copilot(Doc *d, Context *ctx);
 const char *grok_tier(Doc *d, Val *claims);
 Val *grok_login(Val *auth, double now, const char **key);
 Val *merge_login(Doc *d, Val *entry, Val *payload, double now);

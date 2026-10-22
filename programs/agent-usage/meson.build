@@ -5,7 +5,7 @@ deps = [dependency('yyjson'), dependency('libcurl'), dependency('glib-2.0'), cc.
 core = static_library('usage', ['src/json.c', 'src/usage.c', 'src/io.c'],
   include_directories: 'include', dependencies: deps)
 usage_dep = declare_dependency(link_with: core, include_directories: 'include', dependencies: deps)
-foreach name : ['hypr-agent-status', 'omarchy-agent-usage-codex', 'omarchy-agent-usage-grok', 'omarchy-agent-usage-opencode']
+foreach name : ['hypr-agent-status', 'omarchy-agent-usage-codex', 'omarchy-agent-usage-grok', 'omarchy-agent-usage-opencode', 'omarchy-agent-usage-copilot']
   executable(name, 'src/main.c', dependencies: usage_dep, install: true)
 endforeach
 if get_option('fixtures')

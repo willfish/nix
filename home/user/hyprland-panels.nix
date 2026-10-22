@@ -309,7 +309,11 @@ let
     cp -r ${source}/shell/plugins/agents "$out/shell/plugins/"
     chmod -R u+w "$out/shell/plugins/agents"
     cp ${agents}/grok.svg ${agents}/grok-light.svg ${agents}/opencode.svg ${agents}/opencode-light.svg \
+      ${agents}/copilot.svg ${agents}/copilot-light.svg \
       "$out/shell/plugins/agents/assets/"
+    # A record's usageNoteText (Copilot's unlimited premium credits) is a dim
+    # line under the provider name, beside any limit meters.
+    patch --batch -d "$out/shell/plugins/agents" -p1 < ${agents}/usage-note.patch
     cp -r ${source}/shell/plugins/polkit "$out/shell/plugins/"
     cp -r ${source}/shell/plugins/menu "$out/shell/plugins/"
     chmod -R u+w "$out"
@@ -451,7 +455,7 @@ let
         mkdir -p "$out/bin" "$out/libexec" "$out/default"
         # The shell resolves its translation catalogs through OMARCHY_PATH too.
         cp -r ${source}/default/i18n "$out/default/"
-        for name in codex grok opencode; do
+        for name in codex grok opencode copilot; do
           ln -s ${agentUsage}/bin/omarchy-agent-usage-"$name" "$out/bin/omarchy-agent-usage-$name"
         done
         install -m755 ${source}/bin/omarchy-agent-usage-update "$out/libexec/omarchy-agent-usage-update"
@@ -511,6 +515,7 @@ let
               codex.enabled = true;
               grok.enabled = true;
               opencode.enabled = true;
+              copilot.enabled = true;
             };
             refreshIntervalSec = 900;
             syncMode = "Off";

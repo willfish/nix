@@ -8,6 +8,7 @@ int main(int argc, char **argv) {
   const char *id = strstr(argv[0], "codex")      ? "codex"
                    : strstr(argv[0], "grok")     ? "grok"
                    : strstr(argv[0], "opencode") ? "opencode"
+                   : strstr(argv[0], "copilot")  ? "copilot"
                                                  : NULL;
   if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h"))) {
     if (id)

@@ -1,0 +1,31 @@
+--- a/Main.qml
++++ b/Main.qml
+@@ -339,6 +339,8 @@
+       accountSwitch: record.accountSwitch || ({ mode: "manual", threshold: 95 }),
+       // Codex's free full resets of its rate limits, when it has any.
+       resetCredits: record.resetCredits || null,
++      // A plain line such as Copilot's unlimited premium credits.
++      usageNoteText: String(record.usageNoteText || ""),
+       balance: balanceValue(record.balance),
+
+       todayPrompts: synced ? numberValue(stats.todayPrompts) : numberValue(record.todayPrompts),
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -1449,6 +1449,17 @@
+       wrapMode: Text.WordWrap
+     }
+
++    Text {
++      visible: !section.multi && text !== ""
++      width: parent.width
++      textFormat: Text.PlainText
++      text: section.provider ? String(section.provider.usageNoteText || "") : ""
++      color: root.dim
++      font.family: root.fontFamily
++      font.pixelSize: Style.font.caption
++      wrapMode: Text.WordWrap
++    }
++
+     UnavailableUsage {
+       visible: !section.multi && root.pausedWithoutLimits(section.provider)
+       width: parent.width

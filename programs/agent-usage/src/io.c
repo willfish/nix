@@ -420,7 +420,54 @@ Val *jwt_claims(Doc *d, const char *token) {
   return yyjson_mut_is_obj(claims) ? claims : yyjson_mut_obj(d);
 }
 static bool header_value(const char *value) { return safe_header(value); }
+// Pi keeps the long-lived GitHub OAuth token as the Copilot entry's refresh
+// credential; GitHub's quota endpoint takes that, not the short Copilot token.
+Val *collect_copilot(Doc *d, Context *ctx) {
+  const char *raw = getenv("PI_AGENT_DIR");
+  char *root = (raw && *raw) ? duplicate(raw) : join(home_dir(), ".pi/agent"),
+       *sessions = join(root, "sessions"), *path = join(root, "auth.json");
+  Val *stats = scan_pi(d, sessions, "github-copilot", context_now(ctx));
+  Val *entry = get(load(d, path), "github-copilot");
+  free(sessions);
+  free(path);
+  free(root);
+  const char *token = text(get(entry, "refresh"));
+  const char *auth_help = "Run /login github-copilot in Pi.";
+  Allowance a = {.limits = yyjson_mut_arr(d), .tier = "", .status = ""};
+  const char *help = "";
+  bool retry = false;
+  if (!yyjson_mut_is_obj(entry) || !*token) {
+    a.status = "Waiting for auth";
+    help = auth_help;
+  } else {
+    Reply reply = ctx->transport(d, "https://api.github.com/copilot_internal/user",
+                                 token, "User-Agent: hypr-agent-usage", NULL);
+    a.status = "Copilot limits unavailable";
+    if (reply.failed) {
+      help = "Couldn't reach Copilot usage. Local Pi stats are still shown.";
+      retry = true;
+    } else if (reply.status == 401) {
+      a.status = "Sign-in expired";
+      help = auth_help;
+    } else if (reply.status < 200 || reply.status >= 300) {
+      char note[64];
+      snprintf(note, sizeof note, "Copilot usage returned status %ld.",
+               reply.status);
+      help = yyjson_mut_get_str(yyjson_mut_strcpy(d, note));
+    } else {
+      a = parse_copilot(d, reply.body);
+      if (!yyjson_mut_arr_size(a.limits) && !*a.note) {
+        a.status = "Copilot limits unavailable";
+        help = "Copilot usage returned no allowance.";
+      }
+    }
+  }
+  return record(d, "copilot", "Copilot", stats, a, help, retry,
+                context_now(ctx));
+}
 Val *collect(Doc *d, Context *ctx, const char *id) {
+  if (!strcmp(id, "copilot"))
+    return collect_copilot(d, ctx);
   bool codex = !strcmp(id, "codex"), grok = !strcmp(id, "grok");
   const char *name = codex ? "Codex" : grok ? "Grok" : "OpenCode";
   const char *provider = codex ? "openai-codex" : grok ? "xai" : "opencode-go";
