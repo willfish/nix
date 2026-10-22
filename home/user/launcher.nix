@@ -355,6 +355,8 @@ in
           Environment = [
             "PATH=${profileBin}:${
               lib.makeBinPath [
+                # Launched apps inherit this PATH; their wrappers expect coreutils.
+                pkgs.coreutils
                 pkgs.wl-clipboard
                 pkgs.systemd
                 pkgs.xdg-utils
