@@ -5,6 +5,7 @@
   hostName,
   isGraphicalLinux,
   omarchy-local-ai,
+  upstreamSources,
   ...
 }:
 let
@@ -20,7 +21,12 @@ let
   source = omarchy-local-ai;
   manifest = builtins.fromJSON (builtins.readFile "${source}/manifest.json");
   strata = import ./strata.nix {
-    inherit config lib pkgs;
+    inherit
+      config
+      lib
+      pkgs
+      upstreamSources
+      ;
     contextSize = 131072;
   };
   strataRecipe = pkgs.writeText "strata-recipe.json" (

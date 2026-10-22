@@ -91,6 +91,61 @@
       url = "github:basecamp/omarchy";
       flake = false;
     };
+    # Git trees consumed as package and plugin sources. flake.lock owns their
+    # revisions and narHash, so `nix flake update` bumps them; derivations keep
+    # only the hashes that cannot be expressed there.
+    arxiv-scanner-source = {
+      url = "github:linuskelsey/arxiv-scanner";
+      flake = false;
+    };
+    mcp-dap-source = {
+      url = "github:go-delve/mcp-dap-server";
+      flake = false;
+    };
+    omapager-source = {
+      url = "github:njpatel/omapager";
+      flake = false;
+    };
+    omarchy-calendar-source = {
+      url = "github:tmn73/omarchy-calendar";
+      flake = false;
+    };
+    omarchy-emojis-source = {
+      url = "github:Wessel-Boers/omarchy-better-emojis";
+      flake = false;
+    };
+    omarchy-spotify-source = {
+      url = "github:stappmus/Omarchy-Spotify";
+      flake = false;
+    };
+    omarchy-weather-source = {
+      url = "github:eduardodallecort/omarchy-weather-radar";
+      flake = false;
+    };
+    pi-mcp-adapter-source = {
+      url = "github:nicobailon/pi-mcp-adapter";
+      flake = false;
+    };
+    pi-prompt-history-source = {
+      url = "github:vedang/pi-prompt-history";
+      flake = false;
+    };
+    slack-mcp-source = {
+      url = "github:korotovsky/slack-mcp-server";
+      flake = false;
+    };
+    strata-source = {
+      url = "github:Niko1221/Strata";
+      flake = false;
+    };
+    telegram-mcp-source = {
+      url = "github:chigwell/telegram-mcp";
+      flake = false;
+    };
+    ttfx-source = {
+      url = "github:omacom/ttfx";
+      flake = false;
+    };
     # BEGIN generated Omarchy community inputs
     omarchy-theme-aetheria = {
       url = "git+https://github.com/JJDizz1L/aetheria?shallow=1";
@@ -467,8 +522,24 @@
         };
       pre-commit-check = mkPreCommitCheck linuxSystem pkgs;
       darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
+      upstreamSources = {
+        arxivScanner = inputs.arxiv-scanner-source;
+        mcpDap = inputs.mcp-dap-source;
+        omapager = inputs.omapager-source;
+        omarchyCalendar = inputs.omarchy-calendar-source;
+        omarchyEmojis = inputs.omarchy-emojis-source;
+        omarchySpotify = inputs.omarchy-spotify-source;
+        omarchyWeather = inputs.omarchy-weather-source;
+        piMcpAdapter = inputs.pi-mcp-adapter-source;
+        piPromptHistory = inputs.pi-prompt-history-source;
+        slackMcp = inputs.slack-mcp-source;
+        strata = inputs.strata-source;
+        telegramMcp = inputs.telegram-mcp-source;
+        ttfx = inputs.ttfx-source;
+      };
       publicHomeModules = [
         { _module.args.omarchy-local-ai = inputs.omarchy-local-ai; }
+        { _module.args.upstreamSources = upstreamSources; }
         stylix.homeModules.stylix
         nix-index-database.homeModules.default
         sops-nix.homeManagerModules.sops
@@ -646,7 +717,9 @@
               ];
               text = builtins.readFile ./scripts/probe-private-access;
             };
-            mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix { };
+            mcp-dap-server = pkgs.callPackage ./home/user/mcp-packages/mcp-dap-server.nix {
+              source = upstreamSources.mcpDap;
+            };
             tailscale-proxy = import ./programs/tailscale-proxy { inherit pkgs; };
             assistant-tools = import ./programs/assistant-tools { inherit pkgs; };
             agent-usage = import ./programs/agent-usage { inherit pkgs; };
@@ -661,6 +734,7 @@
             opencode-adapt = import ./programs/opencode-adapt { inherit pkgs; };
             hermes-config = import ./programs/hermes-config { inherit pkgs; };
             check-flake-lock-update = import ./programs/check-flake-lock-update { inherit pkgs; };
+            upstream-status = import ./programs/upstream-status { inherit pkgs; };
             import-omarchy-community = import ./programs/import-omarchy-community { inherit pkgs; };
             audit-skills = import ./programs/audit-skills { inherit pkgs; };
             nix-storage-report = import ./programs/nix-storage-report { inherit pkgs; };

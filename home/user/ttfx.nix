@@ -1,24 +1,30 @@
 {
+  lib,
   rustPlatform,
-  fetchFromGitHub,
   nasm,
   python3,
   binutils,
+  source,
 }:
 rustPlatform.buildRustPackage {
   pname = "ttfx";
-  version = "0.3.3-asm";
+  version =
+    let
+      cargoVersion = builtins.head (
+        builtins.match "version = \"([0-9.]+)\"" (
+          lib.findFirst (line: builtins.match "version = \"[0-9.]+\"" line != null) null (
+            lib.splitString "\n" (builtins.readFile "${source}/Cargo.toml")
+          )
+        )
+      );
+    in
+    "${cargoVersion}-unstable-${source.shortRev}";
 
-  # DHH's x86-64 assembly engine. Not on master yet; asm-zen5 links it in
-  # when NASM is present and the CPU tier matches.
-  src = fetchFromGitHub {
-    owner = "omacom";
-    repo = "ttfx";
-    rev = "35c13cc59c563d6c596ec594e8f0fc03bd5b75e0";
-    hash = "sha256-I7rA+LMH9CL/fEJTHzUxMh/ECg8SYGv8/wzwxI9FVdE=";
-  };
+  # DHH's x86-64 assembly engine; asm-zen5 links it in when NASM is present
+  # and the CPU tier matches. flake.lock owns the revision.
+  src = source;
 
-  cargoHash = "sha256-JKfEgISmX8iIw5Bcr0u7pb5J5TsKCvNSQn3E9tH7Wes=";
+  cargoHash = "sha256-ntoj5bmAa9U2+3K1UX6HL0t6MjfCYQNe5LuiuNJ/CnY=";
 
   nativeBuildInputs = [
     nasm

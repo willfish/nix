@@ -1,4 +1,4 @@
-{ pkgs }:
+{ pkgs, source }:
 let
   cuda = pkgs.cudaPackages_13_0;
   llamaSource = pkgs.fetchFromGitHub {
@@ -19,17 +19,15 @@ let
       psutil
     ]
   );
+  # flake.lock owns the revision, so the version follows the locked commit date.
+  d = source.lastModifiedDate;
+  version = "0-unstable-${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}";
 in
 pkgs.stdenv.mkDerivation {
   pname = "strata";
   passthru = { inherit python llamaSource; };
-  version = "0.2.2";
-  src = pkgs.fetchFromGitHub {
-    owner = "Niko1221";
-    repo = "Strata";
-    rev = "011c9e600a93bbc9fd451c563501b5831c32bbca"; # v0.2.2
-    sha256 = "sha256-rZqp6GjcaDzwL9FjBxCrh3DNfF8j9QT7S0kN7BVD+vg=";
-  };
+  inherit version;
+  src = source;
   nativeBuildInputs = [
     pkgs.cmake
     pkgs.ninja

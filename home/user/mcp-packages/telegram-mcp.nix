@@ -1,12 +1,14 @@
 {
   lib,
   bash,
-  fetchFromGitHub,
   stdenvNoCC,
   python3,
+  source,
 }:
 let
-  version = "3.2.97";
+  # flake.lock owns the revision, so the version follows the locked commit date.
+  d = source.lastModifiedDate;
+  version = "0-unstable-${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}";
   interpreter = python3.withPackages (ps: [
     # Upstream pyproject dependencies, plus the mcp[cli] extras
     # (typer, python-dotenv) that nixpkgs' mcp keeps optional.
@@ -27,13 +29,8 @@ stdenvNoCC.mkDerivation {
 
   # Never from PyPI: the `telegram-mcp` name there is squatted by an
   # unrelated project and upstream warns credentials passed to it are
-  # exposed. Pin the exact tag instead.
-  src = fetchFromGitHub {
-    owner = "chigwell";
-    repo = "telegram-mcp";
-    tag = "v${version}";
-    hash = "sha256-DsstsS04EtX0gTNORolDfX65N1cqj58/fQHCSr3Oa30=";
-  };
+  # exposed. Use the locked GitHub source instead.
+  src = source;
 
   dontConfigure = true;
   dontBuild = true;

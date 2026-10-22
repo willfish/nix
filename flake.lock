@@ -42,6 +42,22 @@
         "type": "github"
       }
     },
+    "arxiv-scanner-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792576435,
+        "narHash": "sha256-TTASfjpGhSBjANeuZauEskGt7WcXND4nxqaTrQoPxos=",
+        "owner": "linuskelsey",
+        "repo": "arxiv-scanner",
+        "rev": "a7d6abc524b44e723d1bb8a259db24edbb72ba52",
+        "type": "github"
+      },
+      "original": {
+        "owner": "linuskelsey",
+        "repo": "arxiv-scanner",
+        "type": "github"
+      }
+    },
     "base16": {
       "inputs": {
         "fromYaml": "fromYaml"
@@ -593,6 +609,22 @@
         "type": "github"
       }
     },
+    "mcp-dap-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790201978,
+        "narHash": "sha256-NrHsVTFzWR5U5OEAjpy+LtFlaEn5VvvMipV1WE54X7s=",
+        "owner": "go-delve",
+        "repo": "mcp-dap-server",
+        "rev": "5e4d952bd171ad670e1744b4f182a32fe00fa710",
+        "type": "github"
+      },
+      "original": {
+        "owner": "go-delve",
+        "repo": "mcp-dap-server",
+        "type": "github"
+      }
+    },
     "mux": {
       "inputs": {
         "flake-utils": "flake-utils_2",
@@ -877,6 +909,22 @@
         "type": "github"
       }
     },
+    "omapager-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790541363,
+        "narHash": "sha256-hAsYN9zxTYumvEHMQ6Y9vD1vd7cTs4TCDOp4TjOrJDI=",
+        "owner": "njpatel",
+        "repo": "omapager",
+        "rev": "c389e73516828d18f26e8efec2127c0c3dc3cb97",
+        "type": "github"
+      },
+      "original": {
+        "owner": "njpatel",
+        "repo": "omapager",
+        "type": "github"
+      }
+    },
     "omarchy": {
       "flake": false,
       "locked": {
@@ -893,6 +941,38 @@
         "type": "github"
       }
     },
+    "omarchy-calendar-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791561444,
+        "narHash": "sha256-FuJo2xSInXsx3zzNPeBCJaKmgOA2SEUZMh9HYfWwG8g=",
+        "owner": "tmn73",
+        "repo": "omarchy-calendar",
+        "rev": "a190d1bcc2e6eb1c0e6c9130e3872fcdd6a292c8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tmn73",
+        "repo": "omarchy-calendar",
+        "type": "github"
+      }
+    },
+    "omarchy-emojis-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787648140,
+        "narHash": "sha256-kJD1RSuEwvNkQMAUsgP1r9xhzc00peXl3Dsc1Cfu7ZM=",
+        "owner": "Wessel-Boers",
+        "repo": "omarchy-better-emojis",
+        "rev": "e945ae85ec0f55eb6432c13b8e8e23907ca0d21d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Wessel-Boers",
+        "repo": "omarchy-better-emojis",
+        "type": "github"
+      }
+    },
     "omarchy-local-ai": {
       "flake": false,
       "locked": {
@@ -906,6 +986,22 @@
       "original": {
         "owner": "sybil-solutions",
         "repo": "omarchy-local-ai",
+        "type": "github"
+      }
+    },
+    "omarchy-spotify-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789293057,
+        "narHash": "sha256-vw5WhTQxlyXf0YWiubIWnT2IXaVQ5Hl4ANKB1qQZXXA=",
+        "owner": "stappmus",
+        "repo": "Omarchy-Spotify",
+        "rev": "e7371f38f79e3bf52bd6e3542ea54859f6dc082b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stappmus",
+        "repo": "Omarchy-Spotify",
         "type": "github"
       }
     },
@@ -1793,6 +1889,22 @@
         "url": "https://github.com/HANCORE-linux/omarchy-whitegold-theme"
       }
     },
+    "omarchy-weather-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789435718,
+        "narHash": "sha256-BA4PgDY2PCJ+5upQCbnWxh0ig3vE7627ZPOWKeGDMds=",
+        "owner": "eduardodallecort",
+        "repo": "omarchy-weather-radar",
+        "rev": "7234f1abc6f47738f37d13d8d354c62aca7d82f7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eduardodallecort",
+        "repo": "omarchy-weather-radar",
+        "type": "github"
+      }
+    },
     "outlook-mcp": {
       "inputs": {
         "nixpkgs": [
@@ -1837,14 +1949,46 @@
         "type": "github"
       }
     },
+    "pi-mcp-adapter-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792649891,
+        "narHash": "sha256-fzotbdKL4gtZufZXRW4Jzp5k6w40gNubTJhfJ/5MquA=",
+        "owner": "nicobailon",
+        "repo": "pi-mcp-adapter",
+        "rev": "f4cb843cbfa2ceea131e2017483ff3f09ad6c638",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nicobailon",
+        "repo": "pi-mcp-adapter",
+        "type": "github"
+      }
+    },
+    "pi-prompt-history-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784481897,
+        "narHash": "sha256-7tw7LMB/pzLrDzRTWd+jHaqLUMxXu1MSysIkra8s/a4=",
+        "owner": "vedang",
+        "repo": "pi-prompt-history",
+        "rev": "eedbef7afdf16a317785be469f600d71fadc9ef0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vedang",
+        "repo": "pi-prompt-history",
+        "type": "github"
+      }
+    },
     "pi-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1792621764,
-        "narHash": "sha256-4tJwcgZrZTrNjBrWPZEBABtzA4UQ3f0v6yJEo7+lcHA=",
+        "lastModified": 1792652521,
+        "narHash": "sha256-Am+UXXeYR0ruGa6r2oKkBT0yXmH2OqDTiElyHichFRs=",
         "owner": "earendil-works",
         "repo": "pi",
-        "rev": "58c0b02ce552adab76014e7ed712ab7981359aa8",
+        "rev": "7c22a93d0ed02092142fa63823e63d76aa4e2406",
         "type": "github"
       },
       "original": {
@@ -1971,6 +2115,7 @@
       "inputs": {
         "agent-bus": "agent-bus",
         "arxiv-mcp": "arxiv-mcp",
+        "arxiv-scanner-source": "arxiv-scanner-source",
         "flake-parts": "flake-parts_2",
         "herdr": "herdr",
         "herdr-source": "herdr-source",
@@ -1978,6 +2123,7 @@
         "himalaya-mcp": "himalaya-mcp",
         "home-manager": "home-manager_3",
         "llm-agents": "llm-agents",
+        "mcp-dap-source": "mcp-dap-source",
         "mux": "mux",
         "nix-config": "nix-config",
         "nix-darwin": "nix-darwin",
@@ -1985,8 +2131,12 @@
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_6",
         "nixpkgs-unstable": "nixpkgs-unstable",
+        "omapager-source": "omapager-source",
         "omarchy": "omarchy",
+        "omarchy-calendar-source": "omarchy-calendar-source",
+        "omarchy-emojis-source": "omarchy-emojis-source",
         "omarchy-local-ai": "omarchy-local-ai",
+        "omarchy-spotify-source": "omarchy-spotify-source",
         "omarchy-theme-aetheria": "omarchy-theme-aetheria",
         "omarchy-theme-arc-blueberry": "omarchy-theme-arc-blueberry",
         "omarchy-theme-archwave": "omarchy-theme-archwave",
@@ -2039,14 +2189,37 @@
         "omarchy-theme-vesper": "omarchy-theme-vesper",
         "omarchy-theme-vulkanite": "omarchy-theme-vulkanite",
         "omarchy-theme-white-gold": "omarchy-theme-white-gold",
+        "omarchy-weather-source": "omarchy-weather-source",
         "outlook-mcp": "outlook-mcp",
+        "pi-mcp-adapter-source": "pi-mcp-adapter-source",
+        "pi-prompt-history-source": "pi-prompt-history-source",
         "pi-source": "pi-source",
         "pilot-reviews": "pilot-reviews",
         "pre-commit-hooks": "pre-commit-hooks_2",
+        "slack-mcp-source": "slack-mcp-source",
         "sops-nix": "sops-nix",
+        "strata-source": "strata-source",
         "stylix": "stylix",
+        "telegram-mcp-source": "telegram-mcp-source",
         "tor-mcp": "tor-mcp",
-        "treefmt-nix": "treefmt-nix_3"
+        "treefmt-nix": "treefmt-nix_3",
+        "ttfx-source": "ttfx-source"
+      }
+    },
+    "slack-mcp-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1778799089,
+        "narHash": "sha256-sfKAqY47EiUnQHO30pxGr8JxlhiXtBJVFMBZ7k9a0NM=",
+        "owner": "korotovsky",
+        "repo": "slack-mcp-server",
+        "rev": "b88c0de3f706f4f07337c9eda7133c736d1c9524",
+        "type": "github"
+      },
+      "original": {
+        "owner": "korotovsky",
+        "repo": "slack-mcp-server",
+        "type": "github"
       }
     },
     "sops-nix": {
@@ -2056,16 +2229,32 @@
         ]
       },
       "locked": {
-        "lastModified": 1792056300,
-        "narHash": "sha256-YU1LjDe1o2Ymg5zEiCHbmMXLkDCtxHQRiVqZ3nC5GGk=",
+        "lastModified": 1792308394,
+        "narHash": "sha256-r4G33ygU307QCwyngAS6E9BMhnCRPyZrL7UxRCMrqo0=",
         "owner": "Mic92",
         "repo": "sops-nix",
-        "rev": "44931708c62937c2b1bf7953902989fa5bb9ee1b",
+        "rev": "a1438ca361b05d1e70854d5495abcb34fdf6ff47",
         "type": "github"
       },
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
+        "type": "github"
+      }
+    },
+    "strata-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792573659,
+        "narHash": "sha256-rZqp6GjcaDzwL9FjBxCrh3DNfF8j9QT7S0kN7BVD+vg=",
+        "owner": "Niko1221",
+        "repo": "Strata",
+        "rev": "011c9e600a93bbc9fd451c563501b5831c32bbca",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Niko1221",
+        "repo": "Strata",
         "type": "github"
       }
     },
@@ -2175,6 +2364,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "telegram-mcp-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792580837,
+        "narHash": "sha256-DsstsS04EtX0gTNORolDfX65N1cqj58/fQHCSr3Oa30=",
+        "owner": "chigwell",
+        "repo": "telegram-mcp",
+        "rev": "e55d9c7a66a8eb0855debb268a4ed5b63749af2d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "chigwell",
+        "repo": "telegram-mcp",
         "type": "github"
       }
     },
@@ -2321,6 +2526,22 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "ttfx-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790600764,
+        "narHash": "sha256-tLqFKEZAcXocj09l9+2ksvOgFe5465Z3Y37Hr/LrDp8=",
+        "owner": "omacom",
+        "repo": "ttfx",
+        "rev": "921bd551c308c235e01c5867f0199efe0691c271",
+        "type": "github"
+      },
+      "original": {
+        "owner": "omacom",
+        "repo": "ttfx",
         "type": "github"
       }
     },

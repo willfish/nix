@@ -1,18 +1,17 @@
 {
   lib,
   stdenvNoCC,
-  fetchFromGitHub,
+  source,
 }:
 stdenvNoCC.mkDerivation {
   pname = "pi-prompt-history";
-  version = "0.1.0-unstable-eedbef7";
+  version =
+    let
+      pkg = lib.importJSON "${source}/package.json";
+    in
+    "${pkg.version}-unstable-${source.shortRev}";
 
-  src = fetchFromGitHub {
-    owner = "vedang";
-    repo = "pi-prompt-history";
-    rev = "eedbef7afdf16a317785be469f600d71fadc9ef0";
-    hash = "sha256-7tw7LMB/pzLrDzRTWd+jHaqLUMxXu1MSysIkra8s/a4=";
-  };
+  src = source;
 
   # Upstream hardcodes ~/.pi/agent, including in its bundled config.json.
   # Respect Pi's active profile for defaults and per-profile overrides instead.

@@ -5,14 +5,19 @@
   hostName,
   readSopsSecret,
   piThemeArgs,
+  upstreamSources,
   ...
 }:
 let
   piConfig = import ../../programs/pi-config { inherit pkgs; };
   voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
   llmMcps = import ./llm-mcps.nix { inherit config pkgs; };
-  mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix { };
-  promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix { };
+  mcpAdapter = pkgs.callPackage ./mcp-packages/pi-mcp-adapter.nix {
+    source = upstreamSources.piMcpAdapter;
+  };
+  promptHistory = pkgs.callPackage ./pi-packages/prompt-history.nix {
+    source = upstreamSources.piPromptHistory;
+  };
   # Preserve sibling imports in the store, not just in Home Manager's symlink tree.
   piExtensions = ../config/pi/extensions;
   promptCapture = import ./prompt-capture.nix { inherit pkgs; };

@@ -3,6 +3,7 @@
   lib,
   pkgs,
   hostName,
+  upstreamSources,
   ...
 }:
 let
@@ -72,6 +73,7 @@ let
       lib
       pkgs
       contextSize
+      upstreamSources
       ;
   };
   workspace = "${config.home.homeDirectory}/LocalAssistant";

@@ -3,19 +3,15 @@
   lib,
   pkgs,
   isGraphicalLinux,
+  upstreamSources,
   ...
 }:
 let
   settings = import ../config/hyprland/settings.nix;
   omarchySource = import ./themes/omarchy-source.nix;
-  # Catalogue commit. The packaged daemon remains the 1.1.1-compatible shell
+  # Catalogue source. The packaged daemon remains the 1.1.1-compatible shell
   # API; the Herdr focus patch tracks the current runExecArgv helper.
-  pluginSrc = pkgs.fetchFromGitHub {
-    owner = "njpatel";
-    repo = "omapager";
-    rev = "c389e73516828d18f26e8efec2127c0c3dc3cb97";
-    hash = "sha256-hAsYN9zxTYumvEHMQ6Y9vD1vd7cTs4TCDOp4TjOrJDI=";
-  };
+  pluginSrc = upstreamSources.omapager;
   python = pkgs.python3.withPackages (ps: [ ps.pillow ]);
   githubIcon = pkgs.fetchurl {
     url = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";

@@ -3,6 +3,7 @@
   lib,
   pkgs,
   isGraphicalLinux,
+  upstreamSources,
   ...
 }:
 let
@@ -12,12 +13,7 @@ let
   agents = ../config/hyprland/agents;
   # Pinned bar-widget plugin. The sync scripts stay out: they expect Google
   # OAuth, and the rail reads the existing private iCal export instead.
-  calendarPlugin = pkgs.fetchFromGitHub {
-    owner = "tmn73";
-    repo = "omarchy-calendar";
-    rev = "a190d1bcc2e6eb1c0e6c9130e3872fcdd6a292c8";
-    hash = "sha256-FuJo2xSInXsx3zzNPeBCJaKmgOA2SEUZMh9HYfWwG8g=";
-  };
+  calendarPlugin = upstreamSources.omarchyCalendar;
   panelSettings = import ../../programs/panel-settings { inherit pkgs; };
   calendarSettings = pkgs.writeShellApplication {
     name = "hypr-calendar-settings";
@@ -28,12 +24,7 @@ let
   };
   # Waybar owns the bar, so the plugin's bar pill stays out. The panel and its
   # one service mount in the existing controls shell, same as the calendar.
-  weatherPlugin = pkgs.fetchFromGitHub {
-    owner = "eduardodallecort";
-    repo = "omarchy-weather-radar";
-    rev = "7234f1abc6f47738f37d13d8d354c62aca7d82f7";
-    hash = "sha256-BA4PgDY2PCJ+5upQCbnWxh0ig3vE7627ZPOWKeGDMds=";
-  };
+  weatherPlugin = upstreamSources.omarchyWeather;
   weatherSettings = pkgs.writeShellApplication {
     name = "hypr-weather-settings";
     text = ''
@@ -116,12 +107,7 @@ let
   };
   # Drop-in for the stock emoji overlay. Waybar is not involved: this is a
   # centred picker, opened with Super+Ctrl+E.
-  emojiPlugin = pkgs.fetchFromGitHub {
-    owner = "Wessel-Boers";
-    repo = "omarchy-better-emojis";
-    rev = "e945ae85ec0f55eb6432c13b8e8e23907ca0d21d";
-    hash = "sha256-kJD1RSuEwvNkQMAUsgP1r9xhzc00peXl3Dsc1Cfu7ZM=";
-  };
+  emojiPlugin = upstreamSources.omarchyEmojis;
   # Remember the window that had focus when the shortcut was pressed.
   # Focus follows the mouse, so the click that picks an emoji would otherwise
   # paste into whatever is under the pointer.
@@ -206,12 +192,7 @@ let
   };
   # Pinned arXiv bar widget. Marketplace install is unavailable and expects
   # Omarchy's own bar. Waybar stays the bar; this timer and the popup live here.
-  arxivPlugin = pkgs.fetchFromGitHub {
-    owner = "linuskelsey";
-    repo = "arxiv-scanner";
-    rev = "a7d6abc524b44e723d1bb8a259db24edbb72ba52";
-    hash = "sha256-TTASfjpGhSBjANeuZauEskGt7WcXND4nxqaTrQoPxos=";
-  };
+  arxivPlugin = upstreamSources.arxivScanner;
   # Same private-use flask the idle bar draws. The -mono name tells the
   # notification card to paint it in the theme text colour.
   arxivNotifyIcon =

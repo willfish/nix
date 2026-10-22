@@ -1,18 +1,18 @@
 {
   lib,
   buildGoModule,
-  fetchFromGitHub,
+  source,
 }:
 buildGoModule rec {
   pname = "slack-mcp-server";
-  version = "1.3.0";
+  # flake.lock owns the revision, so the version follows the locked commit date.
+  version =
+    let
+      d = source.lastModifiedDate;
+    in
+    "0-unstable-${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}";
 
-  src = fetchFromGitHub {
-    owner = "korotovsky";
-    repo = "slack-mcp-server";
-    tag = "v${version}";
-    hash = "sha256-I4f6yKV0BXtaxnqi/XNID+Pwl2mWjSqxIHhb07U7sc4=";
-  };
+  src = source;
   vendorHash = "sha256-+uQRODO9oL8mGKBmdghTxE6R9Fz+3GJFVTi17306gT8=";
   subPackages = [ "cmd/slack-mcp-server" ];
   env.CGO_ENABLED = 0;

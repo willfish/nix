@@ -1,18 +1,18 @@
 {
   lib,
   buildGoModule,
-  fetchFromGitHub,
+  source,
 }:
 buildGoModule rec {
   pname = "mcp-dap-server";
-  version = "0-unstable-2026-09-23";
+  # flake.lock owns the revision, so the version follows the locked commit date.
+  version =
+    let
+      d = source.lastModifiedDate;
+    in
+    "0-unstable-${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}";
 
-  src = fetchFromGitHub {
-    owner = "go-delve";
-    repo = "mcp-dap-server";
-    rev = "5e4d952bd171ad670e1744b4f182a32fe00fa710";
-    hash = "sha256-NrHsVTFzWR5U5OEAjpy+LtFlaEn5VvvMipV1WE54X7s=";
-  };
+  src = source;
   vendorHash = "sha256-/1dBkkz/YuCYzlneLVPYtjjCkzSY2lpYzcnzP/6CXGo=";
   env.CGO_ENABLED = 0;
   ldflags = [

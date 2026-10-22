@@ -3,6 +3,7 @@
   lib,
   pkgs,
   readSopsSecret,
+  upstreamSources,
   ...
 }:
 let
@@ -59,10 +60,16 @@ let
       ];
     };
   };
-  slackMcpServer = pkgs.callPackage ./mcp-packages/slack-mcp-server.nix { };
+  slackMcpServer = pkgs.callPackage ./mcp-packages/slack-mcp-server.nix {
+    source = upstreamSources.slackMcp;
+  };
   braveSearchMcpServer = pkgs.callPackage ./mcp-packages/brave-search-mcp-server.nix { };
-  telegramMcpServer = pkgs.callPackage ./mcp-packages/telegram-mcp.nix { };
-  mcpDapServer = pkgs.callPackage ./mcp-packages/mcp-dap-server.nix { };
+  telegramMcpServer = pkgs.callPackage ./mcp-packages/telegram-mcp.nix {
+    source = upstreamSources.telegramMcp;
+  };
+  mcpDapServer = pkgs.callPackage ./mcp-packages/mcp-dap-server.nix {
+    source = upstreamSources.mcpDap;
+  };
   reaAgents = pkgs.callPackage ./mcp-packages/rea-agents.nix { };
   # Native login glue; Telethon remains the unchanged upstream runtime.
   telegramLogin = import ../../programs/telegram-login {

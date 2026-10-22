@@ -3,9 +3,13 @@
   lib,
   pkgs,
   contextSize,
+  upstreamSources,
 }:
 let
-  package = import ./strata-package.nix { inherit pkgs; };
+  package = import ./strata-package.nix {
+    inherit pkgs;
+    source = upstreamSources.strata;
+  };
   dataDir = "${config.xdg.dataHome}/strata";
   # Huihui abliterated UD-Q4_K_XL in Unsloth's shard layout. Shard 1 matches
   # upstream Unsloth; shards 2-4 are the ablation. The .official copy of the

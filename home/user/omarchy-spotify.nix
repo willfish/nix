@@ -3,19 +3,16 @@
   lib,
   pkgs,
   isGraphicalLinux,
+  upstreamSources,
   ...
 }:
 let
   settings = import ../config/hyprland/settings.nix;
   omarchySource = import ./themes/omarchy-source.nix;
-  # Marketplace listing quickshell.spotify. Pinned to the commit the catalogue
-  # last marked compatible. The older verification snapshot is not this player.
-  pluginSrc = pkgs.fetchFromGitHub {
-    owner = "stappmus";
-    repo = "Omarchy-Spotify";
-    rev = "e7371f38f79e3bf52bd6e3542ea54859f6dc082b";
-    hash = "sha256-vw5WhTQxlyXf0YWiubIWnT2IXaVQ5Hl4ANKB1qQZXXA=";
-  };
+  # Marketplace listing quickshell.spotify. The older verification snapshot is
+  # not this player.
+  pluginSrc = upstreamSources.omarchySpotify;
+  pluginVersion = (lib.importJSON "${pluginSrc}/manifest.json").version;
   nativePlaylistSrc = pkgs.applyPatches {
     name = "omarchy-spotify-native-playlists";
     src = pluginSrc;
@@ -23,7 +20,7 @@ let
   };
   backend = pkgs.rustPlatform.buildRustPackage {
     pname = "omarchy-spotify-backend";
-    version = "1.0.4";
+    version = pluginVersion;
     src = nativePlaylistSrc;
     sourceRoot = "omarchy-spotify-native-playlists/backend";
     cargoLock = {

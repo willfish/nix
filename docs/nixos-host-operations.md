@@ -59,6 +59,27 @@ Update Pi alone with `nix flake update pi-source`, or include it in a full
 Pi. The existing post-build hook sends local builds to the Terminus binary cache.
 Other hosts can reuse cached builds for the same locked inputs and platform.
 
+## Updating inputs and pinned sources
+
+`flake.lock` owns every package and plugin source that is a git tree: the
+`*-source` inputs cover the panel plugins, Omapager, Spotify, the MCP servers,
+prompt history, Strata and ttfx. `nix flake update` bumps their revisions and
+narHash, so do not add a second `rev`/`hash` pair to those derivations.
+
+`just update` runs the input update, prints `nix run .#upstream-status` drift,
+and builds this host's home configuration. `just status` reports the same drift
+without changing anything. The status covers the locked sources plus the three
+artifacts a lock cannot hold: agent-browser, rea-agents and the Brave Search
+server, which are release binaries or npm tarballs.
+
+A bump can still leave work a flake cannot express. Derived hashes
+(`cargoHash`, `vendorHash`, `npmDepsHash`) change with the source, and patches
+must be rebased. Both fail the build rather than silently drifting; copy the
+`got: sha256-...` value into the named attribute and rebase the patch before
+switching. Two pins stay deliberately separate: `herdr-source` must match the
+`herdr-nix` release, and Strata's `llama.cpp` revision must match the one its
+CMake build expects.
+
 ## Home capabilities
 
 `home/user/capabilities.nix` assigns a purpose to each host and exposes typed

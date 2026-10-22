@@ -60,6 +60,7 @@ Read each program's README for its authorization boundary and manual checks.
 | [tailscale-proxy](tailscale-proxy) | Tailnet-aware HTTP and WebSocket proxy | `tailscale-open-proxy` | Unix |
 | [telegram-login](telegram-login) | Interactive Telegram session setup | `telegram-mcp-login` | Unix |
 | [theme-menu](theme-menu) | Select and publish desktop themes | `theme-menu` | Linux desktop |
+| [upstream-status](upstream-status) | Report pinned upstreams that trail their repositories | `upstream-status` | Unix |
 | [wallpaper-cycle](wallpaper-cycle) | Select and prepare the next wallpaper | `wallpaper-cycle` | Desktop |
 | [youtube-extract](youtube-extract) | Extract metadata and subtitle text without downloading media | `youtube-extract` | Unix |
 

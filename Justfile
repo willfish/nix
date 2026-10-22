@@ -117,3 +117,23 @@ terminus-health:
       echo "== /dev/sdb =="; sudo smartctl -H /dev/sdb
       echo "== /dev/nvme0 =="; sudo smartctl -H /dev/nvme0
     '
+
+# Report pinned upstreams that trail their repositories.
+status *ARGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    direnv exec . nix run .#upstream-status -- "$@"
+
+# Refresh every flake input, report drift, and build this host's home config.
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    direnv exec . nix flake update
+    direnv exec . nix run .#upstream-status -- .
+    host="$(hostname -s | tr '[:upper:]' '[:lower:]')"
+    case "$host" in
+      andromeda|foundation|starfish|terminus) configuration="william@$host" ;;
+      *) configuration="william-linux" ;;
+    esac
+    direnv exec . nix build --no-link ".#homeConfigurations.\"$configuration\".activationPackage"
+    echo "Build passed. Rebase any patch a future bump breaks, then run hmswitch."

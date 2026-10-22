@@ -5,6 +5,7 @@
   hostName,
   hostTheme,
   isGraphicalLinux,
+  upstreamSources,
   ...
 }:
 {
@@ -20,7 +21,9 @@
     let
       settings = import ../config/hyprland/settings.nix;
       omarchy = import ./themes/omarchy.nix { inherit lib; };
-      ttfx = pkgs.callPackage ./ttfx.nix { };
+      ttfx = pkgs.callPackage ./ttfx.nix {
+        source = upstreamSources.ttfx;
+      };
       agentStatus = import ../../programs/agent-usage { inherit pkgs; };
       arxivStatus = import ../../programs/arxiv-status { inherit pkgs; };
       # MPRIS leaves an empty widget when a player starts in Stopped state.
