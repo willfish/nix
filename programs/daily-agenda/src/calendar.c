@@ -650,6 +650,28 @@ static bool expand_series(Series *s, yyjson_mut_doc *doc, GPtrArray *out,
   }
   return ok;
 }
+// Google's feeds carry X-LIC-ERROR notes from the producer's own libical
+// parse, such as removed empty LOCATION values. They are inert data, not
+// errors in this parse, so drop them and their folded continuation lines
+// before libical counts component errors.
+static void drop_feed_errors(char *s) {
+  char *w = s;
+  bool skip = false;
+  for (char *line = s; *line;) {
+    char *eol = strchr(line, '\n');
+    char *next = eol ? eol + 1 : line + strlen(line);
+    if (*line != ' ' && *line != '\t')
+      skip = !g_ascii_strncasecmp(line, "X-LIC-ERROR", 11) &&
+             (line[11] == ';' || line[11] == ':');
+    if (!skip) {
+      size_t n = (size_t)(next - line);
+      memmove(w, line, n);
+      w += n;
+    }
+    line = next;
+  }
+  *w = '\0';
+}
 yyjson_mut_doc *parse_calendar(GBytes *raw, GDateTime *start, GDateTime *end,
                                GTimeZone *host, const char *zone_name,
                                bool records) {
@@ -667,8 +689,9 @@ yyjson_mut_doc *parse_calendar(GBytes *raw, GDateTime *start, GDateTime *end,
     else
       g_string_append(visible, "\356\200\200");
   }
-  char *input = g_utf8_make_valid(visible->str, (gssize)visible->len),
-       *upper = g_ascii_strup(input, -1);
+  char *input = g_utf8_make_valid(visible->str, (gssize)visible->len);
+  drop_feed_errors(input);
+  char *upper = g_ascii_strup(input, -1);
   g_string_free(visible, true);
   size_t count = 0;
   for (const char *p = upper; (p = strstr(p, "BEGIN:VEVENT")); p += 12)

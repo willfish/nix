@@ -23,6 +23,9 @@ without network requests. `--refresh` updates the daily cache and panel export;
 - Recurrence preserves daily/range overlap, exclusions, moved/cancelled instances,
   `THISANDFUTURE`, nominal duration and timezone behavior. Preserve the previous
   engine's ignored `EXRULE` behavior rather than applying new exclusions.
+  `X-LIC-ERROR` notes already present in a feed, which Google emits for removed
+  empty values, are dropped before parsing; only errors from this parse reject
+  an event.
   IANA data is supplied by the package; local time falls back to `/etc/localtime`.
 - `$XDG_CACHE_HOME/daily-agenda/calendar.json` and
   `$XDG_STATE_HOME/omarchy/calendar-events.json` retain their existing schemas.

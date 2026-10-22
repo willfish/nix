@@ -769,6 +769,23 @@ static void test_text(void) {
   g_free(folded);
   g_free(event);
 }
+static void test_producer_errors(void) {
+  begin("producer X-LIC-ERROR notes do not reject a feed");
+  const char *extras[] = {
+      "X-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for LOCATION "
+      "property. Removing entire property:",
+      "X-LIC-ERROR;X-LIC-ERRORTYPE=VALUE-PARSE-ERROR:No value for \n DESCRIPTION "
+      "property. Removing entire property:\nLOCATION:Room"};
+  for (size_t i = 0; i < sizeof extras / sizeof extras[0]; i++) {
+    char *event = timed(extras[i], NULL), *text = ics1(event);
+    yyjson_doc *doc = parity(text, strlen(text), NULL, 0);
+    if (doc && yyjson_arr_size(yyjson_doc_get_root(doc)) != 1)
+      FAIL("want one event with a producer note, case %zu", i);
+    yyjson_doc_free(doc);
+    g_free(text);
+    g_free(event);
+  }
+}
 static void test_malformed(void) {
   begin("malformed components, windows and untrusted input are rejected");
   const char *events[] = {"SUMMARY:Missing start", "DTSTART:garbage", "DTSTART:20260230T090000Z",
@@ -2002,6 +2019,7 @@ int main(void) {
   test_vtimezone();
   test_text();
   test_malformed();
+  test_producer_errors();
   test_bounds();
   test_credentials();
   test_whitespace();
