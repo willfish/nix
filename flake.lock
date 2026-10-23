@@ -2042,11 +2042,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1792600879,
-        "narHash": "sha256-VN2SOfwfUxFsyvKP9HxD/Z0kWnUULgtk9cP55truf58=",
+        "lastModified": 1792768895,
+        "narHash": "sha256-PmSXzg6gtaklwcYFnfIvu9MdPVj02sy9PdvEvix7P8E=",
         "ref": "main",
-        "rev": "79e0cf4dbd6fdd72bdc5802053b4f1968cd86e7b",
-        "revCount": 76,
+        "rev": "9fe56e4b26f6856134ac1c458ab12d30adaa1b88",
+        "revCount": 77,
         "type": "git",
         "url": "ssh://git@github.com/willfish/pilot-reviews"
       },
