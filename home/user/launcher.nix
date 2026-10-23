@@ -276,7 +276,15 @@ in
             "meetings"
             "daily"
           ] "${profileBin}/daily-workflow agenda")
-        ];
+        ]
+        ++ lib.optional config.dotfiles.capabilities.work (
+          action "󰄧" "New Relic brief" [
+            "newrelic"
+            "incidents"
+            "monitoring"
+            "reports"
+          ] "${profileBin}/newrelic-brief show"
+        );
       };
       "elephant/menus/desktop.toml".source = toml.generate "desktop-menu.toml" {
         name = "desktop";

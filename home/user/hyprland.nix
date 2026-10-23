@@ -688,6 +688,14 @@
                 size = "760 460";
               }
               {
+                name = "newrelic-brief";
+                "match:class" = "^com\\.mitchellh\\.ghostty$";
+                "match:title" = "^New Relic$";
+                float = true;
+                center = true;
+                size = "940 640";
+              }
+              {
                 name = "daily-notes";
                 "match:class" = "^com\\.mitchellh\\.ghostty$";
                 "match:title" = "^Today's notes$";

@@ -57,6 +57,7 @@
     ./voice.nix
     ./darwin.nix
     ./daily-workflow.nix
+    ./newrelic-brief.nix
     ./email.nix
     ./environment.nix
     ./git.nix
