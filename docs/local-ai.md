@@ -11,51 +11,39 @@ and recommended models. Browsing does not download weights or start models.
 **Download** and **Start** do, and images and weights can be large.
 Docker access is root-equivalent.
 
-## Strata on Andromeda
+## Shared Qwen endpoint on Andromeda
 
-**Qwen3.8 Flash-Next (Strata)** is a recipe in the same catalogue, with the
-standard Start, Stop, Open and usage display. Its Nix-built Docker image uses
-the Huihui abliterated UD-Q4_K_XL weights and the existing MTP pack, with 128K
-context. The weights are mounted read-only, not copied into the image or
-downloaded again. A 105 GB `.official` copy of the upstream Unsloth shards and
-pack was deleted in October 2026, so switching back to them means downloading
-them again.
+Start **Qwen3.8 Flash-Next** using the catalogue's SGLang EXL3 recipe:
 
-If weights are missing, run `strata-fetch`: it checks/downloads the pinned
-GGUF shards and prepares the packs inside Docker. This is a large download
-and conversion, not part of Home Manager activation. Catalogue removal cannot
-delete these imported weights.
+```sh
+omarchy-local-ai run qwen3.8-flash-next.sglang.256k.rtx-5090-32gb nvidia:0
+```
 
-The private engine sits behind the widget's authenticated gateway. Strata also
-publishes that gateway on port 8081, preserving the existing Andromeda provider
-and API key in Pi. Requests through either port count towards widget usage.
-Other recipes use the widget's normal local ports and Open action.
+Its authenticated gateway also serves `http://127.0.0.1:8081/v1` and
+`http://andromeda.taile09696.ts.net:8081/v1`. Only loopback and the current
+Tailscale IPv4 address are published, not the LAN. Tailscale must be running
+when this recipe starts; restart the recipe if its Tailscale address changes.
+Do not enable Funnel. Other recipes and extra deployment instances retain only
+the widget's normal local ports unless explicitly shared through the widget.
+
+Pi and OpenCode retain the `andromeda` provider, `qwen3.8-flash-next` alias and
+existing API key from `~/.config/local-llm/api-key`; the gateway maps the alias
+to the recipe's served model. The clients keep their conservative 128K context
+and 16K output limits, while the recipe advertises 256K. A declared server
+limit is not evidence of a successful full-context run.
+
+These are the catalogue's official `turboderp` EXL3 weights, not the previous
+abliterated GGUF weights. The recipe permits one running inference request.
+Its SGLang engine does not inherit the former engine's thinking-token cap;
+reasoning and visible output share the client's output allowance.
 
 Stop an existing GPU model before starting another. Docker restarts running
 models after reboot unless they were stopped. The suspend launcher stops all
-widget-managed GPU models before requesting sleep. Foundation can still use
-Andromeda's provider in Pi, but its widget is not a remote service manager.
+widget-managed models before requesting sleep. Foundation can use Andromeda's
+provider in Pi, but its widget is not a remote service manager.
 
-### Calibrate for Andromeda
-
-Upstream's `./setup.sh --calibrate` tunes PCIe offload, draft confidence, CPU
-workers and adaptive expert-cache settings. Here, `strata-calibrate` runs that
-same measurement routine from the pinned Nix image, without running upstream's
-installer or changing the weights. Stop all GPU models first:
-
-```sh
-omarchy-local-ai stop qwen3.8-flash-next.strata.128k.rtx-5090-32gb
-strata-calibrate
-omarchy-local-ai run qwen3.8-flash-next.strata.128k.rtx-5090-32gb nvidia:0
-```
-
-Allow about 15-30 minutes, potentially longer. It repeatedly loads the model;
-keep other GPU and CPU workloads idle. The command prints a report and proposed
-`settings`, but does not apply them. Retain measured improvements in
-`home/user/strata.nix`, build and run `hmswitch`, then stop/start the recipe to
-load the new image. Upstream requires a gain above 3% before keeping a candidate;
-its short decode prompts do not guarantee faster long-context or concurrent use.
-The model mount stays read-only and calibration has no network access.
+Relay's separate Metal service is unchanged; see [Relay Qwen](strata-relay.md).
+Do not remove its service or model data as part of workstation cleanup.
 
 ## Deployment and maintenance
 
@@ -67,6 +55,9 @@ not enable GPU containers. Check `omarchy-local-ai readiness` before starting.
 Agents and plugin code update through Nix, never the plugin's imperative
 updaters. To review a newer plugin revision, run
 `nix flake update omarchy-local-ai`, inspect the source/patch compatibility,
-then build and activate. Registry refreshes preserve the local Strata recipe;
-weights and runtime state remain in writable user directories.
+then build and activate. If the shared recipe ID changes, update
+`LOCAL_AI_SHARED_RECIPE` in `home/user/omarchy-local-ai.nix` with it.
+Weights and runtime state remain in writable user directories. Builds and
+activation do not download weights or restart model containers; stop/start
+an existing recipe to apply gateway or engine launch changes.
 For panel failures use `journalctl --user -u hyprland-local-ai.service`.

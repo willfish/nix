@@ -28,9 +28,8 @@
       "models": [
         {
           "id": "qwen3.8-flash-next",
-          "name": "Andromeda Qwen 3.8 Flash-Next Q4 (Strata)",
+          "name": "Andromeda Qwen 3.8 Flash-Next (EXL3)",
           "reasoning": true,
-          "samplingParams": { "reasoning_budget_tokens": 8192 },
           "input": ["text"],
           "contextWindow": 131072,
           "maxTokens": 16384,

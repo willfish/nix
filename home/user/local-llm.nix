@@ -3,7 +3,6 @@
   lib,
   pkgs,
   hostName,
-  upstreamSources,
   ...
 }:
 let
@@ -67,15 +66,6 @@ let
   ollamaBlob = "${config.home.homeDirectory}/.ollama/models/blobs/sha256-${modelHash}";
   logPath = "${config.home.homeDirectory}/Library/Logs/local-llm.log";
   apiKeyPath = "${config.xdg.configHome}/local-llm/api-key";
-  strata = import ./strata.nix {
-    inherit
-      config
-      lib
-      pkgs
-      contextSize
-      upstreamSources
-      ;
-  };
   workspace = "${config.home.homeDirectory}/LocalAssistant";
   chatUi = import ./local-llm-ui.nix { inherit pkgs; };
   hermesTools = import ../../programs/hermes-config { inherit pkgs; };
@@ -369,10 +359,6 @@ lib.mkIf (isAutomationDarwin || isAndromeda) {
   home.packages = [
     fetchModel
     server
-  ]
-  ++ lib.optionals isAndromeda [
-    strata.fetch
-    strata.calibrate
   ]
   ++ lib.optionals isAutomationDarwin [
     pkgs.llama-cpp

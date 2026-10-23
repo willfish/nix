@@ -156,18 +156,16 @@ and retain original sources for quotation and citation checks.
 
 ### Local Qwen output and compaction
 
-Flash-Next on Strata limits thinking to 8,192 tokens through the model's
-`samplingParams.reasoning_budget_tokens`. This applies to ordinary replies and
-Pi's built-in summaries, which bypass the extension's request hook. Thinking
-remains enabled but can no longer consume the entire summary allowance. Strata
-reduces the budget further when necessary to leave answer space within a smaller
-output limit. This does not guarantee that every
-answer fits; Pi still rejects token-capped summaries rather than saving them.
+Andromeda's Flash-Next provider uses the [Local AI EXL3 gateway](local-ai.md).
+The client retains a 128K context window and a 16K output limit. The old
+engine-specific thinking-token cap does not apply to SGLang: reasoning and the
+visible answer share that output limit, including Pi's built-in summaries.
+Pi rejects token-capped summaries rather than saving them.
 
 After activating a model configuration change, restart Pi with
 `pi --session <session-id>` and run `/compact` to retry a failed compaction.
 The failed summary was not saved, and the original history remains available.
-For a one-off recovery without this budget, select thinking off before
+If a summary exhausts its output budget, select thinking off before
 `/compact`, then restore the previous level.
 
 ## Subscription allowance

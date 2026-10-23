@@ -41,6 +41,6 @@
     };
   };
   services.xserver.videoDrivers = [ "nvidia" ];
-  # Local AI catalogue models, including Strata, use NVIDIA CDI devices.
+  # Local AI catalogue models use NVIDIA CDI devices.
   hardware.nvidia-container-toolkit.enable = true;
 }

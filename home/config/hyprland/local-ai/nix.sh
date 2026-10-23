@@ -5,22 +5,10 @@ cmd_update() { die "Agents are managed by Nix. Update the dotfiles inputs and ru
 cmd_outdated() { :; }
 docker_group_reexec() { :; }
 
-STRATA_ID=qwen3.8-flash-next.strata.128k.rtx-5090-32gb
-STRATA_IMAGE_ID=""
-if [[ ${LOCAL_AI_STRATA:-0} == 1 ]]; then
-  STRATA_IMAGE_ID=$(<"$LOCAL_AI_STRATA_IMAGE_ID")
-  [[ $STRATA_IMAGE_ID =~ ^sha256:[0-9a-f]{64}$ ]] || die "Invalid Nix Strata image identity"
-  # Keep refreshed upstream recipes, but never let a registry replace the local recipe.
-  mkdir -p "$STATE/catalogues"
-  merged="$STATE/catalogues/$(sha256sum "$RECIPES" "$PANEL/strata-recipe.json" | sha256sum | cut -c1-64).json"
-  if [[ ! -f $merged ]]; then
-    jq --slurpfile local "$PANEL/strata-recipe.json" --arg id "$STRATA_ID" '
-      .hardware["rtx-5090-32gb"].recipes |= ([$local[0]] + map(select(.id != $id)))' "$RECIPES" >"$merged.$$"
-    mv -f "$merged.$$" "$merged"
-  fi
-  RECIPES=$merged
-  # All gateways on this host use the existing key. It never enters the image or argv.
-  KEY=$LOCAL_AI_STRATA_KEY
+# Keep existing Pi/OpenCode credentials usable without putting a key in the store or argv.
+if [[ -n ${LOCAL_AI_KEY_FILE:-} ]]; then
+  # shellcheck disable=SC2034
+  KEY=$LOCAL_AI_KEY_FILE
 fi
 
 readiness() {
@@ -36,14 +24,12 @@ readiness() {
     readiness_line docker-down "Docker is not answering"
     return
   }
-  if [[ ${LOCAL_AI_STRATA:-0} == 1 ]] && ! nvidia_ready; then
+  if [[ ${LOCAL_AI_NVIDIA:-0} == 1 ]] && ! nvidia_ready; then
     readiness_line unsupported "Activate hardware.nvidia-container-toolkit.enable on Andromeda for GPU containers."
     return
   fi
   readiness_line ready
 }
-
-is_strata() { [[ ${LOCAL_AI_STRATA:-0} == 1 && ${1%--*} == "$STRATA_ID" ]]; }
 
 nvidia_cdi_device() {
   local uuid=$1 index=$2 devices
@@ -59,71 +45,23 @@ nvidia_cdi_device() {
   fi
 }
 
-pull() {
-  if [[ -n $STRATA_IMAGE_ID && $1 == "$STRATA_IMAGE_ID" ]]; then
-    docker load --input "$LOCAL_AI_STRATA_IMAGE" >/dev/null
-    docker image inspect "$STRATA_IMAGE_ID" >/dev/null || die "Nix Strata image did not load"
-  else
-    upstream_pull "$@"
-  fi
-}
-
-# The imported weights are not catalogue downloads and must never be deleted by Forget.
-cmd_forget() {
-  if is_strata "${1:-}"; then die "Strata reuses your existing weights; catalogue removal cannot delete them."; fi
-  upstream_forget "$@"
-}
-cmd_download() {
-  if is_strata "${1:-}"; then
-    [[ ${2:-} != off ]] || return 0
-    [[ -f $LOCAL_AI_STRATA_READY ]] || die "Prepare Strata's weights with strata-fetch first (large download)."
-    pull "$STRATA_IMAGE_ID" engine
-  else
-    upstream_download "$@"
-  fi
-}
-cmd_card() {
-  if is_strata "${1:-}"; then
-    printf '# Qwen3.8 Flash-Next with Strata\n\nUses the Huihui abliterated UD-Q4_K_XL weights and the existing MTP pack.\n128K context, RTX 5090, 80 GiB resident expert budget.\nPrepare missing weights with strata-fetch. Catalogue removal keeps these weights.\n'
-  else
-    upstream_card "$@"
-  fi
-}
-
-strata_check() {
-  is_strata "$1" || return 0
-  [[ -s $KEY ]] || die "Existing local model API key missing"
-  [[ -f $LOCAL_AI_STRATA_READY && -f $LOCAL_AI_STRATA_DATA/packs/unsloth-ud-q4_k_xl/native_experts.txt ]] ||
-    die "Prepare Strata's weights with strata-fetch first"
-  owned "$LOCAL_AI_STRATA_DATA"
-}
-
-# Called only for the locally pinned recipe, after upstream's policy and allocation checks.
-strata_engine_options() {
-  is_strata "$1" || return 0
-  printf '%s\0' --volume "$LOCAL_AI_STRATA_DATA:/models/strata:ro" \
-    --user "$(id -u):$(id -g)" --cap-drop ALL --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m
-}
-strata_gateway_options() {
-  is_strata "$1" || return 0
-  # Preserve the authenticated endpoint used by the Andromeda Pi provider.
-  printf '%s\0' --publish 8081:12434
+# Only the primary deployment owns the stable client endpoint, never a second instance.
+# Bind explicit addresses: Docker's published ports can bypass the host's LAN firewall.
+shared_gateway_bindings() {
+  [[ -n ${LOCAL_AI_SHARED_RECIPE:-} && $1 == "$LOCAL_AI_SHARED_RECIPE" ]] || return 0
+  local ip
+  ip=$(tailscale ip -4) || return 1
+  [[ $ip =~ ^100\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]] || return 1
+  printf '%s\n' '127.0.0.1:8081:12434' "$ip:8081:12434"
 }
 
 cmd_snapshot() {
-  upstream_snapshot | jq --arg id "$STRATA_ID" --argjson prepared "$([[ ${LOCAL_AI_STRATA:-0} == 1 && -f ${LOCAL_AI_STRATA_READY:-/nonexistent} ]] && echo true || echo false)" '
-    . + {updates: {}, updatesAt: ""} |
-    (.kinds[].models[] | select(.id == $id)) |= (.downloaded = $prepared |
-      if $prepared then . else .unfit = "prepare weights with strata-fetch first" end)'
+  upstream_snapshot | jq '. + {updates: {}, updatesAt: ""}'
 }
 
-# Docker labels catch deployments missing from the catalogue state. The pinned
-# Strata image also catches direct runs, including the calibration helper.
+# Labels catch deployments missing from the catalogue state, including CPU models.
 local_ai_containers() {
-  docker ps --quiet --filter "label=$LABEL=1" || return 1
-  if [[ -n $STRATA_IMAGE_ID ]]; then
-    docker ps --quiet --filter "ancestor=$STRATA_IMAGE_ID" || return 1
-  fi
+  docker ps --quiet --filter "label=$LABEL=1"
 }
 
 # Stop the former model service before containers so Restart= cannot reload it.

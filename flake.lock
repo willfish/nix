@@ -2238,7 +2238,6 @@
         "pre-commit-hooks": "pre-commit-hooks_2",
         "slack-mcp-source": "slack-mcp-source",
         "sops-nix": "sops-nix",
-        "strata-source": "strata-source",
         "stylix": "stylix",
         "telegram-mcp-source": "telegram-mcp-source",
         "tor-mcp": "tor-mcp",
@@ -2280,22 +2279,6 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
-        "type": "github"
-      }
-    },
-    "strata-source": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1792573659,
-        "narHash": "sha256-rZqp6GjcaDzwL9FjBxCrh3DNfF8j9QT7S0kN7BVD+vg=",
-        "owner": "Niko1221",
-        "repo": "Strata",
-        "rev": "011c9e600a93bbc9fd451c563501b5831c32bbca",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Niko1221",
-        "repo": "Strata",
         "type": "github"
       }
     },

@@ -5,7 +5,6 @@
   hostName,
   isGraphicalLinux,
   omarchy-local-ai,
-  upstreamSources,
   ...
 }:
 let
@@ -20,53 +19,6 @@ let
   omarchySource = import ./themes/omarchy-source.nix;
   source = omarchy-local-ai;
   manifest = builtins.fromJSON (builtins.readFile "${source}/manifest.json");
-  strata = import ./strata.nix {
-    inherit
-      config
-      lib
-      pkgs
-      upstreamSources
-      ;
-    contextSize = 131072;
-  };
-  strataRecipe = pkgs.writeText "strata-recipe.json" (
-    builtins.toJSON {
-      id = "qwen3.8-flash-next.strata.128k.rtx-5090-32gb";
-      name = "Qwen3.8 Flash-Next abliterated (Strata)";
-      family = "qwen";
-      format = "GGUF · UD-Q4_K_XL abliterated + MTP";
-      engine = "strata";
-      servedName = strata.alias;
-      sizeGb = 111.6;
-      cards = 1;
-      weights = [ ];
-      asset = null;
-      scratch = null;
-      launch = {
-        entrypoint = null;
-        arguments = [ ];
-        environment = { };
-        port = 8081;
-        shm = "1g";
-      };
-      serving = {
-        ctxTokens = 131072;
-        kvTokens = 262144;
-      };
-      capabilities = {
-        chat = true;
-        reasoning = true;
-        tools = true;
-        vision = false;
-      };
-      needs = {
-        host_ram_gb = 80;
-      };
-    }
-  );
-  localRecipes = pkgs.runCommand "local-ai-strata-recipe" { nativeBuildInputs = [ pkgs.jq ]; } ''
-    jq --rawfile image ${strata.imageId} '. + {image: ($image | rtrimstr("\n"))}' ${strataRecipe} > "$out"
-  '';
   terminal = pkgs.writeShellApplication {
     name = "omarchy-launch-tui";
     runtimeInputs = [
@@ -122,9 +74,6 @@ let
       mkdir -p "$out/share/local-ai" "$out/bin"
       cp -r bin lib agents *.qml *.js *.json *.svg LICENSE "$out/share/local-ai/"
       cp ${../config/hyprland/local-ai/nix.sh} "$out/share/local-ai/lib/nix.sh"
-      ${lib.optionalString isAndromeda ''
-        cp ${localRecipes} "$out/share/local-ai/strata-recipe.json"
-      ''}
       # The Omarchy installer/remover must never be offered as Nix package management.
       rm "$out/share/local-ai/bin/omarchy-install-ai-local" "$out/share/local-ai/bin/omarchy-remove-ai-local"
       patchShebangs "$out/share/local-ai/bin"
@@ -135,13 +84,10 @@ let
           'CATALOG=$HOME/.cache/omarchy/local-ai/v4/${source.rev}/recipes.json'
       makeWrapper "$out/share/local-ai/bin/omarchy-local-ai" "$out/bin/omarchy-local-ai" \
         --prefix PATH : ${lib.makeBinPath runtime} \
-        --set LOCAL_AI_STRATA ${if isAndromeda then "1" else "0"} \
-        --set LOCAL_AI_STRATA_KEY ${lib.escapeShellArg "${config.xdg.configHome}/local-llm/api-key"} \
+        --set LOCAL_AI_NVIDIA ${if isAndromeda then "1" else "0"} \
         ${lib.optionalString isAndromeda ''
-          --set LOCAL_AI_STRATA_IMAGE ${strata.image} \
-          --set LOCAL_AI_STRATA_IMAGE_ID ${strata.imageId} \
-          --set LOCAL_AI_STRATA_DATA ${lib.escapeShellArg strata.dataDir} \
-          --set LOCAL_AI_STRATA_READY ${lib.escapeShellArg strata.readyPath} \
+          --set LOCAL_AI_KEY_FILE ${lib.escapeShellArg "${config.xdg.configHome}/local-llm/api-key"} \
+          --set LOCAL_AI_SHARED_RECIPE qwen3.8-flash-next.sglang.256k.rtx-5090-32gb \
         ''} \
         --set LOCAL_AI_NIX 1
       runHook postInstall

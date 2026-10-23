@@ -63,7 +63,7 @@ Other hosts can reuse cached builds for the same locked inputs and platform.
 
 `flake.lock` owns every package and plugin source that is a git tree: the
 `*-source` inputs cover the panel plugins, Omapager, Spotify, the MCP servers,
-prompt history, Strata and ttfx. `nix flake update` bumps their revisions and
+prompt history and ttfx. `nix flake update` bumps their revisions and
 narHash, so do not add a second `rev`/`hash` pair to those derivations.
 
 The `trade-tariff-tools` input supplies the upstream `ecs` package for work
@@ -80,9 +80,7 @@ A bump can still leave work a flake cannot express. Derived hashes
 (`cargoHash`, `vendorHash`, `npmDepsHash`) change with the source, and patches
 must be rebased. Both fail the build rather than silently drifting; copy the
 `got: sha256-...` value into the named attribute and rebase the patch before
-switching. Two pins stay deliberately separate: `herdr-source` must match the
-`herdr-nix` release, and Strata's `llama.cpp` revision must match the one its
-CMake build expects.
+switching. The `herdr-source` pin must match the `herdr-nix` release.
 
 ## Home capabilities
 

@@ -1,16 +1,20 @@
-# Local Qwen on Andromeda
+# Local Qwen
 
-Home Manager manages a CUDA llama.cpp server on Andromeda's RTX 5090, using
-Huihui Qwen3.8-27B abliterated UD-Q5_K_XL. Configuration is in
-`home/user/local-llm.nix`. Relay does not start llama-server or the chat-UI
-helper. Its Hermes Qwen topic uses [native Strata](strata-relay.md) at
-`http://127.0.0.1:8081/v1`. Do not kickstart `org.nixos.local-llm` on Relay.
-Andromeda's Tailscale API requires the login key.
+Andromeda serves Qwen3.8 Flash-Next through the [Local AI SGLang EXL3 recipe](local-ai.md).
+Pi and OpenCode use the authenticated `andromeda` provider on port 8081.
+The provider alias and existing API key are unchanged. Start and stop the model
+through Local AI, not a `local-llm.service`.
 
-## Chat
+Relay's Hermes Qwen topic still uses [native Metal Strata](strata-relay.md) at
+`http://127.0.0.1:8081/v1`. That service and its model data are separate from
+workstation Local AI. Do not kickstart `org.nixos.local-llm` on Relay.
 
-The Relay URLs below are the retired llama.cpp UI. Do not start that server.
-Port 8081 on Relay serves Strata for the Hermes Qwen topic.
+## Legacy llama.cpp browser chat
+
+The browser and browser-compaction notes below describe the optional llama.cpp
+backend retained in `home/user/local-llm.nix`, not Andromeda's current EXL3 recipe
+or Relay's Metal service. The Relay browser URLs are retired. Do not start a
+second server on port 8081 while the current model gateway owns it.
 
 Run `local-chat` or open <http://127.0.0.1:8081>.
 From another device on the LAN, open <http://relay.fritz.box:8081>.
@@ -170,94 +174,33 @@ To return to the stock UI, remove `--path ${chatUi}` from the server wrapper in
 `home/user/local-llm.nix`, rebuild and run `hmswitch`, then reload the tab. Existing
 messages remain compatible with the stock UI.
 
-## Lean local agent in Pi
+## Local agent in Pi
 
-The `pi-coding-agent` package is in the shared `home/user/packages.nix` list,
-so plain `pi` is installed on every Home Manager host after updating this
-checkout and switching there. The local server and `qwen-pi` wrapper are enabled
-on Relay and Andromeda. Installing Pi elsewhere does not download Qwen or start
-a server.
-
-Run `qwen-pi` from the directory you want it to work in. It uses the local
-Qwen server with a short system prompt, four local tools (`read`, `bash`, `edit`,
-and `write`) and an `mcp` proxy for the shared external servers described in
-[Pi MCP configuration](pi-mcp.md). On Relay, it shares the server and API key with Hermes;
-`qwen` still launches Hermes there.
+Pi is installed on every Home Manager host. Installing it elsewhere does not
+download weights or start a server. Start the EXL3 recipe on Andromeda, then run:
 
 ```sh
-qwen-pi                         # Medium thinking, interactive terminal UI
-qwen-pi --thinking off          # Quick chat without thinking tokens
-qwen-pi --thinking low          # Lighter reasoning
-qwen-pi --thinking high         # Maps to Qwen's xhigh reasoning
-qwen-pi --thinking max          # Also maps to xhigh on Pi versions with max
-qwen-pi --continue              # Continue the last session in this directory
+pi --provider andromeda --model qwen3.8-flash-next
+pi --provider andromeda --model qwen3.8-flash-next --thinking off
 ```
 
-Home Manager installs Pi from the pinned Nix package (0.85.1 verified on
-Andromeda), without a global
-npm install or install-script bypass. The launcher uses an isolated agent
-directory at `~/.config/local-llm/pi`. Model credentials are resolved from the
-existing key file at request time, not embedded in Git, process arguments or
-the Nix store. Model ID follows `modelAlias` in the Home Manager module.
+The shared configuration selects loopback on Andromeda and its Tailscale DNS
+name elsewhere. Credentials resolve from SOPS at request time; they are not
+embedded in Git, command arguments or the Nix store. OpenCode uses the same
+provider, endpoint and model limits.
 
-The lean launcher disables automatic context-file, skill, extension, prompt
-template and theme discovery. It explicitly loads the local Qwen request
-adapter and the pinned MCP adapter. Consequently it does not inherit the shared
-AGENTS.md/skills harness.
-Pi's own startup network checks and telemetry are disabled. This is not a
-network sandbox: shell commands can still access the network, and tools run as
-William with his filesystem permissions and without per-command approval
-popups. The short prompt asks before destructive actions, but is not an
-enforced permission boundary. MCP servers use the existing credential wrappers
-and can access external services. After first-run metadata discovery they
-connect on demand. Their individual tool
-schemas are discovered through the proxy rather than all added to the prompt.
+The model alias remains stable across the engine change. New sessions show
+EXL3 in the model name; restart an existing session to refresh its model metadata.
+The client retains 131,072 context tokens and 16,384 output tokens. The server's
+larger declared window does not automatically increase the client's budget.
+The old engine's thinking-token cap is not supported by this SGLang runtime.
+For compaction limits and recovery, see [Pi workflow](pi-workflow.md#local-qwen-output-and-compaction).
 
-Pi's native automatic compaction reserves 16,384 tokens for output and keeps
-an 8,192-token recent-history budget:
-
-| Host | Weights | Total context | Compaction above |
-| --- | --- | --- | --- |
-| Relay | Huihui Qwen3.6 Q5_K_M | 65,536 | 49,152 |
-| Andromeda | Huihui Qwen3.8 UD-Q5_K_XL | 131,072 | 114,688 |
-
-The context includes instructions, tool definitions, history and output.
-`/compact` also requests compaction manually. Summaries use
-the local model and are lossy; original sessions remain in Pi's session files.
-This policy is separate from browser and Hermes compression. Home Manager
-restores the declared Pi settings on activation, backing up changed settings
-beside `settings.json` first. Model and prompt files remain declarative.
-
-Measured on relay on 2026-09-06 with the production `qwen-pi` launcher:
-
-| Task | Thinking | Cache state | Elapsed |
-| --- | --- | --- | --- |
-| `Hey` | Medium | Cold, 1,095 input tokens | 16.1 s |
-| `Hey` repeated | Medium | 1,091 cached tokens | 4.6 s |
-| `Hey` | Off | 1,091 cached tokens | 1.8 s |
-| Terminal fixture diagnostic | Medium | Partially warm | 23.4 s |
-
-Cold greeting prefill took 9.7 seconds and generation 4.1 seconds, with the
-remaining time in startup/model wake overhead. The diagnostic actually ran
-`pwd; uname -m; cat service.json`, identified port 80810 as invalid and suggested
-8081, without changing files or using the network. Generation remained about
-9.7-10 tokens/sec. This is a prompt-overhead improvement, not a faster model.
-For context, stripped-down Hermes previously sent about 5,000 tokens and took
-roughly 45 seconds for cold prefill alone. These are small smoke tests, not
-model-quality tests or full-context endurance results.
-
-Live requests verified thinking on/off and medium reasoning kwargs. Tests
-cover reasoning-level mapping and sampling. Pi's installed compaction predicate
-was checked at 49,152/49,153 tokens; a complete 64K Pi compaction session has not
-been exercised.
-
-On Andromeda, the installed Pi wrapper completed a public-fixture read-tool
-round trip in 9.43 seconds. Manual compaction took 33.78 seconds, reducing
-10,933 tokens to an immediate estimate of 8,539; subsequent recall preserved
-both test markers. That isolated test used a temporary 32K server slot. It
-verifies the tool and manual compaction paths, not a full automatic compaction
-at the production limit. The summary also suggested an unrequested next step,
-so successful recall does not establish complete summary fidelity.
+The retired `qwen-pi` launcher and its isolated profile are not installed.
+Historical sessions under `~/.config/local-llm/pi` are retained as user data.
+The widget's **Open** action instead launches its own recipe-specific agent
+profile; it does not replace the shared Pi configuration. See
+[Pi MCP configuration](pi-mcp.md) for the normal shared harness.
 
 ### OpenAI / Astra in Pi
 
@@ -327,34 +270,15 @@ On Andromeda:
 direnv exec . nix build \
   '.#homeConfigurations."william@andromeda".activationPackage' --no-link
 direnv exec . hmswitch
-local-llm-fetch
-systemctl --user start local-llm
-qwen-pi
+omarchy-local-ai run qwen3.8-flash-next.sglang.256k.rtx-5090-32gb nvidia:0
+pi --provider andromeda --model qwen3.8-flash-next
 ```
 
-The Andromeda runtime is llama.cpp 9190 with CUDA 12.9, compiled for the RTX
-5090's Blackwell architecture. It uses one 128K slot, q8 K/V, Flash Attention,
-full layer offload, a 512-token logical batch and a 128-token physical batch.
-Automatic fitting is disabled so it cannot silently reduce context or move
-transformer layers to the CPU. The embedding service runs on eight CPU threads
-to reserve GPU memory for Qwen and the desktop. Speech is Deepgram and does
-not use this GPU.
-
-On 2026-09-08, while local speech still shared the card, Q5 decoded a short
-128-token response at about 60 tokens/sec. A 120,029-token synthetic prompt
-completed in 75.6 seconds and retrieved a fact from its beginning. 160K
-exhausted memory with that speech stack, so 128K remains the configured slot.
-That measurement is not the current memory budget.
-
-Pi compacts above 114,688 context tokens, reserves 16,384 output tokens and keeps
-8,192 recent tokens. Its provider is `andromeda` locally and `relay` on the Mac;
-the same request adapter controls thinking and sampling on both hosts.
-
-The service unloads the model after ten idle minutes and reloads it on the next
-request. Inspect it with `systemctl --user status local-llm` or
-`journalctl --user -u local-llm -n 60`. The API is at
-`http://127.0.0.1:8081/v1`; the key is in `~/.config/local-llm/api-key`.
-The Pi wrapper reads it automatically without exposing it in process arguments.
+For downloads, readiness and gateway restarts, follow [Local AI](local-ai.md).
+Home Manager activation does not start or restart the model containers.
+The `local-llm-fetch` and `local-llm-server` commands remain as manual llama.cpp
+fallbacks, not the current model service. They require their separate GGUF
+weights; stop the Local AI recipe before using the fallback on port 8081.
 
 `local-llm-fetch` selects pinned host-specific weights and verifies downloaded
 files with SHA256. Andromeda uses `huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF`
@@ -377,15 +301,15 @@ activation never download model weights. Other Ollama models are unaffected.
 
 ## API and operations
 
-Local API base URL: `http://127.0.0.1:8081/v1`. Relay's model ID is
-`huihui-qwen3.6-35b-a3b`; Andromeda's remains `qwen3.8-27b`.
-Tailscale URLs are `http://relay.taile09696.ts.net:8081/v1` and
-`http://andromeda.taile09696.ts.net:8081/v1`. Relay also remains on the LAN at
-`http://192.168.178.55:8081/v1`.
-Use the key copied by `local-chat-key` as the client's Bearer API key, except
-for Relay over Tailscale, where the proxy adds it.
-The browser runs the tool-calling loop. Plain API clients must implement their
-own tool loop; enabling this service does not make bare completions use tools.
+Andromeda's API base URL is `http://127.0.0.1:8081/v1` locally or
+`http://andromeda.taile09696.ts.net:8081/v1` over Tailscale. Use the existing
+Bearer API key and `qwen3.8-flash-next` alias. The LAN is not published.
+Relay's Metal endpoint is localhost-only, with model ID
+`qwen3.8-flash-next-iq3_s`; see its separate [operations guide](strata-relay.md).
+Plain API clients must implement their own tool loop.
+
+The following commands apply only to the optional legacy llama.cpp service on
+other Darwin automation hosts, not Relay or Andromeda's current model:
 
 ```sh
 curl --fail http://127.0.0.1:8081/health
@@ -425,9 +349,8 @@ after activation; do not send an unsolicited House message to test it.
 
 The managed defaults are:
 
-- Huihui Qwen3.6-35B-A3B Q5_K_M with thinking enabled. The adapter still
-  sends medium effort, but this template's effort-level support is unverified. The browser still defaults to thinking off. Generic top-level
-  reasoning flags alone do not control this llama.cpp version's template.
+- Relay's native Metal Qwen3.8 Flash-Next IQ3_S model with thinking enabled
+  and high reasoning effort. This is independent of Andromeda's EXL3 recipe.
 - YOLO enabled: terminal/file tool calls do not ask for approval. This is host
   access as William, not the browser MCP's restricted workspace or root access.
   Existing OS permissions and Hermes security blocks still apply.

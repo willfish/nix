@@ -143,10 +143,6 @@
       url = "github:korotovsky/slack-mcp-server";
       flake = false;
     };
-    strata-source = {
-      url = "github:Niko1221/Strata";
-      flake = false;
-    };
     telegram-mcp-source = {
       url = "github:chigwell/telegram-mcp";
       flake = false;
@@ -545,7 +541,6 @@
         piMcpAdapter = inputs.pi-mcp-adapter-source;
         piPromptHistory = inputs.pi-prompt-history-source;
         slackMcp = inputs.slack-mcp-source;
-        strata = inputs.strata-source;
         telegramMcp = inputs.telegram-mcp-source;
         ttfx = inputs.ttfx-source;
       };
