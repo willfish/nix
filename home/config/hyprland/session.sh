@@ -26,10 +26,10 @@ run_action() {
   suspend | hibernate)
     local action="$1" title="${1^}"
     if [ "${HYPR_SESSION_STOP_LOCAL_LLM:-0}" = 1 ]; then
-      notify-send "Preparing to $action" 'Stopping the local AI model first.' || true
+      notify-send "Preparing to $action" 'Stopping local AI models first.' || true
       if ! omarchy-local-ai stop_all; then
-        printf 'hypr-session: could not stop local AI GPU models; %s cancelled\n' "$action" >&2
-        notify-send --urgency=critical "$title cancelled" 'Could not stop local AI GPU models. Check the Local AI panel before retrying.' || true
+        printf 'hypr-session: could not stop local AI workloads; %s cancelled\n' "$action" >&2
+        notify-send --urgency=critical "$title cancelled" 'Could not stop local AI workloads. Check the Local AI panel and model service before retrying.' || true
         return 1
       fi
     fi

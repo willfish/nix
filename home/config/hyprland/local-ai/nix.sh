@@ -117,9 +117,24 @@ cmd_snapshot() {
       if $prepared then . else .unfit = "prepare weights with strata-fetch first" end)'
 }
 
-# Sleep must release all catalogue GPU models, including Strata.
+# Docker labels catch deployments missing from the catalogue state. The pinned
+# Strata image also catches direct runs, including the calibration helper.
+local_ai_containers() {
+  docker ps --quiet --filter "label=$LABEL=1" || return 1
+  if [[ -n $STRATA_IMAGE_ID ]]; then
+    docker ps --quiet --filter "ancestor=$STRATA_IMAGE_ID" || return 1
+  fi
+}
+
+# Stop the former model service before containers so Restart= cannot reload it.
+# Keep catalogue cleanup for starting workers, then catch remaining containers.
 cmd_stop_all() {
-  local id deployments ids
+  local id deployments ids load_state containers
+  load_state=$(systemctl --user show local-llm.service --property=LoadState --value) ||
+    die "Cannot inspect the local model service; sleep cancelled"
+  if [[ $load_state != not-found ]]; then
+    systemctl --user stop local-llm.service || die "Could not stop the local model service; sleep cancelled"
+  fi
   deployments=$(cmd_snapshot) || die "Cannot inspect running models; sleep cancelled"
   ids=$(jq -r '.deployments[] | select(any(.keys[]; startswith("cpu:") | not)) | .id' <<<"$deployments") ||
     die "Cannot read GPU model allocations; sleep cancelled"
@@ -127,4 +142,11 @@ cmd_stop_all() {
     [[ -n $id ]] || continue
     cmd_stop "$id" || die "Could not stop $id; sleep cancelled"
   done <<<"$ids"
+  containers=$(local_ai_containers | sort -u) || die "Cannot inspect Local AI containers; sleep cancelled"
+  while IFS= read -r id; do
+    [[ -n $id ]] || continue
+    docker stop --timeout 30 "$id" >/dev/null || die "Could not stop Local AI container $id; sleep cancelled"
+  done <<<"$containers"
+  containers=$(local_ai_containers) || die "Cannot verify stopped Local AI containers; sleep cancelled"
+  [[ -z $containers ]] || die "Local AI containers are still running; sleep cancelled"
 }
