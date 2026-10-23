@@ -11,12 +11,31 @@
   _module.args.readSopsSecret = pkgs.writeShellScriptBin "read-sops-secret" ''
     set -euo pipefail
 
-    if [ "$#" -ne 1 ]; then
-      echo "usage: read-sops-secret <secret-file>" >&2
+    if [ "$#" -gt 1 ]; then
+      echo "usage: read-sops-secret [secret-file | SECRET_NAME]" >&2
       exit 64
     fi
 
-    secret_file="$1"
+    secrets_dir="''${SOPS_NIX_SECRETS_DIR:-''${XDG_CONFIG_HOME:-$HOME/.config}/sops-nix/secrets}"
+
+    if [ "$#" -eq 0 ]; then
+      names=()
+      for candidate in "$secrets_dir"/*; do
+        [ -f "$candidate" ] && [ -r "$candidate" ] || continue
+        names+=("''${candidate##*/}")
+      done
+      if [ "''${#names[@]}" -eq 0 ]; then
+        echo "read-sops-secret: no readable secrets in $secrets_dir" >&2
+        exit 66
+      fi
+      name="$(printf '%s\n' "''${names[@]}" | ${pkgs.fzf}/bin/fzf --prompt='secret> ')" || exit $?
+      [ -n "$name" ] || exit 130
+      secret_file="$secrets_dir/$name"
+    elif [ -e "$1" ] || [[ "$1" == */* ]]; then
+      secret_file="$1"
+    else
+      secret_file="$secrets_dir/$1"
+    fi
 
     if [ ! -r "$secret_file" ]; then
       echo "secret file is not readable: $secret_file" >&2
