@@ -737,6 +737,7 @@
             launcher-projects = import ./programs/launcher-projects { inherit pkgs; };
             daily-launcher = import ./programs/daily-launcher { inherit pkgs; };
             daily-agenda = import ./programs/daily-agenda { inherit pkgs; };
+            standup-recap = import ./programs/standup-recap { inherit pkgs; };
             pi-config = import ./programs/pi-config { inherit pkgs; };
             opencode-adapt = import ./programs/opencode-adapt { inherit pkgs; };
             hermes-config = import ./programs/hermes-config { inherit pkgs; };

@@ -31,9 +31,53 @@ let
       exec ${workflowPackage}/bin/daily-workflow "$@"
     '';
   };
+  recapPackage = import ../../programs/standup-recap { inherit pkgs; };
+  # Pi and the MCP wrappers live in ~/.local/bin and the profile, which a
+  # systemd user unit does not inherit.
+  recap = pkgs.writeShellApplication {
+    name = "standup-recap";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.curl
+    ];
+    text = ''
+      export PATH="$HOME/.local/bin:${config.home.profileDirectory}/bin:$PATH:/run/current-system/sw/bin"
+      exec ${recapPackage}/bin/standup-recap "$@"
+    '';
+  };
+  recapEnabled = isGraphicalLinux && config.dotfiles.privateEnabled;
 in
 {
-  home.packages = [ agenda ] ++ lib.optional isGraphicalLinux workflow;
+  home.packages = [
+    agenda
+  ]
+  ++ lib.optional isGraphicalLinux workflow
+  ++ lib.optional recapEnabled recap;
+
+  xdg.configFile = lib.mkIf recapEnabled {
+    "standup-recap/config".source = ../config/standup-recap/config;
+    "standup-recap/prompt.md".source = ../config/standup-recap/prompt.md;
+  };
+
+  # Fills today's note from the previous working day. Startup and 09:00 both
+  # trigger it; a completed marker makes the second trigger a no-op.
+  systemd.user.services.standup-recap = lib.mkIf recapEnabled {
+    Unit.Description = "Fill today's daily note with the previous working day's activity";
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${recap}/bin/standup-recap";
+      TimeoutStartSec = 1200;
+    };
+  };
+  systemd.user.timers.standup-recap = lib.mkIf recapEnabled {
+    Unit.Description = "Fill the daily note at login and at 09:00 on weekdays";
+    Timer = {
+      OnStartupSec = "3m";
+      OnCalendar = "Mon..Fri 09:00";
+      Persistent = true;
+    };
+    Install.WantedBy = [ "timers.target" ];
+  };
 
   # The launcher reads cached events; refresh runs separately on this timer.
   # A missing feed file leaves the timer inert.

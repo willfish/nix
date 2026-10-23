@@ -1,0 +1,13 @@
+# standup-recap configuration. Deployed to ~/.config/standup-recap/config.
+# Lines are key = value; a leading ~/ expands to $HOME.
+
+provider = github-copilot
+model = claude-opus-5.5
+thinking = medium
+
+# Pi gathers four sources and may need to reopen Outlook; allow fifteen minutes.
+timeout_seconds = 900
+
+notes_dir = ~/Notes
+pi_command = pi
+# prompt_file defaults to prompt.md beside this file.

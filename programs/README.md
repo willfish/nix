@@ -57,6 +57,7 @@ Read each program's README for its authorization boundary and manual checks.
 | [pi-voice-client](pi-voice-client) | Voice UI and session integration | `pi-voice`, `pi-voice-osd` wrappers | Linux desktop |
 | [prompt-capture](prompt-capture) | Record opt-in LLM traffic through mitmproxy | `prompt-capture` wrapper | Unix |
 | [slack-session](slack-session) | Refresh an authorized Slack browser session | `slack-refresh-session` | Unix |
+| [standup-recap](standup-recap) | Fill the daily note with the previous working day via Pi | `standup-recap`, user timer | Linux desktop |
 | [tailscale-proxy](tailscale-proxy) | Tailnet-aware HTTP and WebSocket proxy | `tailscale-open-proxy` | Unix |
 | [telegram-login](telegram-login) | Interactive Telegram session setup | `telegram-mcp-login` | Unix |
 | [theme-menu](theme-menu) | Select and publish desktop themes | `theme-menu` | Linux desktop |
