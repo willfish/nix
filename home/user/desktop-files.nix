@@ -155,6 +155,24 @@ in
       fi
     '';
 
+    repairHerdrPluginRuntimes = lib.mkIf pkgs.stdenv.isLinux (
+      lib.hm.dag.entryAfter [ "installHerdrPlugins" ] ''
+        export PATH="${
+          lib.makeBinPath [
+            pkgs.patchelf
+            pkgs.jq
+          ]
+        }:$PATH"
+        run ${pkgs.bash}/bin/bash ${configDir}/herdr/repair-plugin-runtimes.sh \
+          ${pkgs.herdr}/bin/herdr \
+          ${pkgs.stdenv.cc.bintools.dynamicLinker} \
+          ${lib.makeLibraryPath [
+            pkgs.glibc
+            pkgs.stdenv.cc.cc.lib
+          ]}
+      ''
+    );
+
   };
 
   xdg.configFile = lib.optionalAttrs isGraphicalLinux {
