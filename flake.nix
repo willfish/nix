@@ -68,6 +68,10 @@
       url = "git+ssh://git@github.com/willfish/outlook-mcp?ref=master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    newrelic-mcp = {
+      url = "git+ssh://git@github.com/willfish/newrelic-mcp-c?ref=master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Keep the tested Tor Browser runtime pin independent of this flake's nixpkgs.
     tor-mcp.url = "git+ssh://git@github.com/willfish/tor-mcp?ref=master";
     # Private reviewer/menu. Preserve its independently qualified native runtime pin.
@@ -384,6 +388,7 @@
       mux,
       himalaya-mcp,
       outlook-mcp,
+      newrelic-mcp,
       arxiv-mcp,
       herdr,
       herdr-source,
@@ -408,6 +413,7 @@
           mux = mux.packages.${system}.default;
           himalaya-mcp = himalaya-mcp.packages.${system}.default;
           outlook-mcp = outlook-mcp.packages.${system}.default;
+          newrelic-mcp = newrelic-mcp.packages.${system}.default;
           arxiv-mcp = arxiv-mcp.packages.${system}.default;
           arxiv-library = arxiv-mcp.packages.${system}.maintenance;
           herdr = herdr.packages.${system}.default;

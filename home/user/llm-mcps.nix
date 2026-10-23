@@ -91,6 +91,11 @@ rec {
         toolTimeout = 360;
       }
       {
+        name = "newrelic";
+        enabled = config.dotfiles.capabilities.work;
+        wrapper = "mcp-newrelic";
+      }
+      {
         name = "aws-access-portal";
         enabled = config.dotfiles.capabilities.work;
         wrapper = "mcp-aws-access-portal";

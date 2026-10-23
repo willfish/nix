@@ -665,13 +665,34 @@
         "type": "github"
       }
     },
+    "newrelic-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792743430,
+        "narHash": "sha256-SorE7Qt+mBlQbxP33eJS0jFClhpewE7gJsl4M4QEEUQ=",
+        "ref": "master",
+        "rev": "2f8aa779d2ec86b0251873b60fc5b746784bc012",
+        "revCount": 1,
+        "type": "git",
+        "url": "ssh://git@github.com/willfish/newrelic-mcp-c"
+      },
+      "original": {
+        "ref": "master",
+        "type": "git",
+        "url": "ssh://git@github.com/willfish/newrelic-mcp-c"
+      }
+    },
     "nix-config": {
       "locked": {
-        "lastModified": 1792742740,
-        "narHash": "sha256-Qj7tcPzDPvr/BepHgP0miX3s9sOdGDAxWKrlsVbtbig=",
+        "lastModified": 1792743451,
+        "narHash": "sha256-DCZGMjoR9C0OD+pfW/gebk4ghDxBP5ZFdnHckNU/0EI=",
         "ref": "refs/heads/master",
-        "rev": "fa4755ea507cc9d07dbac2ba76f8b09feb7ccc1d",
-        "revCount": 41,
+        "rev": "fda7b4ab9b50cee75d9f0e0a85144b00be24d805",
+        "revCount": 42,
         "type": "git",
         "url": "ssh://git@github.com/willfish/nix-config.git"
       },
@@ -2143,6 +2164,7 @@
         "llm-agents": "llm-agents",
         "mcp-dap-source": "mcp-dap-source",
         "mux": "mux",
+        "newrelic-mcp": "newrelic-mcp",
         "nix-config": "nix-config",
         "nix-darwin": "nix-darwin",
         "nix-index-database": "nix-index-database",

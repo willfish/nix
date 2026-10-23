@@ -102,6 +102,7 @@ in
           telegram = telegramMcpServer;
           gmail = pkgs.himalaya-mcp;
           outlook = pkgs.outlook-mcp;
+          newrelic = pkgs.newrelic-mcp;
         }
         .${server.name}
       )
@@ -215,6 +216,21 @@ in
       #!${pkgs.bash}/bin/bash
       set -euo pipefail
       exec ${pkgs.outlook-mcp}/bin/outlook-mcp "$@"
+    '';
+  };
+
+  home.file.".local/bin/mcp-newrelic" = lib.mkIf (enabled "newrelic") {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      unset NEW_RELIC_API_KEY NEW_RELIC_ACCOUNT_ID NEW_RELIC_REGION
+      export NEW_RELIC_API_KEY_FILE=${lib.escapeShellArg config.sops.secrets.NEW_RELIC_API_KEY.path}
+      export NEW_RELIC_ACCOUNT_ID_FILE=${lib.escapeShellArg config.sops.secrets.NEW_RELIC_ACCOUNT_ID.path}
+      export NEW_RELIC_REGION_FILE=${lib.escapeShellArg config.sops.secrets.NEW_RELIC_REGION.path}
+      export NEW_RELIC_READ_ONLY=1
+      exec ${pkgs.newrelic-mcp}/bin/newrelic-mcp-c "$@"
     '';
   };
 
