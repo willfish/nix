@@ -117,12 +117,14 @@ cmd_snapshot() {
       if $prepared then . else .unfit = "prepare weights with strata-fetch first" end)'
 }
 
-# Suspend must release all catalogue GPU models, not just the former native service.
+# Sleep must release all catalogue GPU models, including Strata.
 cmd_stop_all() {
-  local id
-  local deployments
-  deployments=$(cmd_snapshot) || die "Cannot inspect running models; suspend cancelled"
+  local id deployments ids
+  deployments=$(cmd_snapshot) || die "Cannot inspect running models; sleep cancelled"
+  ids=$(jq -r '.deployments[] | select(any(.keys[]; startswith("cpu:") | not)) | .id' <<<"$deployments") ||
+    die "Cannot read GPU model allocations; sleep cancelled"
   while IFS= read -r id; do
-    cmd_stop "$id" || die "Could not stop $id; suspend cancelled"
-  done < <(jq -r '.deployments[] | select(any(.keys[]; startswith("cpu:") | not)) | .id' <<<"$deployments")
+    [[ -n $id ]] || continue
+    cmd_stop "$id" || die "Could not stop $id; sleep cancelled"
+  done <<<"$ids"
 }

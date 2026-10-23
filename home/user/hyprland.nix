@@ -385,6 +385,7 @@
         "display-off"
         "display-toggle"
         "suspend"
+        "hibernate"
         "logout"
         "reboot"
         "poweroff"
@@ -903,7 +904,7 @@
             "custom/session" = {
               format = settings.bar.sessionLabel;
               on-click = settings.bar.commands.power;
-              tooltip-format = "Lock, suspend, log out and power";
+              tooltip-format = "Lock, suspend, hibernate, log out and power";
             };
           } settings.bar.widgets)
         ];

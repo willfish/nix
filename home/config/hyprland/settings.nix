@@ -209,6 +209,12 @@ rec {
         confirmText = "suspend";
       }
       {
+        label = "Hibernate";
+        action = "hibernate";
+        confirm = false;
+        confirmText = "hibernate";
+      }
+      {
         label = "Log out";
         action = "logout";
         confirm = true;

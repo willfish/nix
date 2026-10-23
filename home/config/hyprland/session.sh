@@ -23,17 +23,18 @@ run_action() {
   display-off) exec hyprctl dispatch dpms off ;;
   display-toggle) exec hyprctl dispatch dpms toggle ;;
   # Release the local model's GPU allocations before logind starts locking/sleep.
-  suspend)
+  suspend | hibernate)
+    local action="$1" title="${1^}"
     if [ "${HYPR_SESSION_STOP_LOCAL_LLM:-0}" = 1 ]; then
-      notify-send 'Preparing to suspend' 'Stopping the local AI model first.' || true
+      notify-send "Preparing to $action" 'Stopping the local AI model first.' || true
       if ! omarchy-local-ai stop_all; then
-        printf 'hypr-session: could not stop local AI GPU models; suspend cancelled\n' >&2
-        notify-send --urgency=critical 'Suspend cancelled' 'Could not stop local AI GPU models. Check the Local AI panel before retrying.' || true
+        printf 'hypr-session: could not stop local AI GPU models; %s cancelled\n' "$action" >&2
+        notify-send --urgency=critical "$title cancelled" 'Could not stop local AI GPU models. Check the Local AI panel before retrying.' || true
         return 1
       fi
     fi
-    # Explicit menu suspend overrides a working-agent idle/sleep inhibitor.
-    exec systemctl suspend --ignore-inhibitors
+    # Explicit menu sleep overrides a working-agent idle/sleep inhibitor.
+    exec systemctl "$action" --ignore-inhibitors
     ;;
   # A Waybar-launched helper shares its service cgroup. Let compositor exit
   # trigger cleanup, rather than killing this helper before it can dispatch.
@@ -66,7 +67,7 @@ run_entry() {
 select_action() {
   local action="$1" file line
   case "$action" in
-  lock | display-off | display-toggle | suspend | logout | reboot | poweroff) ;;
+  lock | display-off | display-toggle | suspend | hibernate | logout | reboot | poweroff) ;;
   *)
     printf 'hypr-session: unknown action\n' >&2
     return 1
@@ -107,7 +108,7 @@ menu() {
 }
 
 case "${1:-menu}" in
-lock | display-off | display-toggle | suspend | logout | reboot | poweroff)
+lock | display-off | display-toggle | suspend | hibernate | logout | reboot | poweroff)
   run_action "$1"
   ;;
 menu) menu ;;
@@ -119,7 +120,7 @@ select)
   select_action "$2"
   ;;
 *)
-  printf 'usage: hypr-session lock|display-off|display-toggle|suspend|logout|reboot|poweroff|menu|select ACTION\n' >&2
+  printf 'usage: hypr-session lock|display-off|display-toggle|suspend|hibernate|logout|reboot|poweroff|menu|select ACTION\n' >&2
   exit 64
   ;;
 esac

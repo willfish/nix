@@ -86,6 +86,15 @@ let
         "sleep"
       ];
     };
+    hibernate = {
+      icon = "";
+      keywords = [
+        "hibernate"
+        "hibernation"
+        "sleep"
+        "disk"
+      ];
+    };
     logout = {
       icon = "󰍃";
       keywords = [
