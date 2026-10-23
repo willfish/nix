@@ -11,6 +11,11 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nix-config.url = "git+ssh://git@github.com/willfish/nix-config.git";
+    trade-tariff-tools = {
+      url = "github:trade-tariff/trade-tariff-tools";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.pre-commit-hooks.follows = "pre-commit-hooks";
+    };
     agent-bus = {
       url = "git+ssh://git@github.com/willfish/pi-switchboard.git";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -399,6 +404,7 @@
       mkOverlay =
         system: _final: _prev:
         {
+          ecs = inputs.trade-tariff-tools.packages.${system}.ecs;
           mux = mux.packages.${system}.default;
           himalaya-mcp = himalaya-mcp.packages.${system}.default;
           outlook-mcp = outlook-mcp.packages.${system}.default;

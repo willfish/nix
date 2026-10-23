@@ -66,6 +66,10 @@ Other hosts can reuse cached builds for the same locked inputs and platform.
 prompt history, Strata and ttfx. `nix flake update` bumps their revisions and
 narHash, so do not add a second `rev`/`hash` pair to those derivations.
 
+The `trade-tariff-tools` input supplies the upstream `ecs` package for work
+profiles. Update it alone with `nix flake update trade-tariff-tools`, or include it
+in a full `nix flake update`, then build and run `hmswitch`.
+
 `just update` runs the input update, prints `nix run .#upstream-status` drift,
 and builds this host's home configuration. `just status` reports the same drift
 without changing anything. The status covers the locked sources plus the three

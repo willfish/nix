@@ -387,6 +387,24 @@
         "type": "github"
       }
     },
+    "flake-utils_3": {
+      "inputs": {
+        "systems": "systems_6"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "fromYaml": {
       "flake": false,
       "locked": {
@@ -649,11 +667,11 @@
     },
     "nix-config": {
       "locked": {
-        "lastModified": 1792696283,
-        "narHash": "sha256-S9a4f11vVeNLIwU9/gUz8gvHiwSN+Y27Xlhe7z5ucYU=",
+        "lastModified": 1792742740,
+        "narHash": "sha256-Qj7tcPzDPvr/BepHgP0miX3s9sOdGDAxWKrlsVbtbig=",
         "ref": "refs/heads/master",
-        "rev": "ec4919157c43057757a456fb69364abad4cfe497",
-        "revCount": 40,
+        "rev": "fa4755ea507cc9d07dbac2ba76f8b09feb7ccc1d",
+        "revCount": 41,
         "type": "git",
         "url": "ssh://git@github.com/willfish/nix-config.git"
       },
@@ -2202,6 +2220,7 @@
         "stylix": "stylix",
         "telegram-mcp-source": "telegram-mcp-source",
         "tor-mcp": "tor-mcp",
+        "trade-tariff-tools": "trade-tariff-tools",
         "treefmt-nix": "treefmt-nix_3",
         "ttfx-source": "ttfx-source"
       }
@@ -2367,6 +2386,21 @@
         "type": "github"
       }
     },
+    "systems_6": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
     "telegram-mcp-source": {
       "flake": false,
       "locked": {
@@ -2464,6 +2498,30 @@
         "ref": "master",
         "type": "git",
         "url": "ssh://git@github.com/willfish/tor-mcp"
+      }
+    },
+    "trade-tariff-tools": {
+      "inputs": {
+        "flake-utils": "flake-utils_3",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "pre-commit-hooks": [
+          "pre-commit-hooks"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792600542,
+        "narHash": "sha256-hPqZgwkamOj+Y1RO5egW1aB3SSkROB46dyGxfpEAcYQ=",
+        "owner": "trade-tariff",
+        "repo": "trade-tariff-tools",
+        "rev": "3c06f3dddd3c2f08779e4308a6fa7f9b927d1854",
+        "type": "github"
+      },
+      "original": {
+        "owner": "trade-tariff",
+        "repo": "trade-tariff-tools",
+        "type": "github"
       }
     },
     "treefmt-nix": {
