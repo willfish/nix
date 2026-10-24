@@ -75,8 +75,8 @@ index 38a2979c..984a3481 100644
    }
 
    // Track every layout change between the bar's contentItem and the
-@@ -166,7 +174,8 @@ PanelWindow {
-   // below uses `barH` for the perpendicular axis instead of this y.
+@@ -183,7 +191,8 @@ PanelWindow {
+   // below uses `barThickness` for the perpendicular axis instead of this y.
    readonly property point anchorScreenPos: {
      anchorWatcher.transform  // reactive dependency
 -    if (!anchorItem || !anchorWindow) return Qt.point(0, 0)
@@ -85,10 +85,10 @@ index 38a2979c..984a3481 100644
      return anchorItem.mapToItem(anchorWindow.contentItem, 0, 0)
    }
    readonly property real anchorW: anchorItem ? anchorItem.width : 0
-@@ -212,8 +221,8 @@ PanelWindow {
-   // parallel axis (along the bar) the anchor item's reported position is
-   // still consistent with the bar content origin, so it's accurate for
-   // centering the card under the icon.
+@@ -234,8 +243,8 @@ PanelWindow {
+     : (typeof bar.barSizeFor === "function" && screen ? bar.barSizeFor(screen.name) : bar.barSize)
+   // Bar window dimensions, only for mapping overlay coordinates into
+   // bar-window content coordinates in barPoint() below.
 -  readonly property real barW: anchorWindow ? anchorWindow.width : screenW
 -  readonly property real barH: anchorWindow ? anchorWindow.height : 0
 +  readonly property real barW: bar.vertical ? bar.barSize : screenW
@@ -135,8 +135,8 @@ index 87f160c1..59e60b7e 100644
    property int dnsIndex: 0
    // ["2.4", "5", ...], or empty when there is nothing to choose between.
    // Wi-Fi only: on Ethernet the band of a secondary radio is not what the
-@@ -164,7 +164,7 @@ Panel {
-   readonly property bool bandBusy: pendingBand !== ""
+@@ -166,7 +166,7 @@ Panel {
+   readonly property string dnsEffective: pendingDnsProvider !== "" ? pendingDnsProvider : dnsProvider
    // The speed test needs an interface to test, so its hero action only
    // appears once there is one.
 -  readonly property bool canRunSpeedTest: !!info.iface
@@ -155,7 +155,7 @@ index 87f160c1..59e60b7e 100644
      if (!bandProc.running) {
        bandProc.command = ["omarchy-network-band"]
        bandProc.running = true
-@@ -766,19 +762,10 @@ Panel {
+@@ -770,20 +766,10 @@ Panel {
    }
 
    function setDns(provider) {
@@ -168,12 +168,14 @@ index 87f160c1..59e60b7e 100644
 -      return
 -    }
 -
+-    // The panel stays open, so the choice can be seen taking hold and another
+-    // tried without reopening it.
 -    root.pendingDnsProvider = provider
 -    actionProc.command = ["bash", "-c", root.dnsCommand(provider)]
 -    actionProc.running = true
 +    // NixOS owns /etc. Edit NetworkManager profiles rather than applying
 +    // Omarchy's system-wide DNS script and its Arch privilege assumptions.
-     root.close()
++    root.close()
 +    Quickshell.execDetached(["nm-connection-editor"])
    }
 
