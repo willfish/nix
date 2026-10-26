@@ -4,7 +4,8 @@
   "defaultThinkingLevel": "high",
   "modelThinkingLevels": {
     "andromeda/qwen3.8-flash-next": "high",
-    "opencode-go/glm-5.3-flash": "high"
+    "opencode-go/glm-5.3-flash": "high",
+    "openai-codex/gpt-6.1-sol": "max"
   },
   "quietStartup": true,
   "editorPaddingX": 1,
@@ -13,7 +14,6 @@
       "xai/grok-4.7": { "reserveTokens": 310000 },
       "xai/grok-4.6": { "reserveTokens": 310000 },
       "openai-codex/gpt-6-astra": { "reserveTokens": 82000 },
-      "openai-codex/gpt-6.1-sol": { "reserveTokens": 82000 },
       "openai/gpt-6-astra": { "reserveTokens": 82000 },
       "opencode-go/gemini-4-argon-contributor": { "reserveTokens": 858576 }
     }
