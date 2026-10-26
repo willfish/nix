@@ -166,9 +166,11 @@ let
         code="''${line:0:2}"
         path="''${line:3}"
         case "$code" in
-          '!!')
+          '!!') ;;
+          '??')
             case "$path" in
-              .envrc|*/.envrc) return 0 ;;
+              .envrc|*/.envrc) ;;
+              *) return 0 ;;
             esac
             ;;
           ' D'|'D ')
@@ -197,10 +199,16 @@ let
           echo "Kept worktree: $wt (could not check local changes)" >&2
           return 0
         fi
-        if [ -n "$dirt" ]; then
-          echo "Kept worktree: $wt (local changes)"
-          return 0
-        fi
+        while IFS= read -r line; do
+          [ -n "$line" ] || continue
+          case "$line" in
+            '?? .envrc'|'?? '*/.envrc) ;;
+            *)
+              echo "Kept worktree: $wt (local changes)"
+              return 0
+              ;;
+          esac
+        done <<< "$dirt"
         if [ "$(git -C "$wt" symbolic-ref HEAD 2>/dev/null)" != "refs/heads/$branch" ] \
           || [ "$(git -C "$wt" rev-parse HEAD)" != "$rev" ]; then
           echo "Kept worktree: $wt (checkout changed during cleanup)"
@@ -208,10 +216,18 @@ let
         fi
       fi
       if blocking_dirt "$wt"; then
-        echo "Kept worktree: $wt (local changes or protected .envrc)"
+        echo "Kept worktree: $wt (local changes)"
         return 0
       fi
       [ -n "$label" ] || label="detached"
+
+      # Git refuses untracked files even when they are the only local state.
+      # Remove only disposable .envrc files, so closed-PR removal stays unforced.
+      while IFS= read -r -d "" path; do
+        case "$path" in
+          .envrc|*/.envrc) rm -f -- "$wt/$path" || return 1 ;;
+        esac
+      done < <(git -C "$wt" ls-files --others --exclude-standard -z)
 
       if [ -n "$closed_pr" ]; then
         # Never force closed-PR removal. Git rechecks dirt and locks, and the

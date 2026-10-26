@@ -22,15 +22,20 @@ printf 'original\n' >tracked
 "$REAL_GIT" remote add origin "$scratch/origin"
 "$REAL_GIT" push -qu origin main
 "$REAL_GIT" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
-printf '.envrc\ncache\n' >.git/info/exclude
+printf '.envrc\ncache\n!/.envrc\n' >.git/info/exclude
 base=$("$REAL_GIT" rev-parse HEAD)
 tree=$("$REAL_GIT" rev-parse 'HEAD^{tree}')
-cases=(closed changed open dirty deleted untracked protected locked api-error status-error
+cases=(closed changed open dirty deleted untracked envrc locked api-error status-error
   fork other-base full-page malformed wrong-name ambiguous)
+mkdir -p "$scratch/repo/.worktrees"
 for branch in "${cases[@]}"; do
   tip=$("$REAL_GIT" commit-tree "$tree" -p "$base" -m "Unmerged $branch")
   "$REAL_GIT" branch "$branch" "$tip"
-  "$REAL_GIT" worktree add -q "$scratch/$branch" "$branch"
+  if [[ $branch == envrc ]]; then
+    "$REAL_GIT" worktree add -q "$scratch/repo/.worktrees/envrc" "$branch"
+  else
+    "$REAL_GIT" worktree add -q "$scratch/$branch" "$branch"
+  fi
   jq -n --arg branch "$branch" --arg tip "$tip" '[{
     number: 42, state: "CLOSED", headRefName: $branch, headRefOid: $tip,
     isCrossRepository: false, baseRefName: "main"
@@ -45,7 +50,11 @@ new_tip=$("$REAL_GIT" commit-tree "$tree" -p changed -m 'New local work')
 printf 'changed\n' >"$scratch/dirty/tracked"
 rm "$scratch/deleted/tracked"
 printf 'untracked\n' >"$scratch/untracked/local-work"
-printf 'local config\n' >"$scratch/protected/.envrc"
+printf 'local config\n' >"$scratch/repo/.worktrees/envrc/.envrc"
+mkdir -p "$scratch/repo/.worktrees/envrc/nested"
+printf 'nested config\n' >"$scratch/repo/.worktrees/envrc/nested/.envrc"
+[[ $("$REAL_GIT" -C "$scratch/repo/.worktrees/envrc" status --porcelain --untracked-files=all -- .envrc) == '?? .envrc' ]]
+[[ $("$REAL_GIT" -C "$scratch/repo/.worktrees/envrc" status --porcelain --untracked-files=all --ignored -- nested/.envrc) == '!! nested/.envrc' ]]
 "$REAL_GIT" worktree lock "$scratch/locked"
 for branch in open fork other-base full-page wrong-name ambiguous; do
   # jq, not the shell, expands $n in the full-page fixture.
@@ -62,6 +71,8 @@ for branch in open fork other-base full-page wrong-name ambiguous; do
   mv "$scratch/response" "$CLEANUP_FIXTURES/$branch.json"
 done
 "$REAL_GIT" worktree add -qb landed "$scratch/landed" main
+printf 'landed config\n' >"$scratch/landed/.envrc"
+[[ $("$REAL_GIT" -C "$scratch/landed" status --porcelain --untracked-files=all -- .envrc) == '?? .envrc' ]]
 
 # Keep Git operations real, but make origin identity and GitHub replies offline.
 cat >"$scratch/bin/git" <<'GIT'
@@ -104,12 +115,15 @@ GH
 chmod +x "$scratch/bin/git" "$scratch/bin/gh"
 PATH="$scratch/bin:$PATH" "$cleanup"
 [[ ! -d "$scratch/closed" ]]
+[[ ! -d "$scratch/repo/.worktrees/envrc" ]]
 [[ $("$REAL_GIT" rev-parse closed) == "$closed_tip" ]]
+"$REAL_GIT" show-ref --verify --quiet refs/heads/envrc
 [[ ! -d "$scratch/landed" ]]
 if "$REAL_GIT" show-ref --verify --quiet refs/heads/landed; then exit 1; fi
 for branch in "${cases[@]:1}"; do
+  [[ $branch == envrc ]] && continue
   [[ -d "$scratch/$branch" ]]
   "$REAL_GIT" show-ref --verify --quiet "refs/heads/$branch"
 done
 [[ $("$REAL_GIT" -C "$scratch/dirty" diff --numstat) == $'1\t1\ttracked' ]]
-printf '%s\n' 'PASS: closed checkout removed, branch retained, unsafe cases kept, landed cleanup preserved'
+printf '%s\n' 'PASS: closed and envrc checkouts removed, branches retained, unsafe cases kept, landed cleanup preserved'

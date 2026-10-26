@@ -12,9 +12,10 @@ repository and branch, target the origin default branch, and have no open PR
 on that branch. A live remote branch does not block this verified case.
 
 The local branch and its commits remain. Cleanup does not delete remote branches.
-New local commits, tracked changes, untracked files and protected ignored
-`.envrc` files prevent removal. Other ignored files follow Git's normal clean
-worktree rules. This path never uses forced removal.
+New local commits, tracked changes and other untracked files prevent removal.
+Ignored `.envrc` files do not block cleanup. Cleanup removes untracked `.envrc`
+files from eligible worktrees before removing them, regardless of worktree
+location. This path never uses forced removal.
 
 The lookup supports GitHub origins using HTTPS or SSH. It uses the installed
 `gh` and `jq` commands and existing GitHub access. Missing tools, failed lookups,
