@@ -303,7 +303,8 @@ activation never download model weights. Other Ollama models are unaffected.
 
 Andromeda's API base URL is `http://127.0.0.1:8081/v1` locally or
 `http://andromeda.taile09696.ts.net:8081/v1` over Tailscale. Use the existing
-Bearer API key and `qwen3.8-flash-next` alias. The LAN is not published.
+Bearer API key and `qwen3.8-flash-next` alias. The LAN can also reach port
+8081 with the key.
 Relay's Metal endpoint is localhost-only, with model ID
 `qwen3.8-flash-next-iq3_s`; see its separate [operations guide](strata-relay.md).
 Plain API clients must implement their own tool loop.

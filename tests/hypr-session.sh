@@ -34,11 +34,6 @@ case "$name" in
       printf 'power %s\n' "$*" >>"$SESSION_TEST_LOG"
     fi
     ;;
-  tailscale)
-    [[ $* == 'ip -4' ]]
-    printf '%s\n' "${SESSION_TEST_TAILNET_IP:-100.85.172.69}"
-    exit "${SESSION_TEST_TAILSCALE_STATUS:-0}"
-    ;;
   docker)
     case "$1" in
       ps)
@@ -67,7 +62,7 @@ case "$name" in
 esac
 STUB
 chmod +x "$scratch/bin/command-stub"
-for command in notify-send fuzzel omarchy-local-ai systemctl docker tailscale; do
+for command in notify-send fuzzel omarchy-local-ai systemctl docker; do
   ln -s command-stub "$scratch/bin/$command"
 done
 export PATH="$scratch/bin:$PATH"
@@ -107,17 +102,9 @@ export LABEL=io.omarchy.local-ai LOCAL_AI_KEY_FILE="$scratch/existing-key"
 source "$root/home/config/hyprland/local-ai/nix.sh"
 [[ $KEY == "$LOCAL_AI_KEY_FILE" ]]
 export LOCAL_AI_SHARED_RECIPE=fixture-exl3
-[[ $(shared_gateway_bindings fixture-exl3) == $'127.0.0.1:8081:12434\n100.85.172.69:8081:12434' ]]
+[[ $(shared_gateway_bindings fixture-exl3) == '0.0.0.0:8081:12434' ]]
 [[ -z $(shared_gateway_bindings other-model) ]]
 [[ -z $(shared_gateway_bindings fixture-exl3--2) ]]
-if SESSION_TEST_TAILSCALE_STATUS=1 shared_gateway_bindings fixture-exl3; then
-  echo 'Shared endpoint must fail when Tailscale is unavailable' >&2
-  exit 1
-fi
-if SESSION_TEST_TAILNET_IP=0.0.0.0 shared_gateway_bindings fixture-exl3; then
-  echo 'Shared endpoint must not bind all interfaces' >&2
-  exit 1
-fi
 die() {
   printf '%s\n' "$*" >&2
   exit 1

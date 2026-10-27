@@ -46,13 +46,11 @@ nvidia_cdi_device() {
 }
 
 # Only the primary deployment owns the stable client endpoint, never a second instance.
-# Bind explicit addresses: Docker's published ports can bypass the host's LAN firewall.
+# Docker's published ports bypass the host firewall, so this reaches the LAN too.
+# The gateway still requires the API key.
 shared_gateway_bindings() {
   [[ -n ${LOCAL_AI_SHARED_RECIPE:-} && $1 == "$LOCAL_AI_SHARED_RECIPE" ]] || return 0
-  local ip
-  ip=$(tailscale ip -4) || return 1
-  [[ $ip =~ ^100\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]] || return 1
-  printf '%s\n' '127.0.0.1:8081:12434' "$ip:8081:12434"
+  printf '%s\n' '0.0.0.0:8081:12434'
 }
 
 cmd_snapshot() {

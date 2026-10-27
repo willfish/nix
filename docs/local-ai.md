@@ -20,10 +20,10 @@ omarchy-local-ai run qwen3.8-flash-next.sglang.256k.rtx-5090-32gb nvidia:0
 ```
 
 Its authenticated gateway also serves `http://127.0.0.1:8081/v1` and
-`http://andromeda.taile09696.ts.net:8081/v1`. Only loopback and the current
-Tailscale IPv4 address are published, not the LAN. Tailscale must be running
-when this recipe starts; restart the recipe if its Tailscale address changes.
-Do not enable Funnel. Other recipes and extra deployment instances retain only
+`http://andromeda.taile09696.ts.net:8081/v1`. It publishes port 8081 on every
+IPv4 address, so the LAN can reach it too: Docker's published ports bypass the
+NixOS firewall. Every request still needs the API key. The recipe does not
+depend on Tailscale. Do not enable Funnel or forward the port to the internet. Other recipes and extra deployment instances retain only
 the widget's normal local ports unless explicitly shared through the widget.
 
 Pi and OpenCode retain the `andromeda` provider, `qwen3.8-flash-next` alias and
