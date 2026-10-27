@@ -11,6 +11,12 @@
 
       commandLineArgs = [
         "--remote-debugging-port=9222"
+        # The nixpkgs wrapper enables VA-API video decode/encode. On the RX 7600
+        # (Navi 33) Brave's VA-API jobs hang the vcn_unified_0 ring; when the
+        # ring reset fails amdgpu does a full mode1 reset, VRAM is lost and
+        # Hyprland aborts. Keep video on the CPU until Mesa/amdgpu fix this.
+        "--disable-accelerated-video-decode"
+        "--disable-accelerated-video-encode"
       ];
 
       dictionaries = [
