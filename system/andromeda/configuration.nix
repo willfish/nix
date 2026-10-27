@@ -40,7 +40,20 @@
       persistencedSha256 = "sha256-VyKtF/HdHPQrHHK6opSO69M72LmnGZtauuchj9uuje8=";
     };
   };
-  services.xserver.videoDrivers = [ "nvidia" ];
+  # The RX 7600 drives the display; the 5090 stays loaded for CUDA and models.
+  # amdgpu first makes it the primary X device for the login screen.
+  services.xserver.videoDrivers = [
+    "amdgpu"
+    "nvidia"
+  ];
+  # Early KMS shows the LUKS prompt and splash on the AMD outputs.
+  hardware.amdgpu.initrd.enable = true;
+  # AQ_DRM_DEVICES is colon-separated, so by-path names cannot be used directly.
+  services.udev.extraRules = ''
+    KERNEL=="card*", KERNELS=="0000:83:00.0", SUBSYSTEM=="drm", SUBSYSTEMS=="pci", SYMLINK+="dri/amd-display"
+  '';
+  # Hyprland opens only the AMD card and never takes 5090 memory.
+  environment.sessionVariables.AQ_DRM_DEVICES = "/dev/dri/amd-display";
   # Local AI catalogue models use NVIDIA CDI devices.
   hardware.nvidia-container-toolkit.enable = true;
 }

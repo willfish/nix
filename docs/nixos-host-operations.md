@@ -6,7 +6,7 @@ This is the short operational reference for the four NixOS hosts and the shared 
 
 | Host | Role | Notable host-specific configuration |
 |---|---|---|
-| `andromeda` | workstation | System76 hardware, RTX 5090 with NVIDIA 595.99.02 open driver, Steam, Linux 6.18 |
+| `andromeda` | workstation | System76 hardware, RX 7600 display, RTX 5090 compute with NVIDIA 595.99.02 open driver, Steam, Linux 6.18 |
 | `starfish` | workstation | Dell Precision laptop |
 | `foundation` | workstation | Framework AI 300 hardware |
 | `terminus` | headless server | ZFS media pool, Immich, Audiobookshelf, radio archive on the tailnet |
@@ -244,6 +244,24 @@ systemctl cat nvidia-suspend.service nvidia-resume.service
 findmnt -T /var/tmp
 df -h /var/tmp
 systemctl --failed
+```
+
+### Andromeda display GPU
+
+The monitor connects to the RX 7600 (`0000:83:00.0`). The 5090 drives no
+display; it stays loaded for CUDA and Local AI. `amdgpu` loads in the initrd,
+so the LUKS prompt appears on the AMD outputs. A udev rule links the card to
+`/dev/dri/amd-display`, and `AQ_DRM_DEVICES` limits Hyprland to it. Set the
+firmware's primary display to the AMD card too, or the firmware and
+systemd-boot screens still go to the 5090. To roll back without that setting,
+move the cable to the 5090 and select an earlier generation.
+
+Confirm after login:
+
+```bash
+hyprctl monitors
+cat /sys/bus/pci/devices/0000:83:00.0/boot_vga  # 1 after the firmware change
+nvidia-smi  # no Hyprland process
 ```
 
 Voice on Andromeda and Foundation uses the Deepgram API, configured in
