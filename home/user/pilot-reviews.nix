@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   hostName,
   ...
 }:
@@ -14,7 +15,12 @@
       {
         services.pilot-reviews = {
           enable = true;
-          piExecutable = "${config.home.homeDirectory}/.local/bin/pi";
+          piExecutable = "${pkgs.pi-coding-agent}/bin/pi";
+          environmentSettingsFile =
+            if hostName == "andromeda" then
+              "${config.home.homeDirectory}/.config/pilot-reviews/automatic-environments.json"
+            else
+              null;
           sshAuthSock = "${config.home.homeDirectory}/.config/herdr/herdr.sock.agent";
           # Enabled by default; the operator's saved off switch survives restart.
           autoStart = true;
