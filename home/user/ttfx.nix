@@ -24,7 +24,7 @@ rustPlatform.buildRustPackage {
   # and the CPU tier matches. flake.lock owns the revision.
   src = source;
 
-  cargoHash = "sha256-ntoj5bmAa9U2+3K1UX6HL0t6MjfCYQNe5LuiuNJ/CnY=";
+  cargoHash = "sha256-xSv2a0Q1biE20cOHkSOADxFfRNYKH/1MNCA03hQX9pE=";
 
   nativeBuildInputs = [
     nasm

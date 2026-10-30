@@ -1,6 +1,6 @@
 --- a/Main.qml
 +++ b/Main.qml
-@@ -339,6 +339,8 @@
+@@ -349,6 +349,8 @@
        accountSwitch: record.accountSwitch || ({ mode: "manual", threshold: 95 }),
        // Codex's free full resets of its rate limits, when it has any.
        resetCredits: record.resetCredits || null,
@@ -11,8 +11,8 @@
        todayPrompts: synced ? numberValue(stats.todayPrompts) : numberValue(record.todayPrompts),
 --- a/Panel.qml
 +++ b/Panel.qml
-@@ -1449,6 +1449,17 @@
-       wrapMode: Text.WordWrap
+@@ -1461,6 +1461,17 @@
+       onClicked: root.signInAgain(section.provider, null)
      }
 
 +    Text {
@@ -26,6 +26,6 @@
 +      wrapMode: Text.WordWrap
 +    }
 +
-     UnavailableUsage {
-       visible: !section.multi && root.pausedWithoutLimits(section.provider)
-       width: parent.width
+
+     Column {
+       visible: !section.multi && section.windows.length > 0

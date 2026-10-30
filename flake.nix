@@ -417,6 +417,14 @@
           pi-coding-agent = _final.callPackage ./home/user/pi-package.nix {
             source = inputs.pi-source;
           };
+          # Backport stateful-proxy teardown cleanup without changing other Python consumers.
+          mcp-nixos = _prev.mcp-nixos.override {
+            python3Packages = _prev.python3Packages // {
+              fastmcp = _prev.python3Packages.fastmcp.overrideAttrs (old: {
+                patches = (old.patches or [ ]) ++ [ ./home/user/mcp-packages/fastmcp-stateful-disconnect.patch ];
+              });
+            };
+          };
           # Other agent CLIs come from llm-agents, not the nixpkgs pin.
           opencode = llm-agents.packages.${system}.opencode;
           hermes-agent = import ./home/user/hermes-package.nix {

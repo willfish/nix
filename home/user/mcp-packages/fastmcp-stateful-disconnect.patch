@@ -1,0 +1,29 @@
+Backport https://github.com/PrefectHQ/fastmcp/commit/ddcdf648131b51d605f133d13e5c942ea008ab28
+Adapt the source path and add the AnyIO import required by FastMCP 3.2.3.
+
+--- a/src/fastmcp/server/providers/proxy.py
++++ b/src/fastmcp/server/providers/proxy.py
+@@ -14,6 +14,7 @@
+ from typing import TYPE_CHECKING, Any, cast
+ from urllib.parse import quote
+
++import anyio
+ import mcp.types
+ from mcp import ServerSession
+ from mcp.client.session import ClientSession
+@@ -1071,8 +1072,14 @@
+             async def _on_session_exit():
+                 self._caches.pop(session)
+                 logger.debug(f"{proxy_client} will be disconnect")
+-                await proxy_client._disconnect(force=True)
++                # This callback runs while the server session's exit stack is
++                # unwinding, which usually happens because the owning task is
++                # being cancelled. Shield the disconnect so the forced cleanup
++                # actually runs to completion instead of aborting at the first
++                # cancellation checkpoint (e.g. acquiring the session lock).
++                with anyio.CancelScope(shield=True):
++                    await proxy_client._disconnect(force=True)
+
+             session._exit_stack.push_async_callback(_on_session_exit)
+
+         return proxy_client

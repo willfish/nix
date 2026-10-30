@@ -4,7 +4,7 @@ The C controller preserves `theme-menu --catalogue FILE --state DIR
 [--reapply] [--no-reload] [palette]`. The graphical Linux wrapper supplies the
 catalogue, state and desktop publishing environment. Omit the palette for Fuzzel;
 Escape leaves it unchanged. `default` removes the saved override; `--reapply`
-restores it. Persisted Solarized selections migrate to Osaka Jade.
+restores it. Persisted Solarized and Osaka Jade selections migrate to Jade Horse.
 
 Bundles are read before publication. Ordered writes snapshot all destinations,
 replace changed files and symlinks atomically, and roll back on failure before

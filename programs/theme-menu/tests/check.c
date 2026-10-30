@@ -1290,6 +1290,39 @@ static void test_solarized(void) {
   fix_free(f);
 }
 
+static void test_jade_horse_migration(void) {
+  Fix *f = setup();
+  if (!f)
+    return;
+  yyjson_mut_doc *mut = load_catalogue(f);
+  yyjson_mut_val *palettes =
+      yyjson_mut_obj_get(yyjson_mut_doc_get_root(mut), "palettes");
+  yyjson_mut_val *jade = yyjson_mut_obj_remove_key(palettes, "osaka-jade");
+  yyjson_mut_obj_add_val(mut, palettes, "jade-horse", jade);
+  save_catalogue(f, mut);
+  mkdir(f->state, 0755);
+  char *sel = join_path(f->state, "selection");
+  write_str(f->greeter, "old theme\n");
+  const char *legacy[] = {"osaka-jade\n", "solarized\n"};
+  const char *extra[] = {"--reapply"};
+  const char *keys[] = {"THEME_MENU_PUBLISH"};
+  const char *vals[] = {"1"};
+  for (size_t i = 0; i < sizeof legacy / sizeof legacy[0]; i++) {
+    write_str(sel, legacy[i]);
+    Result r = run_fixture(f, extra, 1, keys, vals, 1, -1);
+    EXPECT(r.status == 0, "jade horse migration %s: %s", legacy[i], r.err);
+    char *text = file_text(sel);
+    EXPECT(text && !strcmp(text, "jade-horse\n"), "migrated selection");
+    free(text);
+    text = file_text(f->greeter);
+    EXPECT(text && !strcmp(text, "jade-horse\n"), "migrated greeter");
+    free(text);
+    result_free(&r);
+  }
+  free(sel);
+  fix_free(f);
+}
+
 static void test_popup(void) {
   Fix *f = setup();
   if (!f)
@@ -2287,6 +2320,7 @@ int main(void) {
   test_rollback();
   test_symlinks();
   test_solarized();
+  test_jade_horse_migration();
   test_popup();
   test_cancel();
   test_unicode_index();

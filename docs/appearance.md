@@ -7,10 +7,10 @@ build. Colour roles feed the shared application renderers; upstream installation
 scripts, application configurations and keybindings are not executed or installed.
 
 Host defaults live in `home/user/themes/host-defaults.nix`: Rosé Pine on
-Andromeda, Tokyo Night on Foundation, Osaka Jade on Starfish, Catppuccin on
+Andromeda, Tokyo Night on Foundation, Jade Horse on Starfish, Catppuccin on
 Terminus and Gruvbox on Relay. Other hosts use Rosé Pine. A saved theme-menu
-selection overrides that default. A previously saved Solarized selection
-migrates to Osaka Jade.
+selection overrides that default. Previously saved Solarized and Osaka Jade
+selections migrate to Jade Horse.
 
 ## Choosing a theme
 

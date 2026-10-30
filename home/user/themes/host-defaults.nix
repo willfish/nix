@@ -5,7 +5,7 @@ let
   defaults = {
     andromeda = "rose-pine";
     foundation = "tokyo-night";
-    starfish = "osaka-jade";
+    starfish = "jade-horse";
     terminus = "catppuccin";
     relay = "gruvbox";
   };

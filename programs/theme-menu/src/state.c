@@ -68,9 +68,15 @@ char *selection(Themes *t) {
   char *s = state_text(t, "selection", "default");
   if (!s)
     return NULL;
-  if (!strcmp(s, "solarized") && !field(field(t->catalogue, "palettes"), s)) {
+  yyjson_val *palettes = field(t->catalogue, "palettes");
+  if (!strcmp(s, "solarized") && !field(palettes, s)) {
     g_free(s);
     s = g_strdup("osaka-jade");
+  }
+  if (!strcmp(s, "osaka-jade") && !field(palettes, s) &&
+      field(palettes, "jade-horse")) {
+    g_free(s);
+    s = g_strdup("jade-horse");
   }
   if (!resolve(t, s)) {
     g_free(s);

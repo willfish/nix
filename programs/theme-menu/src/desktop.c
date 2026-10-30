@@ -51,9 +51,11 @@ static char *theme_id(Themes *t, const char *selected) {
   if (!strcmp(selected, "default"))
     key = yyjson_get_str(field(t->catalogue, "default"));
   yyjson_val *palettes = field(t->catalogue, "palettes");
-  if (key && !strcmp(key, "solarized") && !field(palettes, key) &&
-      field(palettes, "osaka-jade"))
+  if (key && !strcmp(key, "solarized") && !field(palettes, key))
     key = "osaka-jade";
+  if (key && !strcmp(key, "osaka-jade") && !field(palettes, key) &&
+      field(palettes, "jade-horse"))
+    key = "jade-horse";
   return key && field(palettes, key) ? g_strdup(key) : NULL;
 }
 void publish_greeter(Themes *t, const char *selected) {
