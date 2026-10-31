@@ -6,7 +6,7 @@ This is the short operational reference for the four NixOS hosts and the shared 
 
 | Host | Role | Notable host-specific configuration |
 |---|---|---|
-| `andromeda` | workstation | System76 hardware, RX 7600 display, RTX 5090 compute with NVIDIA 595.99.02 open driver, Steam, Linux 6.18 |
+| `andromeda` | workstation | System76 hardware, RTX 5090 display and compute with NVIDIA 595.99.02 open driver, Steam, Linux 6.18 |
 | `starfish` | workstation | Dell Precision laptop |
 | `foundation` | workstation | Framework AI 300 hardware |
 | `terminus` | headless server | ZFS media pool, Immich, Audiobookshelf, radio archive on the tailnet |
@@ -248,20 +248,22 @@ systemctl --failed
 
 ### Andromeda display GPU
 
-The monitor connects to the RX 7600 (`0000:83:00.0`). The 5090 drives no
-display; it stays loaded for CUDA and Local AI. `amdgpu` loads in the initrd,
-so the LUKS prompt appears on the AMD outputs. A udev rule links the card to
-`/dev/dri/amd-display`, and `AQ_DRM_DEVICES` limits Hyprland to it. Set the
-firmware's primary display to the AMD card too, or the firmware and
-systemd-boot screens still go to the 5090. To roll back without that setting,
-move the cable to the 5090 and select an earlier generation.
+The monitor connects to the RTX 5090, which drives Hyprland as well as CUDA
+and Local AI. The compositor therefore uses some of the GPU's memory. The
+host selects the NVIDIA display driver and does not set `AQ_DRM_DEVICES` or
+require an AMD display device. Set the firmware's primary display to the
+NVIDIA card so the firmware and systemd-boot screens appear on that output.
+
+Display-driver and host session-variable changes require a NixOS activation;
+`hmswitch` alone does not apply them. Stage with `nixos-rebuild boot` and
+reboot to avoid restarting a running graphical session and to discard stale
+GPU-selection variables from existing sessions.
 
 Confirm after login:
 
 ```bash
 hyprctl monitors
-cat /sys/bus/pci/devices/0000:83:00.0/boot_vga  # 1 after the firmware change
-nvidia-smi  # no Hyprland process
+nvidia-smi  # Hyprland should appear among the graphics processes
 ```
 
 Voice on Andromeda and Foundation uses the Deepgram API, configured in
