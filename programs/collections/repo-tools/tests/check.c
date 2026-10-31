@@ -1563,7 +1563,7 @@ int main(int argc, char **argv) {
       test_audit_process, test_audit_duplicate, test_audit_paths, test_audit_collision,
       test_audit_frontmatter, test_audit_findings, test_audit_manual, test_audit_long,
       test_audit_overlap, test_audit_freshness, test_audit_symlink, test_audit_cli,
-      test_storage_scope, test_storage_defaults, test_storage_nh, test_storage_dry,
+      test_storage_scope, test_storage_git, test_storage_defaults, test_storage_nh, test_storage_dry,
       test_storage_skip, test_storage_separator, test_storage_inventory,
       test_storage_shell, test_storage_accounting};
   for (size_t i = 0; i < G_N_ELEMENTS(tests); i++) {

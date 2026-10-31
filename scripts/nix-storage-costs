@@ -164,6 +164,11 @@ if [ "$from_nh" -eq 1 ]; then
       ;;
   esac
 fi
+# Match Nix's Git filtering instead of copying .git and its live sockets.
+# A linked worktree has a .git file rather than a directory.
+if [ -d "$flake_path" ] && [ -e "$flake_path/.git" ]; then
+  flake_path="git+file://$flake_path"
+fi
 export NIX_STORAGE_COST_FLAKE="$flake_path"
 export NIX_STORAGE_COST_HOST="$host"
 export NIX_STORAGE_COST_SCOPE="$scope"

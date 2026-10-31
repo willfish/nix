@@ -765,6 +765,40 @@ static void test_storage_scope(void) {
   proc_free(&p);
   g_free(fragment);
 }
+static void test_storage_git(void) {
+  test_name = "Git checkout and worktree flake references";
+  for (int worktree = 0; worktree < 2; worktree++) {
+    Store f = store_fixture();
+    char *git = g_build_filename(f.flake, ".git", NULL);
+    const char *gitdir = "gitdir: /fixture/worktrees/linked\n";
+    if (worktree)
+      CHECK(write_file(git, gitdir, strlen(gitdir), 0644));
+    else
+      CHECK(g_mkdir_with_parents(git, 0700) == 0);
+    const char *args[] = {"--after-nh-switch", worktree ? "home" : "os", "switch", f.flake};
+    Proc p = store_run(&f, args, 4);
+    CHECK(p.code == 0);
+    char *reference = g_strconcat("git+file://", f.flake, NULL);
+    char *fragment = g_strconcat(reference, worktree
+        ? "#homeConfigurations.\"william-linux\".activationPackage"
+        : "#nixosConfigurations.\"andromeda\".config.system.build.toplevel", NULL);
+    CHECK(one_build(&f, fragment));
+    GPtrArray *calls = read_calls(f.calls, "nix");
+    bool git_refs = calls->len > 0;
+    for (guint i = 0; i < calls->len; i++) {
+      yyjson_val *root = yyjson_doc_get_root(calls->pdata[i]);
+      if (!val_streq(yyjson_obj_get(root, "flake"), reference))
+        git_refs = false;
+      yyjson_doc_free(calls->pdata[i]);
+    }
+    g_ptr_array_free(calls, TRUE);
+    CHECK(git_refs);
+    proc_free(&p);
+    g_free(fragment);
+    g_free(reference);
+    g_free(git);
+  }
+}
 static void test_storage_defaults(void) {
   test_name = "Darwin and Linux defaults";
   Store f = store_fixture();
