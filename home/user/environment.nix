@@ -24,6 +24,7 @@ in
     MANPAGER = "nvim +Man!";
     MUX_BACKEND = "herdr";
     NH_HOME_FLAKE = config.dotfiles.sourceDirectory;
+    NH_OS_FLAKE = config.dotfiles.sourceDirectory;
     NIXPKGS_ALLOW_UNFREE = 1;
     PAGER = "less --raw-control-chars -F -X";
     # Host bat/delta syntax theme; fish swaps the mode suffix at startup.
