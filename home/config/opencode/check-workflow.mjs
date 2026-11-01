@@ -11,6 +11,8 @@ const root = await mkdtemp('/tmp/opencode/workflow-');
 const project = join(root, 'project');
 const home = join(root, 'home');
 await mkdir(project, { recursive: true });
+await writeFile(join(project, '.env'), 'FIXTURE_PERMISSION=synthetic\n');
+await writeFile(join(root, 'outside.txt'), 'Synthetic external-directory fixture\n');
 await mkdir(join(home, '.config/opencode'), { recursive: true });
 for (const id of ['fixture-specialist', 'verification-before-completion', 'manual-only-fixture']) {
   const path = join(home, '.agents/skills', id);
@@ -18,7 +20,6 @@ for (const id of ['fixture-specialist', 'verification-before-completion', 'manua
   await writeFile(join(path, 'SKILL.md'), `---\nname: ${id}\ndescription: Fixture skill discovery ${id}\n${id === 'manual-only-fixture' ? 'disable-model-invocation: true\n' : ''}---\nPRELOADED_${id}\n`);
 }
 const requests = [];
-let goalTurns = 0;
 const fixture = createServer(async (request, response) => {
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
@@ -28,20 +29,21 @@ const fixture = createServer(async (request, response) => {
   const last = body.messages.at(-1);
   let content = 'fixture complete';
   let call;
-  if (text.includes('OFFLINE_WAITING_GOAL')) await new Promise(resolve => setTimeout(resolve, 300));
-  if (body.tools?.length && text.includes('OFFLINE_STALE_GOAL')) {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    if (!text.includes('replacement')) call = { name: 'update_goal', arguments: JSON.stringify({ status: 'complete' }) };
-  } else if (body.tools?.length && text.includes('OFFLINE_GOAL_OBJECTIVE')) {
-    goalTurns++;
-    if (goalTurns === 1) content = 'Completed the first part; further work remains.';
-    else if (!text.includes('"name":"update_goal"') && !body.messages.some(m => m.role === 'tool')) {
-      call = { name: 'update_goal', arguments: JSON.stringify({ status: 'complete' }) };
-    }
+  if (text.includes('Stop acting as the assistant. You are now the reviewer for the session')) {
+    content = JSON.stringify({ verdict: 'done', reason: 'The deterministic fixture produced its required result.' });
+  } else if (body.tools?.length && text.includes('OFFLINE_NATIVE_GOAL') && last.role !== 'tool') {
+    call = { name: 'todowrite', arguments: JSON.stringify({ todos: [{ content: 'Verify fixture objective', status: 'completed' }] }) };
+  } else if (body.tools?.length && text.includes('PERMISSION_CHECK')) {
+    const count = body.messages.flatMap(message => message.tool_calls ?? []).length;
+    if (count === 0) call = { name: 'read', arguments: JSON.stringify({ path: '.env' }) };
+    else if (count === 1) call = { name: 'read', arguments: JSON.stringify({ path: join(root, 'outside.txt') }) };
+    else if (count === 2) call = { name: 'write', arguments: JSON.stringify({ path: 'permission-check.txt', content: 'Synthetic write fixture\n' }) };
+    else if (count === 3) call = { name: 'shell', arguments: JSON.stringify({ command: 'test -f .env && test -f permission-check.txt', workdir: project }) };
   } else if (body.tools?.length && text.includes('SKILL_DISCOVERY') && last.role !== 'tool') {
     call = { name: 'skill_catalog', arguments: JSON.stringify({ query: 'fixture' }) };
-  } else if (body.tools?.length && text.includes('NATIVE_CHILD') && !text.includes('You are a subagent spawned')) {
-    if (last.role !== 'tool') call = { name: 'subagent', arguments: JSON.stringify({ agent: 'builder', model: 'fixture/fixture', description: 'Offline native child', prompt: 'Return child complete.' }) };
+  } else if (body.tools?.length && JSON.stringify(last).includes('NATIVE_CHILD') && last.role !== 'tool') {
+    const existing = /followup:(ses_[A-Za-z0-9]+)/.exec(JSON.stringify(last));
+    call = { name: 'subagent', arguments: JSON.stringify({ agent: 'builder', model: 'fixture/fixture', description: 'Offline native child', prompt: 'Return child complete.', ...(existing ? { sessionID: existing[1] } : {}), ...(JSON.stringify(last).includes('BACKGROUND') ? { background: true } : {}) }) };
   } else if (body.tools?.length && text.includes('BUS_GUIDANCE') && last.role !== 'tool') {
     call = { name: 'execute', arguments: JSON.stringify({ code: 'return await tools.coordination.get_coordination_guidance({ role: "builder" });' }) };
   } else if (body.tools?.length && text.includes('NATIVE_QUESTION') && last.role !== 'tool') {
@@ -74,6 +76,7 @@ await writeFile(join(home, '.config/opencode/opencode.json'), JSON.stringify({
   ...deployed,
   $schema: 'https://opencode.ai/config.json',
   autoupdate: false,
+  experimental: { ...deployed.experimental, todo: true },
   model: 'fixture/fixture',
   providers: { ...deployed.providers, fixture: { package: '@opencode/ai/providers/openai-compatible', settings: { baseURL: `http://127.0.0.1:${fixturePort}/v1`, apiKey: 'fixture' }, models: { fixture: { name: 'Fixture', capabilities: { tools: true }, limit: { context: 128000, output: 4096 } } } } },
   mcp: { ...deployed.mcp, servers: Object.fromEntries(Object.entries(deployed.mcp?.servers ?? {}).map(([name, server]) => [name, { ...server, disabled: true }])) },
@@ -91,7 +94,7 @@ function startServer() {
   child.stderr.on('data', chunk => { logs += chunk; });
   return child;
 }
-let server = startServer();
+const server = startServer();
 const base = `http://127.0.0.1:${port}`;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function api(path, body, method = body === undefined ? 'GET' : 'POST') {
@@ -111,7 +114,7 @@ async function until(read, predicate, title) {
   }
   throw new Error(`Timed out: ${title}; last value: ${JSON.stringify(lastValue)}`);
 }
-const goal = async (sessionID, command) => (await api('/api/rpc/dotfiles.workflow/goal', { input: { sessionID, command } })).output;
+const goal = async sessionID => (await api('/api/rpc/opencode.goal/get', { input: { sessionID } })).output;
 const create = async () => (await api('/api/session', { location: { directory: project }, model: { providerID: 'fixture', id: 'fixture' } })).data;
 async function settled(id) {
   return until(() => api(`/api/session/${id}`), value => value.data?.outcome === 'succeeded', 'session settlement');
@@ -129,11 +132,26 @@ try {
   if (matched !== -1) console.log('Unexpected skill advertisement:', systems.slice(Math.max(0, matched - 180), matched + 160));
   assert(!JSON.stringify(first.messages.filter(message => message.role === 'system' || message.role === 'developer')).includes('Fixture skill discovery fixture-specialist'), 'skill metadata is deferred');
   assert(first.tools.some(tool => tool.function.name === 'skill_catalog'), 'compact catalogue is directly callable');
+  assert(first.tools.some(tool => tool.function.name === 'todowrite'), 'native todos are enabled');
+  assert(!first.tools.some(tool => ['get_goal', 'create_goal', 'update_goal'].includes(tool.function.name)), 'the duplicate goal tools are absent');
   assert(requests.some(request => request.messages.some(message => message.role === 'tool' && JSON.stringify(message.content).includes('fixture-specialist') && JSON.stringify(message.content).includes('results'))), 'catalogue returns the requested trusted skill ID');
   const discovery = (await api(`/api/session/${session.id}/context`)).data.flatMap(message => message.content ?? []).find(part => part.type === 'tool' && part.name === 'skill_catalog');
   const catalogue = JSON.parse(discovery.state.content[0].text);
   assert(catalogue.results.find(skill => skill.id === 'manual-only-fixture')?.manualOnly, 'manual-only metadata survives compact discovery');
   console.log('PASS: real V2 plugin loaded, compact skill discovery reached the local provider');
+  if (process.env.OPENCODE_FIXTURE_CONFIG) {
+    assert(deployed.permissions?.some(rule => rule.action === '*' && rule.resource === '*' && rule.effect === 'allow'), 'deployed configuration auto-allows tool operations');
+    assert.equal(deployed.experimental?.todo, true, 'deployed configuration enables native todos');
+    const permissionSession = await create();
+    await api(`/api/session/${permissionSession.id}/prompt`, { text: 'PERMISSION_CHECK' });
+    await settled(permissionSession.id);
+    const context = (await api(`/api/session/${permissionSession.id}/context`)).data;
+    const calls = context.flatMap(message => message.content ?? []).filter(part => part.type === 'tool');
+    assert.equal(calls.length, 4);
+    assert(calls.every(part => part.state.status === 'completed'), 'sensitive-path reads, external reads, writes and shell run without an approval response');
+    assert.equal(await readFile(join(project, 'permission-check.txt'), 'utf8'), 'Synthetic write fixture\n');
+    console.log('PASS: environment-file reads, external-directory reads, writes and shell run without permission prompts');
+  }
   if (process.env.OPENCODE_FIXTURE_AGENTS) {
     const agents = (await api('/api/agent')).data;
     const architect = agents.find(agent => agent.id === 'architect');
@@ -155,12 +173,15 @@ try {
   }
 
   const work = await create();
-  await goal(work.id, 'set OFFLINE_GOAL_OBJECTIVE');
-  await until(() => goal(work.id, 'status'), value => value.goal?.status === 'complete', 'automatic goal continuation and completion');
-  assert(goalTurns >= 2, 'goal continued after an incomplete final response');
-  const complete = await goal(work.id, 'status');
-  assert(complete.goal.tokensUsed > 0, 'goal accounts reported usage');
-  console.log(`PASS: persistent goal continued and completed, reported ${complete.goal.tokensUsed} tokens`);
+  assert.equal(await goal(work.id), null);
+  await api(`/api/session/${work.id}/command`, { name: 'goal', text: 'OFFLINE_NATIVE_GOAL' });
+  const completed = await until(() => goal(work.id), value => value?.status === 'complete', 'native goal review and completion');
+  assert.equal(completed.objective, 'OFFLINE_NATIVE_GOAL');
+  const goalContext = (await api(`/api/session/${work.id}/context`)).data;
+  assert(goalContext.flatMap(message => message.content ?? []).some(part => part.type === 'tool' && part.name === 'todowrite' && part.state.status === 'completed' && part.state.metadata.todos[0].status === 'completed'));
+  await api(`/api/session/${work.id}/command`, { name: 'goal', text: 'clear' });
+  assert.equal(await goal(work.id), null);
+  console.log('PASS: OpenCode native goal command, reviewer, completion, clear and todo metadata');
 
   const childParent = await create();
   await api(`/api/session/${childParent.id}/prompt`, { text: 'NATIVE_CHILD' });
@@ -170,41 +191,14 @@ try {
   assert.equal(children.data[0].outcome, 'succeeded');
   assert(requests.some(request => JSON.stringify(request.messages).includes('PRELOADED_verification-before-completion')), 'role skill preloaded through native prompt admission');
   console.log('PASS: native retained child session and role skill preloading');
-
-  const waiting = await create();
-  await goal(waiting.id, 'set OFFLINE_WAITING_GOAL');
-  assert.equal((await goal(waiting.id, 'pause')).goal.status, 'paused');
-  await goal(waiting.id, 'edit OFFLINE_WAITING_GOAL edited');
-  assert.equal((await goal(waiting.id, 'status')).goal.objective, 'OFFLINE_WAITING_GOAL edited');
-  await goal(waiting.id, 'budget 1');
-  await goal(waiting.id, 'resume');
-  await until(() => goal(waiting.id, 'status'), value => value.goal.status === 'budget_limited', 'budget boundary');
-  assert.equal((await goal(waiting.id, 'budget 10000')).goal.status, 'budget_limited', 'raising a stopped budget does not resume');
-  await goal(waiting.id, 'clear');
-  assert.equal((await goal(waiting.id, 'status')).goal, null);
-  console.log('PASS: explicit pause, edit, budget stop, no implicit resume, and clear');
-
-  const persistent = await create();
-  await goal(persistent.id, 'set OFFLINE_WAITING_GOAL persistent');
-  const saved = await goal(persistent.id, 'pause');
-  server.kill('SIGTERM');
-  await once(server, 'exit');
-  server = startServer();
-  await until(async () => { try { return (await fetch(base + '/api/session', { headers })).ok; } catch { return false; } }, Boolean, 'restarted server');
-  const restored = await goal(persistent.id, 'status');
-  assert.equal(restored.goal.id, saved.goal.id);
-  assert.equal(restored.goal.status, 'paused');
-  console.log('PASS: goal survives a real server restart without resuming a paused objective');
-
-  const stale = await create();
-  await goal(stale.id, 'set OFFLINE_STALE_GOAL');
-  await until(async () => requests.some(request => request.tools?.length && JSON.stringify(request.messages).includes('OFFLINE_STALE_GOAL')), Boolean, 'stale request started');
-  await goal(stale.id, 'edit OFFLINE_STALE_GOAL replacement');
-  await until(() => api(`/api/session/${stale.id}/context`), value => value.data.flatMap(message => message.content ?? []).some(part => part.type === 'tool' && part.state.status === 'error' && part.state.error.message.includes('Goal changed during this request')), 'stale completion rejected');
-  const paused = await goal(stale.id, 'pause');
-  assert.equal(paused.goal.status, 'paused');
-  assert.equal(paused.goal.objective, 'OFFLINE_STALE_GOAL replacement');
-  console.log('PASS: an in-flight response cannot complete an edited objective');
+  await api(`/api/session/${childParent.id}/prompt`, { text: `NATIVE_CHILD followup:${children.data[0].id}` });
+  await until(() => api(`/api/session/${children.data[0].id}/context`), value => value.data.filter(message => message.type === 'user').length === 2, 'native child follow-up');
+  const retained = (await api(`/api/session?parentID=${childParent.id}`)).data;
+  assert.equal(retained.length, 1, 'follow-up reuses the child');
+  const background = await create();
+  await api(`/api/session/${background.id}/prompt`, { text: 'NATIVE_CHILD BACKGROUND' });
+  await until(() => api(`/api/session/${background.id}/context`), value => value.data.flatMap(message => message.content ?? []).some(part => part.type === 'tool' && part.name === 'subagent' && part.state.status === 'completed' && part.state.metadata.status === 'running'), 'native background dispatch');
+  console.log('PASS: native subagent follow-up and background dispatch');
 
   const questionSession = await create();
   await api(`/api/session/${questionSession.id}/prompt`, { text: 'NATIVE_QUESTION' });
@@ -222,7 +216,7 @@ try {
     if (process.env.OPENCODE_FIXTURE_HOME) {
       const added = (await api('/api/session')).data.filter(session => !before.has(session.id));
       assert.equal(added.length, 1, 'goal command on the home screen creates one session');
-      assert.equal((await goal(added[0].id, 'status')).goal.status, 'complete');
+      assert.equal((await goal(added[0].id)).status, 'complete');
       console.log('PASS: /goal from the home screen creates a session and completes the goal');
     }
   }

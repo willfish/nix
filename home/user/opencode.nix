@@ -57,7 +57,6 @@ let
           };
     }) llmMcps.servers
   );
-  upstreamPrompts = "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts";
   agentNames = map (name: lib.removeSuffix ".md" name) (
     builtins.attrNames (
       lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".md" name) (
@@ -110,10 +109,9 @@ let
   commands = pkgs.runCommand "opencode-commands" { } ''
     mkdir -p "$out"
     ${adapt} --kind command ${../config/pi/prompts} "$out"
-    ${adapt} --kind command ${upstreamPrompts} "$out"
     cp ${../config/opencode/commands}/*.md "$out/"
     substituteInPlace "$out/plan-work.md" --replace-fail \
-      'Use the todo tool for' 'Keep a short checklist of'
+      'Use the todo tool for' 'Use the native todowrite tool for'
   '';
   busEnabled =
     config.dotfiles.privateEnabled && ((config.programs.pi-agent-bus or { }).enable or false);
@@ -135,7 +133,6 @@ let
   harness = pkgs.runCommand "opencode-workflow" { } ''
     mkdir -p "$out"
     cp -r ${../config/opencode/harness}/. "$out/"
-    cp -r ${../config/pi/goal} "$out/goal-source"
     cp ${../config/pi/extensions/skill-catalog/catalog.ts} "$out/skill-search.ts"
     cp ${
       if busEnabled then
@@ -200,6 +197,14 @@ in
         "$schema" = "https://opencode.ai/config.json";
         mcp.servers = mcpServers;
         autoupdate = false;
+        experimental.todo = true;
+        permissions = [
+          {
+            action = "*";
+            resource = "*";
+            effect = "allow";
+          }
+        ];
         plugins = [
           {
             package = "${harness}";

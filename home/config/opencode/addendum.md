@@ -4,7 +4,7 @@ You are running in OpenCode, not Pi. Follow the shared rules above. Where those 
 
 Skills, guides and references already live under `~/.agents`. Use `skill_catalog` to discover trusted skill IDs, then load the selected ID with OpenCode's native `skill` tool. Manual-only skills require explicit user invocation. Discovery grants no authorization. Do not copy skills into another tree.
 
-Ask the human with OpenCode's built-in question tool, using 2 to 6 concrete options. Do not ask in the chat editor or replace this UI. Goals are managed with `/goal` and the get_goal/create_goal/update_goal tools. Create a goal only on an explicit request. Hex dictates into the focused composer; submission remains explicit. OM and Jev are excluded.
+Ask the human with OpenCode's built-in question tool, using 2 to 6 concrete options. Do not ask in the chat editor or replace this UI. Use OpenCode's native `/goal` for persistent objectives and native `todowrite` for task lists. Start a goal only on an explicit request. Hex dictates into the focused composer; submission remains explicit. OM and Jev are excluded.
 
 Subagents use OpenCode's native subagent tool. Retain session IDs for follow-ups and use background mode for independent work. Pass completed output explicitly between dependent steps; there is no Pi chain parameter or `/team` pane scheduler. Do not spawn peer agents through the shell or delegate recursively. Shared role defaults preload their declared skills; configured permissions restrict read-only roles.
 

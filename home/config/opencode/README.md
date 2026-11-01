@@ -6,26 +6,25 @@ translates provider names and effort variants, preloads role skills and denies
 editing for declared read-only roles. Native child sessions support foreground,
 background and follow-up work. Pass completed results between dependent calls.
 
+Tool operations are auto-allowed globally, matching Pi's approval-free workflow,
+including environment-file reads and paths outside the project. Specialist role
+limits still apply. Native questions remain available for human decisions.
+
 The workflow plugin preserves native question forms and MCP Code Mode. Its
 `skill_catalog` searches the current trusted registry without advertising every
 skill in the initial prompt. The native skill loader retains permission checks
 and explicit invocation; an unknown instruction format retains native discovery.
 
-## Goals
+## Native goals, todos and subagents
 
-Use `/goal <objective>`, `edit`, `status`, `pause`, `resume`, `budget <tokens|none>`
-and `clear`. Replacing an unfinished goal asks for confirmation in the TUI.
-Escape interrupts continuation. Raising a stopped budget does not resume it.
-Only explicit goal requests authorize creation. The working model performs the
-completion and repeated-blocker audits from the shared goal templates.
+Use OpenCode V2's built-in `/goal <objective>`, `/goal pause`, `/goal resume`
+and `/goal clear`. Its native goal indicator shows status and opens the goal
+dialog. OpenCode owns persistence, continuation, progress review and stop guards.
 
-State is durable and session-scoped. Forks do not inherit a running goal.
-Accounting uses reported uncached input, cache writes, visible output and
-reasoning, including the session's maintenance usage and retained descendants.
-Child snapshots are charged incrementally. Counts are not billing totals or a
-strict spending cap; a running response can cross the budget before the next
-step boundary. Closed-application time is excluded. `maxGoalTokenBudget` in the
-plugin's options supplies an optional maximum and default budget.
+Native `todowrite` and the todo UI are enabled through `experimental.todo`.
+The workflow plugin adds no goal, todo or subagent implementation. Shared
+specialist profiles run through the native `subagent` tool with retained session
+IDs, model variants, foreground/background work and ordinary question forms.
 
 ## Providers and voice
 
@@ -46,7 +45,7 @@ Restart OpenCode after switching a generation that changes the launcher or plugi
 
 `node home/config/opencode/check-workflow.mjs /path/to/opencode2 /path/to/built/plugin`
 runs a disposable V2 server and deterministic local provider. It checks discovery,
-goals, native subagents, skill preloading, restart persistence and question forms.
+native goals and todos, subagents, skill preloading and question forms.
 It uses no live model credentials and is not registered as a build or commit gate.
 `OPENCODE_FIXTURE_CONFIG` and `OPENCODE_FIXTURE_AGENTS` optionally select built
 configuration artifacts; `OPENCODE_FIXTURE_BUS=1` also exercises local coordination
