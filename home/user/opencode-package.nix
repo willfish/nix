@@ -35,6 +35,7 @@ let
   );
 in
 upstream.overrideAttrs (old: {
+  __intentionallyOverridingVersion = true;
   version = "${old.version}.mcp.${
     builtins.substring 0 8 (builtins.hashFile "sha256" ./opencode-packages/deferred-mcp.patch)
   }";
