@@ -145,6 +145,7 @@ stdenv.mkDerivation (finalAttrs: {
   pname = "nyxt";
   inherit version;
   src = source;
+  patches = [ ./nonblocking-ui-buttons.patch ];
 
   nativeBuildInputs = [
     pkg-config
@@ -187,6 +188,19 @@ stdenv.mkDerivation (finalAttrs: {
     sbcl --dynamic-space-size 4096 --no-userinit --non-interactive \
       --load ${./build.lisp}
     runHook postBuild
+  '';
+
+  doCheck = true;
+  checkPhase = ''
+    runHook preCheck
+    if ! ./nyxt --no-config --no-auto-config --quit \
+      --load ${./check-ui-callbacks.lisp} > ui-callback-check.log 2>&1; then
+      cat ui-callback-check.log
+      exit 1
+    fi
+    cat ui-callback-check.log
+    grep -q '^NYXT_UI_CALLBACKS_OK:' ui-callback-check.log
+    runHook postCheck
   '';
 
   installPhase = ''

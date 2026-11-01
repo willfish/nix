@@ -9,6 +9,16 @@ direnv exec . nix build .#nyxt --no-link
 direnv exec . nix run .#nyxt -- --no-config --no-auto-config
 ```
 
+The local button-dispatch patch keeps interactive UI actions off CEF's single
+internal-request worker. Button actions retain their originating buffer; other
+Lisp requests still return their results synchronously.
+
+Package builds check that boundary without opening a browser window. To rerun it:
+
+```sh
+direnv exec . nix run .#nyxt -- --no-config --no-auto-config --quit --load programs/nyxt/check-ui-callbacks.lisp
+```
+
 Linux desktop Home Manager profiles install the package without changing the
 default browser. The package enables Chromium's sandbox rather than preserving
 the CEF bridge's unsandboxed default. Do not work around a startup failure with
