@@ -59,3 +59,5 @@ Branches follow project/ticket conventions, otherwise short descriptive names; n
 For substantive prose read `~/.agents/guides/documentation-relevance.md`. Write for the reader, not the session. Keep PR bodies to what, why, ticket and material risks. Never include verification details in PR bodies: test commands/results/counts, CI status, build logs, manual checks, screenshots, benchmarks or verification narratives. Report evidence and blockers in the conversation instead; still run all required checks. Omit template verification fields unless the user explicitly requests them. New prose-producing skills/guides must reference that guide, not copy it. For dashboard/analytics/Logs Insights changes read `~/.agents/guides/dashboards.md` first.
 
 For skill edits load create-skill/relevant harness docs. Use portable, concise imperative entries; lowercase hyphenated names (2-64 chars), frontmatter only name/description with precise triggers. Put detail in references, repeatable logic in tested scripts, templates in assets. Test realistic tasks and clean up artifacts.
+
+Use polkit pkexec for sudo access
