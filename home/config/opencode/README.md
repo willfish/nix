@@ -14,6 +14,10 @@ The workflow plugin preserves native question forms and MCP Code Mode. Its
 `skill_catalog` searches the current trusted registry without advertising every
 skill in the initial prompt. The native skill loader retains permission checks
 and explicit invocation; an unknown instruction format retains native discovery.
+When running inside Herdr, the workflow TUI plugin (`./tui`) and local server
+hook mirror OpenCode's automatically generated root session title (`session.renamed`)
+to the current numeric Herdr tab using the same oldest-pane election and
+ownership rules as Pi (`herdr-tab.ts`), while preserving manual tab names.
 
 ## Native goals, todos and subagents
 

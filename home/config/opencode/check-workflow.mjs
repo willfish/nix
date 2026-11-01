@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, symlink, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { createServer as createSocketServer } from 'node:net';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { join } from 'node:path';
@@ -29,7 +30,9 @@ const fixture = createServer(async (request, response) => {
   const last = body.messages.at(-1);
   let content = 'fixture complete';
   let call;
-  if (text.includes('Stop acting as the assistant. You are now the reviewer for the session')) {
+  if (text.includes('Reply with only the title.')) {
+    content = 'Skill discovery check';
+  } else if (text.includes('Stop acting as the assistant. You are now the reviewer for the session')) {
     content = JSON.stringify({ verdict: 'done', reason: 'The deterministic fixture produced its required result.' });
   } else if (body.tools?.length && text.includes('OFFLINE_NATIVE_GOAL') && last.role !== 'tool') {
     call = { name: 'todowrite', arguments: JSON.stringify({ todos: [{ content: 'Verify fixture objective', status: 'completed' }] }) };
@@ -92,7 +95,30 @@ await writeFile(join(home, '.config/opencode/opencode.json'), JSON.stringify({
   plugins: [{ package: plugin, options: { busEnabled: process.env.OPENCODE_FIXTURE_BUS === '1' } }],
 }));
 const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config'), XDG_DATA_HOME: join(home, '.local/share'), XDG_STATE_HOME: join(home, '.local/state'), XDG_CACHE_HOME: join(home, '.cache') };
-for (const key of Object.keys(env)) if (/TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|OPENCODE_CONFIG|PI_AGENT_BUS/.test(key)) delete env[key];
+for (const key of Object.keys(env)) if (/TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|OPENCODE_CONFIG|PI_AGENT_BUS|HERDR_/.test(key)) delete env[key];
+const herdrSocket = join(root, 'herdr.sock');
+let herdrTabLabel = '3';
+const herdrCalls = [];
+const herdrServer = createSocketServer(socket => {
+  let input = '';
+  socket.on('data', chunk => {
+    input += chunk.toString('utf8');
+    if (!input.includes('\n')) return;
+    const req = JSON.parse(input.slice(0, input.indexOf('\n')));
+    herdrCalls.push([req.method, req.params]);
+    let result = {};
+    if (req.method === 'pane.get') result = { pane: { pane_id: 'w1:p2', tab_id: 'w1:t1', workspace_id: 'w1' } };
+    else if (req.method === 'pane.list') result = { panes: [{ pane_id: 'w1:p10', tab_id: 'w1:t1', workspace_id: 'w1' }, { pane_id: 'w1:p2', tab_id: 'w1:t1', workspace_id: 'w1' }] };
+    else if (req.method === 'tab.get') result = { tab: { number: 26, label: herdrTabLabel } };
+    else if (req.method === 'tab.rename') { herdrTabLabel = req.params.label; result = { tab: { label: herdrTabLabel } }; }
+    socket.write(`${JSON.stringify({ id: req.id, result })}\n`);
+  });
+});
+herdrServer.listen(herdrSocket);
+await once(herdrServer, 'listening');
+env.HERDR_ENV = '1';
+env.HERDR_SOCKET_PATH = herdrSocket;
+env.HERDR_PANE_ID = 'w1:p2';
 env.OPENCODE_PASSWORD = 'fixture-local-only';
 const headers = { 'content-type': 'application/json', authorization: `Basic ${Buffer.from('opencode:fixture-local-only').toString('base64')}` };
 let logs = '';
@@ -151,7 +177,14 @@ try {
   const discovery = (await api(`/api/session/${session.id}/context`)).data.flatMap(message => message.content ?? []).find(part => part.type === 'tool' && part.name === 'skill_catalog');
   const catalogue = JSON.parse(discovery.state.content[0].text);
   assert(catalogue.results.find(skill => skill.id === 'manual-only-fixture')?.manualOnly, 'manual-only metadata survives compact discovery');
-  console.log('PASS: real V2 plugin loaded, compact skill discovery reached the local provider');
+  await until(() => herdrTabLabel, value => value === '3 Skill discovery check', 'automatic session title names the numeric Herdr tab');
+  await api(`/api/session/${session.id}`, { title: 'Updated session title' }, 'PATCH');
+  await until(() => herdrTabLabel, value => value === '3 Updated session title', 'owned Herdr tab follows session title updates');
+  herdrTabLabel = '3 Manual tab';
+  await api(`/api/session/${session.id}`, { title: 'Ignored after manual rename' }, 'PATCH');
+  await delay(200);
+  assert.equal(herdrTabLabel, '3 Manual tab', 'manual Herdr tab rename ends automatic ownership');
+  console.log('PASS: real V2 plugin loaded, compact skill discovery reached the local provider, and Herdr tab followed automatic session title');
   if (process.env.OPENCODE_FIXTURE_COMMANDS) {
     const commands = (await until(() => api('/api/command'), value => value.data.some(command => command.name === 'design'), 'generated commands loaded')).data;
     assert.equal(commands.find(command => command.name === 'review')?.description, 'review changes [commit|branch|pr], defaults to uncommitted');
@@ -253,5 +286,6 @@ try {
   await Promise.race([once(server, 'exit'), delay(3000)]);
   if (server.exitCode === null) server.kill('SIGKILL');
   await new Promise(resolve => fixture.close(resolve));
+  await new Promise(resolve => herdrServer.close(resolve));
   await rm(root, { recursive: true, force: true });
 }

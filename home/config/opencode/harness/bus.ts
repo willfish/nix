@@ -10,8 +10,10 @@ export async function setupBus(ctx) {
   const definitions = await make();
   async function bridgeFor(sessionID) {
     if (!bridges.has(sessionID)) bridges.set(sessionID, make().then(async bridge => {
-      await bridge.event({ event: { type: "session.created", properties: { info: { id: sessionID } } } });
       const session = await ctx.session.get({ sessionID });
+      await bridge.event({ event: { type: "session.created", properties: {
+        info: { id: sessionID, parentID: session.parentID, title: session.title },
+      } } });
       if (session.model) await bridge.event({ event: { type: "session.next.model.switched", properties: {
         sessionID, model: { providerID: session.model.providerID, id: session.model.id },
       } } });
@@ -28,6 +30,9 @@ export async function setupBus(ctx) {
         await ctx.permission.assert({ action: name, resources: ["*"], sessionID: context.sessionID, agent: context.agent });
         const bridge = await bridgeFor(context.sessionID);
         const result = await definitionFor(bridge, name).execute(input, { abort: context.signal });
+        if (name === "set_agent_label" && typeof result.metadata?.label === "string") {
+          await ctx.session.update({ sessionID: context.sessionID, title: result.metadata.label });
+        }
         return { content: result.output, metadata: result.metadata };
       },
     });
@@ -39,7 +44,7 @@ export async function setupBus(ctx) {
     event.prompt.text = message.parts.map(part => part.text).join("\n\n");
   });
   const controller = new AbortController();
-  const types = ["session.execution.started", "session.execution.succeeded", "session.execution.failed", "session.execution.interrupted", "session.model.selected", "session.deleted"];
+  const types = ["session.execution.started", "session.execution.succeeded", "session.execution.failed", "session.execution.interrupted", "session.model.selected", "session.renamed", "session.deleted"];
   const events = (async () => {
     for await (const event of ctx.event.subscribe({ types, signal: controller.signal })) {
       const id = event.data.sessionID;
@@ -51,6 +56,10 @@ export async function setupBus(ctx) {
       } else if (event.type === "session.model.selected") {
         await bridge.event({ event: { type: "session.next.model.switched", properties: {
           sessionID: id, model: { providerID: event.data.model.providerID, id: event.data.model.id },
+        } } });
+      } else if (event.type === "session.renamed") {
+        await bridge.event({ event: { type: "session.renamed", properties: {
+          sessionID: id, title: event.data.title,
         } } });
       } else {
         await bridge.event({ event: { type: "session.status", properties: { sessionID: id,

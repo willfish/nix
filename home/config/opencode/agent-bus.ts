@@ -1,4 +1,5 @@
 // OpenCode host for the existing Switchboard client. Do not reimplement the protocol.
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname } from "node:os";
 import { join } from "node:path";
@@ -43,6 +44,20 @@ function saveEntries(sessionID, entries) {
 
 function textOf(parts) {
   return (parts ?? []).filter((part) => part?.type === "text" && typeof part.text === "string").map((part) => part.text).join("\n");
+}
+
+const FALLBACK_TITLE = /^(New session|Child session)( - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)?$/;
+
+function cleanTitle(value) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return !trimmed || FALLBACK_TITLE.test(trimmed) ? undefined : trimmed;
+}
+
+function sessionUuid(id) {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return id;
+  const hex = createHash("sha256").update(String(id)).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
 function blank(value) {
@@ -91,11 +106,20 @@ export default async function agentBus(input) {
     saveEntries(sessionID, host.entries);
   }
 
-  function ensure(nextID) {
-    if (!nextID || nextID === sessionID) return;
+  function ensure(nextID, initialTitle) {
+    if (!nextID) return;
+    const title = cleanTitle(initialTitle);
+    if (nextID === sessionID) {
+      if (host && title && title !== host.title) {
+        host.title = title;
+        runtime?.refresh(host.ctx);
+      }
+      return;
+    }
     if (runtime) void runtime.sessionShutdown();
     sessionID = nextID;
     const entries = loadEntries(nextID);
+    const uuid = sessionUuid(nextID);
     const ctx = {
       mode: "tui",
       cwd: input.directory,
@@ -103,15 +127,19 @@ export default async function agentBus(input) {
       isIdle: () => host?.idle !== false,
       ui: { notify() {}, setStatus() {}, confirm: async () => false },
       sessionManager: {
-        getSessionId: () => nextID,
+        getSessionId: () => uuid,
         getBranch: () => entries,
         getLeafId: () => nextID,
       },
     };
-    host = { ctx, entries, idle: true };
+    host = { ctx, entries, idle: true, title };
     runtime = createRuntime({
+      pi: {
+        getSessionName: () => host?.title ?? "",
+        appendEntry: remember,
+      },
       fetch: globalThis.fetch,
-      env: { ...process.env, PI_AGENT_BUS_AUTO_LABEL: "0" },
+      env: { ...process.env, HERDR_ENV: "0", PI_AGENT_BUS_AUTO_LABEL: "0" },
       hostname,
       cwd: () => input.directory,
       pid: () => process.pid,
@@ -156,7 +184,9 @@ export default async function agentBus(input) {
       const id = props.sessionID || props.info?.id;
       if (props.info?.parentID) parents.add(id);
       if (id) seen.add(id);
-      if ((type === "session.created" || type === "session.updated") && id && !parents.has(id)) ensure(id);
+      if ((type === "session.created" || type === "session.updated" || type === "session.renamed") && id && !parents.has(id)) {
+        ensure(id, props.title ?? props.info?.title);
+      }
       if (!id || id !== sessionID || !runtime || !host) return;
       if (type === "session.status") {
         host.idle = props.status?.type !== "busy" && props.status?.type !== "retry";
