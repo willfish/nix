@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const DEFAULT_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"; // George (British, warm, natural)
+const DEFAULT_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku"; // Lily (British, warm, velvety)
 const DEFAULT_MODEL_ID = "eleven_v3";
 
 function loadApiKey() {
@@ -96,7 +96,7 @@ export async function setupSpeak(ctx) {
         },
         voice_id: {
           type: "string",
-          description: "Optional ElevenLabs voice ID (defaults to George: JBFqnCBsd6RMkjVDRZzb, or ELEVENLABS_VOICE_ID env).",
+          description: "Optional ElevenLabs voice ID (defaults to Lily: pFZP5JQG7iQjIQuC4Bku, or ELEVENLABS_VOICE_ID env).",
         },
         model_id: {
           type: "string",

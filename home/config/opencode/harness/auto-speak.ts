@@ -131,7 +131,7 @@ export function createSummarySpeaker(ctx, speak = speakText) {
         if (!current()) return;
         state.controller = new AbortController();
         state.error = undefined;
-        await speak({ text: PENSIVE + summary, voice_id: "JBFqnCBsd6RMkjVDRZzb", model_id: "eleven_v3" },
+        await speak({ text: PENSIVE + summary, voice_id: "pFZP5JQG7iQjIQuC4Bku", model_id: "eleven_v3" },
           { signal: state.controller.signal });
       } catch {
         if (current() && !state.controller?.signal.aborted) {
@@ -169,7 +169,7 @@ export function setupVoiceCommand(context) {
   context.keymap.layer(() => ({ commands: [{
     id: "session.voice",
     title: "Spoken summaries",
-    description: "Automatic pensive George summaries for this session [on|off|status]; starts off",
+    description: "Automatic pensive Lily summaries for this session [on|off|status]; starts off",
     group: "Session",
     palette: true,
     slash: { name: "voice", arguments: true },
@@ -189,7 +189,7 @@ export function setupVoiceCommand(context) {
           input: { sessionID: route.sessionID, action } });
         const state = output as { enabled: boolean; error: string };
         context.ui.toast.show({ title: "Spoken summaries",
-          message: state.enabled ? `On for this session: pensive George. Summary text is sent to ElevenLabs.${state.error ? ` ${state.error}` : ""}` : "Off for this session",
+          message: state.enabled ? `On for this session: pensive Lily. Summary text is sent to ElevenLabs.${state.error ? ` ${state.error}` : ""}` : "Off for this session",
           variant: state.error ? "warning" : "info", duration: 6000 });
       } catch {
         context.ui.toast.show({ message: "Could not change voice mode. Open a main session and check the server plugin.", variant: "error" });

@@ -50,7 +50,7 @@ await speaker.control('ses_main', 'on');
 await turn();
 assert.equal(calls.length, 1);
 assert.deepEqual(calls[0].input, { text: '[thoughtful] [calmly] The change is ready. Tests passed.',
-  voice_id: 'JBFqnCBsd6RMkjVDRZzb', model_id: 'eleven_v3' });
+  voice_id: 'pFZP5JQG7iQjIQuC4Bku', model_id: 'eleven_v3' });
 await event('session.execution.succeeded');
 assert.equal(calls.length, 1, 'duplicate completion does not bill again');
 await turn('msg_one', 'session.execution.failed');
@@ -65,7 +65,7 @@ await speaker.control('ses_main', 'off');
 assert(calls[0].signal.aborted, 'off/new turns cancel playback');
 await turn();
 assert.equal(calls.length, 1);
-console.log('PASS: off by default, explicit per-session opt-in, pensive George, deduplication and terminal filtering');
+console.log('PASS: off by default, explicit per-session opt-in, pensive Lily, deduplication and terminal filtering');
 
 await speaker.control('ses_main', 'on');
 await event('session.execution.started');
@@ -111,6 +111,7 @@ setupVoiceCommand({
 assert.equal(command.slash.name, 'voice');
 await command.run('on');
 assert.match(toasts.at(-1).message, /On for this session/);
+assert.match(toasts.at(-1).message, /pensive Lily/);
 await command.run('off');
 assert.match(toasts.at(-1).message, /Off for this session/);
 await command.run();
@@ -140,7 +141,7 @@ try {
   let requests = 0;
   const fetch = async (url, options) => {
     requests++;
-    assert.match(url, /^https:\/\/api\.elevenlabs\.io\/v1\/text-to-speech\/JBFqnCBsd6RMkjVDRZzb\?/);
+    assert.match(url, /^https:\/\/api\.elevenlabs\.io\/v1\/text-to-speech\/pFZP5JQG7iQjIQuC4Bku\?/);
     assert.equal(options.headers['xi-api-key'], 'synthetic-fixture-only');
     assert.equal(JSON.parse(options.body).text, 'Offline test');
     return new Response(Buffer.alloc(4800), { status: 200 });
@@ -164,6 +165,7 @@ try {
   let manual;
   await setupSpeak({ tool: { async transform(fn) { fn({ add: tool => { manual = tool; } }); } } });
   assert.equal(manual.name, 'speak', 'manual tool is still registered independently');
+  assert.match(manual.input.properties.voice_id.description, /defaults to Lily/);
   console.log('PASS: shared ElevenLabs synthesis and native WAV playback boundary, aborts, safe errors and manual tool registration');
 } finally {
   for (const key of Object.keys(process.env)) if (!(key in saved)) delete process.env[key];

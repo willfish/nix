@@ -54,7 +54,7 @@ not replies already completed or in progress. The manual `speak` tool remains
 available regardless of this setting.
 
 After a successful turn settles, the completion callback reads a short prose
-extract of the final assistant reply through ElevenLabs v3 with George and
+extract of the final assistant reply through ElevenLabs v3 with Lily and
 pensive delivery cues. It prefers a Summary section, otherwise the opening
 paragraph, limited to two sentences and 500 characters. It does not make another
 LLM request. Code blocks and reasoning are excluded; subagents, compactions,
