@@ -72,6 +72,14 @@ const port = reservation.address().port;
 await new Promise(resolve => reservation.close(resolve));
 const deployed = process.env.OPENCODE_FIXTURE_CONFIG ? JSON.parse(await readFile(process.env.OPENCODE_FIXTURE_CONFIG, 'utf8')) : {};
 if (process.env.OPENCODE_FIXTURE_AGENTS) await symlink(process.env.OPENCODE_FIXTURE_AGENTS, join(home, '.config/opencode/agents'));
+if (process.env.OPENCODE_FIXTURE_COMMANDS) await symlink(process.env.OPENCODE_FIXTURE_COMMANDS, join(home, '.config/opencode/commands'));
+const routingMarker = 'Keep delegation, shared tokens, file ownership and final integration coordinated here';
+if (process.env.OPENCODE_FIXTURE_ORCHESTRATOR) {
+  const text = await readFile(process.env.OPENCODE_FIXTURE_ORCHESTRATOR, 'utf8');
+  assert(text.includes('## Design routing') && text.includes(routingMarker));
+  assert(!text.includes('## Final voice summary') && !text.includes('## Dotfiles finish line'));
+  await symlink(process.env.OPENCODE_FIXTURE_ORCHESTRATOR, join(home, '.config/opencode/ORCHESTRATOR.md'));
+}
 await writeFile(join(home, '.config/opencode/opencode.json'), JSON.stringify({
   ...deployed,
   $schema: 'https://opencode.ai/config.json',
@@ -128,6 +136,11 @@ try {
   const first = requests.find(request => request.tools?.length && JSON.stringify(request.messages).includes('SKILL_DISCOVERY'));
   assert(first, `provider received tool request: ${JSON.stringify(requests.map(request => ({ keys: Object.keys(request), tools: request.tools?.map(tool => tool.function.name) })))}`);
   const systems = JSON.stringify(first.messages.filter(message => message.role === 'system' || message.role === 'developer'));
+  if (process.env.OPENCODE_FIXTURE_ORCHESTRATOR) {
+    assert(systems.includes(routingMarker), 'primary design routing is present');
+    assert(!systems.includes('Only this section goes to TTS'), 'Pi-only voice formatting is absent');
+    console.log('PASS: lean primary context contains design routing without Pi voice formatting');
+  }
   const matched = systems.indexOf('Fixture skill discovery fixture-specialist');
   if (matched !== -1) console.log('Unexpected skill advertisement:', systems.slice(Math.max(0, matched - 180), matched + 160));
   assert(!JSON.stringify(first.messages.filter(message => message.role === 'system' || message.role === 'developer')).includes('Fixture skill discovery fixture-specialist'), 'skill metadata is deferred');
@@ -139,6 +152,11 @@ try {
   const catalogue = JSON.parse(discovery.state.content[0].text);
   assert(catalogue.results.find(skill => skill.id === 'manual-only-fixture')?.manualOnly, 'manual-only metadata survives compact discovery');
   console.log('PASS: real V2 plugin loaded, compact skill discovery reached the local provider');
+  if (process.env.OPENCODE_FIXTURE_COMMANDS) {
+    const commands = (await until(() => api('/api/command'), value => value.data.some(command => command.name === 'design'), 'generated commands loaded')).data;
+    assert.equal(commands.find(command => command.name === 'review')?.description, 'review changes [commit|branch|pr], defaults to uncommitted');
+    console.log('PASS: native review is active alongside generated workflow commands');
+  }
   if (process.env.OPENCODE_FIXTURE_CONFIG) {
     assert(deployed.permissions?.some(rule => rule.action === '*' && rule.resource === '*' && rule.effect === 'allow'), 'deployed configuration auto-allows tool operations');
     assert.equal(deployed.experimental?.todo, true, 'deployed configuration enables native todos');
@@ -153,6 +171,8 @@ try {
     console.log('PASS: environment-file reads, external-directory reads, writes and shell run without permission prompts');
   }
   if (process.env.OPENCODE_FIXTURE_AGENTS) {
+    const text = await readFile(join(process.env.OPENCODE_FIXTURE_AGENTS, 'builder.md'), 'utf8');
+    assert(!text.includes('Load these skills when the task reaches their trigger:'), 'generated skill-loading note is absent');
     const agents = (await api('/api/agent')).data;
     const architect = agents.find(agent => agent.id === 'architect');
     assert.equal(architect.model.providerID, 'openai');
@@ -190,6 +210,10 @@ try {
   assert.equal(children.data.length, 1, 'native child retained');
   assert.equal(children.data[0].outcome, 'succeeded');
   assert(requests.some(request => JSON.stringify(request.messages).includes('PRELOADED_verification-before-completion')), 'role skill preloaded through native prompt admission');
+  if (process.env.OPENCODE_FIXTURE_ORCHESTRATOR) {
+    const child = requests.find(request => JSON.stringify(request.messages).includes('PRELOADED_verification-before-completion'));
+    assert(!JSON.stringify(child.messages.filter(message => message.role === 'system' || message.role === 'developer')).includes(routingMarker), 'primary routing stays out of child sessions');
+  }
   console.log('PASS: native retained child session and role skill preloading');
   await api(`/api/session/${childParent.id}/prompt`, { text: `NATIVE_CHILD followup:${children.data[0].id}` });
   await until(() => api(`/api/session/${children.data[0].id}/context`), value => value.data.filter(message => message.type === 'user').length === 2, 'native child follow-up');

@@ -92,14 +92,18 @@ let
   agents = pkgs.runCommand "opencode-v2-agents" { } ''
     mkdir -p "$out"
     ${adapt} --kind agent ${../config/pi/agents} "$out"
-    ${lib.concatMapStringsSep "\n" (
-      name:
-      lib.optionalString (agentField name "model" != "") ''
+    ${lib.concatMapStringsSep "\n" (name: ''
+      ${lib.optionalString (agentField name "model" != "") ''
         substituteInPlace "$out/${name}.md" --replace-fail \
           ${lib.escapeShellArg "model: ${agentField name "model"}"} \
           ${lib.escapeShellArg "model: ${agentModel name}"}
-      ''
-    ) agentNames}
+      ''}
+      ${lib.optionalString (agentSkills.${name} != [ ]) ''
+        substituteInPlace "$out/${name}.md" --replace-fail \
+          ${lib.escapeShellArg "Load these skills when the task reaches their trigger: ${lib.concatStringsSep ", " agentSkills.${name}}.\n"} \
+          ""
+      ''}
+    '') agentNames}
     for file in "$out/"*.md; do
       substituteInPlace "$file" \
         --replace-quiet 'ask_coordinator' 'the native question tool' \
@@ -109,10 +113,17 @@ let
   commands = pkgs.runCommand "opencode-commands" { } ''
     mkdir -p "$out"
     ${adapt} --kind command ${../config/pi/prompts} "$out"
+    # Use OpenCode's built-in review command.
+    rm "$out/review.md"
     cp ${../config/opencode/commands}/*.md "$out/"
     substituteInPlace "$out/plan-work.md" --replace-fail \
       'Use the todo tool for' 'Use the native todowrite tool for'
   '';
+  orchestratorRules = lib.concatMapStringsSep "\n" (section: "## ${lib.trim section}\n") (
+    lib.filter (lib.hasPrefix "Design routing\n") (
+      lib.splitString "## " (builtins.readFile ../config/llm/ORCHESTRATOR.md)
+    )
+  );
   busEnabled =
     config.dotfiles.privateEnabled && ((config.programs.pi-agent-bus or { }).enable or false);
   busClient =
@@ -247,12 +258,6 @@ in
     );
     ".config/opencode/agents".source = agents;
     ".config/opencode/commands".source = commands;
-    ".config/opencode/ORCHESTRATOR.md".text =
-      lib.replaceStrings
-        [
-          "You are the starting Pi agent for this session. Team members and headless subagents do not receive this file."
-        ]
-        [ "You are the primary OpenCode agent for this session. Child sessions do not receive this file." ]
-        (builtins.readFile ../config/llm/ORCHESTRATOR.md);
+    ".config/opencode/ORCHESTRATOR.md".text = orchestratorRules;
   };
 }

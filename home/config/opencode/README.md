@@ -26,6 +26,10 @@ The workflow plugin adds no goal, todo or subagent implementation. Shared
 specialist profiles run through the native `subagent` tool with retained session
 IDs, model variants, foreground/background work and ordinary question forms.
 
+Native `/review` handles uncommitted changes, commits, branches and pull requests.
+The primary-only addendum supplies design routing; shared rules come from
+`AGENTS.md`. Pi's spoken-summary formatting is confined to the Pi harness.
+
 ## Providers and voice
 
 Connect providers through `/connect`. Claude Agent uses Claude Code's own login;
@@ -47,7 +51,8 @@ Restart OpenCode after switching a generation that changes the launcher or plugi
 runs a disposable V2 server and deterministic local provider. It checks discovery,
 native goals and todos, subagents, skill preloading and question forms.
 It uses no live model credentials and is not registered as a build or commit gate.
-`OPENCODE_FIXTURE_CONFIG` and `OPENCODE_FIXTURE_AGENTS` optionally select built
-configuration artifacts; `OPENCODE_FIXTURE_BUS=1` also exercises local coordination
+`OPENCODE_FIXTURE_CONFIG`, `OPENCODE_FIXTURE_AGENTS`, `OPENCODE_FIXTURE_COMMANDS`
+and `OPENCODE_FIXTURE_ORCHESTRATOR` optionally select built configuration artifacts.
+`OPENCODE_FIXTURE_BUS=1` also exercises local coordination
 guidance. `OPENCODE_FIXTURE_TUI=1` leaves the final question open in a real TUI for
 manual interaction, then cleans up when that TUI exits.
