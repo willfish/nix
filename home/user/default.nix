@@ -55,6 +55,7 @@
     ./config.nix
     ./desktop-files.nix
     ./voice.nix
+    ./hex.nix
     ./darwin.nix
     ./daily-workflow.nix
     ./newrelic-brief.nix

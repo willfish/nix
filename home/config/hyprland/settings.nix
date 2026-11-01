@@ -377,10 +377,11 @@ rec {
 
   # Included only when the matching voice capability is enabled.
   voice = {
-    # Opens the top-of-monitor card and records into the selected Pi session.
-    interact = "SUPER, space, Voice, exec, pi-voice-interact";
-    send = "SUPER SHIFT, space, Send voice, exec, pi-voice send";
-    menu = "SUPER SHIFT, V, Voice picker, exec, voice-menu";
+    # Hex follows compositor focus and leaves prompt submission to the user.
+    # CLI controls avoid portal IDs changing with Hex's configured shortcut.
+    interact = "SUPER, space, Dictate, exec, hex dictation toggle";
+    send = "SUPER SHIFT, space, Paste last dictation, exec, hex paste-last";
+    menu = "SUPER SHIFT, V, Voice settings, exec, hex";
     read = "SUPER, R, Read aloud, exec, pi-voice read";
   };
 }

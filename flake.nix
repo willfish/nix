@@ -84,6 +84,11 @@
       flake = false;
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
+    hex = {
+      url = "github:anomalyco/hex/v3.1.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
     pi-source = {
       url = "github:earendil-works/pi/main";
       flake = false;
@@ -427,6 +432,8 @@
           };
           # Other agent CLIs come from llm-agents, not the nixpkgs pin.
           opencode = llm-agents.packages.${system}.opencode;
+          opencode2 = llm-agents.packages.${system}.opencode2;
+          claude-code = llm-agents.packages.${system}.claude-code;
           hermes-agent = import ./home/user/hermes-package.nix {
             hermesInput = inputs.hermes-agent;
             inherit system;
@@ -441,6 +448,12 @@
         }
         // lib.optionalAttrs (system == linuxSystem) {
           tor-mcp = inputs.tor-mcp.packages.${system}.default;
+          # Hex's parser needs Rust >=1.97. Keep runtime libraries on the host pin.
+          hex-voice = inputs.hex.packages.${system}.default.override {
+            rustPlatform = _final.makeRustPlatform {
+              inherit (nixpkgs-unstable.legacyPackages.${system}) cargo rustc;
+            };
+          };
         };
       mkPkgs =
         system:
@@ -558,6 +571,7 @@
         stylix.homeModules.stylix
         nix-index-database.homeModules.default
         sops-nix.homeManagerModules.sops
+        inputs.hex.homeManagerModules.hex
         ./home
       ];
       privateHomeModules = [

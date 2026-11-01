@@ -8,6 +8,9 @@ let
   inherit (pkgs) stdenv;
   aliases = {
     a = "herdr";
+    c = "opencode";
+    co = "opencode";
+    code = "opencode";
     ag = "rg";
     cat = "bat";
     la = "lsd -la";

@@ -15,15 +15,16 @@ let
     if hostName == host then "http://127.0.0.1:8081/v1" else "http://${host}.taile09696.ts.net:8081/v1";
   providerModel = model: {
     inherit (model) name;
+    capabilities.tools = true;
     limit = {
       context = model.contextWindow;
       output = model.maxTokens;
     };
   };
   localProvider = name: baseUrl: envName: models: {
-    npm = "@ai-sdk/openai-compatible";
+    package = "@opencode/ai/providers/openai-compatible";
     inherit name;
-    options = {
+    settings = {
       baseURL = baseUrl;
       apiKey = "{env:${envName}}";
     };
@@ -43,30 +44,76 @@ let
           {
             type = "remote";
             inherit (server) url;
-            enabled = true;
+            codemode = true;
             oauth = false;
-            timeout = (server.toolTimeout or 120) * 1000;
+            timeout.execution = (server.toolTimeout or 120) * 1000;
           }
         else
           {
             type = "local";
             command = [ (mcpCommand server.wrapper) ];
-            enabled = true;
-            timeout = (server.toolTimeout or 120) * 1000;
+            codemode = true;
+            timeout.execution = (server.toolTimeout or 120) * 1000;
           };
     }) llmMcps.servers
   );
-  adapted =
-    kind: source:
-    pkgs.runCommand "opencode-${kind}" { } ''
-      mkdir -p "$out"
-      ${adapt} --kind ${kind} ${source} "$out"
-    '';
   upstreamPrompts = "${pkgs.pi-coding-agent}/libexec/pi/examples/extensions/subagent/prompts";
+  agentNames = map (name: lib.removeSuffix ".md" name) (
+    builtins.attrNames (
+      lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".md" name) (
+        builtins.readDir ../config/pi/agents
+      )
+    )
+  );
+  agentField =
+    name: field:
+    let
+      line = lib.findFirst (lib.hasPrefix "${field}: ") "" (
+        lib.splitString "\n" (builtins.readFile (../config/pi/agents + "/${name}.md"))
+      );
+    in
+    lib.removePrefix "${field}: " line;
+  agentModel =
+    name:
+    let
+      model = lib.replaceStrings [ "openai-codex/" ] [ "openai/" ] (agentField name "model");
+      thinking = agentField name "thinking";
+    in
+    model + lib.optionalString (thinking != "" && thinking != "off") "#${thinking}";
+  agentSkills = builtins.listToAttrs (
+    map (name: {
+      inherit name;
+      value = lib.filter (skill: skill != "") (
+        map lib.trim (
+          lib.splitString "," (lib.removeSuffix "]" (lib.removePrefix "[" (agentField name "skills")))
+        )
+      );
+    }) agentNames
+  );
+  agents = pkgs.runCommand "opencode-v2-agents" { } ''
+    mkdir -p "$out"
+    ${adapt} --kind agent ${../config/pi/agents} "$out"
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      lib.optionalString (agentField name "model" != "") ''
+        substituteInPlace "$out/${name}.md" --replace-fail \
+          ${lib.escapeShellArg "model: ${agentField name "model"}"} \
+          ${lib.escapeShellArg "model: ${agentModel name}"}
+      ''
+    ) agentNames}
+    for file in "$out/"*.md; do
+      substituteInPlace "$file" \
+        --replace-quiet 'ask_coordinator' 'the native question tool' \
+        --replace-quiet ', with requiresUser.' ', using the native question tool for human decisions.'
+    done
+  '';
   commands = pkgs.runCommand "opencode-commands" { } ''
     mkdir -p "$out"
     ${adapt} --kind command ${../config/pi/prompts} "$out"
     ${adapt} --kind command ${upstreamPrompts} "$out"
+    cp ${../config/opencode/commands}/*.md "$out/"
+    substituteInPlace "$out/plan-work.md" --replace-fail \
+      'Use the todo tool for' 'Keep a short checklist of'
   '';
   busEnabled =
     config.dotfiles.privateEnabled && ((config.programs.pi-agent-bus or { }).enable or false);
@@ -85,6 +132,19 @@ let
   busPlugin = lib.replaceStrings [ "@BUS_CLIENT@" ] [ "${busClient}" ] (
     builtins.readFile ../config/opencode/agent-bus.ts
   );
+  harness = pkgs.runCommand "opencode-workflow" { } ''
+    mkdir -p "$out"
+    cp -r ${../config/opencode/harness}/. "$out/"
+    cp -r ${../config/pi/goal} "$out/goal-source"
+    cp ${../config/pi/extensions/skill-catalog/catalog.ts} "$out/skill-search.ts"
+    cp ${
+      if busEnabled then
+        pkgs.writeText "bus-source.ts" busPlugin
+      else
+        pkgs.writeText "bus-source.ts" "export default async function () { return null; }"
+    } "$out/bus-source.ts"
+    cp ${pkgs.writeText "role-skills.json" (builtins.toJSON agentSkills)} "$out/role-skills.json"
+  '';
   sopsExport = name: ''
     if [ -z "''${${name}+x}" ]; then
       if ${name}="$(${readSopsSecret}/bin/read-sops-secret ${
@@ -98,7 +158,10 @@ let
   '';
 in
 {
-  home.packages = [ pkgs.opencode ];
+  home.packages = [
+    pkgs.opencode2
+    pkgs.claude-code
+  ];
 
   home.file = {
     ".local/bin/opencode" = {
@@ -120,25 +183,53 @@ in
           ${sopsExport "LOCAL_LLM_ANDROMEDA_API_KEY"}
         ''}
 
-        exec ${pkgs.opencode}/bin/opencode "$@"
+        exec ${pkgs.opencode2}/bin/opencode2 "$@"
       '';
     };
-    ".config/opencode/tui.json".text = builtins.toJSON {
-      "$schema" = "https://opencode.ai/tui.json";
+    ".config/opencode/cli.json".text = builtins.toJSON {
+      "$schema" = "https://opencode.ai/v2/cli.json";
       keybinds = {
-        editor_open = "ctrl+g,<leader>e";
-        messages_first = "home";
+        "app.clear" = "none";
+        "model.list" = "ctrl+l,<leader>m";
+        "prompt.editor" = "ctrl+g,<leader>e";
+        "session.first" = "home";
       };
     };
     ".config/opencode/opencode.json".text = builtins.toJSON (
       {
         "$schema" = "https://opencode.ai/config.json";
-        mcp = mcpServers;
+        mcp.servers = mcpServers;
+        autoupdate = false;
+        plugins = [
+          {
+            package = "${harness}";
+            options.busEnabled = busEnabled;
+          }
+        ];
+        agents = builtins.listToAttrs (
+          map (name: {
+            inherit name;
+            value.permissions = [
+              {
+                action = "subagent";
+                resource = "*";
+                effect = "deny";
+              }
+            ]
+            ++
+              lib.optional (agentField name "tools" != "" && !(lib.hasInfix "edit" (agentField name "tools")))
+                {
+                  action = "edit";
+                  resource = "*";
+                  effect = "deny";
+                };
+          }) agentNames
+        );
       }
       // lib.optionalAttrs config.dotfiles.privateEnabled {
-        provider = {
+        providers = {
           "opencode-go" = {
-            options.apiKey = "{env:OPENCODE_GO_KEY}";
+            settings.apiKey = "{env:OPENCODE_GO_KEY}";
           };
           relay =
             localProvider "Relay" (qwenBaseUrl "relay") "LOCAL_LLM_RELAY_API_KEY"
@@ -149,11 +240,14 @@ in
         };
       }
     );
-    ".config/opencode/agents".source = adapted "agent" ../config/pi/agents;
+    ".config/opencode/agents".source = agents;
     ".config/opencode/commands".source = commands;
-    ".config/opencode/ORCHESTRATOR.md".source = ../config/llm/ORCHESTRATOR.md;
-  }
-  // lib.optionalAttrs busEnabled {
-    ".config/opencode/plugins/agent-bus.ts".source = pkgs.writeText "agent-bus.ts" busPlugin;
+    ".config/opencode/ORCHESTRATOR.md".text =
+      lib.replaceStrings
+        [
+          "You are the starting Pi agent for this session. Team members and headless subagents do not receive this file."
+        ]
+        [ "You are the primary OpenCode agent for this session. Child sessions do not receive this file." ]
+        (builtins.readFile ../config/llm/ORCHESTRATOR.md);
   };
 }

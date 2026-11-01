@@ -179,7 +179,8 @@ in
         After = [ "sops-nix.service" ];
         Wants = [ "sops-nix.service" ];
       };
-      Install.WantedBy = [ "default.target" ];
+      # Hex owns automatic dictation. Keep the Pi bridge available on demand.
+      Install.WantedBy = [ ];
       Service = common // {
         ExecStart = "${voice}/bin/pi-voice serve";
         RuntimeDirectory = "pi-voice";
@@ -203,7 +204,7 @@ in
         Restart = "on-failure";
         RestartSec = 2;
       };
-      Install.WantedBy = [ "graphical-session.target" ];
+      Install.WantedBy = [ ];
     };
     home.activation.piVoiceDirectories = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${pkgs.systemd}/bin/systemctl --user stop \

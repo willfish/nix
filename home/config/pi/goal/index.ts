@@ -81,7 +81,7 @@ function summary(goal) {
 }
 
 const objectSchema = properties => ({ type: 'object', properties, required: Object.keys(properties).filter(key => key !== 'token_budget'), additionalProperties: false });
-const descriptions = {
+export const descriptions = {
   get_goal: 'Get the current goal for this session, including status, budgets, token and elapsed-time usage, and remaining token budget.',
   create_goal: 'Create a goal only when explicitly requested by the user or system/developer instructions; do not infer goals from ordinary tasks. Set token_budget only when an explicit token budget is requested. Fails if an unfinished goal exists; use update_goal only for status.',
   update_goal: `Update the existing goal. Set status to paused only at the user's explicit request to pause this goal, never on your own initiative. Ask if unclear; a later resume revokes that request. Report the returned status and stop goal work. Budget limits take precedence over pausing.
