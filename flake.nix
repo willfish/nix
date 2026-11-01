@@ -108,6 +108,10 @@
     # Git trees consumed as package and plugin sources. flake.lock owns their
     # revisions and narHash, so `nix flake update` bumps them; derivations keep
     # only the hashes that cannot be expressed there.
+    nyxt-source = {
+      url = "github:atlas-engineer/nyxt";
+      flake = false;
+    };
     arxiv-scanner-source = {
       url = "github:linuskelsey/arxiv-scanner";
       flake = false;
@@ -447,6 +451,7 @@
             ;
         }
         // lib.optionalAttrs (system == linuxSystem) {
+          nyxt = _final.callPackage ./programs/nyxt { source = inputs.nyxt-source; };
           tor-mcp = inputs.tor-mcp.packages.${system}.default;
           # Hex's parser needs Rust >=1.97. Keep runtime libraries on the host pin.
           hex-voice = inputs.hex.packages.${system}.default.override {
@@ -789,6 +794,7 @@
             };
           }
           // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+            inherit (pkgs) nyxt;
             discord-themed = import ./programs/discord-themed { inherit pkgs; };
             slack-themed = import ./programs/slack-themed { inherit pkgs; };
             telegram-themed = import ./programs/telegram-themed { inherit pkgs; };
