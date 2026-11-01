@@ -4,11 +4,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { setupSkills } from "./skills.ts";
 import { setupBus } from "./bus.ts";
+import { setupSpeak } from "./speak.ts";
 
 export default Plugin.define({
   id: "dotfiles.workflow",
   async setup(ctx) {
     await setupSkills(ctx);
+    await setupSpeak(ctx);
     const stopBus = ctx.options.busEnabled ? await setupBus(ctx) : () => {};
     let orchestrator = "";
     try { orchestrator = readFileSync(join(homedir(), ".config/opencode/ORCHESTRATOR.md"), "utf8"); } catch { /* optional */ }

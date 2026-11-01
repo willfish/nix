@@ -191,6 +191,7 @@ in
           export PI_AGENT_BUS_AUTO_LABEL="''${PI_AGENT_BUS_AUTO_LABEL-0}"
           ${sopsExport "PI_AGENT_BUS_TOKEN"}
           ${sopsExport "OPENCODE_GO_KEY"}
+          ${sopsExport "ELEVENLABS_API_KEY"}
           ${sopsExport "LOCAL_LLM_RELAY_API_KEY"}
           ${sopsExport "LOCAL_LLM_ANDROMEDA_API_KEY"}
         ''}
