@@ -148,6 +148,8 @@ let
   harness = pkgs.runCommand "opencode-workflow" { } ''
     mkdir -p "$out"
     cp -r ${../config/opencode/harness}/. "$out/"
+    substituteInPlace "$out/speech-queue.ts" --replace-fail \
+      'const FLOCK = "flock";' 'const FLOCK = "${pkgs.flock}/bin/flock";'
     cp ${../config/pi/extensions/skill-catalog/catalog.ts} "$out/skill-search.ts"
     cp ${
       if busEnabled then

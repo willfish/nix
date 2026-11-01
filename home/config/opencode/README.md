@@ -61,6 +61,16 @@ LLM request. Code blocks and reasoning are excluded; subagents, compactions,
 failed/interrupted turns and duplicate completions are silent. A new turn or
 `/voice off` cancels pending synthesis and playback.
 
+Summaries and manual `speak` share a machine-wide queue for the local user,
+including separate OpenCode processes. Audio finishes before the next request
+starts. Up to three requests can wait, and queued requests expire after 30
+seconds. Full or expired requests are skipped before synthesis, without spending
+ElevenLabs quota. A crashed session's waiting requests are discarded; any audio
+already playing retains the playback lock until it ends. Queue files contain
+only ordering and owner metadata, not summary text.
+Manual `speak` returns after playback or reports why it was skipped; automatic
+summaries remain asynchronous and do not block the coding session.
+
 When enabled, the extracted text leaves the machine and consumes ElevenLabs
 quota. This is not a complete secret-redaction system; leave it off for sensitive
 conversations. Voice errors do not fail the coding session; `/voice status`
@@ -72,8 +82,9 @@ Restart OpenCode after switching a generation that changes the launcher or plugi
 ## Manual integration check
 
 `node home/config/opencode/check-speak.mjs /path/to/built/plugin` checks summary
-extraction, opt-in/cancellation and the speech playback boundary with synthetic
-audio and a stand-in player. It makes no live API requests or speaker output.
+extraction, opt-in/cancellation, cross-process queueing and the playback boundary
+with synthetic audio and a stand-in player. It makes no live API requests or
+speaker output.
 
 `node home/config/opencode/check-workflow.mjs /path/to/opencode2 /path/to/built/plugin`
 runs a disposable V2 server and deterministic local provider. It checks discovery,

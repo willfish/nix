@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { withSpeechQueue } from "./speech-queue.ts";
 
 const DEFAULT_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku"; // Lily (British, warm, velvety)
 const DEFAULT_MODEL_ID = "eleven_v3";
@@ -17,7 +18,7 @@ function loadApiKey() {
   }
 }
 
-async function playPcm24k(pcmBuffer, signal) {
+async function playPcm24k(pcmBuffer, signal, lockFd) {
   signal?.throwIfAborted();
   if (!pcmBuffer.length || pcmBuffer.length % 2) throw new Error("Incomplete ElevenLabs PCM audio");
   const wav = Buffer.alloc(44 + pcmBuffer.length);
@@ -37,22 +38,29 @@ async function playPcm24k(pcmBuffer, signal) {
   pcmBuffer.copy(wav, 44);
 
   const player = process.platform === "darwin" ? "afplay" : "pw-play";
-  const child = spawn(player, ["-"], { stdio: ["pipe", "ignore", "ignore"], detached: true });
-  const stop = () => child.kill();
-  signal?.addEventListener("abort", stop, { once: true });
-  child.once("close", () => signal?.removeEventListener("abort", stop));
-  child.on("error", () => {});
-  child.stdin.on("error", () => {});
   await new Promise<void>((resolve, reject) => {
-    child.once("spawn", resolve);
+    // The player inherits the lock too: an OpenCode crash cannot release it
+    // while orphaned audio is still playing.
+    const child = spawn(player, ["-"], { stdio: ["pipe", "ignore", "ignore", lockFd] });
+    const stop = () => child.kill("SIGKILL");
+    let pipeFailed = false;
+    signal?.addEventListener("abort", stop, { once: true });
+    child.once("spawn", () => {
+      if (signal?.aborted) stop();
+      else child.stdin.end(wav);
+    });
     child.once("error", () => reject(new Error(`Could not start ${player} for speech playback`)));
+    child.stdin.on("error", () => { pipeFailed = true; stop(); });
+    child.once("close", code => {
+      signal?.removeEventListener("abort", stop);
+      if (signal?.aborted) reject(signal.reason);
+      else if (code !== 0 || pipeFailed) reject(new Error(`Speech playback failed (${player})`));
+      else resolve();
+    });
   });
-  signal?.throwIfAborted();
-  child.stdin.end(wav);
-  child.unref();
 }
 
-export async function speakText(input, { signal, fetch = globalThis.fetch, play = playPcm24k } = {}) {
+export async function speakText(input, { signal, fetch = globalThis.fetch, play = playPcm24k, maxWaitMs } = {}) {
   if (typeof input.text !== "string" || !input.text.trim() || input.text.length > 2500) {
     throw new Error("Speech must contain 1 to 2500 characters");
   }
@@ -60,28 +68,31 @@ export async function speakText(input, { signal, fetch = globalThis.fetch, play 
   const apiKey = loadApiKey();
   const voiceId = input.voice_id || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
   const modelId = input.model_id || process.env.ELEVENLABS_MODEL_ID || DEFAULT_MODEL_ID;
-  const response = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=pcm_24000`,
-    {
-      method: "POST",
-      headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ text: input.text, model_id: modelId }),
-      signal: AbortSignal.any([AbortSignal.timeout(30000), ...(signal ? [signal] : [])]),
-    },
-  );
-  // Do not echo provider bodies: they can contain submitted text or credentials.
-  if (!response.ok) throw new Error(`ElevenLabs TTS failed (HTTP ${response.status})`);
-  const pcm = Buffer.from(await response.arrayBuffer());
-  signal?.throwIfAborted();
-  await play(pcm, signal);
-  return { ok: true, voice_id: voiceId, model_id: modelId, bytes: pcm.length };
+  return withSpeechQueue(async lockFd => {
+    signal?.throwIfAborted();
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=pcm_24000`,
+      {
+        method: "POST",
+        headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ text: input.text, model_id: modelId }),
+        signal: AbortSignal.any([AbortSignal.timeout(30000), ...(signal ? [signal] : [])]),
+      },
+    );
+    // Do not echo provider bodies: they can contain submitted text or credentials.
+    if (!response.ok) throw new Error(`ElevenLabs TTS failed (HTTP ${response.status})`);
+    const pcm = Buffer.from(await response.arrayBuffer());
+    signal?.throwIfAborted();
+    await play(pcm, signal, lockFd);
+    return { ok: true, voice_id: voiceId, model_id: modelId, bytes: pcm.length };
+  }, { signal, maxWaitMs });
 }
 
 export async function setupSpeak(ctx) {
   await ctx.tool.transform(editor => editor.add({
     name: "speak",
     description:
-      "Speak short messages aloud to the user using ElevenLabs v3 TTS (non-blocking). " +
+      "Speak short messages aloud through a machine-wide queue using ElevenLabs v3 TTS. " +
       "Supports inline expressive tags such as [excited], [sighs], [laughs], [whispers], [curious], [calmly]. " +
       "Keep spoken messages concise (1-2 sentences) for completions, summaries, or questions.",
     options: { codemode: false },

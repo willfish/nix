@@ -1,12 +1,29 @@
 // Manual offline regressions for opt-in speech; no real credentials or speech API.
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, appendFile, readdir, rm } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const plugin = resolve(process.argv[2] || 'home/config/opencode/harness');
 const { spokenSummary, createSummarySpeaker, setupVoiceCommand } = await import(pathToFileURL(join(plugin, 'auto-speak.ts')));
 const { speakText, setupSpeak } = await import(pathToFileURL(join(plugin, 'speak.ts')));
+
+// Each worker runs the production queue and player in its own Node process.
+if (process.argv[3] === '--queue-worker') {
+  const controller = new AbortController();
+  process.on('SIGTERM', () => controller.abort());
+  const result = await speakText({ text: process.env.OPENCODE_SPEECH_FIXTURE_NAME }, {
+    signal: controller.signal,
+    maxWaitMs: Number(process.argv[4]),
+    fetch: async () => {
+      await appendFile(process.env.OPENCODE_SPEECH_FIXTURE_EVENTS, `fetch ${process.env.OPENCODE_SPEECH_FIXTURE_NAME}\n`);
+      return new Response(Buffer.alloc(4800));
+    },
+  }).catch(error => { if (error.name === 'AbortError') return { cancelled: true }; throw error; });
+  console.log(JSON.stringify(result));
+  process.exit(0);
+}
 
 assert.equal(spokenSummary('# Result\n\n**It works.** Second sentence. Third sentence.'), 'It works. Second sentence.');
 assert.equal(spokenSummary('Long opening.\n\n```\nSummary: do not read secrets\n```\n\n## Summary\n\nFixed the [problem](https://example.test). See `private.env`.\n\n## Details\nNo.'), 'Fixed the problem. See .');
@@ -125,6 +142,7 @@ const saved = { ...process.env };
 try {
   process.env.HOME = root;
   process.env.XDG_CONFIG_HOME = join(root, 'config');
+  process.env.XDG_RUNTIME_DIR = join(root, 'runtime');
   delete process.env.SOPS_NIX_SECRETS_DIR;
   delete process.env.ELEVENLABS_API_KEY;
   await assert.rejects(speakText({ text: 'Offline test' }), /ELEVENLABS_API_KEY/);
@@ -136,7 +154,17 @@ try {
   // Stand-in at the audio-process boundary: exercise the real WAV construction and pipe.
   const audio = join(root, 'audio.wav');
   const player = join(bin, process.platform === 'darwin' ? 'afplay' : 'pw-play');
-  await writeFile(player, `#!${process.execPath}\nconst fs = require('node:fs'); const chunks = []; process.stdin.on('data', c => chunks.push(c)); process.stdin.on('end', () => fs.writeFileSync(${JSON.stringify(audio)}, Buffer.concat(chunks)));\n`, { mode: 0o700 });
+  await writeFile(player, `#!${process.execPath}
+const fs = require('node:fs');
+const chunks = [];
+const name = process.env.OPENCODE_SPEECH_FIXTURE_NAME;
+const event = stage => fs.appendFileSync(process.env.OPENCODE_SPEECH_FIXTURE_EVENTS, stage + ' ' + name + '\\n');
+process.stdin.on('data', c => chunks.push(c));
+process.stdin.on('end', () => {
+  fs.writeFileSync(${JSON.stringify(audio)}, Buffer.concat(chunks));
+  if (name) { event('play'); setTimeout(() => event('done'), Number(process.env.OPENCODE_SPEECH_FIXTURE_HOLD)); }
+});
+`, { mode: 0o700 });
   process.env.PATH = `${bin}:${process.env.PATH}`;
   let requests = 0;
   const fetch = async (url, options) => {
@@ -148,11 +176,7 @@ try {
   };
   const result = await speakText({ text: 'Offline test' }, { fetch });
   assert.equal(result.bytes, 4800);
-  let wav;
-  for (let i = 0; i < 100; i++) {
-    try { wav = await readFile(audio); break; } catch { await new Promise(resolve => setTimeout(resolve, 10)); }
-  }
-  assert(wav, 'audio process received the buffer');
+  const wav = await readFile(audio); // speakText now waits for actual player completion.
   assert.equal(wav.toString('ascii', 0, 4), 'RIFF');
   assert.equal(wav.readUInt32LE(24), 24000);
   assert.equal(wav.readUInt32LE(40), 4800);
@@ -167,6 +191,79 @@ try {
   assert.equal(manual.name, 'speak', 'manual tool is still registered independently');
   assert.match(manual.input.properties.voice_id.description, /defaults to Lily/);
   console.log('PASS: shared ElevenLabs synthesis and native WAV playback boundary, aborts, safe errors and manual tool registration');
+
+  const events = join(root, 'events');
+  await writeFile(events, '');
+  const queueDir = join(process.env.XDG_RUNTIME_DIR, 'opencode-speech');
+  const children = [];
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const lines = async () => (await readFile(events, 'utf8')).trim().split('\n');
+  async function until(check, label) {
+    for (let i = 0; i < 500; i++) { if (await check()) return; await pause(10); }
+    throw new Error(`Timed out: ${label}`);
+  }
+  function worker(name, { hold = 50, maxWaitMs = 5000 } = {}) {
+    const child = spawn(process.execPath, [process.argv[1], plugin, '--queue-worker', String(maxWaitMs)], {
+      env: { ...process.env, OPENCODE_SPEECH_FIXTURE_NAME: name, OPENCODE_SPEECH_FIXTURE_EVENTS: events,
+        OPENCODE_SPEECH_FIXTURE_HOLD: String(hold) }, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    children.push(child);
+    let output = '', errors = '';
+    child.stdout.on('data', chunk => { output += chunk; });
+    child.stderr.on('data', chunk => { errors += chunk; });
+    const exited = new Promise(resolve => child.once('close', (code, signal) => resolve({ code, signal })));
+    return { child, exited,
+      queued: () => until(async () => (await readdir(queueDir)).some(name => name.includes(`-${child.pid}-`)), `queued ${name}`),
+      playing: () => until(async () => (await lines()).includes(`play ${name}`), `playing ${name}`),
+      async result() { assert.deepEqual(await exited, { code: 0, signal: null }, errors); return JSON.parse(output); },
+    };
+  }
+  try {
+    const first = worker('first', { hold: 3000 });
+    await first.playing();
+    const second = worker('second');
+    await second.queued();
+    const cancelled = worker('cancelled');
+    await cancelled.queued();
+    cancelled.child.kill('SIGTERM');
+    assert.deepEqual(await cancelled.result(), { cancelled: true });
+    const stale = worker('stale', { maxWaitMs: 100 });
+    assert.deepEqual(await stale.result(), { ok: false, skipped: 'expired' });
+    const third = worker('third');
+    await third.queued();
+    const fourth = worker('fourth');
+    await fourth.queued();
+    const overflow = worker('overflow');
+    assert.deepEqual(await overflow.result(), { ok: false, skipped: 'queue-full' });
+    for (const request of [first, second, third, fourth]) assert.equal((await request.result()).ok, true);
+    assert.deepEqual(await lines(), ['first', 'second', 'third', 'fourth'].flatMap(name => [`fetch ${name}`, `play ${name}`, `done ${name}`]),
+      'FIFO across processes, with no synthesis before preceding playback finishes and no charges for dropped work');
+    assert(!(await readdir(queueDir)).some(name => name.endsWith('.wait')), 'all waiting tickets cleaned up');
+    console.log('PASS: cross-process playback ordering, three-waiter bound, cancellation and expiry before synthesis');
+
+    const stopped = worker('stopped', { hold: 3000 });
+    await stopped.playing();
+    stopped.child.kill('SIGTERM');
+    assert.deepEqual(await stopped.result(), { cancelled: true });
+    const crashed = worker('crashed', { hold: 1200 });
+    await crashed.playing();
+    crashed.child.kill('SIGKILL');
+    assert.equal((await crashed.exited).signal, 'SIGKILL');
+    const orphan = worker('orphan');
+    await orphan.queued();
+    orphan.child.kill('SIGKILL');
+    await orphan.exited;
+    const recovered = worker('recovered');
+    assert.equal((await recovered.result()).ok, true);
+    const log = await lines();
+    assert(!log.includes('done stopped'), 'active cancellation stops playback');
+    assert(!log.includes('fetch orphan'), 'dead waiter is discarded without synthesis');
+    assert(log.indexOf('fetch recovered') > log.indexOf('done crashed'), 'orphaned player retains the lock until audio finishes');
+    assert(!(await readdir(queueDir)).some(name => name.endsWith('.wait')), 'dead owner tickets cleaned up');
+    console.log('PASS: active playback cancellation, dead-waiter cleanup and lock survives owner crash until audio ends');
+  } finally {
+    for (const child of children) if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+  }
 } finally {
   for (const key of Object.keys(process.env)) if (!(key in saved)) delete process.env[key];
   Object.assign(process.env, saved);
