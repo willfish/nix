@@ -44,12 +44,36 @@ Hex runs as a Home Manager user service on Foundation and Andromeda. Super-Space
 toggles dictation into the focused application, Super-Shift-Space pastes the last
 dictation, and Super-Shift-V opens Hex settings. Review and submit prompts in
 OpenCode. Hex owns dictation autostart; Pi's old voice tools remain available on
-demand. Selected-session submission and OpenCode reply TTS are separate future
-integrations. OM and Jev are not loaded by this workflow.
+demand. OM and Jev are not loaded by this workflow.
+
+Automatic spoken summaries start **off**. In a main session, use `/voice on` to
+enable them, `/voice off` to stop them, and `/voice status` (or `/voice`) to check.
+The choice applies only to that session in the current server process; new
+sessions and server restarts start off. Enabling applies to subsequent turns,
+not replies already completed or in progress. The manual `speak` tool remains
+available regardless of this setting.
+
+After a successful turn settles, the completion callback reads a short prose
+extract of the final assistant reply through ElevenLabs v3 with George and
+pensive delivery cues. It prefers a Summary section, otherwise the opening
+paragraph, limited to two sentences and 500 characters. It does not make another
+LLM request. Code blocks and reasoning are excluded; subagents, compactions,
+failed/interrupted turns and duplicate completions are silent. A new turn or
+`/voice off` cancels pending synthesis and playback.
+
+When enabled, the extracted text leaves the machine and consumes ElevenLabs
+quota. This is not a complete secret-redaction system; leave it off for sensitive
+conversations. Voice errors do not fail the coding session; `/voice status`
+reports a failed speech attempt, and manual `speak` can diagnose it. Playback
+runs on the OpenCode server machine, not on a remotely attached client's machine.
 
 Restart OpenCode after switching a generation that changes the launcher or plugin.
 
 ## Manual integration check
+
+`node home/config/opencode/check-speak.mjs /path/to/built/plugin` checks summary
+extraction, opt-in/cancellation and the speech playback boundary with synthetic
+audio and a stand-in player. It makes no live API requests or speaker output.
 
 `node home/config/opencode/check-workflow.mjs /path/to/opencode2 /path/to/built/plugin`
 runs a disposable V2 server and deterministic local provider. It checks discovery,

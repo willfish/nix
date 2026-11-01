@@ -1,10 +1,12 @@
 import { Plugin } from "@opencode/plugin";
+import { Schema } from "effect";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { setupSkills } from "./skills.ts";
 import { setupBus } from "./bus.ts";
 import { setupSpeak } from "./speak.ts";
+import { setupAutoSpeak, VOICE_RPC_ID } from "./auto-speak.ts";
 import { createTabSynchronizer, sessionTabTitle } from "./herdr-tab.ts";
 
 function setupHerdrServer(ctx) {
@@ -44,6 +46,15 @@ export default Plugin.define({
   async setup(ctx) {
     await setupSkills(ctx);
     await setupSpeak(ctx);
+    const voice = setupAutoSpeak(ctx);
+    await ctx.rpc.register({
+      id: VOICE_RPC_ID,
+      methods: { control: {
+        input: Schema.Struct({ sessionID: Schema.String, action: Schema.Literals(["on", "off", "status"]) }),
+        output: Schema.Struct({ enabled: Schema.Boolean, error: Schema.String }),
+      } },
+      events: {},
+    }, { control: async ({ sessionID, action }) => voice.control(sessionID, action) });
     const stopBus = ctx.options.busEnabled ? await setupBus(ctx) : () => {};
     const stopHerdr = setupHerdrServer(ctx);
     let orchestrator = "";
@@ -53,6 +64,7 @@ export default Plugin.define({
       if (!session.parentID && orchestrator) event.system.push({ type: "text", text: orchestrator });
     });
     return () => {
+      voice.stop();
       stopHerdr();
       stopBus();
     };

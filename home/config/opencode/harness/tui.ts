@@ -1,4 +1,5 @@
 import { Plugin } from "@opencode/plugin/tui";
+import { setupVoiceCommand } from "./auto-speak.ts";
 import {
   createTabSynchronizer,
   nameUnlabelledTab,
@@ -114,6 +115,7 @@ export function setupHerdrTab(
 export default Plugin.define({
   id: "dotfiles.workflow.tui",
   setup(context) {
+    setupVoiceCommand(context);
     return setupHerdrTab(context);
   },
 });

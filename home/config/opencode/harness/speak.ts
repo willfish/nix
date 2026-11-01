@@ -17,7 +17,9 @@ function loadApiKey() {
   }
 }
 
-function playPcm24k(pcmBuffer) {
+async function playPcm24k(pcmBuffer, signal) {
+  signal?.throwIfAborted();
+  if (!pcmBuffer.length || pcmBuffer.length % 2) throw new Error("Incomplete ElevenLabs PCM audio");
   const wav = Buffer.alloc(44 + pcmBuffer.length);
   wav.write("RIFF", 0);
   wav.writeUInt32LE(36 + pcmBuffer.length, 4);
@@ -35,12 +37,44 @@ function playPcm24k(pcmBuffer) {
   pcmBuffer.copy(wav, 44);
 
   const player = process.platform === "darwin" ? "afplay" : "pw-play";
-  const args = process.platform === "darwin" ? ["-"] : ["-"];
-  const child = spawn(player, args, { stdio: ["pipe", "ignore", "ignore"], detached: true });
+  const child = spawn(player, ["-"], { stdio: ["pipe", "ignore", "ignore"], detached: true });
+  const stop = () => child.kill();
+  signal?.addEventListener("abort", stop, { once: true });
+  child.once("close", () => signal?.removeEventListener("abort", stop));
   child.on("error", () => {});
   child.stdin.on("error", () => {});
+  await new Promise<void>((resolve, reject) => {
+    child.once("spawn", resolve);
+    child.once("error", () => reject(new Error(`Could not start ${player} for speech playback`)));
+  });
+  signal?.throwIfAborted();
   child.stdin.end(wav);
   child.unref();
+}
+
+export async function speakText(input, { signal, fetch = globalThis.fetch, play = playPcm24k } = {}) {
+  if (typeof input.text !== "string" || !input.text.trim() || input.text.length > 2500) {
+    throw new Error("Speech must contain 1 to 2500 characters");
+  }
+  signal?.throwIfAborted();
+  const apiKey = loadApiKey();
+  const voiceId = input.voice_id || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
+  const modelId = input.model_id || process.env.ELEVENLABS_MODEL_ID || DEFAULT_MODEL_ID;
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=pcm_24000`,
+    {
+      method: "POST",
+      headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: input.text, model_id: modelId }),
+      signal: AbortSignal.any([AbortSignal.timeout(30000), ...(signal ? [signal] : [])]),
+    },
+  );
+  // Do not echo provider bodies: they can contain submitted text or credentials.
+  if (!response.ok) throw new Error(`ElevenLabs TTS failed (HTTP ${response.status})`);
+  const pcm = Buffer.from(await response.arrayBuffer());
+  signal?.throwIfAborted();
+  await play(pcm, signal);
+  return { ok: true, voice_id: voiceId, model_id: modelId, bytes: pcm.length };
 }
 
 export async function setupSpeak(ctx) {
@@ -74,31 +108,7 @@ export async function setupSpeak(ctx) {
     },
     async execute(input, context) {
       await ctx.permission.assert({ action: "speak", resources: ["*"], sessionID: context.sessionID, agent: context.agent });
-      const apiKey = loadApiKey();
-      const voiceId = input.voice_id || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
-      const modelId = input.model_id || process.env.ELEVENLABS_MODEL_ID || DEFAULT_MODEL_ID;
-      const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=pcm_24000`,
-        {
-          method: "POST",
-          headers: {
-            "xi-api-key": apiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: input.text,
-            model_id: modelId,
-          }),
-          signal: context.signal,
-        }
-      );
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "");
-        throw new Error(`ElevenLabs TTS failed (HTTP ${response.status}): ${errText}`);
-      }
-      const pcm = Buffer.from(await response.arrayBuffer());
-      playPcm24k(pcm);
-      return { content: JSON.stringify({ ok: true, voice_id: voiceId, model_id: modelId, bytes: pcm.length }) };
+      return { content: JSON.stringify(await speakText(input, { signal: context.signal })) };
     },
   }));
 }

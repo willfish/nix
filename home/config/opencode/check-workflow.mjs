@@ -172,6 +172,7 @@ try {
   assert(!JSON.stringify(first.messages.filter(message => message.role === 'system' || message.role === 'developer')).includes('Fixture skill discovery fixture-specialist'), 'skill metadata is deferred');
   assert(first.tools.some(tool => tool.function.name === 'skill_catalog'), 'compact catalogue is directly callable');
   assert(first.tools.some(tool => tool.function.name === 'todowrite'), 'native todos are enabled');
+  assert(first.tools.some(tool => tool.function.name === 'speak'), 'manual speech remains available');
   assert(!first.tools.some(tool => ['get_goal', 'create_goal', 'update_goal'].includes(tool.function.name)), 'the duplicate goal tools are absent');
   assert(requests.some(request => request.messages.some(message => message.role === 'tool' && JSON.stringify(message.content).includes('fixture-specialist') && JSON.stringify(message.content).includes('results'))), 'catalogue returns the requested trusted skill ID');
   const discovery = (await api(`/api/session/${session.id}/context`)).data.flatMap(message => message.content ?? []).find(part => part.type === 'tool' && part.name === 'skill_catalog');
@@ -185,6 +186,21 @@ try {
   await delay(200);
   assert.equal(herdrTabLabel, '3 Manual tab', 'manual Herdr tab rename ends automatic ownership');
   console.log('PASS: real V2 plugin loaded, compact skill discovery reached the local provider, and Herdr tab followed automatic session title');
+  const voice = async (sessionID, action = 'status') => (await api('/api/rpc/dotfiles.voice/control', { input: { sessionID, action } })).output;
+  assert.deepEqual(await voice(session.id), { enabled: false, error: '' });
+  const voiceSession = await create();
+  const beforeVoice = requests.length;
+  assert.deepEqual(await voice(voiceSession.id, 'on'), { enabled: true, error: '' });
+  assert.equal(requests.length, beforeVoice, 'voice control does not invoke a model');
+  assert.equal((await voice(session.id)).enabled, false, 'opt-in does not change other sessions');
+  await api(`/api/session/${voiceSession.id}/prompt`, { text: 'OFFLINE_SPEECH_COMPLETION' });
+  await settled(voiceSession.id);
+  // The isolated fixture has no key. Reaching this status proves the native completion
+  // event reached TTS, while missing credentials stop it before any network request.
+  const voiceFailure = await until(() => voice(voiceSession.id), value => value.error, 'completion callback attempted speech');
+  assert.equal(voiceFailure.enabled, true, 'speech failure did not disable or fail the session');
+  assert.deepEqual(await voice(voiceSession.id, 'off'), { enabled: false, error: '' });
+  console.log('PASS: real V2 voice RPC defaults off, stays session-scoped, and completion callback isolates missing-key failure');
   if (process.env.OPENCODE_FIXTURE_COMMANDS) {
     const commands = (await until(() => api('/api/command'), value => value.data.some(command => command.name === 'design'), 'generated commands loaded')).data;
     assert.equal(commands.find(command => command.name === 'review')?.description, 'review changes [commit|branch|pr], defaults to uncommitted');
