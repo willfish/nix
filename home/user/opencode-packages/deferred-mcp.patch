@@ -1,0 +1,1303 @@
+--- a/packages/schema/src/mcp.ts
++++ b/packages/schema/src/mcp.ts
+@@ -25,12 +25,16 @@
+
+ export class LocalConfig extends Schema.Class<LocalConfig>("Mcp.LocalConfig")({
+   type: Schema.Literal("local"),
++  description: Schema.String.pipe(optional),
+   command: Schema.String.pipe(Schema.Array),
+   cwd: Schema.String.pipe(optional).annotate({
+     description: "Working directory for the MCP server process. Relative paths resolve from the workspace directory.",
+   }),
+   environment: Schema.Record(Schema.String, Schema.String).pipe(optional),
+   disabled: Schema.Boolean.pipe(optional),
++  lazy: Schema.Boolean.pipe(optional).annotate({
++    description: "Connect on discovery or use; retain cached tool metadata while idle.",
++  }),
+   codemode: Schema.Boolean.pipe(optional).annotate({
+     description: "Expose this server's tools through Code Mode. Defaults to true.",
+   }),
+@@ -52,10 +56,14 @@
+
+ export class RemoteConfig extends Schema.Class<RemoteConfig>("Mcp.RemoteConfig")({
+   type: Schema.Literal("remote"),
++  description: Schema.String.pipe(optional),
+   url: Schema.String,
+   headers: Schema.Record(Schema.String, Schema.String).pipe(optional),
+   oauth: Schema.Union([OAuthConfig, Schema.Literal(false)]).pipe(optional),
+   disabled: Schema.Boolean.pipe(optional),
++  lazy: Schema.Boolean.pipe(optional).annotate({
++    description: "Connect on discovery or use; retain cached tool metadata while idle.",
++  }),
+   codemode: Schema.Boolean.pipe(optional).annotate({
+     description: "Expose this server's tools through Code Mode. Defaults to true.",
+   }),
+@@ -72,6 +80,7 @@
+ const Pending = Schema.Struct({ status: Schema.Literal("pending") }).annotate({
+   identifier: "Mcp.Status.Pending",
+ })
++const Idle = Schema.Struct({ status: Schema.Literal("idle") }).annotate({ identifier: "Mcp.Status.Idle" })
+ const Disabled = Schema.Struct({ status: Schema.Literal("disabled") }).annotate({
+   identifier: "Mcp.Status.Disabled",
+ })
+@@ -83,7 +92,7 @@
+ })
+
+ export type Status = typeof Status.Type
+-export const Status = Schema.Union([Connected, Pending, Disabled, Failed, NeedsAuth]).pipe(
++export const Status = Schema.Union([Connected, Pending, Idle, Disabled, Failed, NeedsAuth]).pipe(
+   Schema.toTaggedUnion("status"),
+ )
+
+--- a/packages/client/src/promise/generated/types.ts
++++ b/packages/client/src/promise/generated/types.ts
+@@ -257,6 +257,7 @@
+ export type McpStatusConnected = { status: "connected" }
+
+ export type McpStatusPending = { status: "pending" }
++export type McpStatusIdle = { status: "idle" }
+
+ export type McpStatusDisabled = { status: "disabled" }
+
+@@ -770,7 +771,13 @@
+
+ export type McpServer = {
+   name: string
+-  status: McpStatusConnected | McpStatusPending | McpStatusDisabled | McpStatusFailed | McpStatusNeedsAuth
++  status:
++    | McpStatusConnected
++    | McpStatusPending
++    | McpStatusIdle
++    | McpStatusDisabled
++    | McpStatusFailed
++    | McpStatusNeedsAuth
+   title?: string
+   integrationID?: IntegrationID
+ }
+--- a/packages/core/src/codemode/catalog.ts
++++ b/packages/core/src/codemode/catalog.ts
+@@ -77,7 +77,7 @@
+       const ranked = rankListings(listings)
+       const pinned = new Set(
+         namespaceEntries
+-          .filter((entry) => entry.pinned)
++          .filter((entry) => entry.pinned && budget > 0)
+           .map((entry) => listings.find((listing) => listing.path === entry.path))
+           .filter((listing) => listing !== undefined),
+       )
+--- a/packages/core/src/mcp/index.ts
++++ b/packages/core/src/mcp/index.ts
+@@ -18,6 +18,7 @@
+ import { Location } from "../location.js"
+ import { waitForAbort } from "@opencode/util/process"
+ import { State } from "../state.js"
++import { KV } from "../kv.js"
+ import type { McpClient } from "./client.js"
+
+ export const ServerName = Schema.String.pipe(Schema.brand("MCP.ServerName"))
+@@ -84,6 +85,8 @@
+   client?: McpClient.Connection
+   tools?: ReadonlyArray<Tool>
+   prompts?: ReadonlyArray<Prompt>
++  instructions?: string
++  identity?: string
+   // Set when a remote server is registered as an OAuth integration; the credential lives in the global store.
+   integrationID?: Integration.ID
+   registration?: State.Registration
+@@ -143,17 +146,32 @@
+     readonly sessionID?: Session.ID
+   }) => Effect.Effect<ToolResult, NotFoundError | ToolCallError>
+   readonly instructions: () => Effect.Effect<ServerInstructions[]>
++  readonly discover: (input: {
++    server: string
++    sessionID: string
++    messageID: string
++  }) => Effect.Effect<{ tools: ReadonlyArray<Tool>; instructions: string }, NotFoundError | ToolCallError>
++  readonly prepare: (input: {
++    server: string
++    sessionID: string
++    messageID: string
++  }) => Effect.Effect<void, NotFoundError | ToolCallError>
++  readonly sessionInstructions: (sessionID: string) => Effect.Effect<ServerInstructions[]>
+   readonly prompts: () => Effect.Effect<Prompt[]>
+   readonly prompt: (input: {
+     readonly server: ServerName | string
+     readonly name: string
+     readonly args?: Record<string, string>
+   }) => Effect.Effect<PromptResult | undefined, NotFoundError>
+-  readonly resourceCatalog: () => Effect.Effect<ResourceCatalog>
+-  readonly resources: (input: { readonly server: ServerName | string }) => Effect.Effect<ResourceCatalog, Error>
++  readonly resourceCatalog: (sessionID?: string) => Effect.Effect<ResourceCatalog>
++  readonly resources: (input: {
++    readonly server: ServerName | string
++    readonly sessionID?: string
++  }) => Effect.Effect<ResourceCatalog, Error>
+   readonly readResource: (input: {
+     readonly server: ServerName | string
+     readonly uri: string
++    readonly sessionID?: string
+   }) => Effect.Effect<ResourceContent | undefined, Error>
+ }
+
+@@ -179,6 +197,7 @@
+       const forms = yield* Form.Service
+       const integration = yield* Integration.Service
+       const credentials = yield* Credential.Service
++      const kv = yield* KV.Service
+       const root = yield* Effect.scope
+       const fork = yield* FiberSet.makeRuntime<never, void, never>()
+       // Server scopes close in parallel on shutdown, so one slow server's stop grace does not delay
+@@ -191,6 +210,46 @@
+       const callbacks = yield* FiberSet.makeRuntime<never, void, never>()
+
+       const entries = new Map<ServerName, ServerEntry>()
++      const delivered = new Map<string, string>()
++      const isRecord = (value: unknown): value is Record<string, unknown> =>
++        value !== null && typeof value === "object" && !Array.isArray(value)
++      const sessionExpired = (error: unknown) => isRecord(error) && error._tag === "MCP.SessionExpiredError"
++      const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex")
++      const cacheKey = (name: string, config: Mcp.ServerConfig) =>
++        `mcp/catalog/v1/${digest([location.workspaceID, location.directory, name, config, entries.get(ServerName.make(name))?.identity])}`
++      const policyKey = (sessionID: string, server: string) =>
++        `mcp/policy/v1/${sessionID}/${cacheKey(server, entries.get(ServerName.make(server))?.config ?? { type: "local", command: [] })}`
++      const instructionsFor = (name: ServerName) =>
++        attached.get(name)?.at(-1)?.client.instructions ??
++        entries.get(name)?.client?.instructions ??
++        entries.get(name)?.instructions ??
++        ""
++      const saveCache = (name: ServerName, entry: ServerEntry) => {
++        if (!entry.config.lazy || !entry.tools) return Effect.void
++        return kv.set(
++          cacheKey(name, entry.config),
++          JSON.parse(JSON.stringify({ version: 1, tools: entry.tools, instructions: entry.instructions ?? "" })),
++        )
++      }
++      const loadCache = Effect.fnUntraced(function* (name: ServerName, entry: ServerEntry) {
++        if (!entry.config.lazy || entry.config.disabled) return
++        const value = yield* kv.get(cacheKey(name, entry.config))
++        if (
++          !isRecord(value) ||
++          value.version !== 1 ||
++          !Array.isArray(value.tools) ||
++          typeof value.instructions !== "string"
++        )
++          return
++        if (
++          !value.tools.every(
++            (tool: unknown) => isRecord(tool) && typeof tool.name === "string" && isRecord(tool.inputSchema),
++          )
++        )
++          return
++        entry.tools = value.tools.map((tool) => toTool(name, entry, tool as unknown as McpClient.Tool))
++        entry.instructions = value.instructions
++      })
+       const attached = new Map<ServerName, AttachedEntry[]>()
+       // Serializes lifecycle operations per server. Anything taking this lock from a connection
+       // callback must stay forked: lifecycle operations close scopes while holding it, firing onClose.
+@@ -242,6 +301,8 @@
+             })
+           })
+           .pipe(Scope.provide(scope))
++        const connection = yield* integration.connection.active(integrationID)
++        entry.identity = connection?.type === "env" ? `env:${connection.name}` : (connection?.id ?? "anonymous")
+       })
+       const requireServer = Effect.fnUntraced(function* (name: ServerName) {
+         const entry = entries.get(name)
+@@ -341,6 +402,7 @@
+           Effect.map((tools) => {
+             entry.tools = tools.map((tool) => toTool(name, entry, tool))
+           }),
++          Effect.andThen(Effect.suspend(() => saveCache(name, entry))),
+         )
+
+       const refreshPrompts = (name: ServerName, entry: ServerEntry, connection: McpClient.Connection) =>
+@@ -381,28 +443,55 @@
+         entry: ServerEntry,
+         connection: McpClient.Connection,
+         run: (connection: McpClient.Connection) => Effect.Effect<A, E>,
+-      ) =>
+-        run(connection).pipe(
++        sessionID?: string,
++      ) => {
++        const checked = (connection: McpClient.Connection): Effect.Effect<A, E | ToolCallError> =>
++          Effect.gen(function* () {
++            if (
++              entry.config.lazy &&
++              sessionID &&
++              delivered.get(policyKey(sessionID, name)) !== digest(connection.instructions ?? "")
++            )
++              return yield* new ToolCallError({
++                server: name,
++                tool: "discovery",
++                message:
++                  "MCP instructions changed after reconnect. No service operation ran. Discover the server again before retrying.",
++              })
++            return yield* run(connection)
++          })
++        return checked(connection).pipe(
+           Effect.catchIf(
+             // The client module is loaded lazily, so match the tagged error by tag rather than class.
+-            (error) => "_tag" in error && error._tag === "MCP.SessionExpiredError",
++            sessionExpired,
+             (error) =>
+               recover(name, entry, connection).pipe(
+-                Effect.flatMap(() => (entry.client ? run(entry.client) : Effect.fail(error))),
++                Effect.flatMap(() => (entry.client ? checked(entry.client) : Effect.fail(error))),
+               ),
+           ),
+         )
+-
+-      const loadCatalog = (name: ServerName, entry: ServerEntry, connection: McpClient.Connection) =>
+-        recovering(name, entry, connection, (connection) =>
+-          Effect.all(
+-            {
+-              resources: connection.resources(),
+-              // Some servers declare resources without implementing template listing.
+-              templates: connection.resourceTemplates().pipe(Effect.orElseSucceed(() => [])),
+-            },
+-            { concurrency: "unbounded" },
+-          ),
++      }
++
++      const loadCatalog = (
++        name: ServerName,
++        entry: ServerEntry,
++        connection: McpClient.Connection,
++        sessionID?: string,
++      ) =>
++        recovering(
++          name,
++          entry,
++          connection,
++          (connection) =>
++            Effect.all(
++              {
++                resources: connection.resources(),
++                // Some servers declare resources without implementing template listing.
++                templates: connection.resourceTemplates().pipe(Effect.orElseSucceed(() => [])),
++              },
++              { concurrency: "unbounded" },
++            ),
++          sessionID,
+         ).pipe(
+           Effect.map((catalog) =>
+             ResourceCatalog.make({
+@@ -484,6 +573,8 @@
+           if (Exit.isSuccess(result)) {
+             entry.client = result.value.connection
+             entry.tools = result.value.tools.map((tool) => toTool(name, entry, tool))
++            entry.instructions = result.value.connection.instructions ?? ""
++            yield* saveCache(name, entry)
+             entry.prompts = []
+             entry.status = { status: "connected" }
+             watch(name, entry, result.value.connection)
+@@ -514,7 +605,7 @@
+         if (!scope) return
+         entry.scope = undefined
+         entry.client = undefined
+-        entry.tools = undefined
++        if (!entry.config.lazy) entry.tools = undefined
+         entry.prompts = undefined
+         yield* Scope.close(scope, Exit.void)
+         yield* bus.publish(McpEvent.ToolsChanged, { server: name })
+@@ -537,10 +628,17 @@
+           startup: Latch.makeUnsafe(),
+         }
+         entries.set(name, entry)
++        yield* loadCache(name, entry)
+         yield* Effect.gen(function* () {
+           yield* register(name, entry)
+           if (serverConfig.disabled) {
+             entry.status = { status: "disabled" }
++            yield* bus.publish(McpEvent.StatusChanged, { server: name })
++            return
++          }
++          if (serverConfig.lazy) {
++            entry.status = { status: "idle" }
++            yield* bus.publish(McpEvent.ToolsChanged, { server: name })
+             yield* bus.publish(McpEvent.StatusChanged, { server: name })
+             return
+           }
+@@ -673,12 +771,19 @@
+             })
+           }
+           yield* Effect.forEach(entries, ([name, entry]) => register(name, entry), { discard: true })
++          yield* Effect.forEach(entries, ([name, entry]) => loadCache(name, entry), { discard: true })
+           applied = servers
+
+           // Initial connections stay asynchronous so one slow server does not block Location startup.
+           for (const [name, entry] of entries) {
+             if (entry.config.disabled) {
+               entry.status = { status: "disabled" }
++              entry.startup.openUnsafe()
++              yield* bus.publish(McpEvent.StatusChanged, { server: name })
++              continue
++            }
++            if (entry.config.lazy) {
++              entry.status = { status: "idle" }
+               entry.startup.openUnsafe()
+               yield* bus.publish(McpEvent.StatusChanged, { server: name })
+               continue
+@@ -720,6 +825,8 @@
+             const entry = entries.get(name)
+             if (!entry || entry.integrationID !== integrationID) return
+             if (entry.status.status === "disabled") return
++            const connection = yield* integration.connection.active(integrationID)
++            entry.identity = connection?.type === "env" ? `env:${connection.name}` : (connection?.id ?? "anonymous")
+             yield* stopServer(name, entry)
+             yield* startServer(name, entry)
+           }).pipe(locks.withLock(name))
+@@ -768,7 +875,7 @@
+               ([name, entry]): ServerInfo => ({
+                 name,
+                 status: entry.status,
+-                title: entry.client?.title,
++                title: entry.client?.title ?? entry.config.description,
+                 integrationID: entry.integrationID,
+               }),
+             )
+@@ -811,7 +918,7 @@
+           const shadowed = new Set(clients.map((tool) => `${tool.server}\0${tool.name}`))
+           return [
+             ...Array.from(entries.values())
+-              .flatMap((entry) => entry.tools ?? [])
++              .flatMap((entry) => (entry.status.status === "disabled" ? [] : (entry.tools ?? [])))
+               .filter((tool) => !shadowed.has(`${tool.server}\0${tool.name}`)),
+             ...clients,
+           ].toSorted((a, b) => a.server.localeCompare(b.server) || a.name.localeCompare(b.name))
+@@ -844,8 +951,12 @@
+               tool: input.name,
+               message: unavailable(target.name, target.entry.status),
+             })
+-          const result = yield* recovering(target.name, target.entry, target.entry.client, (connection) =>
+-            connection.callTool({ name: input.name, args: input.args, sessionID: input.sessionID }),
++          const result = yield* recovering(
++            target.name,
++            target.entry,
++            target.entry.client,
++            (connection) => connection.callTool({ name: input.name, args: input.args, sessionID: input.sessionID }),
++            input.sessionID,
+           ).pipe(
+             Effect.mapError(
+               (error) =>
+@@ -861,11 +972,75 @@
+         instructions: Effect.fn("MCP.instructions")(function* () {
+           return Array.from(entries)
+             .flatMap(([server, entry]) => {
+-              const instructions = entry.client?.instructions
++              const instructions = entry.client?.instructions ?? entry.instructions
+               if (!instructions) return []
+               return [{ server, instructions }]
+             })
+             .toSorted((a, b) => a.server.localeCompare(b.server))
++        }),
++        discover: Effect.fn("MCP.discover")(function* ({ server, sessionID, messageID }) {
++          const name = ServerName.make(server)
++          const client = attached.get(name)?.at(-1)
++          if (!client) {
++            const { entry } = yield* requireServer(name)
++            if (entry.status.status === "disabled")
++              return yield* new ToolCallError({
++                server: name,
++                tool: "discovery",
++                message: unavailable(name, { status: "disabled" }),
++              })
++            yield* Effect.gen(function* () {
++              if (!entry.client) yield* startServer(name, entry)
++            }).pipe(locks.withLock(name))
++            if (!entry.client)
++              return yield* new ToolCallError({
++                server: name,
++                tool: "discovery",
++                message: unavailable(name, entry.status),
++              })
++          }
++          const instructions = instructionsFor(name)
++          yield* kv.set(policyKey(sessionID, name), { hash: digest(instructions), step: messageID })
++          return { tools: client?.tools ?? entries.get(name)?.tools ?? [], instructions }
++        }),
++        prepare: Effect.fn("MCP.prepare")(function* ({ server, sessionID, messageID }) {
++          const name = ServerName.make(server)
++          if (!entries.get(name)?.config.lazy) return
++          const key = policyKey(sessionID, name)
++          const selected = yield* kv.get(key)
++          const denied = () =>
++            new ToolCallError({
++              server: name,
++              tool: "discovery",
++              message: `No service operation ran. First call mcp({ server: ${JSON.stringify(server)} }) to discover this server and read its instructions, then use its tools in a later model step.`,
++            })
++          if (!isRecord(selected) || selected.step === messageID || selected.hash !== delivered.get(key))
++            return yield* denied()
++          const client = attached.get(name)?.at(-1)
++          if (!client) {
++            const { entry } = yield* requireServer(name)
++            if (entry.status.status === "disabled") return yield* denied()
++            yield* Effect.gen(function* () {
++              if (!entry.client) yield* startServer(name, entry)
++            }).pipe(locks.withLock(name))
++            if (!entry.client) return yield* denied()
++          }
++          if (selected.hash !== digest(instructionsFor(name))) return yield* denied()
++        }),
++        sessionInstructions: Effect.fn("MCP.sessionInstructions")(function* (sessionID) {
++          const visible: ServerInstructions[] = []
++          for (const name of new Set([...entries.keys(), ...attached.keys()])) {
++            const entry = entries.get(name)
++            if (entry?.status.status === "disabled") continue
++            const key = policyKey(sessionID, name)
++            const selected = yield* kv.get(key)
++            const instructions = instructionsFor(name)
++            const hash = digest(instructions)
++            if (entry?.config.lazy && (!isRecord(selected) || selected.hash !== hash)) continue
++            delivered.set(key, hash)
++            if (instructions) visible.push({ server: name, instructions })
++          }
++          return visible
+         }),
+         prompts: Effect.fn("MCP.prompts")(function* () {
+           return Array.from(entries.values())
+@@ -882,13 +1057,13 @@
+           if (!result) return undefined
+           return { ...result, server: target.name, name: input.name }
+         }),
+-        resourceCatalog: Effect.fn("MCP.resourceCatalog")(function* () {
++        resourceCatalog: Effect.fn("MCP.resourceCatalog")(function* (sessionID) {
+           const empty = ResourceCatalog.make({ resources: [], templates: [] })
+           const catalogs = yield* Effect.forEach(
+             Array.from(entries),
+             ([name, entry]) =>
+               entry.client
+-                ? loadCatalog(name, entry, entry.client).pipe(Effect.orElseSucceed(() => empty))
++                ? loadCatalog(name, entry, entry.client, sessionID).pipe(Effect.orElseSucceed(() => empty))
+                 : Effect.succeed(empty),
+             { concurrency: "unbounded" },
+           )
+@@ -898,14 +1073,18 @@
+           const target = yield* requireServer(ServerName.make(input.server))
+           yield* target.entry.startup.await
+           if (!target.entry.client) return ResourceCatalog.make({ resources: [], templates: [] })
+-          return mergeCatalogs([yield* loadCatalog(target.name, target.entry, target.entry.client)])
++          return mergeCatalogs([yield* loadCatalog(target.name, target.entry, target.entry.client, input.sessionID)])
+         }),
+         readResource: Effect.fn("MCP.readResource")(function* (input) {
+           const target = yield* requireServer(ServerName.make(input.server))
+           yield* target.entry.startup.await
+           if (!target.entry.client) return undefined
+-          const result = yield* recovering(target.name, target.entry, target.entry.client, (connection) =>
+-            connection.readResource({ uri: input.uri }),
++          const result = yield* recovering(
++            target.name,
++            target.entry,
++            target.entry.client,
++            (connection) => connection.readResource({ uri: input.uri }),
++            input.sessionID,
+           )
+           if (!result) return undefined
+           return ResourceContent.make({
+@@ -944,7 +1123,7 @@
+   return makeLocationNode({
+     service: Service,
+     layer: layer(options),
+-    deps: [Location.node, Environment.node, Bus.node, Form.node, Integration.node, Credential.node],
++    deps: [Location.node, Environment.node, Bus.node, Form.node, Integration.node, Credential.node, KV.node],
+   })
+ }
+
+--- a/packages/core/src/mcp/instructions.ts
++++ b/packages/core/src/mcp/instructions.ts
+@@ -6,6 +6,7 @@
+ import { McpTool } from "../tool/mcp.js"
+ import { Mcp } from "./index.js"
+ import { Instructions } from "../instructions/index.js"
++import type { Session } from "@opencode/schema/session"
+
+ const Summary = Schema.Struct({
+   server: Schema.String,
+@@ -61,7 +62,7 @@
+
+ export interface Interface {
+   /** Lists server instructions reachable under the given ruleset; callers pass the merged agent and Session permissions. */
+-  readonly load: (permissions: Permission.Ruleset) => Effect.Effect<Instructions.List>
++  readonly load: (permissions: Permission.Ruleset, sessionID?: Session.ID) => Effect.Effect<Instructions.List>
+ }
+
+ export class Service extends Context.Service<Service, Interface>()("@opencode/McpInstructions") {}
+@@ -72,7 +73,7 @@
+     const mcp = yield* Mcp.Service
+
+     return Service.of({
+-      load: Effect.fn("McpInstructions.load")(function* (permissions) {
++      load: Effect.fn("McpInstructions.load")(function* (permissions, sessionID) {
+         const source = (value: ReadonlyArray<Summary> | Instructions.Removed) =>
+           Instructions.make<ReadonlyArray<Summary>>({
+             key: Instructions.Key.make("core/mcp-guidance"),
+@@ -84,9 +85,12 @@
+               removed: () => "MCP server instructions are no longer available.",
+             },
+           })
+-        const [instructions, tools] = yield* Effect.all([mcp.instructions(), mcp.tools()], {
+-          concurrency: "unbounded",
+-        })
++        const [instructions, tools] = yield* Effect.all(
++          [sessionID === undefined ? mcp.instructions() : mcp.sessionInstructions(sessionID), mcp.tools()],
++          {
++            concurrency: "unbounded",
++          },
++        )
+         const canExecute = Permission.evaluate("execute", "*", permissions).effect !== "deny"
+         // Instructions are useful only when this Session can reach at least one server tool.
+         const visible = instructions
+@@ -94,10 +98,14 @@
+             const owned = tools.filter((tool) => tool.server === item.server)
+             // Without execute, Code Mode server tools are exposed directly.
+             const codemode = canExecute && owned[0]?.codemode !== false
++            const reachableResource =
++              sessionID !== undefined &&
++              (Permission.evaluate("opencode_read_mcp_resource", `${item.server}:*`, permissions).effect !== "deny" ||
++                Permission.evaluate("opencode_list_mcp_resources", item.server, permissions).effect !== "deny")
+             if (
++              !reachableResource &&
+               !owned.some(
+-                (tool) =>
+-                  Permission.evaluate(McpTool.name(tool.server, tool.name), "*", permissions).effect !== "deny",
++                (tool) => Permission.evaluate(McpTool.name(tool.server, tool.name), "*", permissions).effect !== "deny",
+               )
+             )
+               return []
+@@ -108,7 +116,25 @@
+             ]
+           })
+           .toSorted((a, b) => a.server.localeCompare(b.server))
+-        return source(visible.length === 0 ? Instructions.removed : visible)
++        if (sessionID === undefined) return source(visible.length === 0 ? Instructions.removed : visible)
++        const servers = (yield* mcp.servers())
++          .filter((server) => server.status.status !== "disabled")
++          .map((server) =>
++            server.title ? `${server.name}: ${server.title.replace(/\s+/g, " ").slice(0, 100)}` : server.name,
++          )
++        const index = Instructions.make({
++          key: Instructions.Key.make("core/mcp-index"),
++          codec: Schema.toCodecJson(Schema.Array(Schema.String)),
++          read: Effect.succeed(servers),
++          render: {
++            initial: (names) =>
++              `MCP capabilities available on demand: ${names.join(", ")}. Use mcp({server: "name"}) to discover the selected server's tools and full instructions before service operations. Global Code Mode search covers cached tools; an absent cache does not mean a server is unavailable. Discovery grants no authorization.`,
++            changed: (_previous, names) =>
++              `Available MCP servers are now: ${names.join(", ")}. Discover the selected server before use.`,
++            removed: () => "No configured MCP servers are available.",
++          },
++        })
++        return Instructions.combine([index, source(visible.length === 0 ? Instructions.removed : visible)])
+       }),
+     })
+   }),
+--- a/packages/core/src/session/context.ts
++++ b/packages/core/src/session/context.ts
+@@ -4,7 +4,6 @@
+ import { Permission } from "../permission.js"
+ import { Context, Effect, Layer } from "effect"
+ import { Agent } from "../agent.js"
+-import { CodeModeInstructions } from "../codemode/instructions.js"
+ import { Database } from "../database/database.js"
+ import { makeLocationNode } from "@opencode/util/effect/app-node"
+ import { InstructionDiscovery } from "../instruction-discovery.js"
+@@ -141,7 +140,7 @@
+           discovery: discovery.load(),
+           skills: skillInstructions.load(permissions),
+           references: referenceInstructions.load(),
+-          mcp: mcpInstructions.load(permissions),
++          mcp: mcpInstructions.load(permissions, sessionID),
+           entries: entries.load(sessionID),
+         },
+         { concurrency: "unbounded" },
+@@ -153,7 +152,6 @@
+         // prompt-cache prefix: user-level catalog and guidance, then project instructions, then
+         // the date and environment, which vary by day and directory.
+         instructions: Instructions.combine([
+-          CodeModeInstructions.make(loaded.tools.codeModeCatalog),
+           loaded.mcp,
+           loaded.references,
+           loaded.skills,
+--- a/packages/core/src/session/model-request.ts
++++ b/packages/core/src/session/model-request.ts
+@@ -29,6 +29,8 @@
+ import { makeLocationNode } from "@opencode/util/effect/app-node"
+ import { App } from "../app.js"
+ import { Instructions } from "../instructions/index.js"
++import { CodeModeCatalog } from "../codemode/catalog.js"
++import { CodeModeInstructions } from "../codemode/instructions.js"
+ import { Permission } from "../permission.js"
+ import { PluginHooks } from "../plugin/hooks.js"
+ import { QuestionTool } from "../tool/plugin/question.js"
+@@ -113,6 +115,11 @@
+         input.agent.system
+           ? input.agent.system
+           : SessionSystemPrompt.make(input.tools.definitions.map((tool) => tool.name)),
++      ),
++      SystemPart.make(
++        input.tools.codeModeCatalog === undefined
++          ? ""
++          : CodeModeInstructions.render(CodeModeCatalog.summarize(input.tools.codeModeCatalog, { budget: 0 })),
+       ),
+       {
+         ...SystemPart.make(Instructions.join(input.initial)),
+--- a/packages/core/src/tool/mcp.ts
++++ b/packages/core/src/tool/mcp.ts
+@@ -39,6 +39,89 @@
+     const toolOutput = yield* ToolOutput.Service
+     const lock = Semaphore.makeUnsafe(1)
+     let discovered: Mcp.Tool[] = []
++
++    yield* tools.transform((editor) =>
++      editor.add({
++        name: "mcp",
++        options: { codemode: false },
++        description:
++          "Discover MCP capabilities without loading every server. No arguments lists configured servers and connection status. query searches cached tool metadata; select server to connect it, refresh schemas and receive its full instructions before any service call. A cold cache still lists every configured server. Discovery does not authorize operations. Use global search inside execute for exact callable signatures after discovery.",
++        input: Schema.Struct({
++          server: Schema.optionalKey(Schema.String),
++          query: Schema.optionalKey(Schema.String),
++          limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 10 }))),
++          offset: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
++        }),
++        execute: (input, context) =>
++          Effect.gen(function* () {
++            yield* permission.assert({
++              action: "mcp",
++              resources: [input.server ?? "*"],
++              sessionID: context.sessionID,
++              agent: context.agent,
++            })
++            if (!input.server && !input.query) return { output: { servers: yield* mcp.servers() } }
++            const selected = input.server
++              ? yield* mcp.discover({
++                  server: input.server,
++                  sessionID: context.sessionID,
++                  messageID: context.messageID,
++                })
++              : undefined
++            if (selected)
++              yield* lock.withPermit(
++                Effect.gen(function* () {
++                  discovered = yield* mcp.tools()
++                  yield* tools.reload()
++                }),
++              )
++            const candidates = selected?.tools ?? (yield* mcp.tools())
++            const terms: string[] = (input.query ?? "").toLowerCase().split(/\s+/).filter(Boolean)
++            const visible: Mcp.Tool[] = []
++            for (const tool of candidates) {
++              const haystack = `${tool.server} ${tool.name} ${tool.description ?? ""}`.toLowerCase()
++              if (!terms.every((term) => haystack.includes(term))) continue
++              const allowed = yield* permission
++                .assertNotDenied({
++                  action: name(tool.server, tool.name),
++                  resources: ["*"],
++                  sessionID: context.sessionID,
++                  agent: context.agent,
++                })
++                .pipe(
++                  Effect.as(true),
++                  Effect.catchTag("Permission.BlockedError", () => Effect.succeed(false)),
++                )
++              if (allowed) visible.push(tool)
++            }
++            const offset = input.offset ?? 0
++            const page = visible.slice(offset, offset + (input.limit ?? 3))
++            const instructions = selected
++              ? [{ server: input.server!, instructions: selected.instructions }]
++              : (yield* mcp.instructions()).filter((entry) => page.some((tool) => tool.server === entry.server))
++            return {
++              output: {
++                items: page.map((tool) => ({
++                  path: `tools[${JSON.stringify(namespace(tool.server))}][${JSON.stringify(tool.name.replace(/[^a-zA-Z0-9_-]/g, "_"))}]`,
++                  description: tool.description ?? "",
++                  inputSchema: tool.inputSchema,
++                })),
++                instructions,
++                remaining: Math.max(0, visible.length - offset - page.length),
++                next: offset + page.length < visible.length ? { offset: offset + page.length } : null,
++                ...(visible.length ? {} : { servers: yield* mcp.servers() }),
++                notice:
++                  "Read the selected server instructions before using its tools in a later model step. Tool permissions and user approval requirements still apply.",
++              },
++            }
++          }).pipe(
++            Effect.mapError(
++              (error) =>
++                new Tool.Error({ message: error instanceof Error ? error.message : "MCP discovery failed", error }),
++            ),
++          ),
++      }),
++    )
+
+     // Register once after initial discovery; only subsequent updates need a debounced reload.
+     const initial = yield* lock
+@@ -68,6 +151,19 @@
+                         id: context.id,
+                       },
+                     })
++                    yield* mcp.prepare({
++                      server: tool.server,
++                      sessionID: context.sessionID,
++                      messageID: context.messageID,
++                    })
++                    const current = (yield* mcp.tools()).find(
++                      (candidate) => candidate.server === tool.server && candidate.name === tool.name,
++                    )
++                    if (!current || JSON.stringify(current.inputSchema) !== JSON.stringify(tool.inputSchema))
++                      return yield* new ToolFailure({
++                        message:
++                          "The MCP tool schema changed. No service operation ran. Discover the server again before retrying.",
++                      })
+                     const result = yield* mcp
+                       .callTool({
+                         server: tool.server,
+@@ -107,6 +203,7 @@
+                   }).pipe(
+                     Effect.mapError((error) => {
+                       if (error instanceof ToolFailure) return error
++                      if (error instanceof Mcp.ToolCallError) return new ToolFailure({ message: error.message, error })
+                       if (error instanceof Permission.BlockedError)
+                         return new ToolFailure({ message: error.message, error })
+                       if (error instanceof Permission.CorrectedError)
+--- a/packages/core/src/tool/plugin/mcp-resource.ts
++++ b/packages/core/src/tool/plugin/mcp-resource.ts
+@@ -43,8 +43,10 @@
+                 agent: context.agent,
+                 source: { type: "tool", messageID: context.messageID, id: context.id },
+               })
+-              if (input.server === undefined) return { output: yield* mcp.resourceCatalog() }
+-              return { output: yield* mcp.resources({ server: input.server }) }
++              for (const server of servers)
++                yield* mcp.prepare({ server, sessionID: context.sessionID, messageID: context.messageID })
++              if (input.server === undefined) return { output: yield* mcp.resourceCatalog(context.sessionID) }
++              return { output: yield* mcp.resources({ server: input.server, sessionID: context.sessionID }) }
+             }).pipe(Effect.mapError((error) => new ToolFailure({ message: error.message, error }))),
+         })
+         editor.add({
+@@ -72,7 +74,8 @@
+                 agent: context.agent,
+                 source: { type: "tool", messageID: context.messageID, id: context.id },
+               })
+-              const resource = yield* mcp.readResource(input)
++              yield* mcp.prepare({ server: input.server, sessionID: context.sessionID, messageID: context.messageID })
++              const resource = yield* mcp.readResource({ ...input, sessionID: context.sessionID })
+               if (!resource)
+                 return yield* new ToolFailure({
+                   message: `MCP server "${input.server}" is not connected or does not expose resources`,
+--- a/packages/core/test/mcp.test.ts
++++ b/packages/core/test/mcp.test.ts
+@@ -27,6 +27,7 @@
+ import { EnvironmentUnavailable } from "@opencode/core/environment/unavailable"
+ import { Location } from "@opencode/core/location"
+ import { Mcp } from "@opencode/core/mcp/index"
++import { KV } from "@opencode/core/kv"
+ import { McpClient } from "@opencode/core/mcp/client"
+ import { McpStdio } from "@opencode/core/mcp/stdio"
+ import { Permission } from "@opencode/core/permission"
+@@ -105,6 +106,7 @@
+     /** Legacy servers give up on the URL elicitation after this many milliseconds. */
+     elicitationTimeout?: number
+     respond?: (request: Request) => Response | undefined | Promise<Response | undefined>
++    instructions?: () => string
+   } = {},
+ ) {
+   return Effect.acquireRelease(
+@@ -145,7 +147,7 @@
+               prompts: {},
+               ...(input.resources === false ? {} : { resources: { listChanged: input.listChanged } }),
+             },
+-            instructions: "Use the resources tools.",
++            instructions: input.instructions?.() ?? "Use the resources tools.",
+           },
+         )
+         protocol.setRequestHandler("tools/list", () => {
+@@ -291,6 +293,25 @@
+   )
+ }
+
++const memoryKV = Layer.effect(
++  KV.Service,
++  Effect.sync(() => {
++    const values = new Map<string, KV.Value>()
++    return KV.Service.of({
++      get: (key) => Effect.sync(() => values.get(key)),
++      set: (key, value) =>
++        Effect.sync(() => {
++          values.set(key, value)
++        }),
++      remove: (key) =>
++        Effect.sync(() => {
++          values.delete(key)
++        }),
++      scan: () => Effect.succeed({ entries: [] }),
++    })
++  }),
++)
++
+ function resourceMcpLayer(
+   server: string | typeof ConfigMCP.Server.Type,
+   onFormCreated?: (form: Form.Info) => Effect.Effect<void>,
+@@ -301,6 +322,7 @@
+     subscribe?: Bus.Interface["subscribe"]
+     environment?: Layer.Layer<Environment.Service>
+     published?: string[]
++    cache?: Layer.Layer<KV.Service>
+   },
+ ) {
+   const directory = AbsolutePath.make(import.meta.dir)
+@@ -317,7 +339,7 @@
+       )
+     }),
+   ).pipe(
+-    Layer.provideMerge(Mcp.layer(options)),
++    Layer.provideMerge(Mcp.layer(options).pipe(Layer.provideMerge(overrides?.cache ?? memoryKV))),
+     Layer.provideMerge(Form.layer),
+     Layer.provide(
+       Layer.mergeAll(
+@@ -393,6 +415,98 @@
+ const connect = (server: string, config: typeof ConfigMCP.Server.Type, directory: string) =>
+   McpClient.connect(server, config, directory).pipe(Effect.provide(hostEnvironmentLayer))
+
++testEffect(Layer.empty).live("lazy MCP discovery caches metadata and gates calls across session resume", () =>
++  Effect.gen(function* () {
++    let instructionText = "Use the resources tools."
++    const server = yield* resourceServer({ modern: true, instructions: () => instructionText })
++    const config = new ConfigMCP.Remote({
++      type: "remote",
++      url: server.url,
++      oauth: false,
++      lazy: true,
++      protocol: "2026-07-28",
++    })
++    const values = new Map<string, KV.Value>()
++    const cache = Layer.succeed(
++      KV.Service,
++      KV.Service.of({
++        get: (key) => Effect.sync(() => values.get(key)),
++        set: (key, value) =>
++          Effect.sync(() => {
++            values.set(key, value)
++          }),
++        remove: (key) =>
++          Effect.sync(() => {
++            values.delete(key)
++          }),
++        scan: () => Effect.succeed({ entries: [] }),
++      }),
++    )
++    const sessionID = "ses_lazy_discovery"
++    const input = { server: "resources", sessionID, messageID: "discover-step" }
++    yield* Effect.scoped(
++      Effect.gen(function* () {
++        const service = yield* Mcp.Service
++        expect((yield* settled(service))?.status).toBe("idle")
++        expect(server.state.urls).toEqual([])
++        expect(yield* service.tools()).toEqual([])
++        expect(yield* service.sessionInstructions(sessionID)).toEqual([])
++        expect(Exit.isFailure(yield* Effect.exit(service.prepare(input)))).toBe(true)
++        expect(server.state.urls).toEqual([])
++        const found = yield* service.discover(input)
++        expect(found.tools.length).toBeGreaterThan(0)
++        expect(found.instructions).toBe("Use the resources tools.")
++        expect(Exit.isFailure(yield* Effect.exit(service.prepare({ ...input, messageID: "next-step" })))).toBe(true)
++        expect((yield* service.sessionInstructions(sessionID))[0]?.instructions).toBe(found.instructions)
++        expect(Exit.isFailure(yield* Effect.exit(service.prepare(input)))).toBe(true)
++        yield* service.prepare({ ...input, messageID: "next-step" })
++        expect(
++          Exit.isFailure(
++            yield* Effect.exit(service.prepare({ ...input, sessionID: "another-session", messageID: "next-step" })),
++          ),
++        ).toBe(true)
++        expect(server.state.toolCalls).toEqual([])
++        yield* service.callTool({ server: "resources", name: "echo", args: {}, sessionID: Session.ID.make(sessionID) })
++        expect(server.state.toolCalls).toHaveLength(1)
++        instructionText = "Updated resource safety instructions."
++        yield* service.connect("resources")
++        expect(
++          Exit.isFailure(yield* Effect.exit(service.prepare({ ...input, messageID: "changed-policy-step" }))),
++        ).toBe(true)
++        expect(
++          Exit.isFailure(
++            yield* Effect.exit(
++              service.callTool({ server: "resources", name: "echo", args: {}, sessionID: Session.ID.make(sessionID) }),
++            ),
++          ),
++        ).toBe(true)
++        expect(server.state.toolCalls).toHaveLength(1)
++        expect(yield* service.sessionInstructions(sessionID)).toEqual([])
++        yield* service.discover({ ...input, messageID: "rediscover-step" })
++        expect((yield* service.sessionInstructions(sessionID))[0]?.instructions).toBe(instructionText)
++        yield* service.prepare({ ...input, messageID: "updated-policy-step" })
++      }).pipe(Effect.provide(Layer.fresh(resourceMcpLayer(config, undefined, undefined, { cache })))),
++    )
++    yield* Effect.scoped(
++      Effect.gen(function* () {
++        const service = yield* Mcp.Service
++        expect((yield* settled(service))?.status).toBe("idle")
++        const previousLists = server.state.toolLists
++        expect((yield* service.tools()).length).toBeGreaterThan(0)
++        expect(server.state.toolLists).toBe(previousLists)
++        expect((yield* service.sessionInstructions(sessionID))[0]?.instructions).toBe(instructionText)
++        const resumed = yield* Effect.exit(service.prepare({ ...input, messageID: "resumed-step" }))
++        expect({ success: Exit.isSuccess(resumed), status: (yield* service.servers())[0]?.status }).toMatchObject({
++          success: true,
++          status: { status: "connected" },
++        })
++        expect(server.state.toolLists).toBe(previousLists + 1)
++        expect(server.state.toolCalls).toHaveLength(1)
++      }).pipe(Effect.provide(Layer.fresh(resourceMcpLayer(config, undefined, undefined, { cache })))),
++    )
++  }),
++)
++
+ // Reads no longer wait for startup, so tests that assert on a connected server settle it first.
+ const settled = (service: Mcp.Interface, name = "resources") =>
+   Effect.gen(function* () {
+@@ -402,6 +516,7 @@
+   }).pipe(Effect.retry({ times: 200, schedule: Schedule.spaced("10 millis") }))
+
+ const mcp = Layer.mock(Mcp.Service, {
++  prepare: () => Effect.void,
+   tools: () =>
+     Effect.succeed([
+       {
+@@ -1378,9 +1493,7 @@
+           const result = yield* Fiber.join(call)
+           expect(yield* forms.state(form.id)).toEqual({ status: "answered", answer: { elicitation: true } })
+           return result
+-        }).pipe(
+-          Effect.provide(resourceMcpLayer(server.url, (form) => recordForm(created, form))),
+-        )
++        }).pipe(Effect.provide(resourceMcpLayer(server.url, (form) => recordForm(created, form))))
+
+         expect(result.structured).toEqual({ action: "accept" })
+       }),
+@@ -1401,10 +1514,12 @@
+           const { form } = yield* Deferred.await(created)
+           yield* Fiber.await(call)
+           // The server's cancellation and its tool error race; the form settles shortly after either.
+-          const state = yield* forms.state(form.id).pipe(
+-            Effect.repeat({ until: (state) => state.status !== "pending", schedule: Schedule.spaced("10 millis") }),
+-            Effect.timeout("2 seconds"),
+-          )
++          const state = yield* forms
++            .state(form.id)
++            .pipe(
++              Effect.repeat({ until: (state) => state.status !== "pending", schedule: Schedule.spaced("10 millis") }),
++              Effect.timeout("2 seconds"),
++            )
+           expect(state.status).toBe("cancelled")
+         }).pipe(Effect.provide(resourceMcpLayer(server.url, (form) => recordForm(created, form))))
+       }),
+@@ -2117,7 +2232,7 @@
+     yield* Effect.addFinalizer(() =>
+       Deferred.succeed(release, undefined).pipe(Effect.andThen(State.shutdown(Scope.close(root, Exit.void)))),
+     )
+-    const context = yield* Layer.buildWithScope(Mcp.layer(), root)
++    const context = yield* Layer.buildWithScope(Mcp.layer().pipe(Layer.provideMerge(memoryKV)), root)
+     const service = Context.get(context, Mcp.Service)
+     const observed: string[] = []
+     let block = false
+@@ -2179,7 +2294,10 @@
+       yield* Effect.addFinalizer(() =>
+         Deferred.succeed(release, undefined).pipe(Effect.andThen(State.shutdown(Scope.close(root, Exit.void)))),
+       )
+-      const service = Context.get(yield* Layer.buildWithScope(Mcp.layer(), root), Mcp.Service)
++      const service = Context.get(
++        yield* Layer.buildWithScope(Mcp.layer().pipe(Layer.provideMerge(memoryKV)), root),
++        Mcp.Service,
++      )
+       // Pausing the disabled server's status event holds initial reconciliation after every entry exists
+       // but before the enabled server's startup is scheduled.
+       yield* Effect.acquireRelease(
+@@ -2283,6 +2401,7 @@
+       yield* registration.flush
+       expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual([
+         "demo_search",
++        "mcp",
+         "other_lookup",
+         "execute",
+       ])
+@@ -2309,6 +2428,7 @@
+       expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual([
+         "demo_added",
+         "demo_search",
++        "mcp",
+         "other_lookup",
+         "execute",
+       ])
+@@ -2347,6 +2467,7 @@
+         "demo_added",
+         "demo_search",
+         "demo_status",
++        "mcp",
+         "other_lookup",
+         "execute",
+       ])
+@@ -2373,6 +2494,7 @@
+       expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual([
+         "demo_refreshed",
+         "demo_search",
++        "mcp",
+         "execute",
+       ])
+       expect((yield* toolDefinitions(registry)).find((tool) => tool.name === "demo_search")?.description).toBe(
+@@ -2391,6 +2513,7 @@
+           AppNodeBuilder.build(LayerNode.group([Tool.node, McpTool.node, Bus.node]), [
+             Mcp.node.replace(
+               Layer.mock(Mcp.Service, {
++                prepare: () => Effect.void,
+                 tools: () => Ref.get(catalog),
+                 callTool: (input) =>
+                   Effect.succeed({
+@@ -2418,7 +2541,7 @@
+     const bus = yield* Bus.Service
+     yield* registration.flush
+     expect(reads).toBe(1)
+-    expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual(["demo_read_1", "execute"])
++    expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual(["demo_read_1", "mcp", "execute"])
+
+     yield* bus.publish(McpEvent.ToolsChanged, { server: "demo" })
+     yield* advance(() => reads >= 2)
+@@ -2427,12 +2550,13 @@
+     yield* advance(() => reads >= 3)
+     yield* drain
+     expect(reads).toBe(3)
+-    expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual(["demo_read_3", "execute"])
++    expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual(["demo_read_3", "mcp", "execute"])
+   }).pipe(
+     Effect.provide(
+       AppNodeBuilder.build(LayerNode.group([Tool.node, McpTool.node, Bus.node]), [
+         Mcp.node.replace(
+           Layer.mock(Mcp.Service, {
++            prepare: () => Effect.void,
+             tools: () =>
+               Effect.sync(() => [
+                 {
+@@ -2465,6 +2589,7 @@
+       "direct_issues",
+       "direct_lookup",
+       "direct_media",
++      "mcp",
+       "execute",
+     ])
+     expect(codeModeListings(toolSet.codeModeCatalog!).find((tool) => tool.path === "demo.search")?.line).toContain(
+@@ -2831,81 +2956,77 @@
+ }
+
+ for (const source of ["config", "organization"] as const) {
+-  testEffect(Config.testLayer()).live(
+-    `revokes and restores a connected MCP through ${source} policy`,
+-    () =>
+-      Effect.gen(function* () {
+-        const server = yield* resourceServer()
+-        const config = yield* Config.Service
+-        const test = yield* Config.Test
+-        const updates = yield* PubSub.unbounded<{ readonly type: string }>()
+-        const document = (effect: ConfigPolicy.Effect) =>
+-          new Document({
+-            type: "document",
+-            info: new Info({
+-              mcp: new ConfigMCP.Info({
+-                servers: { resources: new ConfigMCP.Remote({ type: "remote", url: server.url, oauth: false }) },
+-              }),
+-              policies: [{ action: "mcp.use", resource: "*", effect }],
++  testEffect(Config.testLayer()).live(`revokes and restores a connected MCP through ${source} policy`, () =>
++    Effect.gen(function* () {
++      const server = yield* resourceServer()
++      const config = yield* Config.Service
++      const test = yield* Config.Test
++      const updates = yield* PubSub.unbounded<{ readonly type: string }>()
++      const document = (effect: ConfigPolicy.Effect) =>
++        new Document({
++          type: "document",
++          info: new Info({
++            mcp: new ConfigMCP.Info({
++              servers: { resources: new ConfigMCP.Remote({ type: "remote", url: server.url, oauth: false }) },
+             }),
+-          })
+-        yield* test.setEntries([document("allow")])
+-        yield* Effect.gen(function* () {
+-          const service = yield* Mcp.Service
+-          expect(yield* settled(service)).toEqual({ status: "connected" })
+-          expect((yield* service.tools()).length).toBeGreaterThan(0)
+-          if (source === "config") yield* test.setEntries([document("deny")])
+-          if (source === "organization")
+-            yield* setOrganizationPolicy([{ action: "mcp.use", resource: "*", effect: "deny" }])
+-          yield* PubSub.publish(updates, { type: Event.Updated.type })
+-          yield* service.servers().pipe(
+-            Effect.filterOrFail(
+-              (servers) => servers.length === 0,
+-              () => new Error("MCP policy was not applied"),
+-            ),
+-            Effect.retry({ times: 200, schedule: Schedule.spaced("10 millis") }),
+-          )
+-          expect(yield* service.servers()).toEqual([])
+-          expect(yield* service.tools()).toEqual([])
+-          expect(yield* service.instructions()).toEqual([])
+-          expect(yield* service.prompts()).toEqual([])
+-          expect(yield* service.resourceCatalog()).toEqual({ resources: [], templates: [] })
+-          expect(Exit.isFailure(yield* service.resources({ server: "resources" }).pipe(Effect.exit))).toBe(true)
+-          expect(Exit.isFailure(yield* service.prompt({ server: "resources", name: "greet" }).pipe(Effect.exit))).toBe(
+-            true,
+-          )
+-          expect(
+-            Exit.isFailure(
+-              yield* service.readResource({ server: "resources", uri: "docs://readme" }).pipe(Effect.exit),
+-            ),
+-          ).toBe(true)
+-          expect(Exit.isFailure(yield* service.connect("resources").pipe(Effect.exit))).toBe(true)
+-          expect(Exit.isFailure(yield* service.callTool({ server: "resources", name: "echo" }).pipe(Effect.exit))).toBe(
+-            true,
+-          )
+-          expect(server.state.toolCalls).toEqual([])
+-          expect(server.state.resourceReads).toEqual([])
+-          yield* Effect.promise(server.restart)
+-          if (source === "config") yield* test.setEntries([document("allow")])
+-          if (source === "organization") yield* setOrganizationPolicy(undefined)
+-          yield* PubSub.publish(updates, { type: Event.Updated.type })
+-          yield* service.servers().pipe(
+-            Effect.filterOrFail(
+-              (servers) => servers.some((server) => server.status.status === "connected"),
+-              () => new Error("MCP policy was not restored"),
+-            ),
+-            Effect.retry({ times: 200, schedule: Schedule.spaced("10 millis") }),
+-          )
+-          expect(yield* settled(service)).toEqual({ status: "connected" })
+-          expect((yield* service.tools()).length).toBeGreaterThan(0)
+-        }).pipe(
+-          Effect.provide(
+-            resourceMcpLayer(server.url, undefined, undefined, {
+-              entries: config.entries,
+-              subscribe: (() => Stream.fromPubSub(updates)) as Bus.Interface["subscribe"],
+-            }),
++            policies: [{ action: "mcp.use", resource: "*", effect }],
++          }),
++        })
++      yield* test.setEntries([document("allow")])
++      yield* Effect.gen(function* () {
++        const service = yield* Mcp.Service
++        expect(yield* settled(service)).toEqual({ status: "connected" })
++        expect((yield* service.tools()).length).toBeGreaterThan(0)
++        if (source === "config") yield* test.setEntries([document("deny")])
++        if (source === "organization")
++          yield* setOrganizationPolicy([{ action: "mcp.use", resource: "*", effect: "deny" }])
++        yield* PubSub.publish(updates, { type: Event.Updated.type })
++        yield* service.servers().pipe(
++          Effect.filterOrFail(
++            (servers) => servers.length === 0,
++            () => new Error("MCP policy was not applied"),
+           ),
++          Effect.retry({ times: 200, schedule: Schedule.spaced("10 millis") }),
+         )
+-      }),
++        expect(yield* service.servers()).toEqual([])
++        expect(yield* service.tools()).toEqual([])
++        expect(yield* service.instructions()).toEqual([])
++        expect(yield* service.prompts()).toEqual([])
++        expect(yield* service.resourceCatalog()).toEqual({ resources: [], templates: [] })
++        expect(Exit.isFailure(yield* service.resources({ server: "resources" }).pipe(Effect.exit))).toBe(true)
++        expect(Exit.isFailure(yield* service.prompt({ server: "resources", name: "greet" }).pipe(Effect.exit))).toBe(
++          true,
++        )
++        expect(
++          Exit.isFailure(yield* service.readResource({ server: "resources", uri: "docs://readme" }).pipe(Effect.exit)),
++        ).toBe(true)
++        expect(Exit.isFailure(yield* service.connect("resources").pipe(Effect.exit))).toBe(true)
++        expect(Exit.isFailure(yield* service.callTool({ server: "resources", name: "echo" }).pipe(Effect.exit))).toBe(
++          true,
++        )
++        expect(server.state.toolCalls).toEqual([])
++        expect(server.state.resourceReads).toEqual([])
++        yield* Effect.promise(server.restart)
++        if (source === "config") yield* test.setEntries([document("allow")])
++        if (source === "organization") yield* setOrganizationPolicy(undefined)
++        yield* PubSub.publish(updates, { type: Event.Updated.type })
++        yield* service.servers().pipe(
++          Effect.filterOrFail(
++            (servers) => servers.some((server) => server.status.status === "connected"),
++            () => new Error("MCP policy was not restored"),
++          ),
++          Effect.retry({ times: 200, schedule: Schedule.spaced("10 millis") }),
++        )
++        expect(yield* settled(service)).toEqual({ status: "connected" })
++        expect((yield* service.tools()).length).toBeGreaterThan(0)
++      }).pipe(
++        Effect.provide(
++          resourceMcpLayer(server.url, undefined, undefined, {
++            entries: config.entries,
++            subscribe: (() => Stream.fromPubSub(updates)) as Bus.Interface["subscribe"],
++          }),
++        ),
++      )
++    }),
+   )
+ }
+--- a/packages/core/test/fixture/mcp.ts
++++ b/packages/core/test/fixture/mcp.ts
+@@ -18,6 +18,9 @@
+   tools: () => Effect.succeed([]),
+   callTool: () => Effect.die("unused mcp.callTool"),
+   instructions: () => Effect.succeed([]),
++  sessionInstructions: () => Effect.succeed([]),
++  prepare: () => Effect.void,
++  discover: () => Effect.succeed({ tools: [], instructions: "" }),
+   prompts: () => Effect.succeed([]),
+   prompt: () => Effect.undefined,
+   resourceCatalog: () => Effect.succeed(Mcp.ResourceCatalog.make({ resources: [], templates: [] })),
+--- a/packages/core/test/codemode/instructions.test.ts
++++ b/packages/core/test/codemode/instructions.test.ts
+@@ -24,6 +24,18 @@
+ }
+
+ describe("CodeModeInstructions", () => {
++  it.effect("keeps a zero-budget index discoverable without pinned example schemas", () =>
++    Effect.sync(() => {
++      const summary = CodeModeCatalog.summarize({ tools: [{ ...echo, pinned: true }, lookup] }, { budget: 0 })
++      expect(summary.total).toBe(2)
++      expect(summary.shown).toBe(0)
++      const prompt = CodeModeInstructions.render(summary)
++      expect(prompt).toContain("search(")
++      expect(prompt).toContain("- notes (1 tool, none shown)")
++      expect(prompt).not.toContain(echo.signature)
++      expect(prompt).not.toContain(lookup.signature)
++    }),
++  )
+   it.effect("instructs the model not to call execute while the catalog is empty", () =>
+     Effect.gen(function* () {
+       const initialized = yield* readInitial(CodeModeInstructions.make({ tools: [] }))
+--- a/packages/tui/src/component/dialog-mcp.tsx
++++ b/packages/tui/src/component/dialog-mcp.tsx
+@@ -24,6 +24,7 @@
+   if (props.status.status === "connected") {
+     return <span style={{ attributes: TextAttributes.BOLD }}>Connected ✓</span>
+   }
++  if (props.status.status === "idle") return <>Idle (connects on demand) ○</>
+   if (props.status.status === "failed") {
+     return <>Failed !</>
+   }
+@@ -121,7 +122,10 @@
+     setLoading((prev) => new Set(prev).add(name))
+     const target = current()
+     const input = { server: name, location: { directory: target.directory } }
+-    const call = server.status.status === "connected" ? client.api.experimental.mcp.disconnect(input) : client.api.experimental.mcp.connect(input)
++    const call =
++      server.status.status === "connected"
++        ? client.api.experimental.mcp.disconnect(input)
++        : client.api.experimental.mcp.connect(input)
+     void call.catch(toast.error).finally(() =>
+       setLoading((prev) => {
+         const next = new Set(prev)
+--- a/packages/tui/src/feature-plugins/sidebar/mcp.tsx
++++ b/packages/tui/src/feature-plugins/sidebar/mcp.tsx
+@@ -78,6 +78,7 @@
+                   <Switch fallback={item.status.status}>
+                     <Match when={item.status.status === "connected"}>Connected</Match>
+                     <Match when={item.status.status === "pending"}>Connecting</Match>
++                    <Match when={item.status.status === "idle"}>Idle</Match>
+                     <Match when={item.status.status === "failed"}>Error</Match>
+                     <Match when={item.status.status === "disabled"}>Disabled</Match>
+                     <Match when={item.status.status === "needs_auth"}>Sign in</Match>

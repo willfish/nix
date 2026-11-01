@@ -84,6 +84,10 @@
       flake = false;
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
+    opencode-source = {
+      url = "github:anomalyco/opencode/v2.2.5";
+      flake = false;
+    };
     hex = {
       url = "github:anomalyco/hex/v3.1.1";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -436,7 +440,10 @@
           };
           # Other agent CLIs come from llm-agents, not the nixpkgs pin.
           opencode = llm-agents.packages.${system}.opencode;
-          opencode2 = llm-agents.packages.${system}.opencode2;
+          opencode2 = _final.callPackage ./home/user/opencode-package.nix {
+            source = inputs.opencode-source;
+            bun = inputs.nixpkgs-unstable.legacyPackages.${system}.bun;
+          };
           claude-code = llm-agents.packages.${system}.claude-code;
           hermes-agent = import ./home/user/hermes-package.nix {
             hermesInput = inputs.hermes-agent;
@@ -736,6 +743,7 @@
 
           packages = {
             pi = pkgs.pi-coding-agent;
+            inherit (pkgs) opencode2;
             activation-dbus = pkgs.symlinkJoin {
               name = "home-activation-dbus";
               paths = [

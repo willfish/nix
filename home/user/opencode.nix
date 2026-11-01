@@ -43,16 +43,20 @@ let
         if server ? url then
           {
             type = "remote";
+            description = server.description or server.name;
             inherit (server) url;
             codemode = true;
+            lazy = true;
             oauth = false;
             timeout.execution = (server.toolTimeout or 120) * 1000;
           }
         else
           {
             type = "local";
+            description = server.description or server.name;
             command = [ (mcpCommand server.wrapper) ];
             codemode = true;
+            lazy = true;
             timeout.execution = (server.toolTimeout or 120) * 1000;
           };
     }) llmMcps.servers
