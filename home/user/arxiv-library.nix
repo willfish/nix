@@ -42,6 +42,32 @@ let
     };
     Install.WantedBy = [ "default.target" ];
   };
+  poller = operation: {
+    Unit = {
+      Description = "Poll arXiv ${operation}";
+      After = [ "network-online.target" ];
+      # Bootstrap is an explicit operator action, not a side effect of switching.
+      ConditionPathExists = "${root}/polling-enabled";
+      "X-RestartIfChanged" = false;
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${package}/bin/arxiv-library-poll ${root} ${operation}";
+      Environment = environment;
+      TimeoutStartSec = "infinity";
+      Restart = "on-failure";
+      RestartSec = "5min";
+      Nice = 19;
+      CPUQuota = "100%";
+      MemoryMax = "2G";
+      NoNewPrivileges = true;
+      PrivateTmp = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ReadWritePaths = [ root ];
+      RestrictSUIDSGID = true;
+    };
+  };
 in
 {
   home.packages = lib.optionals isServer [
@@ -90,6 +116,8 @@ in
     arxiv-ingest = lib.recursiveUpdate (worker "ingest") {
       Service.ExecStart = "${package}/bin/arxiv-library-ingest ${root} --watch";
     };
+    arxiv-poll = poller "metadata";
+    arxiv-bodies = poller "bodies";
     arxiv-embeddings = lib.recursiveUpdate (worker "embeddings") {
       # Embeddings are opt-in; routine ingestion only builds the BM25 index.
       Install.WantedBy = [ ];
@@ -116,14 +144,35 @@ in
       };
     };
   };
-  systemd.user.timers.arxiv-index = lib.mkIf isServer {
-    Unit.Description = "Refresh arXiv passage search coverage hourly";
-    Timer = {
-      OnBootSec = "10min";
-      OnUnitInactiveSec = "1h";
-      Unit = "arxiv-index.service";
+  systemd.user.timers = lib.mkIf isServer {
+    arxiv-poll = {
+      Unit.Description = "Discover new and revised arXiv papers daily";
+      Timer = {
+        OnCalendar = "*-*-* 06:30:00 UTC";
+        Persistent = true;
+        RandomizedDelaySec = "5min";
+        Unit = "arxiv-poll.service";
+      };
+      Install.WantedBy = [ "timers.target" ];
     };
-    # Retain manual use without scheduling further embedding publication.
-    Install.WantedBy = [ ];
+    arxiv-bodies = {
+      Unit.Description = "Drain resumable arXiv PDF batches";
+      Timer = {
+        OnBootSec = "15min";
+        OnUnitInactiveSec = "5min";
+        Unit = "arxiv-bodies.service";
+      };
+      Install.WantedBy = [ "timers.target" ];
+    };
+    arxiv-index = {
+      Unit.Description = "Refresh arXiv passage search coverage hourly";
+      Timer = {
+        OnBootSec = "10min";
+        OnUnitInactiveSec = "1h";
+        Unit = "arxiv-index.service";
+      };
+      # Retain manual use without scheduling further embedding publication.
+      Install.WantedBy = [ ];
+    };
   };
 }

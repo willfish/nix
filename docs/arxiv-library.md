@@ -23,8 +23,8 @@ Activate each host with `hmswitch`. Reconnect existing MCP clients to load a cha
 ## Tools and coverage
 
 - `search` searches complete paper bodies using BM25 literal-word AND matching and returns paper IDs and titles. An optional category filters the primary category.
-- `paper` returns metadata and original assembled LaTeX. Offsets count Unicode characters; follow `next_offset` for the complete text.
-- `library_status` reports the maintained FTS document count, initial import checkpoints and source settings. It is progress information, not an independent integrity audit.
+- `paper` returns metadata and text labelled `latex` or `pdf-text`. Live records include indexed version and pending-update status. Offsets count Unicode characters; follow `next_offset` for the complete text.
+- `library_status` reports the maintained FTS document count, initial checkpoints, polling timestamps and body queue counts. Metadata discovery can be ahead of searchable bodies. It is progress information, not an independent integrity audit.
 
 Native serving is BM25-only. Optional embedding generation and index publication remain disabled by default. Existing vectors are preserved but are not exposed through a semantic/hybrid endpoint.
 
@@ -35,6 +35,8 @@ Native serving is BM25-only. Optional embedding generation and index publication
 | `arxiv-prepare` | Validate the original source manifest and pinned model assets | Dependency of corpus jobs |
 | `arxiv-download` | Resume and verify source archive downloads | Initial acquisition; successful completion remains recorded |
 | `arxiv-ingest` | Resume paper and BM25 import | Runs until initial import is complete; retries failures |
+| `arxiv-poll` and its timer | Discover new and revised papers using OAI-PMH | Daily at 06:30 UTC, up to five minutes jitter |
+| `arxiv-bodies` and its timer | Download versioned PDFs and index extracted text | Resumable 200-paper batches, five-minute pause |
 | `arxiv-embeddings` | Optional passage-vector generation | Opt-in |
 | `arxiv-index` and its timer | Optional ANN publication | Opt-in |
 
@@ -52,6 +54,8 @@ The embedding worker has a 1.5-core CPU quota and 2 GB memory limit. Index publi
 
 ## Updates and serving copies
 
-There is no scheduled upstream refresh. `arxiv-library-refresh /srv/media/arxiv` checks metadata without changing the library; `--apply` is an explicit maintenance action after the initial import completes. Do not edit the original manifest in place to change revisions.
+Live polling requires explicit bootstrap with a selected start date and the `/srv/media/arxiv/polling-enabled` marker; activation alone does not start downloading papers. Follow the application's daily-polling runbook. Both workers share a persistent 15-second request limiter and retain failed bodies for retry. They have a one-core quota and 2 GB memory limit.
+
+`arxiv-library-refresh /srv/media/arxiv` still checks Hugging Face without changing the library. Once live polling owns the corpus, snapshot `--apply` is refused to protect newer papers. Do not edit the original manifest in place.
 
 SSD publication is separate from activation. The publisher verifies a complete generation, but does not change the MCP route. Before changing the Terminus wrapper's `ARXIV_DATABASE`, follow the runbook's receipt validation, search/retrieval checks and reader-retention procedure. Select a resolved generation path, not a partial benchmark copy or an unverified database.
