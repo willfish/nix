@@ -66,34 +66,9 @@ static int palette_compare(const void *a, const void *b, void *raw) {
   }
   return 0;
 }
-static GHashTable *ini_values(const char *text) {
-  GHashTable *values =
-      g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-  char **rows = lines(text), *section = g_strdup("");
-  for (size_t i = 0; rows[i]; i++) {
-    char *s = trim(rows[i]);
-    size_t n = strlen(s);
-    if (n >= 2 && s[0] == '[' && s[n - 1] == ']') {
-      g_free(section);
-      section = g_strndup(s + 1, n - 2);
-    } else {
-      char *eq = strchr(s, '=');
-      if (eq && s[0] != '#') {
-        *eq = 0;
-        char *key = trim(s), *value = trim(eq + 1),
-             *name = g_strdup_printf("%s/%s", section, key);
-        g_hash_table_replace(values, name, value);
-        g_free(key);
-      }
-    }
-    g_free(s);
-  }
-  g_free(section);
-  g_strfreev(rows);
-  return values;
-}
 static bool launcher_style(Themes *t, char **font, char **border,
-                           char **radius) {
+                          char **radius, char **style) {
+  *style = g_strdup("");
   yyjson_val *a = field(t->catalogue, "appearance");
   char *family = setting(a, "monoFont", "JetBrainsMono Nerd Font"),
        *size = setting(a, "fontSize", "12");
@@ -121,23 +96,13 @@ static bool launcher_style(Themes *t, char **font, char **border,
   char *text = read_text(t, source);
   if (!text)
     return false;
-  GHashTable *values = ini_values(text);
-  g_free(text);
-  const char *keys[] = {"main/font", "border/width", "border/radius"};
-  char **dest[] = {font, border, radius};
-  for (size_t i = 0; i < 3; i++) {
-    const char *value = g_hash_table_lookup(values, keys[i]);
-    if (value) {
-      g_free(*dest[i]);
-      *dest[i] = g_strdup(value);
-    }
-  }
-  g_hash_table_destroy(values);
+  g_free(*style);
+  *style = text;
   return true;
 }
 char *choose(Themes *t) {
   char *current = selection(t), *mode = current_mode(t), *chosen = NULL,
-       *font = NULL, *border = NULL, *radius = NULL;
+       *font = NULL, *border = NULL, *radius = NULL, *style = NULL;
   if (!current || !mode) {
     g_free(current);
     g_free(mode);
@@ -197,7 +162,7 @@ char *choose(Themes *t) {
       luma(colour(colours, "base07", "f4dbd6")) < 0)
     fail(t, "Invalid theme colour");
   if (!t->error)
-    launcher_style(t, &font, &border, &radius);
+    launcher_style(t, &font, &border, &radius, &style);
   char *anchor = setting(launcher, "anchor", "center"),
        *layer = setting(launcher, "layer", "overlay"),
        *width = setting(launcher, "width", "40"),
@@ -216,13 +181,16 @@ char *choose(Themes *t) {
   char *settings = NULL, *directory = NULL, *file = NULL;
   Command *c = NULL;
   if (!t->error) {
+    // Keep the legacy fallback for catalogues without a session stylesheet.
+    // Append the complete shared style so colours and geometry cannot drift.
     settings = g_strdup_printf(
         "[main]\nfont=%s\nanchor=%s\nlayer=%s\nwidth=%s\nlines=%s\nminimal-"
         "lines=yes\nmatch-mode=%s\nicons-enabled=no\nhorizontal-pad="
         "20\nvertical-pad=12\ninner-pad=8\n[colors]\nbackground=%sff\ntext=%"
         "sff\ninput=%sff\nprompt=%sff\nselection=%sff\nselection-text=%"
         "sff\nselection-match=%sff\nmatch=%sff\nborder=%sff\n[border]\nwidth=%"
-        "s\nradius=%s\n",
+        "s\nradius=%s\n\n%s\n[main]\nkeyboard-focus=exclusive\n"
+        "exit-on-keyboard-focus-loss=yes\n",
         font, anchor, layer, width, count, match,
         colour(colours, "base00", "24273a"),
         colour(colours, "base05", "cad3f5"),
@@ -230,7 +198,7 @@ char *choose(Themes *t) {
         colour(colours, "base0D", "b7bdf8"), bg, fg,
         colour(colours, "base0D", "b7bdf8"),
         colour(colours, "base0D", "b7bdf8"),
-        colour(colours, "base0D", "b7bdf8"), border, radius);
+        colour(colours, "base0D", "b7bdf8"), border, radius, style);
     GError *error = NULL;
     directory = g_dir_make_tmp("theme-menu-XXXXXX", &error);
     if (!directory) {
@@ -291,6 +259,7 @@ char *choose(Themes *t) {
   g_free(font);
   g_free(border);
   g_free(radius);
+  g_free(style);
   g_free(anchor);
   g_free(layer);
   g_free(width);

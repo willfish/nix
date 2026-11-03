@@ -91,7 +91,7 @@ rec {
     layer = "overlay";
   };
 
-  # Menus share launcher placement and the active theme's fonts/colours.
+  # Menus share launcher placement and Nanolight's neutral light/dark styling.
   menus.voice = {
     width = 55;
     lines = 10;

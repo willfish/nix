@@ -142,6 +142,12 @@ in
         # Walker's layer covers the monitor; don't blur its transparent margins.
         ignore_alpha = 0.2;
       }
+      {
+        name = "fuzzel-glass";
+        "match:namespace" = "^launcher$";
+        blur = true;
+        ignore_alpha = 0.2;
+      }
     ];
 
     services.elephant = {

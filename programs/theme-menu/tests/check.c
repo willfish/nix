@@ -1356,7 +1356,7 @@ static void test_popup(void) {
   const char *legacy = getenv("THEME_MENU_LEGACY");
   if (legacy && menu && menu->settings) {
     char *python = find_python();
-    EXPECT(python, "python for styling parity");
+    EXPECT(python, "python for menu parity");
     Fix *old = setup();
     if (python && old) {
       char **argv = xmalloc(10 * sizeof *argv);
@@ -1398,8 +1398,8 @@ static void test_popup(void) {
       int on = 0;
       Log *ol = read_logs(old, &on);
       Log *om = find_log(ol, on, "fuzzel");
-      EXPECT(om && om->settings && !strcmp(om->settings, menu->settings),
-             "legacy settings");
+      EXPECT(om && om->input && !strcmp(om->input, menu->input),
+             "legacy menu choices");
       logs_free(ol, on);
       result_free(&p);
       free_env(env);
@@ -1412,6 +1412,50 @@ static void test_popup(void) {
   }
   logs_free(logs, n);
   fix_free(f);
+}
+
+static void test_shared_popup_style(void) {
+  const char *modes[] = {"dark", "light"};
+  for (size_t i = 0; i < 2; i++) {
+    Fix *f = setup();
+    if (!f)
+      return;
+    mkdir(f->state, 0755);
+    char *mode_path = join_path(f->state, "mode");
+    write_str(mode_path, modes[i]);
+    free(mode_path);
+    char leaf[64];
+    snprintf(leaf, sizeof leaf, "tokyo-night/%s-fuzzel.ini", modes[i]);
+    char *source = join_path(f->root, leaf);
+    const char *style = i
+        ? "[main]\nfont=Inter:pixelsize=13.5\nline-height=38px\n"
+          "[colors]\nbackground=ffffffc7\ntext=292929ff\n"
+          "selection=00000014\n[border]\nradius=18\nselection-radius=10\n"
+        : "[main]\nfont=Inter:pixelsize=13.5\nline-height=38px\n"
+          "[colors]\nbackground=1a1a1abd\ntext=eeeeeeff\n"
+          "selection=ffffff29\n[border]\nradius=18\nselection-radius=10\n";
+    write_str(source, style);
+    const char *keys[] = {"TM_COMMANDS"};
+    const char *vals[] = {"{\"fuzzel\":{\"code\":2}}"};
+    const char *extra[] = {"--no-reload"};
+    Result r = run(f, extra, 1, keys, vals, 1);
+    EXPECT(r.status == 0, "%s shared popup: %s", modes[i], r.err);
+    int n = 0;
+    Log *logs = read_logs(f, &n);
+    Log *menu = find_log(logs, n, "fuzzel");
+    EXPECT(menu && menu->settings && strstr(menu->settings, style),
+           "%s popup uses the complete shared style", modes[i]);
+    EXPECT(menu && menu->settings &&
+               strstr(menu->settings, "[main]\nkeyboard-focus=exclusive\n"
+                                     "exit-on-keyboard-focus-loss=yes\n"),
+           "%s popup preserves keyboard focus behaviour", modes[i]);
+    EXPECT(menu && menu->settings && strstr(menu->settings, "width=45\nlines=4"),
+           "%s popup preserves launcher dimensions", modes[i]);
+    logs_free(logs, n);
+    result_free(&r);
+    free(source);
+    fix_free(f);
+  }
 }
 
 static void test_cancel(void) {
@@ -2322,6 +2366,7 @@ int main(void) {
   test_solarized();
   test_jade_horse_migration();
   test_popup();
+  test_shared_popup_style();
   test_cancel();
   test_unicode_index();
   test_native_popup();
