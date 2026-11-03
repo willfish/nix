@@ -20,6 +20,10 @@ in
       paste_with_shift = true;
     };
   };
+  # Leave Andromeda's VRAM for local models without disabling Hex's UI renderer.
+  systemd.user.services.hex = lib.mkIf (voice.stt && hostName == "andromeda") {
+    Service.Environment = [ "TRANSCRIBE_BACKENDS=cpu" ];
+  };
   # The running portal may retain the application dirs from before a profile
   # switch. Publish its app ID in the stable user directory as well.
   xdg.dataFile."applications/anomaly.hex.desktop" = lib.mkIf voice.stt {
