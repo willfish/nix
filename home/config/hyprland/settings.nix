@@ -379,9 +379,9 @@ rec {
   voice = {
     # Hex follows compositor focus and leaves prompt submission to the user.
     # CLI controls avoid portal IDs changing with Hex's configured shortcut.
-    interact = "SUPER, space, Dictate, exec, hex dictation toggle";
-    send = "SUPER SHIFT, space, Paste last dictation, exec, hex paste-last";
-    menu = "SUPER SHIFT, V, Voice settings, exec, hex";
+    interact = "SUPER, space, Hex: dictate, exec, hex dictation toggle";
+    send = "SUPER SHIFT, space, Hex: paste last dictation, exec, hex paste-last";
+    menu = "SUPER SHIFT, V, Hex: settings, exec, hex";
     read = "SUPER, R, Read aloud, exec, pi-voice read";
   };
 }
