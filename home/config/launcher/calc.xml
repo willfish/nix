@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="ItemBox">
+    <property name="spacing">12</property>
+    <style><class name="item-box"/></style>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="hexpand">true</property>
+        <property name="valign">center</property>
+        <property name="spacing">6</property>
+        <child>
+          <object class="GtkLabel" id="ItemSubtext">
+            <property name="ellipsize">end</property>
+            <style><class name="calc-expression"/></style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="label">Expression</property>
+            <property name="halign">center</property>
+            <style><class name="calc-caption"/></style>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkImage">
+        <property name="icon-name">go-next-symbolic</property>
+        <property name="pixel-size">13</property>
+        <property name="valign">center</property>
+        <style><class name="calc-arrow"/></style>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox" id="ItemTextBox">
+        <property name="orientation">vertical</property>
+        <property name="hexpand">true</property>
+        <property name="valign">center</property>
+        <property name="spacing">6</property>
+        <child>
+          <object class="GtkLabel" id="ItemText">
+            <property name="ellipsize">end</property>
+            <style><class name="calc-result"/></style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="label">Result</property>
+            <property name="halign">center</property>
+            <style><class name="calc-caption"/></style>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

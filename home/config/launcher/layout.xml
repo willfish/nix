@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkWindow" id="Window">
+    <property name="title">Walker</property>
+    <style><class name="window"/></style>
+    <child>
+      <object class="GtkBox" id="BoxWrapper">
+        <property name="orientation">vertical</property>
+        <property name="halign">center</property>
+        <property name="valign">center</property>
+        <property name="width-request">680</property>
+        <property name="overflow">hidden</property>
+        <style><class name="box-wrapper"/></style>
+        <child>
+          <object class="GtkBox" id="SearchContainer">
+            <property name="spacing">12</property>
+            <style><class name="search-container"/></style>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">system-search-symbolic</property>
+                <property name="pixel-size">19</property>
+                <property name="width-request">22</property>
+                <style><class name="search-icon"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkEntry" id="Input">
+                <property name="hexpand">true</property>
+                <style><class name="input"/></style>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="ContentContainer">
+            <style><class name="content-container"/></style>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="hexpand">true</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">Results</property>
+                    <property name="xalign">0</property>
+                    <style><class name="section-heading"/></style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="ElephantHint">
+                    <property name="label">Connecting to app search…</property>
+                    <property name="visible">false</property>
+                    <style><class name="elephant-hint"/></style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="Placeholder">
+                    <property name="label">No matches</property>
+                    <style><class name="placeholder"/></style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow" id="Scroll">
+                    <property name="hexpand">true</property>
+                    <property name="can-focus">false</property>
+                    <property name="max-content-height">400</property>
+                    <property name="propagate-natural-height">true</property>
+                    <property name="hscrollbar-policy">never</property>
+                    <property name="vscrollbar-policy">automatic</property>
+                    <style><class name="scroll"/></style>
+                    <child>
+                      <object class="GtkGridView" id="List">
+                        <property name="max-columns">1</property>
+                        <property name="min-columns">1</property>
+                        <property name="can-focus">false</property>
+                        <style><class name="list"/></style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox" id="Preview">
+                <style><class name="preview"/></style>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="Keybinds">
+            <property name="spacing">8</property>
+            <style><class name="keybinds"/></style>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">system-search-symbolic</property>
+                <property name="pixel-size">16</property>
+                <style><class name="brand-icon"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="label">Walker</property>
+                <style><class name="brand"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox" id="GlobalKeybinds">
+                <property name="spacing">8</property>
+                <style><class name="global-keybinds"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox" id="ItemKeybinds">
+                <property name="hexpand">true</property>
+                <property name="halign">end</property>
+                <property name="spacing">10</property>
+                <style><class name="item-keybinds"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">vertical</property>
+                <property name="valign">center</property>
+                <style><class name="footer-separator"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="label">Close</property>
+                <style><class name="close-label"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="label">esc</property>
+                <property name="valign">center</property>
+                <style><class name="keycap"/></style>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="Error">
+            <property name="visible">false</property>
+            <property name="wrap">true</property>
+            <property name="xalign">0</property>
+            <style><class name="error"/></style>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

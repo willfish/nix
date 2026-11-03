@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="Keybind">
+    <property name="spacing">6</property>
+    <property name="valign">center</property>
+    <style><class name="keybind"/></style>
+    <child>
+      <object class="GtkButton" id="KeybindButton">
+        <style><class name="keybind-button"/></style>
+        <child>
+          <object class="GtkLabel" id="KeybindLabel">
+            <style><class name="keybind-label"/></style>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkLabel" id="KeybindBind">
+        <style><class name="keybind-bind"/></style>
+      </object>
+    </child>
+  </object>
+</interface>

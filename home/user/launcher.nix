@@ -131,6 +131,17 @@ in
     home.packages = [
       launcher
       projects
+      pkgs.inter
+    ];
+
+    wayland.windowManager.hyprland.settings.layerrule = [
+      {
+        name = "walker-glass";
+        "match:namespace" = "^walker$";
+        blur = true;
+        # Walker's layer covers the monitor; don't blur its transparent margins.
+        ignore_alpha = 0.2;
+      }
     ];
 
     services.elephant = {
@@ -146,11 +157,31 @@ in
       theme = {
         name = "hyprland";
         style = ''@import url("file://${config.xdg.stateHome}/theme-menu/active/walker.css");'';
+        layout = {
+          layout = builtins.readFile ../config/launcher/layout.xml;
+          keybind = builtins.readFile ../config/launcher/keybind.xml;
+          item_calc = builtins.readFile ../config/launcher/calc.xml;
+        }
+        // lib.genAttrs [
+          "item_desktopapplications"
+          "item_windows"
+          "item_providerlist"
+          "item_actionmenu"
+          "item_dmenu"
+          "item_emergency"
+          "item_menus"
+          "item_menus-daily"
+          "item_menus-projects"
+          "item_menus-desktop"
+          "item_menus-session"
+        ] (_: builtins.readFile ../config/launcher/item.xml);
       };
       settings = {
         close_when_open = true;
         hide_action_hints = false;
         hide_quick_activation = true;
+        # Keep the footer compact without removing secondary actions or binds.
+        actions_as_menu = true;
         # No query text is ever routed to a shell runner or network provider.
         providers = {
           default = [
@@ -241,7 +272,7 @@ in
           };
         };
         placeholders.default = {
-          input = "Apps, windows, projects and actions";
+          input = "Search apps, windows, projects…";
           list = "No matches";
         };
       };

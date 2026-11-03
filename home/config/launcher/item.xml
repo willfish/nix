@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="ItemBox">
+    <property name="spacing">12</property>
+    <property name="height-request">38</property>
+    <style><class name="item-box"/></style>
+    <child>
+      <object class="GtkLabel" id="ItemImageFont">
+        <property name="width-request">26</property>
+        <style><class name="item-image-text"/></style>
+      </object>
+    </child>
+    <child>
+      <object class="GtkImage" id="ItemImage">
+        <property name="pixel-size">26</property>
+        <property name="width-request">26</property>
+        <style><class name="item-image"/></style>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox" id="ItemTextBox">
+        <property name="hexpand">true</property>
+        <property name="spacing">12</property>
+        <style><class name="item-text-box"/></style>
+        <child>
+          <object class="GtkLabel" id="ItemText">
+            <property name="ellipsize">end</property>
+            <property name="xalign">0</property>
+            <property name="max-width-chars">45</property>
+            <style><class name="item-text"/></style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="ItemSubtext">
+            <property name="ellipsize">end</property>
+            <property name="xalign">0</property>
+            <property name="hexpand">true</property>
+            <property name="max-width-chars">35</property>
+            <style><class name="item-subtext"/></style>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkLabel" id="QuickActivation">
+        <property name="valign">center</property>
+        <style><class name="item-quick-activation"/></style>
+      </object>
+    </child>
+  </object>
+</interface>
