@@ -44,6 +44,7 @@ let
     pbcopy = "xclip -selection clipboard";
     pbpaste = "xclip -selection clipboard -o";
   };
+  wtclean = import ../../programs/wtclean { inherit pkgs; };
   git-cleanup = pkgs.writeShellScriptBin "git-cleanup" ''
     set -euo pipefail
 
@@ -56,6 +57,14 @@ let
     default="''${default_ref#refs/remotes/origin/}"
     current_root="$(git rev-parse --show-toplevel)"
     git pull --ff-only
+
+    # HMRC requires an exact merged PR, not a matching commit subject.
+    # Fish may have navigated to a linked default-branch checkout.
+    primary_root="$(git rev-parse --path-format=absolute --git-common-dir)"
+    primary_root="''${primary_root%/.git}"
+    if ${wtclean}/bin/wtclean --check-repo "$primary_root"; then
+      exec ${wtclean}/bin/wtclean --yes --repo "$primary_root"
+    fi
 
     # Prune administrative records only. A missing checkout may still be
     # unpublished, so this raw prune must not delete its service state.
@@ -327,6 +336,7 @@ in
   home.packages = [
     git-cleanup
     git-cm
+    wtclean
     (import ../../programs/collections/repo-tools { inherit pkgs; })
   ];
 

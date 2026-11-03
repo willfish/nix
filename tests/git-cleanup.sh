@@ -127,3 +127,25 @@ for branch in "${cases[@]:1}"; do
 done
 [[ $("$REAL_GIT" -C "$scratch/dirty" diff --numstat) == $'1\t1\ttracked' ]]
 printf '%s\n' 'PASS: closed and envrc checkouts removed, branches retained, unsafe cases kept, landed cleanup preserved'
+
+# Fish can navigate to a linked default-branch checkout before running cleanup.
+# Stub only the packaged wtclean boundary to verify primary-repo dispatch.
+export EXPECTED_PRIMARY="$scratch/repo" ROUTE_LOG="$scratch/route.log"
+cat >"$scratch/bin/wtclean-route" <<'ROUTE'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$1" in
+  --check-repo) [[ "$2" == "$EXPECTED_PRIMARY" ]] ;;
+  --yes) [[ "$2" == --repo && "$3" == "$EXPECTED_PRIMARY" ]]; echo dispatched >"$ROUTE_LOG" ;;
+  *) exit 2 ;;
+esac
+ROUTE
+chmod +x "$scratch/bin/wtclean-route"
+sed -E "s@/nix/store/[^/]+-wtclean/bin/wtclean@$scratch/bin/wtclean-route@g" "$cleanup" >"$scratch/routed-cleanup"
+chmod +x "$scratch/routed-cleanup"
+"$REAL_GIT" switch -qc holding
+"$REAL_GIT" worktree add -q "$scratch/default-route" main
+cd "$scratch/default-route"
+PATH="$scratch/bin:$PATH" "$scratch/routed-cleanup"
+[[ $(<"$ROUTE_LOG") == dispatched ]]
+printf '%s\n' 'PASS: linked default-branch checkout dispatches cleanup through its primary repository'
