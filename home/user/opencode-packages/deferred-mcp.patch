@@ -644,7 +644,7 @@
          ...SystemPart.make(Instructions.join(input.initial)),
 --- a/packages/core/src/tool/mcp.ts
 +++ b/packages/core/src/tool/mcp.ts
-@@ -39,6 +39,89 @@
+@@ -39,6 +39,90 @@
      const toolOutput = yield* ToolOutput.Service
      const lock = Semaphore.makeUnsafe(1)
      let discovered: Mcp.Tool[] = []
@@ -661,6 +661,7 @@
 +          limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 10 }))),
 +          offset: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
 +        }),
++        output: Schema.Unknown,
 +        execute: (input, context) =>
 +          Effect.gen(function* () {
 +            yield* permission.assert({
@@ -734,7 +735,7 @@
 
      // Register once after initial discovery; only subsequent updates need a debounced reload.
      const initial = yield* lock
-@@ -68,6 +151,19 @@
+@@ -68,6 +152,19 @@
                          id: context.id,
                        },
                      })
@@ -754,7 +755,7 @@
                      const result = yield* mcp
                        .callTool({
                          server: tool.server,
-@@ -107,6 +203,7 @@
+@@ -107,6 +204,7 @@
                    }).pipe(
                      Effect.mapError((error) => {
                        if (error instanceof ToolFailure) return error
