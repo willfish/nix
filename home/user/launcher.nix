@@ -187,6 +187,7 @@ in
           default = [
             "menus:daily"
             "desktopapplications"
+            "calc"
             "windows"
             "menus:projects"
             "menus:desktop"
@@ -272,13 +273,21 @@ in
           };
         };
         placeholders.default = {
-          input = "Search apps, windows, projects…";
+          input = "Search apps, do maths, find projects…";
           list = "No matches";
         };
       };
     };
 
     xdg.configFile = {
+      "elephant/calc.toml".source = toml.generate "calc.toml" {
+        # Recognise numeric expressions in ordinary searches, without a prefix.
+        require_number = true;
+        min_chars = 3;
+        # Only show successful qalc results, not a flickering placeholder row.
+        async = false;
+        autosave = false;
+      };
       "elephant/elephant.toml".source = toml.generate "elephant.toml" {
         auto_detect_launch_prefix = false;
         # Applications must survive an Elephant restart or a theme change.
