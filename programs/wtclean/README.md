@@ -1,4 +1,4 @@
-# Merged worktree cleanup
+# Inactive worktree cleanup
 
 `git cm` uses `wtclean` for primary checkouts directly under
 `~/Repositories/hmrc` whose origin is a `trade-tariff/*` GitHub repository.
@@ -13,12 +13,15 @@ wtclean
 ```
 
 `wtclean` cleans immediately without confirmation; `--dry-run` only previews.
+Normal output summarizes retained worktrees and names failed checks. Add
+`--verbose` for individual retention reasons and isolated state paths.
 Add `--repo PATH` to limit the operation to one primary checkout. Worktrees can
-be anywhere, but their exact HEAD must match one same-repository merged PR
-targeting the default branch. Squash merges are supported. Closed-but-unmerged
-PRs, lookup failures, local changes, untracked files, index-hidden changes,
-locked worktrees and missing checkouts are retained. Primary checkouts and
-local branches are never deleted.
+be anywhere, but their exact HEAD must match one same-repository merged or
+closed PR, including stacked PRs, with no open PR on the branch. Squash
+merges are supported. Lookup failures, changed PR tips, local changes,
+untracked files, index-hidden changes and locked worktrees are retained.
+Primary checkouts and local branches are never deleted. Missing registrations
+are pruned using Git without deleting their unverified isolated state.
 
 Cleanup verifies the flake's path-hashed worktree ID and state conventions,
 stops isolated PostgreSQL using its original Nix executable, then removes the

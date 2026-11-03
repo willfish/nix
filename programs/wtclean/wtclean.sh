@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-dry_run=0 check_only=0 repo_arg=''
+dry_run=0 verbose=0 check_only=0 repo_arg=''
 while (($#)); do
   case "$1" in
   --dry-run)
@@ -12,6 +12,10 @@ while (($#)); do
     # Retain compatibility with existing callers; cleanup is now the default.
     shift
     ;;
+  --verbose)
+    verbose=1
+    shift
+    ;;
   --repo | --check-repo)
     [[ $1 != --check-repo ]] || check_only=1
     [[ $# -ge 2 ]] || exit 2
@@ -19,10 +23,11 @@ while (($#)); do
     shift 2
     ;;
   -h | --help)
-    echo 'usage: wtclean [--dry-run] [--repo PATH]'
-    echo 'Remove clean linked worktrees of HMRC trade-tariff GitHub repos with a merged PR at their exact HEAD.'
+    echo 'usage: wtclean [--dry-run] [--verbose] [--repo PATH]'
+    echo 'Remove clean HMRC trade-tariff worktrees whose exact HEAD has a merged or closed PR.'
     echo 'Also stop and remove their isolated flake Postgres and caches. Keep primary checkouts and branches.'
     echo 'Default: clean immediately without confirmation. --dry-run previews without changing anything.'
+    echo 'Missing worktree registrations are pruned without deleting unverified state. --verbose explains retained worktrees.'
     exit 0
     ;;
   *)
@@ -34,12 +39,53 @@ done
 
 home=$(cd "$HOME" && pwd -P)
 cwd=$(pwd -P)
-errors=0 removed=0
+errors=0 removed=0 pruned=0 kept=0 open_count=0 dirty_count=0 unpublished_count=0 other_count=0
+reason='' response='' pr='' pr_kind='' commit_missing=0
+real_git="$(command git --exec-path)/../../bin/git"
+scratch=$(mktemp -d)
+trap 'rm -rf -- "$scratch"' EXIT
+declare -a warnings=()
 declare -a plan_repo=() plan_path=() plan_rev=() plan_branch=() plan_remote=() plan_default=() plan_pr=() plan_state=()
 declare -a paths=() revs=() branches=() blocked=() state=()
 
-git_at() { command git -c core.fsmonitor=false -C "$repo" "$@"; }
-keep() { echo "KEEP $wt: $*"; }
+git_at() { "$real_git" -c core.fsmonitor=false -C "$repo" "$@"; }
+keep() { reason="$*"; }
+warn() {
+  warnings+=("$*")
+  errors=$((errors + 1))
+}
+report_keep() {
+  kept=$((kept + 1))
+  case "$reason" in
+  'open PR') open_count=$((open_count + 1)) ;;
+  'local changes or untracked files' | 'assume-unchanged or skip-worktree index entries') dirty_count=$((dirty_count + 1)) ;;
+  'unpublished review snapshot' | 'no associated PR') unpublished_count=$((unpublished_count + 1)) ;;
+  *) other_count=$((other_count + 1)) ;;
+  esac
+  if [[ $verbose == 1 ]]; then printf 'KEEP %s: %s\n' "$wt" "$reason"; fi
+}
+fetch_json() {
+  commit_missing=0
+  if ! gh api "$@" >"$scratch/response" 2>"$scratch/error"; then
+    reason=$(sed -n 's/^gh: //p' "$scratch/error" | head -n 1)
+    [[ -n $reason ]] || reason='GitHub request failed'
+    if [[ $reason == 'No commit found for SHA:'* && $reason == *'(HTTP 422)' ]]; then commit_missing=1; fi
+    return 1
+  fi
+  response=$(cat "$scratch/response")
+}
+summary() {
+  if [[ $dry_run == 1 ]]; then
+    printf 'Would remove %s worktrees; would prune %s stale registrations.\n' "${#plan_path[@]}" "$pruned"
+  else
+    printf 'Removed %s worktrees; pruned %s stale registrations.\n' "$removed" "$pruned"
+  fi
+  printf 'Kept %s worktrees: %s linked to open PRs, %s modified, %s unpublished/no PR, %s protected/unverified.\n' "$kept" "$open_count" "$dirty_count" "$unpublished_count" "$other_count"
+  if [[ $errors != 0 ]]; then
+    printf 'Incomplete: %s checks or cleanup actions failed:\n' "$errors" >&2
+    printf '  %s\n' "${warnings[@]}" >&2
+  fi
+}
 
 repo_identity() {
   [[ ${repo%/*} == "$home/Repositories/hmrc" && -d "$repo/.git" && ! -L $repo ]] || return 1
@@ -74,7 +120,8 @@ load_worktrees() {
     worktree\ *) path=${field#worktree } ;;
     HEAD\ *) rev=${field#HEAD } ;;
     branch\ *) branch=${field#branch } ;;
-    locked | locked\ * | prunable | prunable\ *) block=1 ;;
+    locked | locked\ *) block=locked ;;
+    prunable | prunable\ *) [[ $block == locked ]] || block=missing ;;
     '')
       if [[ -n $path ]]; then
         paths+=("$path") revs+=("$rev") branches+=("$branch") blocked+=("$block")
@@ -146,17 +193,82 @@ checkout_safe() {
   }
 }
 
-merged_pr() {
-  local prs
-  prs=$(gh api "repos/$remote/commits/$rev/pulls?per_page=100") || return 1
-  jq -er --arg rev "$rev" --arg remote "$remote" --arg base "$default" '
-    select(type == "array" and length < 100)
-    | select(all(.[]; .state != "open"))
-    | map(select((.merged_at | type == "string" and length > 0) and .state == "closed" and .head.sha == $rev
-      and .head.repo.full_name == $remote and .base.repo.full_name == $remote and .base.ref == $base))
-    | select(length == 1) | .[0].number
-    | select(type == "number" and . > 0 and floor == .)
-  ' <<<"$prs"
+closed_pr() {
+  local branch=$1 endpoint encoded match
+  local -a endpoints=()
+  if [[ -n $branch ]]; then
+    encoded=$(jq -rn --arg head "trade-tariff:${branch#refs/heads/}" '$head | @uri') || return 1
+    endpoints+=("repos/$remote/pulls?state=all&head=$encoded&per_page=100")
+  fi
+  # Review checkouts can have another name, or lose remote reachability after
+  # squash merging. Ask GitHub before classifying them as local-only snapshots.
+  endpoints+=("repos/$remote/commits/$rev/pulls?per_page=100")
+  for endpoint in "${endpoints[@]}"; do
+    if ! fetch_json "$endpoint"; then
+      if [[ $commit_missing == 1 && $endpoint == */commits/* ]]; then
+        keep 'unpublished review snapshot'
+        return 1
+      fi
+      warn "$remote ($wt): $reason"
+      keep 'GitHub lookup failed'
+      return 1
+    fi
+    if ! jq -e 'type == "array" and length < 100' <<<"$response" >/dev/null 2>&1; then
+      warn "$remote ($wt): ambiguous or invalid PR response"
+      keep 'GitHub lookup failed'
+      return 1
+    fi
+    if jq -e 'any(.[]; .state == "open")' <<<"$response" >/dev/null; then
+      keep 'open PR'
+      return 1
+    fi
+    if [[ $(jq length <<<"$response") != 0 ]]; then break; fi
+  done
+  if [[ $(jq length <<<"$response") == 0 ]]; then
+    keep 'no associated PR'
+    return 1
+  fi
+  match=$(jq -er --arg rev "$rev" --arg remote "$remote" '
+    map(select(.state == "closed" and .head.sha == $rev
+      and .head.repo.full_name == $remote and .base.repo.full_name == $remote))
+    | select(length == 1) | .[0]
+    | select(.number | type == "number" and . > 0 and floor == .)
+    | [.number, (if .merged_at then "merged" else "closed" end)] | @tsv
+  ' <<<"$response") || {
+    keep 'PR tip differs from checkout, or is ambiguous'
+    return 1
+  }
+  IFS=$'\t' read -r pr pr_kind <<<"$match"
+}
+
+unverified_repo() {
+  local i
+  warn "$remote: $reason"
+  for ((i = 1; i < ${#paths[@]}; i++)); do
+    [[ ${blocked[$i]} != missing ]] || continue
+    wt=${paths[$i]}
+    keep 'repository lookup failed'
+    report_keep
+  done
+}
+
+prune_missing() {
+  local preview count
+  preview=$(git_at worktree prune --dry-run --verbose --expire now 2>&1) || {
+    warn "$remote: cannot inspect stale worktree registrations"
+    return 1
+  }
+  count=$(grep -c '^Removing ' <<<"$preview" || true)
+  [[ $count != 0 ]] || return 0
+  if [[ $dry_run != 1 ]]; then
+    # Use real Git, not the service-state wrapper: missing records prove no PR state.
+    git_at worktree prune --expire now 2>"$scratch/error" || {
+      warn "$remote: cannot prune stale worktree registrations"
+      return 1
+    }
+  fi
+  pruned=$((pruned + count))
+  if [[ $verbose == 1 ]]; then printf '%s\n' "$preview"; fi
 }
 
 safe_state_path() {
@@ -278,28 +390,46 @@ for repo in "${repos[@]}"; do
     continue
   fi
   load_worktrees || {
-    errors=$((errors + 1))
+    warn "$remote: cannot list registered worktrees"
     continue
   }
   [[ ${#paths[@]} -gt 1 ]] || continue
-  default=$(gh api "repos/$remote" --jq .default_branch) || {
-    errors=$((errors + 1))
+  prune_missing || continue
+  if [[ $dry_run != 1 ]]; then
+    load_worktrees || {
+      warn "$remote: cannot reload worktrees after pruning"
+      continue
+    }
+  fi
+  [[ ${#paths[@]} -gt 1 ]] || continue
+  if ! fetch_json "repos/$remote" --jq .default_branch; then
+    unverified_repo
     continue
-  }
+  fi
+  default=$response
   [[ -n $default && $default != null ]] || {
-    errors=$((errors + 1))
+    warn "$remote: default branch is unknown"
     continue
   }
   for ((i = 1; i < ${#paths[@]}; i++)); do
-    checkout_safe "$i" || continue
+    # Dry runs keep the registrations, but report them as pending pruning.
+    [[ ${blocked[$i]} != missing ]] || continue
+    reason='cannot inspect worktree'
+    checkout_safe "$i" || {
+      report_keep
+      continue
+    }
     rev=${revs[$i]}
-    if ! pr=$(merged_pr); then
-      keep 'no verified merged PR at this exact HEAD targeting the default branch'
+    if ! closed_pr "${branches[$i]}"; then
+      report_keep
       continue
     fi
-    collect_state || continue
-    echo "REMOVE $wt (merged PR #$pr)"
-    for p in "${state[@]}"; do echo "  state: $p"; done
+    collect_state || {
+      report_keep
+      continue
+    }
+    if [[ $dry_run == 1 || $verbose == 1 ]]; then printf 'REMOVE %s (%s PR #%s)\n' "$wt" "$pr_kind" "$pr"; fi
+    if [[ $verbose == 1 ]]; then for p in "${state[@]}"; do echo "  state: $p"; done; fi
     plan_repo+=("$repo") plan_path+=("$wt") plan_rev+=("$rev") plan_branch+=("${branches[$i]}")
     plan_remote+=("$remote") plan_default+=("$default") plan_pr+=("$pr")
     snapshot=$(printf '%s\n' "${state[@]}")
@@ -307,15 +437,16 @@ for repo in "${repos[@]}"; do
   done
 done
 
-echo "${#plan_path[@]} worktree(s) eligible. Primary checkouts and branches stay intact."
 if [[ $dry_run == 1 || ${#plan_path[@]} == 0 ]]; then
+  summary
   [[ $errors == 0 ]]
   exit
 fi
 apply_candidate() {
-  local n=$1 i found=-1 pr_now snapshot p
+  local n=$1 i found=-1 snapshot p
   repo=${plan_repo[$n]} wt=${plan_path[$n]} rev=${plan_rev[$n]}
   remote=${plan_remote[$n]} default=${plan_default[$n]}
+  reason=''
   load_worktrees || return 1
   for ((i = 1; i < ${#paths[@]}; i++)); do
     [[ ${paths[$i]} != "$wt" ]] || {
@@ -325,12 +456,13 @@ apply_candidate() {
   done
   [[ $found != -1 && ${revs[$found]} == "$rev" && ${branches[$found]} == "${plan_branch[$n]}" ]] || return 1
   checkout_safe "$found" || return 1
-  pr_now=$(merged_pr) || return 1
-  [[ $pr_now == "${plan_pr[$n]}" ]] || return 1
+  closed_pr "${branches[$found]}" || return 1
+  [[ $pr == "${plan_pr[$n]}" ]] || return 1
   collect_state || return 1
   snapshot=$(printf '%s\n' "${state[@]}")
   [[ $snapshot == "${plan_state[$n]}" ]] || return 1
-  stop_postgres || return 1
+  stop_postgres >"$scratch/postgres" 2>&1 || return 1
+  if [[ $verbose == 1 ]]; then cat "$scratch/postgres"; fi
   # Never force removal. Git rechecks local changes and locks before deleting.
   git_at worktree remove "$wt" || return 1
   removed=$((removed + 1))
@@ -343,14 +475,13 @@ apply_candidate() {
     safe_state_path "$p" || return 1
     rm -rf -- "$p" || return 1
   done
-  echo "REMOVED $wt and ${#state[@]} isolated state path(s)"
+  printf 'REMOVED %s (%s PR #%s) and %s isolated state path(s)\n' "$wt" "$pr_kind" "$pr" "${#state[@]}"
 }
 
 for ((n = 0; n < ${#plan_path[@]}; n++)); do
   if ! apply_candidate "$n"; then
-    echo "CLEANUP INCOMPLETE ${plan_path[$n]}: retained remaining state" >&2
-    errors=$((errors + 1))
+    warn "${plan_path[$n]}: cleanup incomplete; retained remaining state${reason:+ ($reason)}"
   fi
 done
-echo "Removed $removed/${#plan_path[@]} eligible worktree(s)."
+summary
 [[ $errors == 0 ]]

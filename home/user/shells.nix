@@ -58,7 +58,7 @@ let
     current_root="$(git rev-parse --show-toplevel)"
     git pull --ff-only
 
-    # HMRC requires an exact merged PR, not a matching commit subject.
+    # HMRC requires verified PR state, not a matching commit subject.
     # Fish may have navigated to a linked default-branch checkout.
     primary_root="$(git rev-parse --path-format=absolute --git-common-dir)"
     primary_root="''${primary_root%/.git}"
