@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-dry_run=0 yes=0 check_only=0 repo_arg=''
+dry_run=0 check_only=0 repo_arg=''
 while (($#)); do
   case "$1" in
   --dry-run)
@@ -9,7 +9,7 @@ while (($#)); do
     shift
     ;;
   --yes)
-    yes=1
+    # Retain compatibility with existing callers; cleanup is now the default.
     shift
     ;;
   --repo | --check-repo)
@@ -19,10 +19,10 @@ while (($#)); do
     shift 2
     ;;
   -h | --help)
-    echo 'usage: wtclean [--dry-run] [--yes] [--repo PATH]'
+    echo 'usage: wtclean [--dry-run] [--repo PATH]'
     echo 'Remove clean linked worktrees of HMRC trade-tariff GitHub repos with a merged PR at their exact HEAD.'
     echo 'Also stop and remove their isolated flake Postgres and caches. Keep primary checkouts and branches.'
-    echo 'Default: preview, then require DELETE. --dry-run changes nothing. --yes skips confirmation.'
+    echo 'Default: clean immediately without confirmation. --dry-run previews without changing anything.'
     exit 0
     ;;
   *)
@@ -312,18 +312,6 @@ if [[ $dry_run == 1 || ${#plan_path[@]} == 0 ]]; then
   [[ $errors == 0 ]]
   exit
 fi
-if [[ $yes == 0 ]]; then
-  [[ -t 0 ]] || {
-    echo 'No terminal. Use --dry-run or explicitly approve with --yes.' >&2
-    exit 2
-  }
-  read -r -p 'Delete these worktrees and isolated state? Type DELETE: ' answer
-  [[ $answer == DELETE ]] || {
-    echo 'Cancelled.'
-    exit 0
-  }
-fi
-
 apply_candidate() {
   local n=$1 i found=-1 pr_now snapshot p
   repo=${plan_repo[$n]} wt=${plan_path[$n]} rev=${plan_rev[$n]}

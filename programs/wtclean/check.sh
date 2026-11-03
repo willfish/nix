@@ -86,7 +86,7 @@ bash "$source_dir/wtclean.sh" --dry-run --repo "$repo" >"$scratch/preview"
 cat "$scratch/preview"
 [[ -d "$scratch/merged" && -d $data ]]
 grep -q '2 worktree(s) eligible' "$scratch/preview"
-bash "$source_dir/wtclean.sh" --yes --repo "$repo"
+bash "$source_dir/wtclean.sh"
 [[ ! -e "$scratch/merged" && ! -e "$scratch/detached" && ! -e $data ]]
 [[ ! -e "$HOME/.local/share/yarn/worktrees/$ident" ]]
 for name in closed dirty untracked locked unpublished hidden symlink; do [[ -d "$scratch/$name" ]]; done
@@ -102,7 +102,7 @@ jq --arg tip "$tip" '.[0].head.sha=$tip' "$FIXTURES/$("$REAL_GIT" rev-parse merg
 fail_id=$(printf '%s\n' "$scratch/faildb" | md5sum | cut -c1-8)
 mkdir "${data%/*}/$fail_id"
 printf '123456789\n' >"${data%/*}/$fail_id/postmaster.pid"
-if bash "$source_dir/wtclean.sh" --yes --repo "$repo"; then
+if bash "$source_dir/wtclean.sh" --repo "$repo"; then
   echo 'Unexpected success with an unknown PostgreSQL executable' >&2
   exit 1
 fi

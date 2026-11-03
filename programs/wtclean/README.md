@@ -9,9 +9,10 @@ Preview or clean every matching repository without switching branches:
 
 ```sh
 wtclean --dry-run
-wtclean --yes
+wtclean
 ```
 
+`wtclean` cleans immediately without confirmation; `--dry-run` only previews.
 Add `--repo PATH` to limit the operation to one primary checkout. Worktrees can
 be anywhere, but their exact HEAD must match one same-repository merged PR
 targeting the default branch. Squash merges are supported. Closed-but-unmerged
