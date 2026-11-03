@@ -14,7 +14,8 @@ a 64K context, high reasoning effort, and Hermes compression at 48K tokens.
 Hermes rejects windows below 64,000 tokens, so the launcher enforces 65,536
 in a runtime copy of the setup config, including older 32K installations.
 The upstream streaming-memory limits remain enabled. The optional
-expert-skipping speed shortcut is disabled.
+expert-skipping speed shortcut is disabled. Prompt processing uses 4096-token
+chunks. MTP/DFlash2 drafting and the optional FP16 decode path remain disabled.
 
 ## Prepare and start
 
@@ -24,10 +25,13 @@ Apple's Command Line Tools and their SDK, not the older SDK in a Nix shell.
 Python and dependencies stay in the private Strata checkout; no Homebrew
 installation or system Python changes are needed.
 
-Source lives at `~/.local/opt/Strata`; model files and the streaming expert
-copy live at `~/.local/share/strata`. Allow roughly 140 GB for preparation.
+Source lives at `~/.local/opt/Strata-v0.2.10` (engine 0.1.56); model files and
+the streaming expert copy live at `~/.local/share/strata`. Allow roughly 140 GB
+for preparation.
 Keep them on the internal SSD. Do not prepare/repack weights beside a running
 engine, or override the upstream memory caps to chase throughput.
+Keep the previous `~/.local/opt/Strata` installation for rollback; the staged
+release also reuses its Python interpreter and build inputs.
 
 After preparation, run `hmswitch` to install the `org.nixos.strata` system
 job. `strata-relay-server` is also available for a foreground run, but do not
@@ -37,6 +41,6 @@ the Nix store. Hermes and Tailscale remain separate services.
 
 `GET /health` checks model readiness. Authenticated clients use `/v1/models`
 and `/v1/chat/completions`. The engine log is
-`~/.local/opt/Strata/strata-iq3_s.log`; the system job log is
+`~/.local/opt/Strata-v0.2.10/strata-iq3_s.log`; the system job log is
 `/var/log/dotfiles/strata.log`. The old llama-server and its browser-tool helper
 are not required for Hermes's Qwen topic.

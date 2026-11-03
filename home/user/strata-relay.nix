@@ -7,8 +7,8 @@
 }:
 let
   enabled = pkgs.stdenv.isDarwin && hostName == "relay";
-  source = "${config.home.homeDirectory}/.local/opt/Strata";
-  revision = "296b59d2f73c8f04a805df29c2fa97655adace78";
+  source = "${config.home.homeDirectory}/.local/opt/Strata-v0.2.10";
+  revision = "ffa80d73133ea5c548aefe57889a16e8085a938f";
   data = "${config.xdg.dataHome}/strata";
   keyFile = "${config.xdg.configHome}/local-llm/api-key";
   runtimeConfig = "${config.xdg.stateHome}/strata/runtime.json";
@@ -65,10 +65,17 @@ let
     mkdir -p ${lib.escapeShellArg (builtins.dirOf runtimeConfig)}
     runtime=$(mktemp ${lib.escapeShellArg "${runtimeConfig}.XXXXXX"})
     trap 'rm -f "$runtime"' EXIT
-    ${pkgs.jq}/bin/jq '
+    ${pkgs.jq}/bin/jq --arg source "$source" '
       (.args | index("--max-context")) as $i
       | if $i == null then error("missing --max-context")
         else .args[$i + 1] = "65536" end
+      | .exe = ($source + "/build-metal/strata")
+      | .cwd = $source
+      | .log = ($source + "/strata-iq3_s.log")
+      | .env.STRATA_METAL_PROMPT_CHUNK = "4096"
+      | .env.STRATA_METAL_F16 = "0"
+      | .drafting = "off"
+      | .mtp = false
     ' "$source/strata-iq3_s.json" > "$runtime"
     mv "$runtime" ${lib.escapeShellArg runtimeConfig}
     # Read after the environment reset: the key never appears in process arguments.
