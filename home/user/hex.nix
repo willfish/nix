@@ -20,9 +20,12 @@ in
       paste_with_shift = true;
     };
   };
-  # Leave Andromeda's VRAM for local models without disabling Hex's UI renderer.
+  # Leave Andromeda's VRAM for local models: CPU transcription and Lavapipe UI rendering.
   systemd.user.services.hex = lib.mkIf (voice.stt && hostName == "andromeda") {
-    Service.Environment = [ "TRANSCRIBE_BACKENDS=cpu" ];
+    Service.Environment = [
+      "TRANSCRIBE_BACKENDS=cpu"
+      "VK_DRIVER_FILES=${pkgs.mesa}/share/vulkan/icd.d/lvp_icd.x86_64.json"
+    ];
   };
   # The running portal may retain the application dirs from before a profile
   # switch. Publish its app ID in the stable user directory as well.
