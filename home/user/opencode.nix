@@ -249,18 +249,34 @@ in
           }) agentNames
         );
       }
-      // lib.optionalAttrs config.dotfiles.privateEnabled {
-        providers = {
-          "opencode-go" = {
-            settings.apiKey = "{env:OPENCODE_GO_KEY}";
+      // {
+        providers =
+          lib.optionalAttrs config.dotfiles.privateEnabled {
+            "opencode-go" = {
+              settings.apiKey = "{env:OPENCODE_GO_KEY}";
+            };
+            relay =
+              localProvider "Relay" (qwenBaseUrl "relay") "LOCAL_LLM_RELAY_API_KEY"
+                piModels.providers.relay.models;
+            andromeda =
+              localProvider "Andromeda" (qwenBaseUrl "andromeda") "LOCAL_LLM_ANDROMEDA_API_KEY"
+                piModels.providers.andromeda.models;
+          }
+          // lib.optionalAttrs (hostName == "andromeda") {
+            hex-rewrite = {
+              package = "@opencode/ai/providers/openai-compatible";
+              name = "Hex rewrite (CPU)";
+              settings.baseURL = "http://127.0.0.1:18083/v1";
+              models."qwen2.5-3b-instruct" = {
+                name = "Qwen2.5 3B Instruct (CPU)";
+                capabilities.tools = false;
+                limit = {
+                  context = 8192;
+                  output = 1024;
+                };
+              };
+            };
           };
-          relay =
-            localProvider "Relay" (qwenBaseUrl "relay") "LOCAL_LLM_RELAY_API_KEY"
-              piModels.providers.relay.models;
-          andromeda =
-            localProvider "Andromeda" (qwenBaseUrl "andromeda") "LOCAL_LLM_ANDROMEDA_API_KEY"
-              piModels.providers.andromeda.models;
-        };
       }
     );
     ".config/opencode/agents".source = agents;
