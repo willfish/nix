@@ -21,4 +21,3 @@ metadata
 # Archive tooling is owned source, not scratch.
 !system/terminus/radio-archive/*.py
 !home/config/cliamp/sync-radio-archive-playlists.py
-!programs/nyxt/fetch-dependencies.py

@@ -70,7 +70,6 @@
     ./arxiv-library.nix
     ./neovim.nix
     ./network.nix
-    ./nyxt.nix
     ./packages.nix
     ./pi.nix
     ./opencode.nix

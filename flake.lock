@@ -972,22 +972,6 @@
         "type": "github"
       }
     },
-    "nyxt-source": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1793492728,
-        "narHash": "sha256-qNrdHvMA3bx8EI7CCp01Lnqj4HbRoAfz9sHFzSsQ71g=",
-        "owner": "atlas-engineer",
-        "repo": "nyxt",
-        "rev": "325c2a004e6ee9f22045590e81b059740a87cc1b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "atlas-engineer",
-        "repo": "nyxt",
-        "type": "github"
-      }
-    },
     "omapager-source": {
       "flake": false,
       "locked": {
@@ -2229,7 +2213,6 @@
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_6",
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "nyxt-source": "nyxt-source",
         "omapager-source": "omapager-source",
         "omarchy": "omarchy",
         "omarchy-calendar-source": "omarchy-calendar-source",
