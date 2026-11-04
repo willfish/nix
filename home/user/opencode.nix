@@ -267,8 +267,8 @@ in
               package = "@opencode/ai/providers/openai-compatible";
               name = "Hex rewrite (CPU)";
               settings.baseURL = "http://127.0.0.1:18083/v1";
-              models."qwen2.5-3b-instruct" = {
-                name = "Qwen2.5 3B Instruct (CPU)";
+              models."qwen3-4b-instruct-2507" = {
+                name = "Qwen3 4B Instruct (CPU)";
                 capabilities.tools = false;
                 limit = {
                   context = 8192;
