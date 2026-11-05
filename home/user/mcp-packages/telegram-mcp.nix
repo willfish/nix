@@ -3,6 +3,7 @@
   bash,
   stdenvNoCC,
   python3,
+  fetchPypi,
   source,
 }:
 let
@@ -19,7 +20,21 @@ let
     ps.pillow
     ps.pypdf
     ps.qrcode
-    ps.telethon
+    # nixpkgs' 1.42 predates the layer-229 button types used by this server.
+    # Match upstream's uv.lock, including its source archive hash.
+    (ps.telethon.overridePythonAttrs {
+      version = "1.45.0";
+      src = fetchPypi {
+        pname = "telethon";
+        version = "1.45.0";
+        hash = "sha256-TLeuJpuKudrZ/EkLhZ8LwviFEh6ZD1sgQHsfqg2yodk=";
+      };
+      # The sdist ships setup.py and generated types, but no Hatch hook or tests.
+      pyproject = null;
+      format = "setuptools";
+      doCheck = false;
+      pythonImportsCheck = [ "telethon" ];
+    })
     ps.typer
   ]);
 in
@@ -44,6 +59,17 @@ stdenvNoCC.mkDerivation {
 
   # The withPackages interpreter, for companion scripts (login helper).
   passthru.interpreter = interpreter;
+
+  # Import every registered tool without credentials or a network connection.
+  doInstallCheck = true;
+  installCheckPhase = ''
+    runHook preInstallCheck
+    cd "$out/share/telegram-mcp"
+    TELEGRAM_API_ID=1 TELEGRAM_API_HASH=build-check \
+      TELEGRAM_SESSION_NAME="$TMPDIR/session" TELEGRAM_LOG_FILE="$TMPDIR/mcp_errors.log" \
+      ${interpreter}/bin/python3 -c 'import telegram_mcp.runner'
+    runHook postInstallCheck
+  '';
 
   # Upstream's install guard refuses to start unless the distribution
   # metadata proves an explicit source-checkout install (a defense against
