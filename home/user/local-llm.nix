@@ -73,7 +73,7 @@ let
   hermesOverlay = pkgs.writeText "local-qwen-hermes.json" (
     builtins.toJSON {
       model = {
-        default = if isRelay then "qwen3.8-flash-next-iq3_s" else modelAlias;
+        default = if isRelay then "qwen3.8-flash-next-unsloth-ud-iq4_xs-v31" else modelAlias;
         provider = "qwen-local";
         base_url = "http://127.0.0.1:8081/v1";
         api_key = "";

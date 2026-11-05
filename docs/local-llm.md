@@ -107,7 +107,8 @@ are not enabled.
 
 The server releases the model and KV cache after ten idle minutes. Sending a new
 message reloads it, so the first response after sleeping takes longer. Browser
-history is local to the browser profile. Both servers listen on all IPv4 interfaces. On Andromeda, API requests require
+history is local to the browser profile. Both servers listen on all IPv4
+interfaces. On Andromeda, API requests require
 the login key. On Relay, Tailscale clients reach port 8081 without one; the
 compiled Rust `tailscale-open-proxy` injects the key before localhost llama.cpp
 sees the request. Its source and Cargo tests live in `programs/tailscale-proxy`.
@@ -117,7 +118,8 @@ are limited to 64 KiB and 128 fields, connection setup to ten seconds and active
 connections to 512; established streams have no inference timeout. LAN and
 localhost clients on Relay still send the key. Health and model-list metadata remain
 public. HTTP is unencrypted; Tailscale provides the transport encryption. Do not
-enable Funnel or otherwise forward this port to the internet. Andromeda's NixOS firewall trusts `tailscale0` and
+enable Funnel or otherwise forward this port to the internet. Andromeda's NixOS
+firewall trusts `tailscale0` and
 does not open 8081 on the LAN, so that GPU is tailnet-only. Relay also remains
 reachable on the LAN. The tool service itself listens only on `127.0.0.1:8082`;
 the authenticated chat server proxies browser tool calls to it.
@@ -306,7 +308,7 @@ Andromeda's API base URL is `http://127.0.0.1:8081/v1` locally or
 Bearer API key and `qwen3.8-flash-next` alias. The LAN can also reach port
 8081 with the key.
 Relay's Metal endpoint is localhost-only, with model ID
-`qwen3.8-flash-next-iq3_s`; see its separate [operations guide](strata-relay.md).
+`qwen3.8-flash-next-unsloth-ud-iq4_xs-v31`; see its separate [operations guide](strata-relay.md).
 Plain API clients must implement their own tool loop.
 
 The following commands apply only to the optional legacy llama.cpp service on
@@ -350,8 +352,8 @@ after activation; do not send an unsolicited House message to test it.
 
 The managed defaults are:
 
-- Relay's native Metal Qwen3.8 Flash-Next IQ3_S model with thinking enabled
-  and high reasoning effort. This is independent of Andromeda's EXL3 recipe.
+- Relay's native Metal Qwen3.8 Flash-Next Unsloth Dynamic v3.1 model with thinking
+  enabled and high reasoning effort. This is independent of Andromeda's EXL3 recipe.
 - YOLO enabled: terminal/file tool calls do not ask for approval. This is host
   access as William, not the browser MCP's restricted workspace or root access.
   Existing OS permissions and Hermes security blocks still apply.

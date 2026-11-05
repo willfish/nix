@@ -7,8 +7,10 @@
 }:
 let
   enabled = pkgs.stdenv.isDarwin && hostName == "relay";
-  source = "${config.home.homeDirectory}/.local/opt/Strata-v0.2.10";
-  revision = "ffa80d73133ea5c548aefe57889a16e8085a938f";
+  source = "${config.home.homeDirectory}/.local/opt/Strata-v0.2.11";
+  revision = "c3b3f5035506f3e966f1b4b7b188aeaabae92f1d";
+  model = "UD-IQ4_XS-v31";
+  tag = "unsloth-${lib.toLower model}";
   data = "${config.xdg.dataHome}/strata";
   keyFile = "${config.xdg.configHome}/local-llm/api-key";
   runtimeConfig = "${config.xdg.stateHome}/strata/runtime.json";
@@ -39,7 +41,7 @@ let
       fi
       cd "$source"
       exec ${cleanEnvironment} STRATA_SOURCE=huggingface PIP_ONLY_BINARY=:all: \
-        /bin/sh ./setup.sh --yes --model IQ3_S --context 65536 --vision no \
+        /bin/sh ./setup.sh --yes --family unsloth --model ${model} --context 65536 --vision no \
         --port 8081 --host 127.0.0.1 --no-browser --no-start \
         --data-dir ${lib.escapeShellArg data}
     '';
@@ -48,11 +50,11 @@ let
     set -euo pipefail
     umask 077
     source=${lib.escapeShellArg source}
-    if [ ! -f "$source/strata-iq3_s.json" ]; then
+    if [ ! -f "$source/strata-${tag}.json" ]; then
       echo 'Run strata-relay-setup before starting Strata.' >&2
       exit 0
     fi
-    if [ -e ${lib.escapeShellArg "${data}/models/IQ3_S/.preparing.lock"} ]; then
+    if [ -e ${lib.escapeShellArg "${data}/metal/.preparing.lock"} ]; then
       echo 'Model preparation must finish before Strata starts.' >&2
       exit 1
     fi
@@ -71,12 +73,12 @@ let
         else .args[$i + 1] = "65536" end
       | .exe = ($source + "/build-metal/strata")
       | .cwd = $source
-      | .log = ($source + "/strata-iq3_s.log")
+      | .log = ($source + "/strata-${tag}.log")
       | .env.STRATA_METAL_PROMPT_CHUNK = "4096"
       | .env.STRATA_METAL_F16 = "0"
       | .drafting = "off"
       | .mtp = false
-    ' "$source/strata-iq3_s.json" > "$runtime"
+    ' "$source/strata-${tag}.json" > "$runtime"
     mv "$runtime" ${lib.escapeShellArg runtimeConfig}
     # Read after the environment reset: the key never appears in process arguments.
     export STRATA_API_KEY
