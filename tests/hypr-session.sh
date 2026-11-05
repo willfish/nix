@@ -11,13 +11,14 @@ export SESSION_TEST_STOPPED="$scratch/stopped"
 export HYPR_SESSION_MENU_FILE="$scratch/menu.tsv"
 export HYPR_SESSION_FUZZEL_CONFIG=/dev/null
 export HYPR_SESSION_STOP_LOCAL_LLM=1
-printf 'Suspend\tsuspend\t0\tsuspend\nHibernate\thibernate\t0\thibernate\n' >"$HYPR_SESSION_MENU_FILE"
+printf 'Lock\tlock\t0\tlock\nSuspend\tsuspend\t0\tsuspend\nHibernate\thibernate\t0\thibernate\n' >"$HYPR_SESSION_MENU_FILE"
 cat >"$scratch/bin/command-stub" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 name=${0##*/}
 case "$name" in
   notify-send) exit 0 ;;
+  hypr-lock) printf 'lock\n' >>"$SESSION_TEST_LOG" ;;
   fuzzel) input=$(</dev/stdin); grep -Fx -- "$SESSION_TEST_CHOICE" <<<"$input" ;;
   omarchy-local-ai)
     printf 'cleanup %s\n' "$*" >>"$SESSION_TEST_LOG"
@@ -62,10 +63,24 @@ case "$name" in
 esac
 STUB
 chmod +x "$scratch/bin/command-stub"
-for command in notify-send fuzzel omarchy-local-ai systemctl docker; do
+for command in notify-send hypr-lock fuzzel omarchy-local-ai systemctl docker; do
   ln -s command-stub "$scratch/bin/$command"
 done
 export PATH="$scratch/bin:$PATH"
+for route in direct select menu; do
+  args=(lock)
+  case "$route" in
+  select) args=(select lock) ;;
+  menu)
+    args=(menu)
+    export SESSION_TEST_CHOICE=Lock
+    ;;
+  esac
+  : >"$SESSION_TEST_LOG"
+  bash -euo pipefail "$root/home/config/hyprland/session.sh" "${args[@]}"
+  printf 'lock\n' >"$scratch/expected"
+  diff -u "$scratch/expected" "$SESSION_TEST_LOG"
+done
 for action in suspend hibernate; do
   for route in direct select menu; do
     args=("$action")
@@ -170,4 +185,4 @@ for failure in service-query service-stop docker-query docker-stop survivor; do
   }
   grep -q 'sleep cancelled' "$scratch/error"
 done
-printf 'PASS: shared endpoint isolation, sleep routes, service-first cleanup, tracked GPU models, labelled containers and failure cancellation\n'
+printf 'PASS: shared endpoint isolation, lock/sleep routes, service-first cleanup, tracked GPU models, labelled containers and failure cancellation\n'

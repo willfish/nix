@@ -426,13 +426,28 @@
         text = builtins.readFile ../config/hyprland/record.sh;
       };
       agentAwake = import ../../programs/herdr-sleep-inhibit { inherit pkgs; };
+      # Avoid NVIDIA EGL allocation failures and Hyprlock's output-recreation
+      # failure on this shared display/compute GPU. Swaylock renders with Cairo.
+      useSwaylock = hostName == "andromeda";
+      lockerName = if useSwaylock then "swaylock" else "hyprlock";
+      lockerPackage = if useSwaylock then pkgs.swaylock else pkgs.hyprlock;
+      lockScreen = pkgs.writeShellApplication {
+        name = "hypr-lock";
+        text = ''
+          ${stopScreensaver}
+          if ${pkgs.procps}/bin/pidof ${lockerName} >/dev/null; then
+            exit 0
+          fi
+          exec ${lockerPackage}/bin/${lockerName} "$@"
+        '';
+      };
       session = pkgs.writeShellApplication {
         name = "hypr-session";
         runtimeInputs = [
           pkgs.coreutils
           pkgs.fuzzel
           pkgs.gawk
-          pkgs.hyprlock
+          lockScreen
           pkgs.libnotify
           pkgs.systemd
         ];
@@ -562,6 +577,7 @@
         pkgs.grimblast
         record
         session
+        lockScreen
         screensaver
         launchScreensaver
         themeSeed
@@ -570,7 +586,6 @@
         pkgs.playerctl
         pkgs.fuzzel
         pkgs.grim
-        pkgs.hyprlock
         pkgs.satty
         pkgs.slurp
         pkgs.wl-clipboard
@@ -927,6 +942,9 @@
         run install -d -m 0700 ${lib.escapeShellArg screenshotDirectory}
       '';
 
+      programs.swaylock = lib.mkIf useSwaylock {
+        enable = true;
+      };
       # Swaylock has no include directive; read the active theme on each lock.
       xdg.configFile."swaylock/config" = lib.mkIf config.programs.swaylock.enable {
         source = config.lib.file.mkOutOfStoreSymlink (themeFile "swaylock.conf");
@@ -935,7 +953,7 @@
       # Theme hyprlock.conf is sourced for $theme_* only. Do not also let that
       # file declare background or input-field: Hyprlock adds a widget per block.
       programs.hyprlock = {
-        enable = true;
+        enable = !useSwaylock;
         settings = {
           source = themeFile "hyprlock.conf";
           general = {
@@ -987,11 +1005,11 @@
         settings = {
           general = {
             # inhibit_sleep=2 waits for the Wayland lock notification when
-            # lock_cmd starts hyprlock and before_sleep_cmd locks the session.
-            # A foreground hyprlock in before_sleep either blocks suspend or
+            # lock_cmd starts the locker and before_sleep_cmd locks the session.
+            # A foreground locker in before_sleep either blocks suspend or
             # returns before the lock is up.
             inhibit_sleep = 2;
-            lock_cmd = "${stopScreensaver}; ${pkgs.procps}/bin/pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
+            lock_cmd = "${lockScreen}/bin/hypr-lock";
             before_sleep_cmd = "${pkgs.systemd}/bin/loginctl lock-session";
             after_sleep_cmd = "${pkgs.hyprland}/bin/hyprctl dispatch dpms on";
           };

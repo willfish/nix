@@ -19,7 +19,7 @@ confirm() {
 
 run_action() {
   case "$1" in
-  lock) exec hyprlock ;;
+  lock) exec hypr-lock ;;
   display-off) exec hyprctl dispatch dpms off ;;
   display-toggle) exec hyprctl dispatch dpms toggle ;;
   # Release the local model's GPU allocations before logind starts locking/sleep.
