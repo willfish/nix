@@ -20,7 +20,7 @@ buildNpmPackage {
   # hono, nanoid, postcss, protobufjs and smol-toml advisory fixes, and
   # settings.namespaceProxyTools replaces the old gateway-only patch.
   patches = [ ./pi-mcp-adapter-lock.patch ];
-  npmDepsHash = "sha256-Sfufw0ee8c/z7aQIXjNn8LQNxlHSWAXfqSBH5BqMftY=";
+  npmDepsHash = "sha256-1wpPin0UymB4fvajlud12LPi12fEiEG1b7gf4iKkZVA=";
   # npm needs to update cache entries shared by nested Pi dev dependencies.
   makeCacheWritable = true;
   npmFlags = [ "--ignore-scripts" ];
