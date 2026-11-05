@@ -278,6 +278,9 @@ let
     for panel in audio bluetooth network tailscale; do
       cp -r ${source}/shell/plugins/panels/"$panel" "$out/shell/plugins/panels/"
     done
+    # The agents panel shares Elsewhen's row-reordering helpers, not its UI.
+    mkdir -p "$out/shell/plugins/panels/elsewhen"
+    cp ${source}/shell/plugins/panels/elsewhen/Model.js "$out/shell/plugins/panels/elsewhen/"
     cp ${calendarPlugin}/LICENSE ${calendarPlugin}/manifest.json \
       ${calendarPlugin}/*.qml ${calendarPlugin}/*.js "$out/shell/plugins/panels/calendar/"
     cp -r ${weatherPlugin}/ui ${weatherPlugin}/lib ${weatherPlugin}/data "$out/shell/plugins/panels/weather/"
