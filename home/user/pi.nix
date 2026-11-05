@@ -123,7 +123,7 @@ in
   home.file.".pi/agent/extensions/hidden-models.ts".source = ../config/pi/extensions/hidden-models.ts;
   home.file.".pi/agent/extensions/pi-qwen.ts".source = ../config/local-llm/pi-qwen.ts;
 
-  home.file.".pi/agent/extensions/pi-voice.ts" = lib.mkIf voiceFeatures.stt {
+  home.file.".pi/agent/extensions/pi-voice.ts" = lib.mkIf voiceFeatures.pi {
     source = ../config/pi/extensions/pi-voice.ts;
   };
   home.file.".pi/agent/extensions/mcp".source = "${mcpAdapter}/lib/node_modules/pi-mcp-adapter";

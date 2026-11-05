@@ -2,12 +2,14 @@
 let
   linux = pkgs.stdenv.isLinux;
 in
-{
-  # Voice controller, hotkeys, status card and Deepgram speech.
+rec {
+  # Hex dictation and its desktop shortcuts.
   stt =
     linux
     && builtins.elem hostName [
       "andromeda"
       "foundation"
     ];
+  # Temporarily retire the Pi voice bridge and menu while using Hex.
+  pi = stt && false;
 }

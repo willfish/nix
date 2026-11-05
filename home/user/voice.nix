@@ -8,7 +8,7 @@
 }:
 let
   voiceFeatures = import ./voice-supported.nix { inherit pkgs hostName; };
-  voiceStt = voiceFeatures.stt;
+  voiceStt = voiceFeatures.pi;
   dataDir = "${config.home.homeDirectory}/.local/share/pi-voice";
   nativeVoice = import ../../programs/pi-voice-client { inherit pkgs; };
   makeVoice =

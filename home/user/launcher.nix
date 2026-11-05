@@ -361,7 +361,7 @@ in
             openUrl "http://relay.taile09696.ts.net:8081"
           ))
         ]
-        ++ lib.optionals (import ./voice-supported.nix { inherit pkgs hostName; }).stt [
+        ++ lib.optionals (import ./voice-supported.nix { inherit pkgs hostName; }).pi [
           (action "󰍬" "Voice picker" [ "dictation" "speech" "model" ] "${profileBin}/voice-menu")
         ]
         ++ lib.optionals (hostName == "andromeda") [

@@ -8,6 +8,8 @@
 let
   voice = import ./voice-supported.nix { inherit pkgs hostName; };
   cpuRewrite = voice.stt && hostName == "andromeda";
+  # Keep the dialect configuration available, but use plain dictation for now.
+  rewriteEnabled = false;
   rewriteModel = pkgs.fetchurl {
     url = "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/a06e946bb6b655725eafa393f4a9745d460374c9/Qwen3-4B-Instruct-2507-Q4_K_M.gguf";
     hash = "sha256:3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597";
@@ -37,7 +39,7 @@ in
         replacements = [ ];
         transformations = [ ];
         post_processing = {
-          enabled = true;
+          enabled = rewriteEnabled;
           model = "hex-rewrite/qwen3-4b-instruct-2507";
           variant = null;
           deadline_seconds = 30;
@@ -53,7 +55,7 @@ in
       "VK_DRIVER_FILES=${pkgs.mesa}/share/vulkan/icd.d/lvp_icd.x86_64.json"
     ];
   };
-  systemd.user.services.hex-rewrite = lib.mkIf cpuRewrite {
+  systemd.user.services.hex-rewrite = lib.mkIf (cpuRewrite && rewriteEnabled) {
     Unit.Description = "CPU-only dictation rewriting model";
     Service = {
       ExecStart = lib.concatStringsSep " " [
