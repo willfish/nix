@@ -132,10 +132,10 @@ cmd_stop() {
   printf 'stop %s\n' "$1" >>"$SESSION_TEST_LOG"
   return "${SESSION_TEST_STOP_STATUS:-0}"
 }
-export SESSION_TEST_SNAPSHOT='{"deployments":[{"id":"qwen3.8-flash-next.sglang.256k.rtx-5090-32gb","keys":["nvidia:0"]},{"id":"cpu-model","keys":["cpu:0"]},{"id":"other-gpu-model","keys":["amd:fixture"]}]}'
+export SESSION_TEST_SNAPSHOT='{"deployments":[{"id":"qwen3.8-flash-next.strata.256k.rtx-5090-32gb","keys":["nvidia:0"]},{"id":"cpu-model","keys":["cpu:0"]},{"id":"other-gpu-model","keys":["amd:fixture"]}]}'
 : >"$SESSION_TEST_LOG"
 (cmd_stop_all)
-printf 'stop qwen3.8-flash-next.sglang.256k.rtx-5090-32gb\nstop other-gpu-model\n' >"$scratch/expected"
+printf 'stop qwen3.8-flash-next.strata.256k.rtx-5090-32gb\nstop other-gpu-model\n' >"$scratch/expected"
 diff -u "$scratch/expected" "$SESSION_TEST_LOG"
 for failure in snapshot parse stop; do
   (
@@ -159,7 +159,7 @@ export SESSION_TEST_UNIT_LOAD=loaded
 export SESSION_TEST_LABELLED=$'labelled-cpu\nuntracked-engine'
 : >"$SESSION_TEST_LOG"
 (cmd_stop_all)
-printf 'service local-llm.service\nstop qwen3.8-flash-next.sglang.256k.rtx-5090-32gb\nstop other-gpu-model\ncontainer labelled-cpu\ncontainer untracked-engine\n' >"$scratch/expected"
+printf 'service local-llm.service\nstop qwen3.8-flash-next.strata.256k.rtx-5090-32gb\nstop other-gpu-model\ncontainer labelled-cpu\ncontainer untracked-engine\n' >"$scratch/expected"
 diff -u "$scratch/expected" "$SESSION_TEST_LOG"
 
 # Labels still catch managed containers absent from the catalogue state.

@@ -1,6 +1,7 @@
 # Local Qwen
 
-Andromeda serves Qwen3.8 Flash-Next through the [Local AI SGLang EXL3 recipe](local-ai.md).
+Andromeda serves Qwen3.8 Flash-Next through the
+[Local AI Strata/Unsloth recipe](local-ai.md).
 Pi and OpenCode use the authenticated `andromeda` provider on port 8081.
 The provider alias and existing API key are unchanged. Start and stop the model
 through Local AI, not a `local-llm.service`.
@@ -12,7 +13,7 @@ workstation Local AI. Do not kickstart `org.nixos.local-llm` on Relay.
 ## Legacy llama.cpp browser chat
 
 The browser and browser-compaction notes below describe the optional llama.cpp
-backend retained in `home/user/local-llm.nix`, not Andromeda's current EXL3 recipe
+backend retained in `home/user/local-llm.nix`, not Andromeda's current Strata recipe
 or Relay's Metal service. The Relay browser URLs are retired. Do not start a
 second server on port 8081 while the current model gateway owns it.
 
@@ -179,7 +180,7 @@ messages remain compatible with the stock UI.
 ## Local agent in Pi
 
 Pi is installed on every Home Manager host. Installing it elsewhere does not
-download weights or start a server. Start the EXL3 recipe on Andromeda, then run:
+download weights or start a server. Start the Strata recipe on Andromeda, then run:
 
 ```sh
 pi --provider andromeda --model qwen3.8-flash-next
@@ -192,10 +193,10 @@ embedded in Git, command arguments or the Nix store. OpenCode uses the same
 provider, endpoint and model limits.
 
 The model alias remains stable across the engine change. New sessions show
-EXL3 in the model name; restart an existing session to refresh its model metadata.
+Unsloth in the model name; restart an existing session to refresh model metadata.
 The client retains 131,072 context tokens and 16,384 output tokens. The server's
 larger declared window does not automatically increase the client's budget.
-The old engine's thinking-token cap is not supported by this SGLang runtime.
+Reasoning and visible output share the client's output allowance.
 For compaction limits and recovery, see [Pi workflow](pi-workflow.md#local-qwen-output-and-compaction).
 
 The retired `qwen-pi` launcher and its isolated profile are not installed.
@@ -272,7 +273,7 @@ On Andromeda:
 direnv exec . nix build \
   '.#homeConfigurations."william@andromeda".activationPackage' --no-link
 direnv exec . hmswitch
-omarchy-local-ai run qwen3.8-flash-next.sglang.256k.rtx-5090-32gb nvidia:0
+omarchy-local-ai run qwen3.8-flash-next.strata.256k.rtx-5090-32gb nvidia:0
 pi --provider andromeda --model qwen3.8-flash-next
 ```
 
@@ -353,7 +354,8 @@ after activation; do not send an unsolicited House message to test it.
 The managed defaults are:
 
 - Relay's native Metal Qwen3.8 Flash-Next Unsloth Dynamic v3.1 model with thinking
-  enabled and high reasoning effort. This is independent of Andromeda's EXL3 recipe.
+  enabled and high reasoning effort. Its Metal service is independent of
+  Andromeda's CUDA recipe.
 - YOLO enabled: terminal/file tool calls do not ask for approval. This is host
   access as William, not the browser MCP's restricted workspace or root access.
   Existing OS permissions and Hermes security blocks still apply.

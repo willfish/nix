@@ -1,5 +1,15 @@
 --- a/bin/omarchy-local-ai
 +++ b/bin/omarchy-local-ai
+@@ -224,7 +224,8 @@
+             | if ($r.reported | type == "boolean") then .reported = $r.reported else . end
+             | if (.capabilities | type == "object") and ($r.capabilities | type == "object") then
+                 .capabilities |= with_entries(.key as $k | if ($r.capabilities[$k] | type == "boolean") then .value = $r.capabilities[$k] else . end)
+-              else . end]
++              else . end]
++          + [$shipped[$h].recipes[] | select(.engine == "strata")]
+           | reduce .[] as $x ([]; if any(.[]; .id == $x.id) then . else . + [$x] end))})
+       | with_entries(select(.value.recipes | length > 0)))' "$tmp") || die "invalid registry catalog"
+   printf '%s\n' "$r" >"$tmp"
 @@ -834,7 +834,7 @@
  # phase_start <id> <port> <key>: re-read the recipe here, check every path, build both containers
  phase_start() (

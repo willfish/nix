@@ -18,6 +18,11 @@ let
   settings = import ../config/hyprland/settings.nix;
   omarchySource = import ./themes/omarchy-source.nix;
   source = omarchy-local-ai;
+  strataRecipeJSON = builtins.toJSON (import ../config/hyprland/local-ai/strata-recipe.nix);
+  strataRecipe = pkgs.writeText "strata-recipe.json" strataRecipeJSON;
+  catalogRevision = "${source.rev}-${
+    builtins.substring 0 12 (builtins.hashString "sha256" strataRecipeJSON)
+  }";
   manifest = builtins.fromJSON (builtins.readFile "${source}/manifest.json");
   terminal = pkgs.writeShellApplication {
     name = "omarchy-launch-tui";
@@ -67,12 +72,19 @@ let
     inherit (manifest) version;
     src = source;
     patches = [ ../config/hyprland/local-ai/nix.patch ];
-    nativeBuildInputs = [ pkgs.makeWrapper ];
+    nativeBuildInputs = [
+      pkgs.makeWrapper
+      pkgs.jq
+    ];
     dontBuild = true;
     installPhase = ''
       runHook preInstall
       mkdir -p "$out/share/local-ai" "$out/bin"
       cp -r bin lib agents *.qml *.js *.json *.svg LICENSE "$out/share/local-ai/"
+      jq --slurpfile strata ${strataRecipe} \
+        '.hardware["rtx-5090-32gb"].recipes += $strata' \
+        "$out/share/local-ai/recipes.json" > "$out/share/local-ai/recipes.json.tmp"
+      mv "$out/share/local-ai/recipes.json.tmp" "$out/share/local-ai/recipes.json"
       cp ${../config/hyprland/local-ai/nix.sh} "$out/share/local-ai/lib/nix.sh"
       # The Omarchy installer/remover must never be offered as Nix package management.
       rm "$out/share/local-ai/bin/omarchy-install-ai-local" "$out/share/local-ai/bin/omarchy-remove-ai-local"
@@ -81,13 +93,13 @@ let
       # so an old refresh cannot override a newly installed plugin's recipes.
       substituteInPlace "$out/share/local-ai/bin/omarchy-local-ai" \
         --replace-fail 'CATALOG=$HOME/.cache/omarchy/local-ai/v4/recipes.json' \
-          'CATALOG=$HOME/.cache/omarchy/local-ai/v4/${source.rev}/recipes.json'
+          'CATALOG=$HOME/.cache/omarchy/local-ai/v4/${catalogRevision}/recipes.json'
       makeWrapper "$out/share/local-ai/bin/omarchy-local-ai" "$out/bin/omarchy-local-ai" \
         --prefix PATH : ${lib.makeBinPath runtime} \
         --set LOCAL_AI_NVIDIA ${if isAndromeda then "1" else "0"} \
         ${lib.optionalString isAndromeda ''
           --set LOCAL_AI_KEY_FILE ${lib.escapeShellArg "${config.xdg.configHome}/local-llm/api-key"} \
-          --set LOCAL_AI_SHARED_RECIPE qwen3.8-flash-next.sglang.256k.rtx-5090-32gb \
+          --set LOCAL_AI_SHARED_RECIPE qwen3.8-flash-next.strata.256k.rtx-5090-32gb \
         ''} \
         --set LOCAL_AI_NIX 1
       runHook postInstall

@@ -28,7 +28,7 @@
       "models": [
         {
           "id": "qwen3.8-flash-next",
-          "name": "Andromeda Qwen 3.8 Flash-Next (EXL3)",
+          "name": "Andromeda Qwen 3.8 Flash-Next (Unsloth v3.1)",
           "reasoning": true,
           "input": ["text"],
           "contextWindow": 131072,
