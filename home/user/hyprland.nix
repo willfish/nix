@@ -263,7 +263,7 @@
               exit 1
               ;;
           esac
-          for name in hyprland.conf fuzzel.ini walker.css waybar.css hyprlock.conf gtk.css mako.conf colors.toml shell.toml; do
+          for name in hyprland.conf fuzzel.ini walker.css waybar.css hyprlock.conf swaylock.conf gtk.css mako.conf colors.toml shell.toml; do
             if [ ! -s "$state/$name" ]; then
               install -m 0644 ${themeFallback}/"$mode/$name" "$state/$name"
             fi
@@ -926,6 +926,11 @@
       home.activation.screenshotDirectory = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run install -d -m 0700 ${lib.escapeShellArg screenshotDirectory}
       '';
+
+      # Swaylock has no include directive; read the active theme on each lock.
+      xdg.configFile."swaylock/config" = lib.mkIf config.programs.swaylock.enable {
+        source = config.lib.file.mkOutOfStoreSymlink (themeFile "swaylock.conf");
+      };
 
       # Theme hyprlock.conf is sourced for $theme_* only. Do not also let that
       # file declare background or input-field: Hyprlock adds a widget per block.

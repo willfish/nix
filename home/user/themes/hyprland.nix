@@ -14,6 +14,7 @@ in
     "walker.css"
     "waybar.css"
     "hyprlock.conf"
+    "swaylock.conf"
     "gtk.css"
     "mako.conf"
     "colors.toml"
@@ -223,6 +224,41 @@ in
       "hyprlock.conf" = ''
         # Selected mode: ${mode}. Variables only; do not add widgets here.
         ${variables}
+      '';
+      "swaylock.conf" = ''
+        color=${palette.base00}
+        font=${mono}
+        font-size=${fontSize}
+        ignore-empty-password
+        indicator-idle-visible
+        indicator-caps-lock
+        show-failed-attempts
+        indicator-radius=48
+        indicator-thickness=${borderSize}
+        line-uses-inside
+        separator-color=00000000
+        inside-color=${palette.base01}
+        inside-clear-color=${palette.base01}
+        inside-caps-lock-color=${palette.base01}
+        inside-ver-color=${palette.base01}
+        inside-wrong-color=${palette.base01}
+        ring-color=${palette.base0D}
+        ring-clear-color=${palette.base03}
+        ring-caps-lock-color=${palette.base0A}
+        ring-ver-color=${palette.base0B}
+        ring-wrong-color=${palette.base08}
+        key-hl-color=${palette.base05}
+        bs-hl-color=${palette.base08}
+        caps-lock-key-hl-color=${palette.base05}
+        caps-lock-bs-hl-color=${palette.base08}
+        text-color=${palette.base05}
+        text-clear-color=${palette.base05}
+        text-caps-lock-color=${palette.base0A}
+        text-ver-color=${palette.base05}
+        text-wrong-color=${palette.base08}
+        layout-bg-color=${palette.base01}
+        layout-border-color=${palette.base0D}
+        layout-text-color=${palette.base05}
       '';
       "mako.conf" = ''
         background-color=${hash palette.base00}

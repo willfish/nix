@@ -93,8 +93,12 @@ Grimblast and Satty from the pinned Nix packages.
 ## Appearance and login
 
 Super+Shift+T uses the existing shared palette menu for Ghostty, Neovim and Herdr,
-plus Hyprland, Waybar, the control panels, Fuzzel, Mako and Hyprlock. Use this menu in Hyprland to
+plus Hyprland, Waybar, the control panels, Fuzzel, Mako, Hyprlock and Swaylock. Use this menu in Hyprland to
 refresh those desktop consumers.
+
+Swaylock uses the same background, font and authentication colours as Hyprlock,
+with a thin circular indicator rather than a clock and rounded password field.
+Theme changes apply on the next lock.
 
 The menu contains all built-in Omarchy themes without a name prefix or personal
 variants. Each selection applies its native mode and matching wallpaper.
