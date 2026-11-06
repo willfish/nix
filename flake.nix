@@ -440,7 +440,10 @@
             source = inputs.opencode-source;
             bun = inputs.nixpkgs-unstable.legacyPackages.${system}.bun;
           };
-          claude-code = llm-agents.packages.${system}.claude-code;
+          # Apply privacy controls in the executable, including Claude Agent's bridge.
+          claude-code = llm-agents.packages.${system}.claude-code.override {
+            disableTelemetry = true;
+          };
           hermes-agent = import ./home/user/hermes-package.nix {
             hermesInput = inputs.hermes-agent;
             inherit system;
