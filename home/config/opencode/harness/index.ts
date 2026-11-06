@@ -12,6 +12,7 @@ import { createTabSynchronizer, sessionTabTitle } from "./herdr-tab.ts";
 function setupHerdrServer(ctx) {
   if (
     process.argv.includes("--service") ||
+    process.env.HC_TERMINAL_ID ||
     process.env.HERDR_ENV !== "1" ||
     !process.env.HERDR_SOCKET_PATH ||
     !process.env.HERDR_PANE_ID

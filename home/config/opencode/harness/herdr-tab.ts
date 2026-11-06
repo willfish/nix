@@ -1,5 +1,7 @@
 import { createConnection } from "node:net";
 import { randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 type Environment = Record<string, string | undefined>;
 type Call = (method: string, params: Record<string, string>) => Promise<unknown>;
@@ -7,6 +9,48 @@ type Call = (method: string, params: Record<string, string>) => Promise<unknown>
 export const HERDR_LABEL_ENTRY = "agent-bus-herdr-label";
 export type TabOwnership = { socket: string; pane: string; tab: string; label: string };
 type Pane = { pane_id?: string; tab_id?: string; workspace_id?: string };
+const execute = promisify(execFile);
+type AppCall = (args: string[]) => Promise<string>;
+
+export function herdrTarget(env: Environment): string | undefined {
+  if (env.HC_TERMINAL_ID) return `herdr-app:${env.HERDR_APP_HOME ?? "default"}:${env.HC_TERMINAL_ID}`;
+  if (env.HERDR_ENV === "1" && env.HERDR_SOCKET_PATH && env.HERDR_PANE_ID)
+    return `${env.HERDR_SOCKET_PATH}:${env.HERDR_PANE_ID}`;
+}
+
+async function nameDesktopTab(label: string, env: Environment, options: {
+  previous?: TabOwnership;
+  isCurrent?: () => boolean;
+  appCall?: AppCall;
+}): Promise<TabOwnership | void> {
+  const current = options.isCurrent ?? (() => true);
+  const call = options.appCall ?? (async args => (await execute("herdr-app", args, {
+    env, timeout: 2000, maxBuffer: 1024 * 1024,
+  })).stdout);
+  const locate = async () => {
+    const result = JSON.parse(await call(["ls"]));
+    for (const space of result.spaces ?? []) {
+      for (const tab of space.tabs ?? []) {
+        // The first terminal owns the tab, never whichever pane happens to have focus.
+        if (tab.terminals?.[0]?.terminal === env.HC_TERMINAL_ID) return tab;
+      }
+    }
+  };
+  const tab = await locate();
+  if (!tab || !current() || typeof tab.name !== "string") return;
+  const socket = `herdr-app:${env.HERDR_APP_HOME ?? "default"}`;
+  const previous = options.previous;
+  const owned = previous?.socket === socket && previous.pane === env.HC_TERMINAL_ID &&
+    previous.tab === tab.id && previous.label === tab.name;
+  if (!/^[0-9]+$/.test(tab.name) && !owned) return;
+  const next = `${tab.name.match(/^[0-9]+/)?.[0]} ${Array.from(label).slice(0, 48).join("")}`;
+  const ownership = { socket, pane: env.HC_TERMINAL_ID!, tab: tab.id, label: next };
+  if (next === tab.name) return ownership;
+  const latest = await locate();
+  if (latest?.id !== tab.id || latest.name !== tab.name || !current()) return;
+  await call(["do", "tab.rename", JSON.stringify({ id: tab.id, name: next })]);
+  return current() ? ownership : undefined;
+}
 
 const FALLBACK_TITLE = /^(New session|Child session)( - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)?$/;
 
@@ -26,11 +70,15 @@ export async function nameUnlabelledTab(
   options: {
     previous?: TabOwnership;
     isCurrent?: () => boolean;
+    appCall?: AppCall;
   } = {},
 ): Promise<TabOwnership | void> {
   const current = options.isCurrent ?? (() => true);
-  if (env.HERDR_ENV !== "1" || !env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID || !label || !current()) return;
+  if (!label || !current()) return;
   if (/[\u0000-\u001f\u007f-\u009f<>]/.test(label)) return;
+  // Desktop shells can inherit stale legacy variables. The core terminal wins.
+  if (env.HC_TERMINAL_ID) return nameDesktopTab(label, env, options);
+  if (env.HERDR_ENV !== "1" || !env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID) return;
   const paneResult = (await call("pane.get", { pane_id: env.HERDR_PANE_ID })) as { pane?: Pane };
   const pane = paneResult?.pane;
   if (!pane?.tab_id || !pane.pane_id || !pane.workspace_id || !current()) return;

@@ -175,6 +175,36 @@ in
       ''
     );
 
+    # Mods reject imports through store symlinks; keys need regular files for hot reload.
+    # Keep writable runtime copies, while preserving edits before replacing them.
+    herdrAppInterface = lib.mkIf isGraphicalLinux (
+      lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        installHerdrAppFile() {
+          local source="$1" target="$2"
+          if [ -f "$target" ] && ! cmp -s "$source" "$target"; then
+            run cp -p "$target" "$target.before-dotfiles-$(date +%s%N)"
+          fi
+          if [ -L "$target" ]; then
+            run rm "$target"
+          fi
+          if [ ! -f "$target" ] || ! cmp -s "$source" "$target"; then
+            run install -m 644 "$source" "$target"
+          fi
+        }
+        run mkdir -p "${config.xdg.configHome}/herdr-app"
+        installHerdrAppFile ${../config/herdr-app/keys.json} \
+          "${config.xdg.configHome}/herdr-app/keys.json"
+        for name in agent-picker workspacex; do
+          source="${../config/herdr-app/mods}/$name"
+          target="${config.xdg.configHome}/herdr-app/mods/$name"
+          run mkdir -p "$target"
+          for file in main.js model.js mod.json; do
+            installHerdrAppFile "$source/$file" "$target/$file"
+          done
+        done
+      ''
+    );
+
     repairHerdrPluginRuntimes = lib.mkIf pkgs.stdenv.isLinux (
       lib.hm.dag.entryAfter [ "installHerdrPlugins" ] ''
         export PATH="${
@@ -197,12 +227,6 @@ in
 
   xdg.configFile = lib.optionalAttrs isGraphicalLinux {
     "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
-    # Herdr desktop app: app defaults plus the TUI's ctrl+b prefix chords.
-    # The app writes this file only to replace untouched shipped defaults.
-    "herdr-app/keys.json" = {
-      source = ../config/herdr-app/keys.json;
-      force = true;
-    };
     "mimeapps.list".force = config.dotfiles.privateEnabled;
     # Direct file, not the config directory: a directory copy drops untracked files.
     "cliamp/radios.toml" = {

@@ -1,8 +1,11 @@
 import { createConnection } from 'node:net';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 // Companion to Herdr's managed lifecycle extension. Presentation only.
 const source = 'user:pi-model';
 const ttlMs = 15000;
+const execute = promisify(execFile);
 
 function clean(value: unknown): string {
   return typeof value === 'string'
@@ -18,6 +21,13 @@ export function displayLabel(ctx: { thinkingLevel?: string; model?: { id?: strin
 }
 
 export function sendMetadata(params: Record<string, unknown>, env: NodeJS.ProcessEnv = process.env) {
+  // Core terminals take precedence over inherited variables from the old TUI.
+  if (env.HC_TERMINAL_ID) {
+    const label = params.clear_display_agent ? '' : clean(params.display_agent);
+    return execute('hc', ['label', env.HC_TERMINAL_ID, `user.agent.display=${label}`], {
+      env, timeout: 2000, maxBuffer: 1024 * 1024,
+    });
+  }
   return new Promise((resolve) => {
     const socket = createConnection(env.HERDR_SOCKET_PATH);
     let timer;
@@ -46,7 +56,7 @@ export default function herdrModel(pi: { on: (name: string, handler: (...args: a
   cancel?: typeof clearInterval;
 } = {}) {
   const env = options.env ?? process.env;
-  if (env.HERDR_ENV !== '1' || !env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID) return;
+  if (!env.HC_TERMINAL_ID && (env.HERDR_ENV !== '1' || !env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID)) return;
   const send = options.send ?? ((params) => sendMetadata(params, env));
   const every = options.every ?? setInterval;
   const cancel = options.cancel ?? clearInterval;
@@ -54,15 +64,19 @@ export default function herdrModel(pi: { on: (name: string, handler: (...args: a
   let timer;
   let label;
   let sequence = Date.now() * 1000;
+  let writes = Promise.resolve();
 
   function report(clear = false) {
-    return send({
+    const params = {
       source,
       agent: 'pi',
       seq: ++sequence,
       ttl_ms: ttlMs,
       ...(clear ? { clear_display_agent: true } : { display_agent: label }),
-    }).catch(() => {}); // A stopped Herdr server must not interrupt the agent.
+    };
+    // Core labels persist: shutdown's clear must follow any pending update.
+    writes = writes.then(() => send(params)).then(() => {}, () => {});
+    return writes; // A stopped Herdr server must not interrupt the agent.
   }
 
   async function update(_event, ctx) {

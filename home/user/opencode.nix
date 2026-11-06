@@ -203,6 +203,7 @@ in
     };
     ".config/opencode/cli.json".text = builtins.toJSON {
       "$schema" = "https://opencode.ai/v2/cli.json";
+      session.sidebar = "hide";
       keybinds = {
         "app.clear" = "none";
         "model.list" = "ctrl+l,<leader>m";

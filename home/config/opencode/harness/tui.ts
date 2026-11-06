@@ -5,7 +5,9 @@ import {
   nameUnlabelledTab,
   sessionTabTitle,
   type TabOwnership,
+  herdrTarget,
 } from "./herdr-tab.ts";
+import { createDesktopMetadata } from "./herdr-metadata.ts";
 
 export function setupHerdrTab(
   context: any,
@@ -16,8 +18,9 @@ export function setupHerdrTab(
   } = {},
 ) {
   const env = options.env ?? process.env;
-  if (env.HERDR_ENV !== "1" || !env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID) return () => {};
-  const paneKey = `${env.HERDR_SOCKET_PATH}:${env.HERDR_PANE_ID}`;
+  const paneKey = herdrTarget(env);
+  if (!paneKey) return () => {};
+  const metadata = createDesktopMetadata(env);
   const stored = context.storage?.store?.("herdr-tab", {
     initial: {} as Record<string, TabOwnership>,
   });
@@ -68,6 +71,7 @@ export function setupHerdrTab(
   }
 
   function check(force = false) {
+    metadata.sync(context.ui.model?.current?.());
     const selected = current();
     const label = titleFor(selected);
     if (!selected || !label) return;
@@ -109,6 +113,7 @@ export function setupHerdrTab(
     clearInterval(poll);
     unsubscribe();
     tab.stop();
+    metadata.stop();
   };
 }
 

@@ -1,0 +1,11 @@
+{
+  "place": "none",
+  "title": "Workspacex",
+  "overlay": {
+    "kind": "popup",
+    "at": "top",
+    "offset": 40,
+    "width": 680,
+    "height": 0.8
+  }
+}

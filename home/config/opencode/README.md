@@ -18,6 +18,15 @@ When running inside Herdr, the workflow TUI plugin (`./tui`) and local server
 hook mirror OpenCode's automatically generated root session title (`session.renamed`)
 to the current numeric Herdr tab using the same oldest-pane election and
 ownership rules as Pi (`herdr-tab.ts`), while preserving manual tab names.
+In Herdr desktop, the TUI instead resolves its `HC_TERMINAL_ID` to its actual
+tab, with the first terminal owning automatic naming. Model and effort details
+are published as the core label `user.agent.display`; native OSC reporting
+continues to own agent status. Inherited legacy pane variables are ignored.
+
+Herdr desktop's **Ctrl+B, A** opens the fuzzy agent picker (including model,
+effort, status and path); **Ctrl+B, O** opens the SessionX-style space picker.
+The space picker switches live spaces or explicitly creates one from a zoxide
+match. Alt+H/J/K/L retain pane navigation.
 
 ## Native goals, todos and subagents
 
@@ -80,6 +89,9 @@ runs on the OpenCode server machine, not on a remotely attached client's machine
 Restart OpenCode after switching a generation that changes the launcher or plugin.
 
 ## Manual integration check
+
+`node home/config/opencode/check-herdr.mjs` checks desktop tab ownership,
+manual-name preservation, legacy compatibility and model metadata offline.
 
 `node home/config/opencode/check-speak.mjs /path/to/built/plugin` checks summary
 extraction, opt-in/cancellation, cross-process queueing and the playback boundary

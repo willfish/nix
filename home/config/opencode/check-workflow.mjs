@@ -95,7 +95,7 @@ await writeFile(join(home, '.config/opencode/opencode.json'), JSON.stringify({
   plugins: [{ package: plugin, options: { busEnabled: process.env.OPENCODE_FIXTURE_BUS === '1' } }],
 }));
 const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config'), XDG_DATA_HOME: join(home, '.local/share'), XDG_STATE_HOME: join(home, '.local/state'), XDG_CACHE_HOME: join(home, '.cache') };
-for (const key of Object.keys(env)) if (/TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|OPENCODE_CONFIG|PI_AGENT_BUS|HERDR_/.test(key)) delete env[key];
+for (const key of Object.keys(env)) if (/TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|OPENCODE_CONFIG|PI_AGENT_BUS|HERDR_|^HC_/.test(key)) delete env[key];
 const herdrSocket = join(root, 'herdr.sock');
 let herdrTabLabel = '3';
 const herdrCalls = [];
