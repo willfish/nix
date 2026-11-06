@@ -29,6 +29,65 @@ static Val *limit(Doc *d, const char *label, const char *title, double percent,
   strput(d, v, "resetsAt", end);
   return v;
 }
+Allowance parse_claude(Doc *d, Val *p) {
+  Allowance a = {.limits = yyjson_mut_arr(d), .tier = "", .status = ""};
+  const char *keys[] = {"five_hour", "seven_day"};
+  const char *labels[] = {"Session (5-hour)", "Weekly (7-day, all models)"};
+  const char *titles[] = {"Session", "Weekly"};
+  for (size_t i = 0; i < 2; i++) {
+    Val *bucket = get(p, keys[i]);
+    double used = fraction(get(bucket, "utilization"), true);
+    if (used >= 0)
+      yyjson_mut_arr_append(
+          a.limits, limit(d, labels[i], titles[i], used,
+                          iso_timestamp(d, get(bucket, "resets_at"))));
+  }
+  size_t base_count = yyjson_mut_arr_size(a.limits), i, n;
+  Val *entry;
+  yyjson_mut_arr_foreach(get(p, "limits"), i, n, entry) {
+    Val *model = get(get(entry, "scope"), "model");
+    const char *name = text(either(get(model, "display_name"), get(model, "id")));
+    const char *kind = text(get(entry, "kind"));
+    double used = fraction(get(entry, "percent"), true);
+    if (!*name || used < 0)
+      continue;
+    const char *window = "";
+    if (strstr(kind, "month"))
+      window = "Monthly";
+    else if (strstr(kind, "week") || strstr(kind, "day"))
+      window = "Weekly";
+    else if (strstr(kind, "hour") || strstr(kind, "session"))
+      window = "Session";
+    size_t size = size_add(size_add(strlen(name), strlen(window)), 2);
+    char *title = allocate(size);
+    snprintf(title, size, "%s%s%s", name, *window ? " " : "", window);
+    bool seen = false;
+    size_t j, count;
+    Val *previous;
+    yyjson_mut_arr_foreach(a.limits, j, count, previous)
+      if (!strcmp(text(get(previous, "title")), title))
+        seen = true;
+    if (!seen)
+      yyjson_mut_arr_append(
+          a.limits, limit(d, title, title, used,
+                          iso_timestamp(d, get(entry, "resets_at"))));
+    free(title);
+  }
+  // Older responses expose model limits only as named buckets.
+  if (yyjson_mut_arr_size(a.limits) == base_count) {
+    const char *legacy[] = {"seven_day_opus", "seven_day_sonnet"};
+    const char *names[] = {"Opus Weekly", "Sonnet Weekly"};
+    for (size_t j = 0; j < 2; j++) {
+      Val *bucket = get(p, legacy[j]);
+      double used = fraction(get(bucket, "utilization"), true);
+      if (used >= 0)
+        yyjson_mut_arr_append(
+            a.limits, limit(d, names[j], names[j], used,
+                            iso_timestamp(d, get(bucket, "resets_at"))));
+    }
+  }
+  return a;
+}
 Allowance parse_codex(Doc *d, Val *p, double now) {
   Allowance a = {.limits = yyjson_mut_arr(d), .tier = "", .status = ""};
   char *plan = duplicate(text(get(p, "plan_type")));

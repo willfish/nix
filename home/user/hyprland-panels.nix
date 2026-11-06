@@ -314,6 +314,9 @@ let
     cp ${agents}/grok.svg ${agents}/grok-light.svg ${agents}/opencode.svg ${agents}/opencode-light.svg \
       ${agents}/copilot.svg ${agents}/copilot-light.svg \
       "$out/shell/plugins/agents/assets/"
+    # Claude's orange mark works in both themes; upstream ships no light copy.
+    cp "$out/shell/plugins/agents/assets/claude.svg" \
+      "$out/shell/plugins/agents/assets/claude-light.svg"
     # A record's usageNoteText (Copilot's unlimited premium credits) is a dim
     # line under the provider name, beside any limit meters.
     patch --batch -d "$out/shell/plugins/agents" -p1 < ${agents}/usage-note.patch
@@ -438,6 +441,7 @@ let
   };
   # Reviewed collectors only. The pinned panel watches their JSON records.
   # Codex and Grok use Pi's OAuth logins; OpenCode Go uses Pi's stored key.
+  # Claude reads Claude Code's login without refreshing or copying credentials.
   # Omarchy's installer, plugin loader, and agent launcher stay out.
   agentUpdate = pkgs.writeShellScript "omarchy-agent-usage-update" ''
     here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -458,7 +462,7 @@ let
         mkdir -p "$out/bin" "$out/libexec" "$out/default"
         # The shell resolves its translation catalogs through OMARCHY_PATH too.
         cp -r ${source}/default/i18n "$out/default/"
-        for name in codex grok opencode copilot; do
+        for name in claude codex grok opencode copilot; do
           ln -s ${agentUsage}/bin/omarchy-agent-usage-"$name" "$out/bin/omarchy-agent-usage-$name"
         done
         install -m755 ${source}/bin/omarchy-agent-usage-update "$out/libexec/omarchy-agent-usage-update"
@@ -513,7 +517,7 @@ let
         lib.escapeShellArg (
           builtins.toJSON {
             providers = {
-              claude.enabled = false;
+              claude.enabled = true;
               fireworks.enabled = false;
               codex.enabled = true;
               grok.enabled = true;

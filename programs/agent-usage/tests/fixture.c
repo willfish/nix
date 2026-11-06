@@ -57,9 +57,10 @@ int main(int argc, char **argv) {
     out = scan_opencode(d, text(get(args, "path")), now);
   else if (!strcmp(op, "billing"))
     out = parse_grok(d, v);
-  else if (!strcmp(op, "codex") || !strcmp(op, "go")) {
-    Allowance a =
-        !strcmp(op, "codex") ? parse_codex(d, v, now) : parse_opencode(d, v);
+  else if (!strcmp(op, "claude") || !strcmp(op, "codex") || !strcmp(op, "go")) {
+    Allowance a = !strcmp(op, "claude") ? parse_claude(d, v)
+                  : !strcmp(op, "codex") ? parse_codex(d, v, now)
+                                         : parse_opencode(d, v);
     out = yyjson_mut_obj(d);
     put(d, out, "limits", a.limits);
     strput(d, out, "plan", a.tier);

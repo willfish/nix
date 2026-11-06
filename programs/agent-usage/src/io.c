@@ -465,7 +465,67 @@ Val *collect_copilot(Doc *d, Context *ctx) {
   return record(d, "copilot", "Copilot", stats, a, help, retry,
                 context_now(ctx));
 }
+Val *collect_claude(Doc *d, Context *ctx) {
+  const char *configured = getenv("CLAUDE_CONFIG_DIR");
+  char *root = configured && *configured ? duplicate(configured)
+                                         : join(home_dir(), ".claude");
+  char *path = join(root, ".credentials.json");
+  Val *login = get(load(d, path), "claudeAiOauth");
+  free(path);
+  free(root);
+  const char *token = text(get(login, "accessToken"));
+  char *plan = duplicate(text(get(login, "subscriptionType")));
+  if (*plan)
+    plan[0] = (char)toupper((unsigned char)plan[0]);
+  const char *tier = *plan ? plan : "Subscription";
+  Allowance a = {.limits = yyjson_mut_arr(d), .tier = tier,
+                 .status = "Waiting for auth",
+                 .note = "Account-wide subscription limits"};
+  const char *help = "Run `claude auth login` to restore authoritative usage.";
+  bool retry = false, fetched = false;
+  double now = context_now(ctx);
+  int64_t expires = number(get(login, "expiresAt"));
+  if (*token && expires > 0 && expires <= now * 1000) {
+    a.status = "Limits paused";
+    help = "Start Claude Code to refresh its access token; signing in again may not be needed.";
+  } else if (*token) {
+    // The CLI owns refresh tokens. This read-only probe never rewrites its login.
+    Reply reply = ctx->transport(d, "https://api.anthropic.com/api/oauth/usage",
+                                 token, "anthropic-beta: oauth-2025-04-20", NULL);
+    a.status = "Claude limits unavailable";
+    if (reply.failed) {
+      help = "Couldn't reach Anthropic's usage endpoint.";
+      retry = true;
+    } else if (reply.status == 401 || reply.status == 403) {
+      a.status = "Sign-in expired";
+      help = "Start Claude Code, or run `claude auth login`, to refresh its sign-in.";
+    } else if (reply.status == 429) {
+      help = "Anthropic is rate limiting usage checks. Try again later.";
+    } else if (reply.status < 200 || reply.status >= 300) {
+      char note[80];
+      snprintf(note, sizeof note, "Claude usage returned status %ld.", reply.status);
+      help = yyjson_mut_get_str(yyjson_mut_strcpy(d, note));
+    } else {
+      a = parse_claude(d, reply.body);
+      a.tier = tier;
+      a.note = "Account-wide subscription limits";
+      fetched = yyjson_mut_arr_size(a.limits) > 0;
+      a.status = fetched ? "" : "Claude limits unavailable";
+      help = fetched ? "" : "Anthropic returned no subscription limits.";
+    }
+  }
+  Val *out = record(d, "claude", "Claude Code", empty_stats(d, now), a, help,
+                    retry, context_now(ctx));
+  put(d, out, "hasLocalStats", yyjson_mut_bool(d, false));
+  put(d, out, "hasPromptStats", yyjson_mut_bool(d, false));
+  if (fetched)
+    intput(d, out, "limitsFetchedAt", (int64_t)(context_now(ctx) * 1000));
+  free(plan);
+  return out;
+}
 Val *collect(Doc *d, Context *ctx, const char *id) {
+  if (!strcmp(id, "claude"))
+    return collect_claude(d, ctx);
   if (!strcmp(id, "copilot"))
     return collect_copilot(d, ctx);
   bool codex = !strcmp(id, "codex"), grok = !strcmp(id, "grok");

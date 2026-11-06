@@ -155,7 +155,8 @@ static Box make_box(const char *key) {
   box.slots[2] = fmt("XDG_STATE_HOME=%s", box.state);
   box.slots[3] = strdup("TZ=UTC");
   box.slots[4] = fmt("OPENCODE_GO_API_KEY=%s", key ? key : "");
-  for (int i = 0; i < 5; i++)
+  box.slots[5] = fmt("CLAUDE_CONFIG_DIR=%s/.claude", box.root);
+  for (int i = 0; i < 6; i++)
     box.env[i] = box.slots[i];
   return box;
 }
@@ -698,11 +699,14 @@ static void commands(void) {
 static void installed(void) {
   check_begin("all installed command names work offline, including ignored updater flags and exact help");
   Box box = make_box("");
-  const char *ids[] = {"codex", "grok", "opencode"};
-  for (size_t i = 0; i < 3; i++) {
+  char *aliases = check_join(box.root, "claude-opencode");
+  check_mkdir_p(aliases);
+  const char *ids[] = {"claude", "codex", "grok", "opencode"};
+  for (size_t i = 0; i < 4; i++) {
     char leaf[64];
     snprintf(leaf, sizeof leaf, "omarchy-agent-usage-%s", ids[i]);
-    char *bin = check_join(bin_dir, leaf);
+    char *target = check_join(bin_dir, leaf), *bin = check_join(aliases, leaf);
+    expect(symlink(target, bin) == 0, "provider names in parent paths do not select the command");
     const char *args[] = {bin, "--force", "--limits-only", NULL};
     Proc proc = check_run(bin, args, NULL, 0, box.env, 15);
     expect(proc.exited && proc.status == 0 && proc.err_len == 0, ids[i]);
@@ -711,7 +715,9 @@ static void installed(void) {
     expect(is_str(jget(record, "id"), ids[i]), "id");
     expect(is_num(jget(record, "schemaVersion"), 1), "schema");
     expect(yyjson_is_true(jget(record, "ready")), "ready");
-    expect(yyjson_is_true(jget(record, "hasLocalStats")), "stats");
+    expect(!strcmp(ids[i], "claude") ? yyjson_is_false(jget(record, "hasLocalStats"))
+                                    : yyjson_is_true(jget(record, "hasLocalStats")),
+           "stats coverage");
     expect(is_str(jget(record, "usageStatusText"), "Waiting for auth"), "waiting");
     expect(!jget(record, "retryAdvised"), "no retry");
     yyjson_doc_free(doc);
@@ -725,8 +731,10 @@ static void installed(void) {
                !memcmp(help.err, expected, help.err_len),
            "help");
     proc_free(&help);
+    free(target);
     free(bin);
   }
+  free(aliases);
   free_box(&box);
 }
 static void status_exe(void) {
@@ -765,6 +773,104 @@ static yyjson_doc *collect(const char *id, Box *box, const char *replies) {
   yyjson_doc *doc = call_op("collect", fields, box->env, 15);
   free(fields);
   return doc;
+}
+static void claude_windows(void) {
+  check_begin("Claude subscription percentages, reset times and scoped model limits retain their meaning");
+  yyjson_doc *doc = call_op(
+      "claude",
+      "\"value\":{\"five_hour\":{\"utilization\":0.6,\"resets_at\":\"2026-09-29T17:00:00Z\"},"
+      "\"seven_day\":{\"utilization\":25,\"resets_at\":1791288000},"
+      "\"seven_day_oauth_apps\":{\"utilization\":99},\"seven_day_opus\":{\"utilization\":80}}",
+      NULL, 10);
+  yyjson_val *limits = jget(yyjson_doc_get_root(doc), "limits");
+  expect(yyjson_arr_size(limits) == 3, "session, all-model week and legacy Opus week");
+  expect(is_num(jget(yyjson_arr_get(limits, 0), "percent"), 0.006), "fractional percentage");
+  expect(is_str(jget(yyjson_arr_get(limits, 0), "resetsAt"), "2026-09-29T17:00:00Z"), "reset");
+  expect(is_num(jget(yyjson_arr_get(limits, 1), "percent"), 0.25), "all-model percentage");
+  expect(is_str(jget(yyjson_arr_get(limits, 2), "title"), "Opus Weekly"), "legacy title");
+  yyjson_doc_free(doc);
+  doc = call_op(
+      "claude",
+      "\"value\":{\"five_hour\":{\"utilization\":null},\"seven_day\":{\"utilization\":0},"
+      "\"seven_day_opus\":{\"utilization\":80},\"limits\":["
+      "{\"kind\":\"weekly_scoped\",\"scope\":{\"model\":{\"display_name\":\"Opus 5.5 (1M context)\"}},\"percent\":12},"
+      "{\"kind\":\"weekly_scoped\",\"scope\":{\"model\":{\"display_name\":\"Opus 5.5 (1M context)\"}},\"percent\":12},"
+      "{\"kind\":\"five_hour_scoped\",\"scope\":{\"model\":{\"id\":\"opus\"}},\"percent\":30},"
+      "{\"kind\":\"weekly_scoped\",\"scope\":{\"model\":{\"id\":\"missing\"}}}]}",
+      NULL, 10);
+  limits = jget(yyjson_doc_get_root(doc), "limits");
+  expect(yyjson_arr_size(limits) == 3, "missing limits omitted and scoped duplicates removed");
+  expect(is_num(jget(yyjson_arr_get(limits, 0), "percent"), 0), "observed zero kept");
+  expect(is_str(jget(yyjson_arr_get(limits, 1), "title"), "Opus 5.5 (1M context) Weekly"), "explicit window title");
+  expect(is_num(jget(yyjson_arr_get(limits, 1), "percent"), 0.12), "scoped percentage");
+  expect(is_str(jget(yyjson_arr_get(limits, 2), "title"), "opus Session"), "separate model window");
+  yyjson_doc_free(doc);
+}
+static void claude_login(void) {
+  check_begin("Claude reads the configured login without modifying or exposing credentials");
+  Box box = make_box("");
+  free(box.slots[5]);
+  box.slots[5] = fmt("CLAUDE_CONFIG_DIR=%s/claude-config", box.root);
+  box.env[5] = box.slots[5];
+  char *auth = check_join(box.root, "claude-config/.credentials.json");
+  const char *credentials = "{\"claudeAiOauth\":{\"accessToken\":\"fixture-claude-access\","
+                            "\"refreshToken\":\"fixture-claude-refresh\",\"expiresAt\":1790684100000,"
+                            "\"subscriptionType\":\"max\"},\"retained\":true}";
+  save_json(auth, credentials);
+  yyjson_doc *doc = collect("claude", &box,
+      "[{\"status\":200,\"body\":{\"five_hour\":{\"utilization\":5}}}]");
+  yyjson_val *root = yyjson_doc_get_root(doc), *record = jget(root, "record");
+  yyjson_val *request = yyjson_arr_get(jget(root, "requests"), 0);
+  expect(yyjson_arr_size(jget(root, "requests")) == 1, "one read-only request");
+  expect(is_str(jget(request, "url"), "https://api.anthropic.com/api/oauth/usage"), "fixed endpoint");
+  expect(is_str(jget(request, "headers"), "anthropic-beta: oauth-2025-04-20"), "OAuth header");
+  expect(is_str(jget(request, "token"), "fixture-claude-access"), "access token only");
+  expect(is_str(jget(request, "form"), ""), "not a refresh request");
+  expect(is_str(jget(record, "tierLabel"), "Max"), "subscription label");
+  expect(yyjson_is_false(jget(record, "hasLocalStats")), "no fabricated local totals");
+  expect(yyjson_is_false(jget(record, "hasPromptStats")), "no fabricated prompt totals");
+  expect(is_num(jget(record, "limitsFetchedAt"), 1790683200000), "measurement freshness");
+  char *encoded = yyjson_val_write(record, 0, NULL);
+  expect(encoded && !strstr(encoded, "fixture-claude"), "credentials absent from display record");
+  free(encoded);
+  yyjson_doc_free(doc);
+  size_t len;
+  unsigned char *saved = check_read(auth, &len);
+  expect(saved && len == strlen(credentials) && !memcmp(saved, credentials, len), "login unchanged");
+  free(saved);
+  save_json(auth, "{\"claudeAiOauth\":{\"accessToken\":\"expired-access\",\"expiresAt\":1790683199000,"
+                  "\"refreshToken\":\"leave-this-alone\",\"subscriptionType\":\"max\"}}");
+  doc = collect("claude", &box, "[]");
+  root = yyjson_doc_get_root(doc);
+  expect(yyjson_arr_size(jget(root, "requests")) == 0, "expired access does not refresh");
+  expect(is_str(jget(jget(root, "record"), "usageStatusText"), "Limits paused"), "paused status");
+  yyjson_doc_free(doc);
+  free(auth);
+  free_box(&box);
+}
+static void claude_errors(void) {
+  check_begin("Claude unavailable, rate-limited and signed-out states never become zero usage");
+  Box box = make_box("");
+  yyjson_doc *doc = collect("claude", &box, "[]");
+  yyjson_val *root = yyjson_doc_get_root(doc);
+  expect(yyjson_arr_size(jget(root, "requests")) == 0, "no credentials, no request");
+  expect(is_str(jget(jget(root, "record"), "usageStatusText"), "Waiting for auth"), "waiting");
+  yyjson_doc_free(doc);
+  char *auth = check_join(box.root, ".claude/.credentials.json");
+  save_json(auth, "{\"claudeAiOauth\":{\"accessToken\":\"fixture\",\"expiresAt\":1790684100000}}");
+  const char *replies[] = {"[{\"failed\":true}]", "[{\"status\":429}]", "[{\"status\":401}]",
+                           "[{\"status\":200,\"body\":{}}]"};
+  for (size_t i = 0; i < 4; i++) {
+    doc = collect("claude", &box, replies[i]);
+    yyjson_val *record = jget(yyjson_doc_get_root(doc), "record");
+    expect(yyjson_arr_size(jget(record, "limits")) == 0, "no invented meter");
+    expect(is_str(jget(record, "usageStatusText"), i == 2 ? "Sign-in expired" : "Claude limits unavailable"), "status");
+    expect(i == 0 ? yyjson_is_true(jget(record, "retryAdvised")) : !jget(record, "retryAdvised"), "only transport failure retries");
+    expect(!jget(record, "limitsFetchedAt"), "no false measurement freshness");
+    yyjson_doc_free(doc);
+  }
+  free(auth);
+  free_box(&box);
 }
 static void fresh_oauth(void) {
   check_begin("fresh OAuth credentials use fixed usage URLs and required account/JWT headers without refresh");
@@ -1420,6 +1526,9 @@ int main(void) {
   commands();
   installed();
   status_exe();
+  claude_windows();
+  claude_login();
+  claude_errors();
   fresh_oauth();
   persist_refresh();
   failed_save();
