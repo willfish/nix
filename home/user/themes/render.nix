@@ -252,6 +252,41 @@ rec {
       )}
     '';
 
+  # Herdr desktop app theme file (~/.config/herdr-app/themes/<name>.json).
+  # Same terminal palette as Ghostty; the app derives its chrome from it.
+  herdrApp =
+    p:
+    let
+      c = hex p;
+      brightTarget = if channelSum p.base00 > channelSum p.base05 then p.base07 else p.base05;
+      bright = colour: "#${mix colour brightTarget}";
+    in
+    builtins.toJSON {
+      background = c.base00;
+      foreground = c.base05;
+      selection = "#${(selectionPair p).bg}";
+      cursor = c.base0D;
+      ansi = [
+        c.base00
+        c.base08
+        c.base0B
+        c.base0A
+        c.base0D
+        c.base0E
+        c.base0C
+        c.base05
+        c.base04
+        (bright p.base08)
+        (bright p.base0B)
+        (bright p.base0A)
+        (bright p.base0D)
+        (bright p.base0E)
+        (bright p.base0C)
+        c.base06
+      ];
+      colors.accent = c.base0D;
+    };
+
   # A bat/delta syntax theme (TextMate plist) from any palette. Delta reads
   # it through bat's cache, so token colours match every rendered surface and
   # only light/dark swapping stays external.

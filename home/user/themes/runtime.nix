@@ -197,6 +197,10 @@ let
               value = textFile "${host}-ghostty-${mode}" (render.ghostty theme.${mode});
             }
             {
+              name = "herdr-app-${mode}.json";
+              value = textFile "${host}-herdr-app-${mode}.json" (render.herdrApp theme.${mode});
+            }
+            {
               name = "host-${mode}.json";
               value = textFile "${host}-pi-${mode}.json" (
                 builtins.toJSON (render.pi "host-${mode}" theme.${mode})

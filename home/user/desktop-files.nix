@@ -155,6 +155,26 @@ in
       fi
     '';
 
+    # The app rewrites settings.json (zoom, Settings UI), so merge the TUI's
+    # carried-over preferences instead of linking a read-only file.
+    herdrAppSettings = lib.mkIf isGraphicalLinux (
+      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        settings="${config.xdg.configHome}/herdr-app/settings.json"
+        run mkdir -p "$(dirname "$settings")"
+        [ -s "$settings" ] || echo '{}' > "$settings"
+        if merged=$(${pkgs.jq}/bin/jq '
+          .sounds = ((.sounds // {}) + {enabled: false})
+          | .theme = {light: "host-light", dark: "host-dark"}
+        ' "$settings"); then
+          if [ "$merged" != "$(cat "$settings")" ]; then
+            run ${pkgs.coreutils}/bin/install -m 600 /dev/stdin "$settings" <<< "$merged"
+          fi
+        else
+          echo "warning: herdr-app settings.json is not valid JSON; left unchanged" >&2
+        fi
+      ''
+    );
+
     repairHerdrPluginRuntimes = lib.mkIf pkgs.stdenv.isLinux (
       lib.hm.dag.entryAfter [ "installHerdrPlugins" ] ''
         export PATH="${
@@ -177,6 +197,12 @@ in
 
   xdg.configFile = lib.optionalAttrs isGraphicalLinux {
     "xdg-terminal-exec/default".text = "com.mitchellh.ghostty.desktop";
+    # Herdr desktop app: app defaults plus the TUI's ctrl+b prefix chords.
+    # The app writes this file only to replace untouched shipped defaults.
+    "herdr-app/keys.json" = {
+      source = ../config/herdr-app/keys.json;
+      force = true;
+    };
     "mimeapps.list".force = config.dotfiles.privateEnabled;
     # Direct file, not the config directory: a directory copy drops untracked files.
     "cliamp/radios.toml" = {

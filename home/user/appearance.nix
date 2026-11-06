@@ -161,6 +161,9 @@ in
   }
   // lib.optionalAttrs isGraphicalLinux {
     "theme-menu/catalogue.json".source = runtime.manifest;
+    # Herdr desktop app themes; settings.json selects host-light/host-dark.
+    "herdr-app/themes/host-dark.json".source = runtime.file "herdr-app-dark.json";
+    "herdr-app/themes/host-light.json".source = runtime.file "herdr-app-light.json";
   };
 
   gtk = lib.mkIf isGraphicalLinux {
