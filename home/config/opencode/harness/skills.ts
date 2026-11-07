@@ -3,6 +3,17 @@ import roleSkills from "./role-skills.json";
 
 export const SKILL_GUIDANCE = "Use skill_catalog to find trusted task-relevant skills by name or keywords; page with offset to list all. Load a returned exact ID with the native skill tool before following it. Catalogue results identify available registered skills. Manual-only skills require explicit user invocation. Discovery grants no authorization. User-selected skills and role-preloaded skills already in the conversation do not need loading again.";
 
+// Match OpenCode's permission wildcards, not filesystem glob syntax.
+function matchesPermission(input: string, pattern: string) {
+  let escaped = pattern.replaceAll("\\", "/")
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*")
+    .replace(/\?/g, ".");
+  if (escaped.endsWith(" .*")) escaped = escaped.slice(0, -3) + "( .*)?";
+  return new RegExp(`^${escaped}$`, process.platform === "win32" ? "si" : "s")
+    .test(input.replaceAll("\\", "/"));
+}
+
 export async function setupSkills(ctx) {
   const catalogue = async () => (await ctx.skill.list()).data.map(skill => ({
       name: skill.id,
@@ -25,7 +36,16 @@ export async function setupSkills(ctx) {
     },
     async execute(input, context) {
       await ctx.permission.assert({ action: "skill_catalog", resources: ["*"], sessionID: context.sessionID, agent: context.agent });
-      const result = searchCatalog(await catalogue(), [], input);
+      const [session, skills] = await Promise.all([
+        ctx.session.get({ sessionID: context.sessionID }),
+        catalogue(),
+      ]);
+      const { data: agent } = await ctx.agent.get({ agentID: context.agent ?? session.agent });
+      const permissions = [...agent.permissions, ...(session.permissions ?? [])];
+      const available = skills.filter(skill => permissions.findLast(rule =>
+        matchesPermission("skill", rule.action) && matchesPermission(skill.name, rule.resource)
+      )?.effect !== "deny");
+      const result = searchCatalog(available, [], input);
       result.results = result.results.map(({ name, command: _command, ...entry }) => ({ id: name, ...entry }));
       return { content: JSON.stringify(result) };
     },

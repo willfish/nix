@@ -15,7 +15,7 @@ await mkdir(project, { recursive: true });
 await writeFile(join(project, '.env'), 'FIXTURE_PERMISSION=synthetic\n');
 await writeFile(join(root, 'outside.txt'), 'Synthetic external-directory fixture\n');
 await mkdir(join(home, '.config/opencode'), { recursive: true });
-for (const id of ['fixture-specialist', 'verification-before-completion', 'manual-only-fixture']) {
+for (const id of ['fixture-specialist', 'verification-before-completion', 'manual-only-fixture', 'denied-fixture', 'ask-fixture', 'browser-automation']) {
   const path = join(home, '.agents/skills', id);
   await mkdir(path, { recursive: true });
   await writeFile(join(path, 'SKILL.md'), `---\nname: ${id}\ndescription: Fixture skill discovery ${id}\n${id === 'manual-only-fixture' ? 'disable-model-invocation: true\n' : ''}---\nPRELOADED_${id}\n`);
@@ -43,7 +43,9 @@ const fixture = createServer(async (request, response) => {
     else if (count === 2) call = { name: 'write', arguments: JSON.stringify({ path: 'permission-check.txt', content: 'Synthetic write fixture\n' }) };
     else if (count === 3) call = { name: 'shell', arguments: JSON.stringify({ command: 'test -f .env && test -f permission-check.txt', workdir: project }) };
   } else if (body.tools?.length && text.includes('SKILL_DISCOVERY') && last.role !== 'tool') {
-    call = { name: 'skill_catalog', arguments: JSON.stringify({ query: 'fixture' }) };
+    call = { name: 'skill_catalog', arguments: JSON.stringify({ query: text.includes('SKILL_DISCOVERY_BROWSER') ? 'browser' : 'fixture', limit: 10 }) };
+  } else if (body.tools?.length && text.includes('SKILL_BROWSER_LOAD') && body.messages.flatMap(message => message.tool_calls ?? []).at(-1)?.function.name === 'skill_catalog') {
+    call = { name: 'skill', arguments: JSON.stringify({ id: 'browser-automation' }) };
   } else if (body.tools?.length && JSON.stringify(last).includes('NATIVE_CHILD') && last.role !== 'tool') {
     const existing = /followup:(ses_[A-Za-z0-9]+)/.exec(JSON.stringify(last));
     call = { name: 'subagent', arguments: JSON.stringify({ agent: 'builder', model: 'fixture/fixture', description: 'Offline native child', prompt: 'Return child complete.', ...(existing ? { sessionID: existing[1] } : {}), ...(JSON.stringify(last).includes('BACKGROUND') ? { background: true } : {}) }) };
@@ -89,6 +91,7 @@ await writeFile(join(home, '.config/opencode/opencode.json'), JSON.stringify({
   autoupdate: false,
   experimental: { ...deployed.experimental, todo: true },
   model: 'fixture/fixture',
+  permissions: [...(deployed.permissions ?? []), { action: 'sk?ll', resource: 'denied-*', effect: 'deny' }, { action: 'skill', resource: 'ask-fixture', effect: 'ask' }],
   providers: { ...deployed.providers, fixture: { package: '@opencode/ai/providers/openai-compatible', settings: { baseURL: `http://127.0.0.1:${fixturePort}/v1`, apiKey: 'fixture' }, models: { fixture: { name: 'Fixture', capabilities: { tools: true }, limit: { context: 128000, output: 4096 } } } } },
   mcp: { ...deployed.mcp, servers: Object.fromEntries(Object.entries(deployed.mcp?.servers ?? {}).map(([name, server]) => [name, { ...server, disabled: true }])) },
   agents: { ...deployed.agents, builder: { ...deployed.agents?.builder, mode: 'subagent', description: 'Offline test builder', model: 'fixture/fixture' }, title: { model: 'fixture/fixture' } },
@@ -174,10 +177,13 @@ try {
   assert(first.tools.some(tool => tool.function.name === 'todowrite'), 'native todos are enabled');
   assert(first.tools.some(tool => tool.function.name === 'speak'), 'manual speech remains available');
   assert(!first.tools.some(tool => ['get_goal', 'create_goal', 'update_goal'].includes(tool.function.name)), 'the duplicate goal tools are absent');
-  assert(requests.some(request => request.messages.some(message => message.role === 'tool' && JSON.stringify(message.content).includes('fixture-specialist') && JSON.stringify(message.content).includes('results'))), 'catalogue returns the requested trusted skill ID');
   const discovery = (await api(`/api/session/${session.id}/context`)).data.flatMap(message => message.content ?? []).find(part => part.type === 'tool' && part.name === 'skill_catalog');
+  assert.equal(discovery.state.status, 'completed', JSON.stringify(discovery.state));
+  assert(requests.some(request => request.messages.some(message => message.role === 'tool' && JSON.stringify(message.content).includes('fixture-specialist') && JSON.stringify(message.content).includes('results'))), 'catalogue returns the requested trusted skill ID');
   const catalogue = JSON.parse(discovery.state.content[0].text);
   assert(catalogue.results.find(skill => skill.id === 'manual-only-fixture')?.manualOnly, 'manual-only metadata survives compact discovery');
+  assert(catalogue.results.some(skill => skill.id === 'ask-fixture'), 'skills needing approval remain discoverable without prompting');
+  assert(!catalogue.results.some(skill => skill.id === 'denied-fixture'), 'wildcard-denied skills are omitted');
   await until(() => herdrTabLabel, value => value === '3 Skill discovery check', 'automatic session title names the numeric Herdr tab');
   await api(`/api/session/${session.id}`, { title: 'Updated session title' }, 'PATCH');
   await until(() => herdrTabLabel, value => value === '3 Updated session title', 'owned Herdr tab follows session title updates');
@@ -186,6 +192,25 @@ try {
   await delay(200);
   assert.equal(herdrTabLabel, '3 Manual tab', 'manual Herdr tab rename ends automatic ownership');
   console.log('PASS: real V2 plugin loaded, compact skill discovery reached the local provider, and Herdr tab followed automatic session title');
+  const browserSession = await create();
+  const browserDiscovery = async text => {
+    await api(`/api/session/${browserSession.id}/prompt`, { text });
+    await api(`/api/experimental/session/${browserSession.id}/wait`, undefined, 'POST');
+    const calls = (await api(`/api/session/${browserSession.id}/context`)).data.flatMap(message => message.content ?? []).filter(part => part.type === 'tool');
+    const discovery = calls.findLast(part => part.name === 'skill_catalog');
+    assert.equal(discovery.state.status, 'completed');
+    return { calls, catalogue: JSON.parse(discovery.state.content[0].text) };
+  };
+  assert((await api('/api/skill')).data.some(skill => skill.id === 'browser'), 'native browser is registered even without a desktop attachment');
+  const browsers = await browserDiscovery('SKILL_DISCOVERY_BROWSER SKILL_BROWSER_LOAD');
+  assert(browsers.catalogue.results.some(skill => skill.id === 'browser-automation'), 'visible Brave workflow remains discoverable');
+  assert(!browsers.catalogue.results.some(skill => skill.id === 'browser'), 'unattached native browser is not advertised');
+  assert(browsers.calls.some(part => part.name === 'skill' && part.state.status === 'completed' && JSON.stringify(part.state.content).includes('PRELOADED_browser-automation')), 'visible Brave skill loads through the native tool');
+  await api(`/api/session/${browserSession.id}`, { permissions: [{ action: 'skill', resource: 'browser', effect: 'allow' }] }, 'PATCH');
+  assert((await browserDiscovery('SKILL_DISCOVERY_BROWSER')).catalogue.results.some(skill => skill.id === 'browser'), 'session allow reveals the native skill without removing its registration');
+  await api(`/api/session/${browserSession.id}`, { permissions: [{ action: 'skill', resource: 'browser', effect: 'allow' }, { action: 'skill', resource: 'browser', effect: 'deny' }] }, 'PATCH');
+  assert(!(await browserDiscovery('SKILL_DISCOVERY_BROWSER')).catalogue.results.some(skill => skill.id === 'browser'), 'later session deny hides the native skill again');
+  console.log('PASS: permission-aware discovery preserves Brave skill loading, approval/manual metadata and dynamic native-browser visibility');
   const voice = async (sessionID, action = 'status') => (await api('/api/rpc/dotfiles.voice/control', { input: { sessionID, action } })).output;
   assert.deepEqual(await voice(session.id), { enabled: false, error: '' });
   const voiceSession = await create();
