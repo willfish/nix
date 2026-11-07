@@ -108,9 +108,18 @@ static char *next_name(yyjson_val *names, const char *current,
   }
   if (!found)
     at = preferred_at;
-  at = step == 1 ? (at + 1) % ordered->len
-                 : (at + ordered->len - 1) % ordered->len;
-  chosen = g_strdup(ordered->pdata[at]);
+  for (size_t tried = 1; tried < ordered->len; tried++) {
+    at = step == 1 ? (at + 1) % ordered->len
+                   : (at + ordered->len - 1) % ordered->len;
+    const char *candidate = ordered->pdata[at];
+    char *lower = g_ascii_strdown(candidate, -1);
+    bool branded = strstr(lower, "omarchy") != NULL;
+    g_free(lower);
+    if (!branded) {
+      chosen = g_strdup(candidate);
+      break;
+    }
+  }
 done:
   g_ptr_array_free(ordered, true);
   return chosen;

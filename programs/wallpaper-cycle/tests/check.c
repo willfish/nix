@@ -182,8 +182,9 @@ static Fix *fixture(const char *names_json, const char *preferred) {
   g_mkdir_with_parents(f->state, 0755);
   g_mkdir_with_parents(f->bin, 0755);
   g_mkdir_with_parents(backgrounds, 0755);
-  const char *files[] = {"a.png", "b.png", "c.png", "雪.png", "other.png"};
-  for (size_t i = 0; i < 5; i++) {
+  const char *files[] = {"a.png", "b.png", "c.png", "雪.png", "other.png",
+                         "omarchy.webp", "3-omarchy-neon.png", "2-OmArChY.png"};
+  for (size_t i = 0; i < G_N_ELEMENTS(files); i++) {
     char *path = g_build_filename(backgrounds, files[i], NULL);
     write_text(path, files[i]);
     g_free(path);
@@ -361,6 +362,18 @@ static void set_source(Fix *f, const char *json_value) {
   write_text(f->catalogue, text);
   g_free(text);
 }
+static void use_catalogue_metadata(Fix *f, const char *names,
+                                   const char *preferred) {
+  char *meta = g_build_filename(f->theme, "theme.json", NULL);
+  EXPECT(unlink(meta) == 0);
+  g_free(meta);
+  char *text = g_strdup_printf(
+      "{\"default\":\"rose\",\"palettes\":{\"rose\":{\"backgrounds\":%s,"
+      "\"preferred\":\"%s\",\"session\":{\"dark\":{\"wallpaper.png\":\"nix-theme:rose\"}}}}}",
+      names, preferred ? preferred : "a.png");
+  write_text(f->catalogue, text);
+  g_free(text);
+}
 static char *wrap_space(uint32_t cp, const char *inner) {
   char u[4];
   size_t n = utf8(cp, u);
@@ -444,6 +457,55 @@ int main(void) {
     g_free(expect);
     g_free(current);
     fix_free(f);
+  }
+  begin("both metadata sources skip Omarchy filenames in either direction without losing other images");
+  const char *tail = "[\"a.png\",\"b.png\",\"omarchy.webp\"]";
+  const char *numbered =
+      "[\"a.png\",\"3-omarchy-neon.png\",\"b.png\",\"2-OmArChY.png\",\"c.png\"]";
+  const char *single = "[\"a.png\",\"omarchy.webp\",\"2-OmArChY.png\"]";
+  const char *branded = "[\"omarchy.webp\",\"2-OmArChY.png\"]";
+  const struct {
+    const char *names, *current, *preferred, *direction, *chosen;
+  } exclusions[] = {
+      {tail, "b.png", NULL, "next", "a.png"},
+      {tail, "a.png", NULL, "previous", "b.png"},
+      {numbered, "a.png", NULL, "next", "b.png"},
+      {numbered, "b.png", NULL, "previous", "a.png"},
+      {numbered, "b.png", NULL, "next", "c.png"},
+      {numbered, "c.png", NULL, "previous", "b.png"},
+      {numbered, "3-omarchy-neon.png", NULL, "next", "b.png"},
+      {numbered, "3-omarchy-neon.png", NULL, "previous", "a.png"},
+      {numbered, "", "3-omarchy-neon.png", "next", "b.png"},
+      {numbered, "", "3-omarchy-neon.png", "previous", "a.png"},
+      {single, "a.png", NULL, "next", NULL},
+      {single, "a.png", NULL, "previous", NULL},
+      {single, "omarchy.webp", NULL, "next", "a.png"},
+      {single, "omarchy.webp", NULL, "previous", "a.png"},
+      {single, "", NULL, "next", NULL},
+      {branded, "omarchy.webp", NULL, "next", NULL},
+      {branded, "omarchy.webp", NULL, "previous", NULL},
+  };
+  for (int catalogue_only = 0; catalogue_only < 2; catalogue_only++) {
+    for (size_t i = 0; i < G_N_ELEMENTS(exclusions); i++) {
+      Fix *f = fixture(exclusions[i].names, exclusions[i].preferred);
+      if (catalogue_only)
+        use_catalogue_metadata(f, exclusions[i].names, exclusions[i].preferred);
+      prepare(f);
+      write_text(f->current, exclusions[i].current);
+      EXPECT(run_dir(f, exclusions[i].direction) == (exclusions[i].chosen ? 0 : 3));
+      if (exclusions[i].chosen) {
+        char *current = read_text(f->current);
+        char *expected = g_strconcat(exclusions[i].chosen, "\n", NULL);
+        EXPECT(current && !strcmp(current, expected));
+        EXPECT(only_magick(f));
+        g_free(expected);
+        g_free(current);
+      } else {
+        expect_no_calls(f);
+        EXPECT(!g_file_test(f->live, G_FILE_TEST_EXISTS));
+      }
+      fix_free(f);
+    }
   }
   begin("duplicate entries retain the first current/preferred index and original ordering");
   {

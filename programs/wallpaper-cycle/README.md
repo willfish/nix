@@ -5,9 +5,11 @@
 a successful change. A hand-set wallpaper disables rotation and removes its
 previous rotation files and Nix output link.
 
-The helper preserves catalogue ordering, starts after the preferred image when
-there is no current selection, and wraps in either direction. It builds the
-selected theme lazily through `nix build --out-link`. Background files must
+The helper preserves catalogue ordering, skips filenames containing `omarchy`
+(case-insensitively), starts after the preferred image when there is no current
+selection, and wraps in either direction. It does not reconvert the current image
+when every other entry is excluded. It builds the selected theme lazily through
+`nix build --out-link`. Background files must
 resolve directly inside the theme's canonical `backgrounds` directory.
 ImageMagick converts the chosen file to a temporary PNG; a changed package link
 or current selection abandons that conversion before publication. The current
