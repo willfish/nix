@@ -166,6 +166,9 @@ Ghostty reloads through its D-Bus action; Neovim instances with the installed
 watcher update automatically. Older Neovim instances need restarting once.
 The addressed Herdr server reloads; other servers need their own
 `herdr server reload-config` with the appropriate socket selected.
+Herdr App watches regular `host-light.json` and `host-dark.json` files in
+`~/.config/herdr-app/themes/`, published by the picker. Palette changes reload
+without restarting the app, including light-to-light and dark-to-dark switches.
 Existing Pi sessions need restarting for named palette changes because their
 watcher does not watch launcher-loaded files. Explicit Pi theme choices take
 precedence. Remote hosts retain their own palettes.

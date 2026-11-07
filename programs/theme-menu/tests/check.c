@@ -198,10 +198,10 @@ static const char *palette_ids[] = {"tokyo-night", "rose-pine", "osaka-jade"};
 static const char *palette_labels[] = {"Tokyo Night", "Rosé Pine",
                                        "Osaka Jade"};
 static const char *file_names[] = {
-    "host-palettes.json", "herdr.toml",     "btop.theme",
-    "ghostty-dark",       "ghostty-light",  "host-dark.json",
-    "host-light.json",    "delta",          "bat-dark",
-    "bat-light"};
+    "host-palettes.json", "herdr.toml",          "btop.theme",
+    "ghostty-dark",       "ghostty-light",       "host-dark.json",
+    "host-light.json",    "delta",               "bat-dark",
+    "bat-light",          "herdr-app-dark.json", "herdr-app-light.json"};
 static const char *session_names[] = {"hyprland.conf", "gtk.css", "fuzzel.ini",
                                       "walker.css"};
 static const char *commands[] = {"fuzzel",    "gdbus",    "herdr",  "notify-send",
@@ -1148,6 +1148,72 @@ static void test_mode_actions(void) {
          "mode notify log");
   logs_free(logs, n);
   free(delta);
+  fix_free(f);
+}
+
+static void test_herdr_app_themes(void) {
+  Fix *f = setup();
+  if (!f)
+    return;
+  char *app = join_path(f->config, "herdr-app");
+  char *themes = join_path(app, "themes");
+  const char *offline[] = {"--no-reload", "default"};
+  Result r = run(f, offline, 2, NULL, NULL, 0);
+  EXPECT(r.status == 0 && !exists_stat(app), "unpublished Herdr themes untouched");
+  result_free(&r);
+  mkdir(app, 0755);
+  mkdir(themes, 0755);
+  char *settings = join_path(app, "settings.json");
+  const char *preferences = "{\"zoom\":1.25,\"font_ligatures\":true}\n";
+  write_str(settings, preferences);
+  const char *sources[] = {"herdr-app-dark.json", "herdr-app-light.json"};
+  const char *targets[] = {"host-dark.json", "host-light.json"};
+  for (int i = 0; i < 2; i++) {
+    char *source_dir = join_path(f->root, "tokyo-night");
+    char *source = join_path(source_dir, sources[i]);
+    char *target = join_path(themes, targets[i]);
+    EXPECT(symlink(source, target) == 0, "create managed Herdr theme symlink");
+    free(source_dir);
+    free(source);
+    free(target);
+  }
+  const char *keys[] = {"THEME_MENU_PUBLISH"};
+  const char *vals[] = {"1"};
+  for (int m = 0; m < 2; m++) {
+    const char *mode[] = {"--no-reload", m ? "light" : "dark"};
+    r = run(f, mode, 2, NULL, NULL, 0);
+    EXPECT(r.status == 0, "Herdr mode setup %s", r.err);
+    result_free(&r);
+    for (int i = 0; i < 3; i++) {
+      const char *extra[] = {"--no-reload", palette_ids[i]};
+      r = run(f, extra, 2, keys, vals, 1);
+      EXPECT(r.status == 0, "Herdr same-mode palette %s", r.err);
+      result_free(&r);
+      char *source_dir = join_path(f->root, palette_ids[i]);
+      for (int n = 0; n < 2; n++) {
+        char *source = join_path(source_dir, sources[n]);
+        char *target = join_path(themes, targets[n]);
+        struct stat st;
+        EXPECT(lstat(target, &st) == 0 && S_ISREG(st.st_mode),
+               "Herdr theme must be a watched regular file");
+        EXPECT(file_eq_path(source, target), "Herdr palette %s %s",
+               palette_ids[i], targets[n]);
+        free(source);
+        free(target);
+      }
+      free(source_dir);
+    }
+  }
+  EXPECT(file_eq_mem(settings, preferences, strlen(preferences)),
+         "Herdr preferences preserved");
+  char *original = join_path(f->root, "tokyo-night/herdr-app-dark.json");
+  const char *original_body = "tokyo-night:herdr-app-dark.json\n";
+  EXPECT(file_eq_mem(original, original_body, strlen(original_body)),
+         "old Herdr symlink target preserved");
+  free(original);
+  free(settings);
+  free(themes);
+  free(app);
   fix_free(f);
 }
 
@@ -2360,6 +2426,7 @@ int main(void) {
   test_parity();
   test_bundles();
   test_mode_actions();
+  test_herdr_app_themes();
   test_unknown();
   test_rollback();
   test_symlinks();

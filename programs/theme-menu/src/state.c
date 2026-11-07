@@ -318,8 +318,18 @@ bool apply(Themes *t, const char *selected) {
   for (size_t i = 0; i < names->len && !t->error; i++) {
     const char *name = names->pdata[i], *source = string(t, field(files, name));
     GBytes *data = source ? read_bytes(t, source) : NULL;
-    if (data)
+    if (data) {
       put(writes, path_join(active, name), data);
+      // Herdr watches its themes directory, not out-of-store symlink targets.
+      const char *app_theme =
+          !strcmp(name, "herdr-app-dark.json")
+              ? "herdr-app/themes/host-dark.json"
+          : !strcmp(name, "herdr-app-light.json")
+              ? "herdr-app/themes/host-light.json"
+              : NULL;
+      if (app_theme && !g_strcmp0(g_getenv("THEME_MENU_PUBLISH"), "1"))
+        put(writes, path_join(t->config, app_theme), g_bytes_ref(data));
+    }
   }
   g_ptr_array_free(names, true);
   g_free(active);

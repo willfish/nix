@@ -15,13 +15,15 @@ session assets without overwriting application overrides or palette selection.
 An advisory lock covers the popup, state writes and desktop publication.
 
 `THEME_MENU_PUBLISH=1` enables lazy wallpaper builds, rotation-root management,
-greeter updates and Hyprland publication. `THEME_WALLPAPER_FLAKE` selects the
+greeter updates, Herdr App themes and Hyprland publication. `THEME_WALLPAPER_FLAKE` selects the
 wallpaper flake. Greeter updates never create files or follow symlinks; only an
 existing regular file receives a catalogue-listed ASCII ID, including newline,
 of at most 64 bytes. GTK CSS symlinks and custom styles remain untouched. Waybar
 reloads use the current user's unit, not a process scan. btop reloads use SIGUSR2;
 Ghostty uses its public D-Bus action and is not started. Herdr reloads its
-addressed server. Desktop command failures produce the original warning/fallback
+addressed server. Herdr App's paired themes are published as regular files in
+its watched themes directory, so same-mode palette changes also reload live.
+Desktop command failures produce the original warning/fallback
 behavior and deadlines.
 
 For disposable, nonpublishing bundle checks, unset `THEME_MENU_PUBLISH` and use
