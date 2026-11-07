@@ -676,11 +676,11 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1782985894,
-        "narHash": "sha256-rWKPT7vE2hhaqsl5cWv39JgTLzhBBPmngwiB1Qn84oI=",
+        "lastModified": 1794037403,
+        "narHash": "sha256-oopsNI620yvqU639a6rjZ4VURpizi61wvDYmVZcoR6g=",
         "owner": "willfish",
         "repo": "mux",
-        "rev": "927030bb88e4b16b6671f68610980491ffbd2c81",
+        "rev": "c9dc8b560d68af898fa7580a09bd13f69231576b",
         "type": "github"
       },
       "original": {

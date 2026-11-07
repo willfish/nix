@@ -11,7 +11,7 @@ let
   capabilities = config.dotfiles.capabilities;
   isTerminus = capabilities.nas;
   muxWithDefaultBackend = pkgs.writeShellScriptBin "mux" ''
-    export MUX_BACKEND="''${MUX_BACKEND:-herdr}"
+    export MUX_BACKEND="''${MUX_BACKEND:-${config.home.sessionVariables.MUX_BACKEND}}"
     exec ${pkgs.mux}/bin/mux "$@"
   '';
 

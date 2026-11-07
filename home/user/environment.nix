@@ -22,7 +22,7 @@ in
     GIT_PAGER = "delta";
     LESS = "-R";
     MANPAGER = "nvim +Man!";
-    MUX_BACKEND = "herdr";
+    MUX_BACKEND = if config.dotfiles.capabilities.desktop then "herdr-app" else "herdr";
     NH_HOME_FLAKE = config.dotfiles.sourceDirectory;
     NH_OS_FLAKE = config.dotfiles.sourceDirectory;
     NIXPKGS_ALLOW_UNFREE = 1;

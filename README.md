@@ -129,6 +129,22 @@ If invoking `nh` directly on Linux, pass the flake path and configuration separa
 
 For routine read-only health reports, [Justfile](Justfile) provides `just health` for reachable known hosts and `just health terminus` for one host. `just terminus-health` adds detailed ZFS/SMART checks and may prompt for sudo.
 
+### Start a mux project in Herdr
+
+Desktop homes default `mux` to the Herdr desktop app (`herdr-app` and `hc`).
+With the app open, run `mux start work` to load the existing
+`~/.config/tmuxinator/work.yml` as one space, with a tab for each window and
+splits for its panes. A repeat run selects the existing local `work` space
+without starting its commands again. `mux stop work` closes that space and
+ends its terminals.
+
+New Fish shells load the default after `hmswitch`. In an existing Fish shell,
+run `set -gx MUX_BACKEND herdr-app` first. Headless homes retain the older
+`herdr` backend. Use `mux start --backend herdr work` for the older Herdr TUI,
+or `mux start --backend tmux work` for tmux. See the
+[mux README](https://github.com/willfish/mux#multiplexer-backends) for backend
+requirements and limits.
+
 ## Checks and maintenance
 
 There is **no CI workflow in this checkout**. Local commit hooks are not host builds, and pushes do not build NixOS or Home Manager configurations.

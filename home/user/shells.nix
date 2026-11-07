@@ -417,7 +417,7 @@ in
 
         set -gx AWS_DEFAULT_REGION eu-west-2
         set -gx AWS_REGION eu-west-2
-        set -gx MUX_BACKEND herdr
+        set -gx MUX_BACKEND ${lib.escapeShellArg config.home.sessionVariables.MUX_BACKEND}
         set -gx ERL_AFLAGS "-kernel shell_history enabled"
         set -gx SAM_CLI_TELEMETRY 0
         complete -c gitignore -w git-ignore
