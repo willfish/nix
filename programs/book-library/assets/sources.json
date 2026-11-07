@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "byte_cap": 1099511627776,
+  "openstax": true,
+  "oapen": true,
+  "gutenberg": true,
+  "kiwix": [
+    {
+      "name": "wikipedia_en_all",
+      "flavour": "maxi",
+      "category": "reference",
+      "licence": "CC BY-SA; source attribution and version retained in archive",
+      "licence_url": "https://en.wikipedia.org/wiki/Wikipedia:Copyrights"
+    },
+    {
+      "name": "wikipedia_en_all",
+      "flavour": "mini",
+      "category": "reference",
+      "portable": true,
+      "licence": "CC BY-SA; source attribution and version retained in archive",
+      "licence_url": "https://en.wikipedia.org/wiki/Wikipedia:Copyrights"
+    },
+    {
+      "name": "wikibooks_en_all",
+      "flavour": "maxi",
+      "category": "education",
+      "licence": "CC BY-SA / GFDL; individual source notices retained",
+      "licence_url": "https://en.wikibooks.org/wiki/Wikibooks:Copyrights"
+    },
+    {
+      "name": "wiktionary_en_all",
+      "flavour": "nopic",
+      "category": "reference",
+      "licence": "CC BY-SA / GFDL; individual source notices retained",
+      "licence_url": "https://en.wiktionary.org/wiki/Wiktionary:Copyrights"
+    },
+    {
+      "name": "appropedia_en_all",
+      "flavour": "maxi",
+      "category": "practical",
+      "licence": "CC BY-SA 4.0; source notices retained",
+      "licence_url": "https://www.appropedia.org/Appropedia:Copyrights"
+    },
+    {
+      "name": "ifixit_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-NC-SA 3.0; source notices retained",
+      "licence_url": "https://www.ifixit.com/Info/Licensing"
+    },
+    {
+      "name": "wikipedia_en_medicine",
+      "flavour": "maxi",
+      "category": "practical",
+      "licence": "CC BY-SA; source attribution and version retained in archive",
+      "licence_url": "https://en.wikipedia.org/wiki/Wikipedia:Copyrights"
+    },
+    {
+      "name": "electronics.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "engineering.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "diy.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "gardening.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "cooking.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "outdoors.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "ham.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "mechanics.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "unix.stackexchange.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "superuser.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    },
+    {
+      "name": "serverfault.com_en_all",
+      "flavour": "",
+      "category": "practical",
+      "licence": "CC BY-SA 2.5/3.0/4.0 as applicable per post",
+      "licence_url": "https://stackoverflow.com/help/licensing"
+    }
+  ],
+  "gutenberg_authors": [
+    { "search": "Wells, H. G.", "death_year": 1946 },
+    { "search": "Shelley, Mary Wollstonecraft", "death_year": 1851 },
+    { "search": "Stapledon, Olaf", "death_year": 1950 },
+    { "search": "Carroll, Lewis", "death_year": 1898 },
+    { "search": "Nesbit, E.", "death_year": 1924 },
+    { "search": "Potter, Beatrix", "death_year": 1943 },
+    { "search": "Burnett, Frances Hodgson", "death_year": 1924 },
+    { "search": "Grahame, Kenneth", "death_year": 1932 },
+    { "search": "Austen, Jane", "death_year": 1817 },
+    { "search": "Dickens, Charles", "death_year": 1870 }
+  ]
+}

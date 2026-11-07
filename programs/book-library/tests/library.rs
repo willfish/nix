@@ -1,0 +1,297 @@
+use book_library::{Manifest, Source, acquire, atomic_json, db, digest, extract, file_hash, root};
+use rusqlite::params;
+use serde_json::{Value, json};
+use std::{
+    fs,
+    io::{BufRead, BufReader, Write},
+    net::TcpListener,
+    process::{Command, Stdio},
+};
+
+fn metadata(url: &str) -> Source {
+    Source {
+        id: String::new(),
+        provider: "fixture".into(),
+        title: "Practical electricity".into(),
+        authors: "Synthetic fixture".into(),
+        category: "practical".into(),
+        language: "eng".into(),
+        edition: "1".into(),
+        licence: "CC0".into(),
+        licence_url: "https://creativecommons.org/publicdomain/zero/1.0/".into(),
+        origin: "https://example.org/electricity".into(),
+        url: url.into(),
+        format: "txt".into(),
+        size: None,
+        upstream_sha256: None,
+        metadata: json!({}),
+    }
+    .identify()
+}
+
+fn fixture() -> (tempfile::TempDir, Source) {
+    let temp = tempfile::tempdir().unwrap();
+    let path = root(temp.path(), true, true).unwrap();
+    let text = "Electrical power is measured in watts. Energy is power multiplied by time.\nA 10 watt lamp for 3 hours uses 30 watt-hours. Résistance and current are different quantities.\n";
+    let mut source = metadata("https://example.org/electricity.txt");
+    source.size = Some(text.len() as u64);
+    let hash = digest(text.as_bytes());
+    let object = format!("objects/{hash}.txt");
+    fs::write(path.join(&object), text).unwrap();
+    let manifest = Manifest {
+        version: 1,
+        created: 1,
+        policy_sha256: digest(b"fixture"),
+        byte_cap: 64 << 20,
+        sources: vec![source.clone()],
+        exclusions: vec![],
+    };
+    atomic_json(&path.join("manifest.json"), &manifest).unwrap();
+    acquire::seed(&path, &manifest).unwrap();
+    let connection = db::connect(&path, true).unwrap();
+    connection
+        .execute(
+            "UPDATE sources SET status='verified',object=?1,sha256=?2 WHERE id=?3",
+            params![object, hash, source.id],
+        )
+        .unwrap();
+    drop(connection);
+    extract::ingest(&path, None).unwrap();
+    (temp, source)
+}
+
+#[test]
+fn search_read_grep_and_read_only_boundary() {
+    let (temp, source) = fixture();
+    let library = db::Library::open(temp.path()).unwrap();
+    let result = library
+        .search("power AND time", Some("practical"), None, 5)
+        .unwrap();
+    let hit = &result["books"]["results"][0];
+    assert_eq!(hit["source_id"], source.id);
+    let locator = hit["locator"].as_str().unwrap();
+    let page = library.read(&source.id, locator, 0, 40).unwrap();
+    assert_eq!(page["text"].as_str().unwrap().chars().count(), 40);
+    assert_eq!(page["next_offset"], 40);
+    assert!(page["citation"].as_str().unwrap().starts_with("book://"));
+    assert!(library.read(&source.id, locator, 0, 16001).is_err());
+    assert!(library.read("../../etc/passwd", locator, 0, 100).is_err());
+    let matches = library
+        .grep("Résistance", &[source.id.clone()], false, 5)
+        .unwrap();
+    assert_eq!(matches["matches"].as_array().unwrap().len(), 1);
+    assert!(library.grep(".*", &[], true, 5).is_err());
+    assert!(library.db.execute("DELETE FROM sources", []).is_err());
+    assert!(
+        db::audit(temp.path(), true).unwrap()["complete"]
+            .as_bool()
+            .unwrap()
+    );
+}
+
+#[test]
+fn independent_audit_detects_original_corruption() {
+    let (temp, source) = fixture();
+    let library = db::Library::open(temp.path()).unwrap();
+    fs::write(library.object(&source.id).unwrap(), b"corrupt").unwrap();
+    let report = db::audit(temp.path(), true).unwrap();
+    assert_eq!(report["complete"], false);
+    assert_eq!(report["errors"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn recreation_requires_an_explicit_category_or_source_selection() {
+    let (temp, mut source) = fixture();
+    source.category = "recreation".into();
+    let connection = db::connect(temp.path(), true).unwrap();
+    connection
+        .execute(
+            "UPDATE sources SET metadata=?1 WHERE id=?2",
+            params![serde_json::to_string(&source).unwrap(), source.id],
+        )
+        .unwrap();
+    drop(connection);
+    let library = db::Library::open(temp.path()).unwrap();
+    assert!(
+        library.search("watts", None, None, 5).unwrap()["books"]["results"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        library
+            .search("watts", Some("recreation"), None, 5)
+            .unwrap()["books"]["results"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        library
+            .search_scope("watts", None, None, Some(&source.id), 5)
+            .unwrap()["books"]["results"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn essentials_copy_keeps_compact_reference_and_plain_reading_export() {
+    let (temp, mut source) = fixture();
+    source.title = "Wikipedia".into();
+    source.metadata = json!({"portable":true});
+    let mut manifest = book_library::load_manifest(temp.path()).unwrap();
+    manifest.sources = vec![source.clone()];
+    atomic_json(&temp.path().join("manifest.json"), &manifest).unwrap();
+    let connection = db::connect(temp.path(), true).unwrap();
+    connection
+        .execute(
+            "UPDATE sources SET metadata=?1 WHERE id=?2",
+            params![serde_json::to_string(&source).unwrap(), source.id],
+        )
+        .unwrap();
+    drop(connection);
+    let parent = tempfile::tempdir().unwrap();
+    let destination = parent.path().join("essentials");
+    assert_eq!(
+        db::snapshot(temp.path(), &destination, 1).unwrap()["sources"],
+        1
+    );
+    assert!(
+        fs::read_to_string(destination.join("text").join(format!("{}.txt", source.id)))
+            .unwrap()
+            .contains("watt-hours")
+    );
+    assert!(
+        db::audit(&destination, true).unwrap()["complete"]
+            .as_bool()
+            .unwrap()
+    );
+    assert!(db::snapshot(temp.path(), &destination, 1).is_err());
+}
+
+#[test]
+fn acquisition_resumes_a_verified_range_without_duplicate_bytes() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = root(temp.path(), true, true).unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let bytes = b"A synthetic book about water and energy.\n";
+    let url = format!("http://{}/book.txt", listener.local_addr().unwrap());
+    let mut source = metadata(&url);
+    source.size = Some(bytes.len() as u64);
+    source.upstream_sha256 = Some(digest(bytes));
+    fs::write(
+        path.join("partial").join(format!("{}.part", source.id)),
+        &bytes[..10],
+    )
+    .unwrap();
+    let manifest = Manifest {
+        version: 1,
+        created: 1,
+        policy_sha256: digest(b"fixture"),
+        byte_cap: 64 << 20,
+        sources: vec![source.clone()],
+        exclusions: vec![],
+    };
+    atomic_json(&path.join("manifest.json"), &manifest).unwrap();
+    let server = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut request = String::new();
+        let mut reader = BufReader::new(stream.try_clone().unwrap());
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            request.push_str(&line);
+            if line == "\r\n" {
+                break;
+            }
+        }
+        assert!(request.to_ascii_lowercase().contains("range: bytes=10-"));
+        write!(stream,"HTTP/1.1 206 Partial Content\r\nContent-Length: {}\r\nContent-Range: bytes 10-{}/{}\r\nETag: \"fixture-v1\"\r\nConnection: close\r\n\r\n",bytes.len()-10,bytes.len()-1,bytes.len()).unwrap();
+        stream.write_all(&bytes[10..]).unwrap();
+    });
+    assert_eq!(
+        acquire::run(&path, None, true).unwrap()["downloaded_this_run"],
+        1
+    );
+    server.join().unwrap();
+    let library = db::Library::open(&path).unwrap();
+    assert_eq!(
+        file_hash(&library.object(&source.id).unwrap()).unwrap(),
+        source.upstream_sha256.unwrap()
+    );
+    assert_eq!(
+        acquire::run(&path, None, true).unwrap()["downloaded_this_run"],
+        0
+    );
+    // A verified sample receipt can seed a new generation without another HTTP request.
+    drop(library);
+    db::connect(&path, true)
+        .unwrap()
+        .execute(
+            "UPDATE sources SET status='pending',object=NULL,sha256=NULL WHERE id=?",
+            [&source.id],
+        )
+        .unwrap();
+    assert_eq!(
+        acquire::run(&path, None, true).unwrap()["downloaded_this_run"],
+        1
+    );
+}
+
+#[test]
+fn mcp_stdio_initialises_lists_and_calls_real_retrieval() {
+    let (temp, _) = fixture();
+    let mut child = Command::new("timeout")
+        .arg("15s")
+        .arg(env!("CARGO_BIN_EXE_book-library"))
+        .args(["--root", temp.path().to_str().unwrap(), "mcp"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .unwrap();
+    let mut input = child.stdin.take().unwrap();
+    let mut output = BufReader::new(child.stdout.take().unwrap());
+    let mut call = |request: Value| -> Value {
+        writeln!(input, "{request}").unwrap();
+        input.flush().unwrap();
+        if request.get("id").is_none() {
+            return Value::Null;
+        }
+        let mut response = String::new();
+        output.read_line(&mut response).unwrap();
+        serde_json::from_str(&response).unwrap()
+    };
+    let hello = call(
+        json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"offline-fixture","version":"1"}}}),
+    );
+    assert_eq!(hello["result"]["serverInfo"]["name"], "Offline knowledge");
+    call(json!({"jsonrpc":"2.0","method":"notifications/initialized"}));
+    let list = call(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}));
+    assert_eq!(list["result"]["tools"].as_array().unwrap().len(), 5);
+    assert!(
+        list["result"]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|t| t["annotations"]["readOnlyHint"] == true)
+    );
+    let found = call(
+        json!({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"watts"}}}),
+    );
+    assert_eq!(
+        found["result"]["structuredContent"]["books"]["results"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    drop(call);
+    drop(input);
+    drop(output);
+    assert!(child.wait().unwrap().success());
+}

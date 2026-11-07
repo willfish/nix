@@ -28,6 +28,19 @@ rec {
         wrapper = "mcp-arxiv";
       }
       {
+        name = "books";
+        description = "Search and read the offline book and reference library on Terminus";
+        enabled = config.dotfiles.privateEnabled;
+        wrapper = "mcp-books";
+      }
+      {
+        name = "books-local";
+        description = "Search and read the portable offline essentials copy without network access";
+        enabled =
+          config.dotfiles.privateEnabled && config.dotfiles.capabilities.desktop && pkgs.stdenv.isLinux;
+        wrapper = "mcp-books-local";
+      }
+      {
         name = "web-search";
         description = "Search the public web";
         enabled = config.dotfiles.privateEnabled;

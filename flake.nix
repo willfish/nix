@@ -800,6 +800,7 @@
             };
           }
           // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+            book-library = import ./programs/book-library { inherit pkgs; };
             discord-themed = import ./programs/discord-themed { inherit pkgs; };
             slack-themed = import ./programs/slack-themed { inherit pkgs; };
             telegram-themed = import ./programs/telegram-themed { inherit pkgs; };

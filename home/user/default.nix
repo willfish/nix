@@ -68,6 +68,7 @@
     ./hermes.nix
     ./mcp.nix
     ./arxiv-library.nix
+    ./book-library.nix
     ./neovim.nix
     ./network.nix
     ./packages.nix

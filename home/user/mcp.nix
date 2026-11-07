@@ -114,6 +114,9 @@ in
             "jira"
             "browser"
             "aws-access-portal"
+            # Runtime and wrappers are owned by book-library.nix.
+            "books"
+            "books-local"
           ])
         ) servers
       );
