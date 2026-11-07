@@ -1,0 +1,10 @@
+{
+  "place": "none",
+  "title": "Balance panes",
+  "overlay": {
+    "kind": "window",
+    "frame": "none",
+    "width": 1,
+    "height": 1
+  }
+}

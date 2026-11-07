@@ -83,6 +83,7 @@
     "ctrl-b shift-j": "pane.swap:down",
     "ctrl-b shift-k": "pane.swap:up",
     "ctrl-b shift-l": "pane.swap:right",
+    "ctrl-b shift-e": "mod.open:balance-panes",
     "ctrl-b v": "pane.split:right",
     "ctrl-b %": "pane.split:right",
     "ctrl-b -": "pane.split:down",

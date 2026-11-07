@@ -194,7 +194,7 @@ in
         run mkdir -p "${config.xdg.configHome}/herdr-app"
         installHerdrAppFile ${../config/herdr-app/keys.json} \
           "${config.xdg.configHome}/herdr-app/keys.json"
-        for name in agent-picker workspacex; do
+        for name in agent-picker workspacex balance-panes; do
           source="${../config/herdr-app/mods}/$name"
           target="${config.xdg.configHome}/herdr-app/mods/$name"
           run mkdir -p "$target"

@@ -145,6 +145,12 @@ or `mux start --backend tmux work` for tmux. See the
 [mux README](https://github.com/willfish/mux#multiplexer-backends) for backend
 requirements and limits.
 
+In the desktop app, press `Ctrl+B`, then `Shift+E` to balance the active tab's
+panes. This keeps the split arrangement, running programs, and scrollback.
+The dotfiles-managed `balance-panes` mod reads the active layout and uses native
+resize commands. It does not use the older TUI plugin or replace the shared
+layout.
+
 ## Checks and maintenance
 
 There is **no CI workflow in this checkout**. Local commit hooks are not host builds, and pushes do not build NixOS or Home Manager configurations.
