@@ -243,6 +243,75 @@ fn acquisition_resumes_a_verified_range_without_duplicate_bytes() {
 }
 
 #[test]
+fn provider_cooldowns_defer_only_that_host_and_keep_failure_reports_current() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = root(temp.path(), true, true).unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let mut blocked = metadata(&format!("{url}/first.txt"));
+    blocked.size = Some(5);
+    let mut also_blocked = metadata(&format!("{url}/second.txt"));
+    also_blocked.size = Some(6);
+    let mut cached = metadata("https://independent.example/book.txt");
+    let text = b"An independently verified source about water.\n";
+    cached.size = Some(text.len() as u64);
+    let hash = digest(text);
+    let object = format!("objects/{hash}.txt");
+    fs::write(path.join(&object), text).unwrap();
+    atomic_json(
+        &path.join("receipts").join(format!("{}.json", cached.id)),
+        &json!({"source_id":cached.id,"sha256":hash,"object":object}),
+    )
+    .unwrap();
+    let manifest = Manifest {
+        version: 1,
+        created: 1,
+        policy_sha256: digest(b"fixture"),
+        byte_cap: 64 << 20,
+        sources: vec![blocked.clone(), also_blocked, cached.clone()],
+        exclusions: vec![],
+    };
+    atomic_json(&path.join("manifest.json"), &manifest).unwrap();
+    let server = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut reader = BufReader::new(stream.try_clone().unwrap());
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            if line == "\r\n" {
+                break;
+            }
+        }
+        stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 3600\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+    });
+    assert!(acquire::run(&path, Some(1), true).is_err());
+    server.join().unwrap();
+    let report: Value =
+        serde_json::from_reader(fs::File::open(path.join("acquisition-report.json")).unwrap())
+            .unwrap();
+    assert_eq!(report["downloaded_this_run"], 1);
+    assert_eq!(report["failures"][0]["source_id"], blocked.id);
+    assert_eq!(report["deferred_providers"]["127.0.0.1"]["sources"], 1);
+    assert!(acquire::run(&path, Some(1), true).is_err());
+    let report: Value =
+        serde_json::from_reader(fs::File::open(path.join("acquisition-report.json")).unwrap())
+            .unwrap();
+    assert_eq!(report["downloaded_this_run"], 0);
+    assert!(report["failures"].as_array().unwrap().is_empty());
+    assert_eq!(report["deferred_providers"]["127.0.0.1"]["sources"], 2);
+    db::connect(&path, true)
+        .unwrap()
+        .execute(
+            "UPDATE sources SET status='pending' WHERE id=?",
+            [&cached.id],
+        )
+        .unwrap();
+    let report = acquire::run(&path, Some(1), true).unwrap();
+    assert_eq!(report["downloaded_this_run"], 1);
+    assert_eq!(report["deferred_providers"]["127.0.0.1"]["sources"], 2);
+}
+
+#[test]
 fn mcp_stdio_initialises_lists_and_calls_real_retrieval() {
     let (temp, _) = fixture();
     let mut child = Command::new("timeout")

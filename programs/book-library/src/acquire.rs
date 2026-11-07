@@ -129,6 +129,7 @@ pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
     let connection = db::connect(&root, true)?;
     let mut completed = 0;
     let mut failures = Vec::new();
+    let mut deferred = serde_json::Map::new();
     let mut cooldowns: Value = fs::read(root.join("cooldowns.json"))
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
@@ -149,10 +150,12 @@ pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
             .context("URL has no host")?
             .to_owned();
         if cooldowns[&host].as_u64().unwrap_or(0) > now() {
-            bail!(
-                "Provider {host} is paused until epoch {}; no request sent",
-                cooldowns[&host]
-            );
+            let until = cooldowns[&host].clone();
+            let entry = deferred
+                .entry(host)
+                .or_insert_with(|| json!({"until":until,"sources":0}));
+            entry["sources"] = json!(entry["sources"].as_u64().unwrap_or(0) + 1);
+            continue;
         }
         let result = download(
             &client,
@@ -180,9 +183,7 @@ pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
                 )?;
                 failures.push(json!({"source_id":source.id,"title":source.title,"error":message}));
                 eprintln!("download failed: {}: {error:#}", source.title);
-                if message.contains("HTTP 403")
-                    || message.contains("HTTP 429")
-                    || message.contains("capacity")
+                if message.contains("capacity")
                     || message.contains("space")
                     || message.contains("cap would")
                 {
@@ -193,12 +194,16 @@ pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
         thread::sleep(Duration::from_secs(2));
     }
     atomic_json(&root.join("cooldowns.json"), &cooldowns)?;
-    let report = json!({"downloaded_this_run":completed,"failures":failures,"footprint_bytes":used_bytes(&root)?,"byte_cap":manifest.byte_cap});
+    let report = json!({"downloaded_this_run":completed,"failures":failures,"deferred_providers":deferred,"footprint_bytes":used_bytes(&root)?,"byte_cap":manifest.byte_cap});
     atomic_json(&root.join("acquisition-report.json"), &report)?;
     ensure!(
         failures.is_empty(),
         "Acquisition has {} failed objects; see acquisition-report.json",
         failures.len()
+    );
+    ensure!(
+        completed > 0 || deferred.is_empty(),
+        "Pending sources are under provider cooldown; no requests sent. See acquisition-report.json"
     );
     Ok(report)
 }
