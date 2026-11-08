@@ -88,6 +88,10 @@
       url = "github:anomalyco/opencode/v2.2.5";
       flake = false;
     };
+    ovis-source = {
+      url = "github:devswha/ovis/v0.5.1";
+      flake = false;
+    };
     hex = {
       url = "github:anomalyco/hex/v3.1.1";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -457,6 +461,10 @@
             ;
         }
         // lib.optionalAttrs (system == linuxSystem) {
+          ovis = _final.callPackage ./home/user/ovis-package.nix {
+            source = inputs.ovis-source;
+            bun = inputs.nixpkgs-unstable.legacyPackages.${system}.bun;
+          };
           tor-mcp = inputs.tor-mcp.packages.${system}.default;
           # Hex's parser needs Rust >=1.97. Keep runtime libraries on the host pin.
           hex-voice = inputs.hex.packages.${system}.default.override {
@@ -800,6 +808,7 @@
             };
           }
           // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+            inherit (pkgs) ovis;
             book-library = import ./programs/book-library { inherit pkgs; };
             discord-themed = import ./programs/discord-themed { inherit pkgs; };
             slack-themed = import ./programs/slack-themed { inherit pkgs; };

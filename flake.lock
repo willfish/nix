@@ -2006,6 +2006,23 @@
         "url": "ssh://git@github.com/willfish/outlook-mcp"
       }
     },
+    "ovis-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794095375,
+        "narHash": "sha256-ed+WLXBEd9Uiw7inug0vCM2EryR13hUll5d6j3zsNYU=",
+        "owner": "devswha",
+        "repo": "ovis",
+        "rev": "c99017754cb330143589afb2f74473828b86615e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "devswha",
+        "ref": "v0.5.1",
+        "repo": "ovis",
+        "type": "github"
+      }
+    },
     "pi-fixture": {
       "inputs": {
         "bun2nix": "bun2nix",
@@ -2274,6 +2291,7 @@
         "omarchy-weather-source": "omarchy-weather-source",
         "opencode-source": "opencode-source",
         "outlook-mcp": "outlook-mcp",
+        "ovis-source": "ovis-source",
         "pi-mcp-adapter-source": "pi-mcp-adapter-source",
         "pi-prompt-history-source": "pi-prompt-history-source",
         "pi-source": "pi-source",

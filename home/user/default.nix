@@ -74,6 +74,7 @@
     ./packages.nix
     ./pi.nix
     ./opencode.nix
+    ./ovis.nix
     ./programs.nix
     ./prompt-capture-file.nix
     ./shells.nix

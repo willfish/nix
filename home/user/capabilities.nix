@@ -70,6 +70,8 @@ in
       development = capability "general development tools (projects still own their dev shells)";
       documents = capability "document generation tools";
       nas = capability "NAS media maintenance tools";
+      ovisHub = capability "the private multi-host Ovis web hub";
+      ovisBridge = capability "a loopback Ovis bridge for the Herdr desktop app";
     };
   };
 
@@ -125,6 +127,8 @@ in
       development = full;
       documents = interactive;
       nas = cfg.role == "nas";
+      ovisHub = cfg.role == "nas" && cfg.privateEnabled;
+      ovisBridge = hostName == "andromeda" && cfg.privateEnabled;
     };
 
     # Leave in-flight KB batches alone; the timer picks up the new command next run.

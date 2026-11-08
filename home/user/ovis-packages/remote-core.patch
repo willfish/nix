@@ -1,0 +1,42 @@
+--- a/server/remote-host.ts
++++ b/server/remote-host.ts
+@@ -159,13 +159,20 @@
+     if (!home?.startsWith("/")) throw new Error("The SSH account's home directory ($HOME) could not be read on this PC");
+     // the same XDG_CONFIG_HOME rule remote-entry.ts and herdr itself follow
+     const herdrConfig = `${xdgConfig?.startsWith("/") ? xdgConfig : `${home}/.config`}/herdr`;
+-    const nominalSocket = session ? `${herdrConfig}/sessions/${session}/herdr.sock` : `${herdrConfig}/herdr.sock`;
+-    const expectedSocket = await ssh.run(`socket=${shellQuote(nominalSocket)}; if test -d "\${socket%/*}"; then cd -P "\${socket%/*}" && printf '%s/herdr.sock' "$PWD"; else printf '%s' "$socket"; fi`);
++    const core = process.env["OVIS_SSH_RUNTIME"] === "herdr-core";
++    const nominalSocket = core ? `${home}/.local/state/ovis/herdr-core.sock`
++      : session ? `${herdrConfig}/sessions/${session}/herdr.sock` : `${herdrConfig}/herdr.sock`;
++    const expectedSocket = await ssh.run(`socket=${shellQuote(nominalSocket)}; if test -d "\${socket%/*}"; then cd -P "\${socket%/*}" && printf '%s/%s' "$PWD" "\${socket##*/}"; else printf '%s' "$socket"; fi`);
++    const descriptors = parseDescriptors(lines);
++    // The desktop app's bridge is managed by Nix, never by the TUI-only bundle installer.
++    if (core && !descriptors.some((descriptor) => descriptor.socket_path === expectedSocket)) {
++      throw new Error("Start the Nix-managed Ovis Herdr app bridge on this PC before connecting; automatic bridge installation is disabled for this runtime.");
++    }
+     return {
+       platform: `${os === "Darwin" ? "darwin" : "linux"}-${arch === "x86_64" ? "x64" : "arm64"}`,
+       home, herdrPath: herdrPath ?? "", expectedSocket,
+       bundleReady: lines.includes("bundle-ready"), bundleOlder: lines.includes("bundle-older"),
+-      descriptors: parseDescriptors(lines),
++      descriptors,
+       runtimeDir: `${home}/${BUNDLE_DIR}`, registryDir: `${home}/.config/herdr-web-ui/bridges`,
+     };
+   },
+@@ -176,6 +183,7 @@
+     await ssh.run(`set -eu; umask 077; mkdir -p "$HOME/.ssh"; touch "$HOME/.ssh/authorized_keys"; key=${shellQuote(keyLine)}; grep -qxF "$key" "$HOME/.ssh/authorized_keys" || printf '\\n%s\\n' "$key" >> "$HOME/.ssh/authorized_keys"; chmod 600 "$HOME/.ssh/authorized_keys"`);
+   },
+   async installBundle(ssh, platform, signal, options = {}) {
++    if (process.env["OVIS_SSH_RUNTIME"] === "herdr-core") throw new Error("Deploy this Herdr app bridge with Nix; TUI bundle installation is disabled.");
+     const { asset, input } = await fetchBundle(platform, signal, options);
+     // Verify on BOTH hosts, extract into staging and atomically rename. No user-wide
+     // Bun/Node/herdr installation is changed; the complete runtime lives in this dir.
+@@ -183,6 +191,7 @@
+   },
+   stop: async (ssh, pid) => { await ssh.run(`kill -TERM ${pid}`); },
+   async start(ssh, { session, herdrPath, inspection }) {
++    if (process.env["OVIS_SSH_RUNTIME"] === "herdr-core") throw new Error("Start this Herdr app bridge through its Nix-managed user service; TUI startup is disabled.");
+     // a bundle published before the rename reads HERDR_WEB_HERDR_BIN
+     const remoteHerdr = shellQuote(herdrPath || `${inspection.home}/${BUNDLE_DIR}/bin/herdr`);
+     await ssh.run(REMOTE_PATH + `umask 077; mkdir -p "$HOME/.config/herdr-web-ui/bridges"; HERDR_REMOTE_SESSION=${shellQuote(session ?? "")} OVIS_HERDR_BIN=${remoteHerdr} HERDR_WEB_HERDR_BIN=${remoteHerdr} nohup "$HOME/${BUNDLE_DIR}/bin/bun" "$HOME/${BUNDLE_DIR}/server/remote-entry.ts" </dev/null >>"$HOME/.config/herdr-web-ui/bridges/bridge.log" 2>&1 &`);

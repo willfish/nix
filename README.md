@@ -151,6 +151,8 @@ The dotfiles-managed `balance-panes` mod reads the active layout and uses native
 resize commands. It does not use the older TUI plugin or replace the shared
 layout.
 
+For phone access to the same running agents, see [Ovis over Tailscale](docs/ovis.md).
+
 ## Checks and maintenance
 
 There is **no CI workflow in this checkout**. Local commit hooks are not host builds, and pushes do not build NixOS or Home Manager configurations.
