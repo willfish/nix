@@ -283,6 +283,7 @@ let
     cp ${source}/shell/plugins/panels/elsewhen/Model.js "$out/shell/plugins/panels/elsewhen/"
     cp ${calendarPlugin}/LICENSE ${calendarPlugin}/manifest.json \
       ${calendarPlugin}/*.qml ${calendarPlugin}/*.js "$out/shell/plugins/panels/calendar/"
+    cp -r ${calendarPlugin}/vendor "$out/shell/plugins/panels/calendar/"
     cp -r ${weatherPlugin}/ui ${weatherPlugin}/lib ${weatherPlugin}/data "$out/shell/plugins/panels/weather/"
     cp ${weatherPlugin}/LICENSE ${weatherPlugin}/manifest.json ${weatherPlugin}/Panel.qml \
       ${weatherPlugin}/Service.qml "$out/shell/plugins/panels/weather/"
