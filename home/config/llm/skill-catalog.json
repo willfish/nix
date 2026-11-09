@@ -200,6 +200,13 @@
     "references": {}
   },
   {
+    "name": "socratic-tutor",
+    "kind": "shared",
+    "invocation": "user-invoked router/orchestrator",
+    "hermes": false,
+    "references": {}
+  },
+  {
     "name": "teach",
     "kind": "shared",
     "invocation": "user-invoked router/orchestrator",
