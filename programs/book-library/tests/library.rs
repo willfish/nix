@@ -243,6 +243,70 @@ fn acquisition_resumes_a_verified_range_without_duplicate_bytes() {
 }
 
 #[test]
+fn acquisition_restarts_a_partial_from_a_different_request_url() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = root(temp.path(), true, true).unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let bytes = b"The complete selected original, not an extracted derivative.\n";
+    let url = format!("http://{}/original.txt", listener.local_addr().unwrap());
+    let mut source = metadata(&url);
+    source.size = Some(bytes.len() as u64);
+    let rejected = b"Rejected derivative bytes";
+    fs::write(
+        path.join("partial").join(format!("{}.part", source.id)),
+        rejected,
+    )
+    .unwrap();
+    atomic_json(
+        &path.join("partial").join(format!("{}.json", source.id)),
+        &json!({"url":format!("{url}?sequence=1"),"etag":"\"same-item-validator\""}),
+    )
+    .unwrap();
+    let manifest = Manifest {
+        version: 1,
+        created: 1,
+        policy_sha256: digest(b"fixture"),
+        byte_cap: 64 << 20,
+        sources: vec![source.clone()],
+        exclusions: vec![],
+    };
+    atomic_json(&path.join("manifest.json"), &manifest).unwrap();
+    let server = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut request = String::new();
+        let mut reader = BufReader::new(stream.try_clone().unwrap());
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            request.push_str(&line);
+            if line == "\r\n" {
+                break;
+            }
+        }
+        assert!(request.starts_with("GET /original.txt HTTP/1.1\r\n"));
+        assert!(!request.to_ascii_lowercase().contains("range:"));
+        write!(stream,"HTTP/1.1 200 OK\r\nContent-Length: {}\r\nETag: \"same-item-validator\"\r\nConnection: close\r\n\r\n",bytes.len()).unwrap();
+        stream.write_all(bytes).unwrap();
+    });
+    assert_eq!(
+        acquire::run(&path, None, true).unwrap()["downloaded_this_run"],
+        1
+    );
+    server.join().unwrap();
+    let library = db::Library::open(&path).unwrap();
+    assert_eq!(
+        fs::read(library.object(&source.id).unwrap()).unwrap(),
+        bytes
+    );
+    let receipt: Value = serde_json::from_reader(
+        fs::File::open(path.join("partial").join(format!("{}.json", source.id))).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(receipt["url"], url);
+    assert_eq!(receipt["response_url"], url);
+}
+
+#[test]
 fn provider_cooldowns_defer_only_that_host_and_keep_failure_reports_current() {
     let temp = tempfile::tempdir().unwrap();
     let path = root(temp.path(), true, true).unwrap();

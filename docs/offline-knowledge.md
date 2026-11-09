@@ -74,6 +74,13 @@ current batch and pause; stopping the unit retains committed checkpoints. Do not
 restart a healthy worker merely to inspect progress. Provider cooldowns remain
 in effect after a restart.
 
+OAPEN downloads use the PDF filename from its catalogue, without an invented
+bitstream sequence. Older frozen URLs retain `sequence=1` for stable source
+identities, but acquisition omits that parameter from the request. The partial
+receipt records the actual request and final response URLs; a partial belonging
+to a different request URL is restarted, not appended. Do not guess sequence
+numbers or accept extracted text in place of the preserved PDF.
+
 All bulk data and scratch stay on ZFS. The application enforces a 1 TiB incremental
 cap and a 512 GiB / 20% free-space reserve. Do not enlarge the cap, move data to the
 OS disk, delete other media or change pool layout to bypass a capacity failure.

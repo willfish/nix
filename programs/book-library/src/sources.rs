@@ -408,10 +408,7 @@ fn oapen_records(doc: &roxmltree::Document<'_>) -> Result<Vec<Source>> {
             .pop_if_empty()
             .extend(handle.split('/'))
             .push(&filename);
-        download
-            .query_pairs_mut()
-            .append_pair("sequence", "1")
-            .append_pair("isAllowed", "y");
+        download.query_pairs_mut().append_pair("isAllowed", "y");
         output.push(Source {
                 id:String::new(),provider:"oapen".into(),title:values("title").first().context("OAPEN title missing")?.clone(),authors:values("creator").join("; "),category:"practical".into(),language:"eng".into(),edition:values("datestamp").first().cloned().unwrap_or_default(),
                 licence:licence.text().unwrap_or("Creative Commons; see original edition").trim().into(),licence_url:licence.attribute("uri").unwrap().into(),origin,url:download.into(),format:"pdf".into(),size:None,upstream_sha256:None,

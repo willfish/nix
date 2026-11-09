@@ -113,6 +113,27 @@ fn verify_type(path: &Path, format: &str) -> Result<()> {
     Ok(())
 }
 
+fn request_url(provider: &str, value: &str) -> Result<url::Url> {
+    let mut url = url::Url::parse(value)?;
+    if provider == "oapen"
+        && url.host_str() == Some("library.oapen.org")
+        && url.path().starts_with("/bitstream/handle/")
+    {
+        // DSpace resolves an explicit sequence before the authoritative filename.
+        // Older locks invented sequence=1, which can select a TEXT derivative.
+        let query: Vec<_> = url
+            .query_pairs()
+            .filter(|(name, _)| name != "sequence")
+            .map(|(name, value)| (name.into_owned(), value.into_owned()))
+            .collect();
+        url.set_query(None);
+        if !query.is_empty() {
+            url.query_pairs_mut().extend_pairs(query);
+        }
+    }
+    Ok(url)
+}
+
 pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
     let root = root(path, true, fixture)?;
     let lock = OpenOptions::new()
@@ -272,7 +293,7 @@ fn download(
             return Ok((relative, expected));
         }
     }
-    let url = url::Url::parse(&source.url)?;
+    let url = request_url(&source.provider, &source.url)?;
     ensure!(
         url.scheme() == "https"
             || (fixture && url.scheme() == "http" && url.host_str() == Some("127.0.0.1")),
@@ -292,11 +313,17 @@ fn download(
         .as_str()
         .or_else(|| previous["last_modified"].as_str());
     let mut offset = fs::metadata(&partial).map(|m| m.len()).unwrap_or(0);
+    if previous["url"]
+        .as_str()
+        .is_some_and(|previous_url| previous_url != url.as_str())
+    {
+        offset = 0;
+    }
     if offset > 0 && validator.is_none() && source.upstream_sha256.is_none() {
         offset = 0;
     }
     let mut request = client
-        .get(source.url.clone())
+        .get(url.clone())
         .timeout(Duration::from_secs(24 * 3600));
     if offset > 0 {
         request = request.header(header::RANGE, format!("bytes={offset}-"));
@@ -348,7 +375,7 @@ fn download(
         .map(str::to_owned);
     atomic_json(
         &receipt_path,
-        &json!({"url":source.url,"etag":etag,"last_modified":last_modified}),
+        &json!({"url":url.as_str(),"response_url":response.url().as_str(),"etag":etag,"last_modified":last_modified}),
     )?;
     let expected = source
         .size
@@ -412,4 +439,23 @@ fn download(
         fs::rename(&partial, &destination)?;
     }
     Ok((relative, hash))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::request_url;
+
+    #[test]
+    fn oapen_requests_use_the_locked_filename_without_an_invented_sequence() {
+        let locked = "https://library.oapen.org/bitstream/handle/20.500.12657/37266/PUB_676_Schl%C3%B6gl_DisruptedDevelopmentAndTheFutu.pdf?sequence=1&isAllowed=y";
+        let url = request_url("oapen", locked).unwrap();
+        assert_eq!(url.path(), url::Url::parse(locked).unwrap().path());
+        assert_eq!(url.query(), Some("isAllowed=y"));
+        assert_eq!(request_url("other", locked).unwrap().as_str(), locked);
+        let other_host = locked.replace("library.oapen.org", "example.org");
+        assert_eq!(
+            request_url("oapen", &other_host).unwrap().as_str(),
+            other_host
+        );
+    }
 }
