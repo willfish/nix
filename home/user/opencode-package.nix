@@ -19,7 +19,7 @@ let
       rev = source.shortRev;
     }
     // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux") {
-      hash = "sha256-+GgLX4lq8fPOJVoDGp220uiCTLB0ZwrBkcNo36q9MZU=";
+      hash = "sha256-hV75d+Zs51vB6MfZ9luH1JB6jO+tqp9RYqqYyi3zQM4=";
     }
     // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") {
       hash = "sha256-bp2jsa4iX5jX4O3vWQC9TRSwsAtnkzXX86O90NaJdq8=";

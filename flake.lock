@@ -126,6 +126,22 @@
         "type": "github"
       }
     },
+    "brave-nixpkgs": {
+      "locked": {
+        "lastModified": 1794210080,
+        "narHash": "sha256-Zx8+zI4ZeTPuHYY4AoNHuorX+YeLhy1nZMSD2RiTa+g=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "90d38a7e1acbbce2087b306bd643c334ded7c92f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "release-26.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "bun2nix": {
       "inputs": {
         "flake-parts": [
@@ -2213,6 +2229,7 @@
         "agent-bus": "agent-bus",
         "arxiv-mcp": "arxiv-mcp",
         "arxiv-scanner-source": "arxiv-scanner-source",
+        "brave-nixpkgs": "brave-nixpkgs",
         "flake-parts": "flake-parts_2",
         "herdr": "herdr",
         "herdr-source": "herdr-source",

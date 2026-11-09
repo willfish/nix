@@ -10,6 +10,8 @@
   '';
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    # Temporary Brave-only pin until its restoration reaches nixos-26.05.
+    brave-nixpkgs.url = "github:NixOS/nixpkgs/release-26.05";
     nix-config.url = "git+ssh://git@github.com/willfish/nix-config.git";
     trade-tariff-tools = {
       url = "github:trade-tariff/trade-tariff-tools";
@@ -418,6 +420,7 @@
       mkOverlay =
         system: _final: _prev:
         {
+          brave = inputs.brave-nixpkgs.legacyPackages.${system}.brave;
           ecs = inputs.trade-tariff-tools.packages.${system}.ecs;
           mux = mux.packages.${system}.default;
           himalaya-mcp = himalaya-mcp.packages.${system}.default;
