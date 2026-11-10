@@ -73,6 +73,9 @@ from a Home Manager activation. Remove only the enable marker to finish the
 current batch and pause; stopping the unit retains committed checkpoints. Do not
 restart a healthy worker merely to inspect progress. Provider cooldowns remain
 in effect after a restart.
+Untried sources precede retries; failed sources rotate by oldest attempt across
+restarts. A retained failure remains incomplete and subject to the same provider
+cooldown, rather than blocking every untried work from that provider.
 
 OAPEN downloads use the PDF filename from its catalogue, without an invented
 bitstream sequence. Older frozen URLs retain `sequence=1` for stable source

@@ -38,6 +38,7 @@ pub fn initialise(root: &Path) -> Result<Connection> {
     let db = connect(root, true)?;
     db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
         CREATE TABLE IF NOT EXISTS sources(id TEXT PRIMARY KEY, metadata TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', object TEXT, sha256 TEXT, error TEXT, text_notes TEXT);
+        CREATE TABLE IF NOT EXISTS acquisition_attempts(source_id TEXT PRIMARY KEY REFERENCES sources(id), attempted_at INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS passages(rowid INTEGER PRIMARY KEY, source_id TEXT NOT NULL REFERENCES sources(id), locator TEXT NOT NULL, sequence INTEGER NOT NULL, title TEXT NOT NULL, heading TEXT NOT NULL, body TEXT NOT NULL, UNIQUE(source_id,locator));
         CREATE INDEX IF NOT EXISTS passages_source ON passages(source_id,sequence);
         CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(title,heading,body,content='passages',content_rowid='rowid');

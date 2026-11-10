@@ -376,6 +376,110 @@ fn provider_cooldowns_defer_only_that_host_and_keep_failure_reports_current() {
 }
 
 #[test]
+fn acquisition_prioritises_untried_sources_and_rotates_persisted_failures() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = root(temp.path(), true, true).unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let mut first = metadata(&format!("{url}/first.txt"));
+    first.size = Some(1);
+    let mut second = metadata(&format!("{url}/second.txt"));
+    second.size = Some(2);
+    let text = b"A newly acquired practical book about clean water.\n";
+    let mut untried = metadata(&format!("{url}/untried.txt"));
+    untried.size = Some(text.len() as u64);
+    let manifest = Manifest {
+        version: 1,
+        created: 1,
+        policy_sha256: digest(b"fixture"),
+        byte_cap: 64 << 20,
+        sources: vec![first.clone(), second.clone(), untried.clone()],
+        exclusions: vec![],
+    };
+    atomic_json(&path.join("manifest.json"), &manifest).unwrap();
+    acquire::seed(&path, &manifest).unwrap();
+    let connection = db::connect(&path, true).unwrap();
+    for source in [&first, &second] {
+        connection
+            .execute(
+                "UPDATE sources SET status='failed',error='retained refusal' WHERE id=?",
+                [&source.id],
+            )
+            .unwrap();
+    }
+    drop(connection);
+    let server = std::thread::spawn(move || {
+        for endpoint in ["untried", "first", "second"] {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut request = String::new();
+            reader.read_line(&mut request).unwrap();
+            assert!(request.starts_with(&format!("GET /{endpoint}.txt HTTP/1.1\r\n")));
+            loop {
+                let mut line = String::new();
+                reader.read_line(&mut line).unwrap();
+                if line == "\r\n" {
+                    break;
+                }
+            }
+            if endpoint == "untried" {
+                write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    text.len()
+                )
+                .unwrap();
+                stream.write_all(text).unwrap();
+            } else {
+                stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 3600\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+            }
+        }
+    });
+    assert_eq!(
+        acquire::run(&path, Some(1), true).unwrap()["downloaded_this_run"],
+        1
+    );
+    let connection = db::connect(&path, false).unwrap();
+    for source in [&first, &second] {
+        let retained: (String, String) = connection
+            .query_row(
+                "SELECT status,error FROM sources WHERE id=?",
+                [&source.id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(retained, ("failed".into(), "retained refusal".into()));
+    }
+    drop(connection);
+    assert!(acquire::run(&path, Some(1), true).is_err());
+    // A new invocation still sends no request during the persisted host cooldown.
+    assert!(acquire::run(&path, Some(1), true).is_err());
+    let report: Value =
+        serde_json::from_reader(fs::File::open(path.join("acquisition-report.json")).unwrap())
+            .unwrap();
+    assert_eq!(report["deferred_providers"]["127.0.0.1"]["sources"], 2);
+    assert!(report["failures"].as_array().unwrap().is_empty());
+    // Expire only the synthetic fixture's cooldown, never a production deadline.
+    atomic_json(&path.join("cooldowns.json"), &json!({"127.0.0.1":0})).unwrap();
+    assert!(acquire::run(&path, Some(1), true).is_err());
+    server.join().unwrap();
+    let report: Value =
+        serde_json::from_reader(fs::File::open(path.join("acquisition-report.json")).unwrap())
+            .unwrap();
+    assert_eq!(report["failures"][0]["source_id"], second.id);
+    let connection = db::connect(&path, false).unwrap();
+    let failures: u64 = connection
+        .query_row(
+            "SELECT count(*) FROM sources WHERE status='failed'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(failures, 2);
+    assert_eq!(book_library::load_manifest(&path).unwrap().sources.len(), 3);
+}
+
+#[test]
 fn mcp_stdio_initialises_lists_and_calls_real_retrieval() {
     let (temp, _) = fixture();
     let mut child = Command::new("timeout")

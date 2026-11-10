@@ -5,6 +5,7 @@ use reqwest::{blocking::Client, header};
 use rusqlite::params;
 use serde_json::{Value, json};
 use std::{
+    collections::HashMap,
     fs::{self, File, OpenOptions},
     io::{Read, Write},
     path::Path,
@@ -71,7 +72,21 @@ pub fn seed(root: &Path, manifest: &Manifest) -> Result<()> {
     Ok(())
 }
 
-fn acquisition_order(manifest: &Manifest) -> Vec<&Source> {
+fn acquisition_order<'a>(
+    manifest: &'a Manifest,
+    connection: &rusqlite::Connection,
+) -> Result<Vec<&'a Source>> {
+    let mut statement = connection.prepare("SELECT s.id,s.status,coalesce(a.attempted_at,0) FROM sources s LEFT JOIN acquisition_attempts a ON a.source_id=s.id")?;
+    let attempts = statement
+        .query_map([], |row| {
+            let state: String = row.get(1)?;
+            let attempted_at: u64 = row.get(2)?;
+            Ok((
+                row.get::<_, String>(0)?,
+                (state == "failed" || attempted_at > 0, attempted_at),
+            ))
+        })?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()?;
     let mut selected: Vec<_> = manifest.sources.iter().collect();
     selected.sort_by_key(|source| {
         let priority = if source.provider == "openstax" || source.provider == "kiwix" {
@@ -83,9 +98,17 @@ fn acquisition_order(manifest: &Manifest) -> Vec<&Source> {
         } else {
             3
         };
-        (priority, source.size.unwrap_or(32 << 20))
+        // Untried works must not starve behind a repeated provider refusal.
+        // Existing failures without attempt history enter the retry queue too.
+        let (retry, attempted_at) = attempts.get(&source.id).copied().unwrap_or((false, 0));
+        (
+            retry,
+            attempted_at,
+            priority,
+            source.size.unwrap_or(32 << 20),
+        )
     });
-    selected
+    Ok(selected)
 }
 
 fn verify_type(path: &Path, format: &str) -> Result<()> {
@@ -160,7 +183,7 @@ pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or(json!({}));
-    for source in acquisition_order(&manifest) {
+    for source in acquisition_order(&manifest, &connection)? {
         if limit.is_some_and(|limit| completed >= limit) {
             break;
         }
@@ -183,6 +206,10 @@ pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
             entry["sources"] = json!(entry["sources"].as_u64().unwrap_or(0) + 1);
             continue;
         }
+        connection.execute(
+            "INSERT INTO acquisition_attempts(source_id,attempted_at) VALUES(?1,?2) ON CONFLICT(source_id) DO UPDATE SET attempted_at=excluded.attempted_at",
+            params![source.id, now()],
+        )?;
         let result = download(
             &client,
             &root,
