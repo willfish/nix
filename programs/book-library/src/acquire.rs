@@ -134,6 +134,11 @@ fn request_url(provider: &str, value: &str) -> Result<url::Url> {
     Ok(url)
 }
 
+fn request_delay(host: &str) -> Duration {
+    // OAPEN's published robots.txt requires a ten-second crawl delay.
+    Duration::from_secs(if host == "library.oapen.org" { 10 } else { 2 })
+}
+
 pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
     let root = root(path, true, fixture)?;
     let lock = OpenOptions::new()
@@ -212,7 +217,7 @@ pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
                 }
             }
         }
-        thread::sleep(Duration::from_secs(2));
+        thread::sleep(request_delay(&host));
     }
     atomic_json(&root.join("cooldowns.json"), &cooldowns)?;
     let report = json!({"downloaded_this_run":completed,"failures":failures,"deferred_providers":deferred,"footprint_bytes":used_bytes(&root)?,"byte_cap":manifest.byte_cap});
@@ -443,7 +448,13 @@ fn download(
 
 #[cfg(test)]
 mod tests {
-    use super::request_url;
+    use super::{request_delay, request_url};
+
+    #[test]
+    fn oapen_attempts_observe_the_published_crawl_delay() {
+        assert_eq!(request_delay("library.oapen.org").as_secs(), 10);
+        assert_eq!(request_delay("example.org").as_secs(), 2);
+    }
 
     #[test]
     fn oapen_requests_use_the_locked_filename_without_an_invented_sequence() {

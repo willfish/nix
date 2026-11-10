@@ -80,6 +80,15 @@ identities, but acquisition omits that parameter from the request. The partial
 receipt records the actual request and final response URLs; a partial belonging
 to a different request URL is restarted, not appended. Do not guess sequence
 numbers or accept extracted text in place of the preserved PDF.
+OAPEN acquisition attempts are separated by at least ten seconds, including failed attempts,
+in accordance with its published crawl delay. Provider cooldowns take precedence.
+
+During explicitly authorised autonomous acquisition, `book-library-supervise.timer`
+recovers an accidentally stopped maintenance job. It respects both removal of
+`acquisition-enabled` and an `acquisition-hold` file, and never shortens provider
+cooldowns. To deliberately pause, remove the enable marker or create the hold
+file before stopping maintenance. The supervisor is not started by Home Manager
+activation and stops itself after the pinned full-corpus audit passes.
 
 All bulk data and scratch stay on ZFS. The application enforces a 1 TiB incremental
 cap and a 512 GiB / 20% free-space reserve. Do not enlarge the cap, move data to the
