@@ -162,6 +162,25 @@ fn request_delay(host: &str) -> Duration {
     Duration::from_secs(if host == "library.oapen.org" { 10 } else { 2 })
 }
 
+fn retry_delay(status: reqwest::StatusCode, headers: &header::HeaderMap, at: u64) -> Option<u64> {
+    headers
+        .get(header::RETRY_AFTER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| {
+            value.parse::<u64>().ok().or_else(|| {
+                chrono::DateTime::parse_from_rfc2822(value)
+                    .ok()
+                    .map(|date| (date.timestamp().max(0) as u64).saturating_sub(at))
+            })
+        })
+        .or(match status.as_u16() {
+            403 => Some(86400),
+            429 | 503 => Some(3600),
+            _ => None,
+        })
+        .map(|delay| delay.max(60))
+}
+
 pub fn run(path: &Path, limit: Option<usize>, fixture: bool) -> Result<Value> {
     let root = root(path, true, fixture)?;
     let lock = OpenOptions::new()
@@ -365,15 +384,14 @@ fn download(
     }
     let mut response = request.send()?;
     let status = response.status();
-    if status.as_u16() == 403 || status.as_u16() == 429 || status.as_u16() == 503 {
-        let delay = response
-            .headers()
-            .get(header::RETRY_AFTER)
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(if status.as_u16() == 403 { 86400 } else { 3600 });
-        cooldowns[url.host_str().unwrap()] = json!(now() + delay.max(60));
-        atomic_json(&root.join("cooldowns.json"), cooldowns)?;
+    if !status.is_success() {
+        let captured_at = now();
+        let delay = retry_delay(status, response.headers(), captured_at);
+        let cooldown_until = delay.map(|delay| captured_at.saturating_add(delay));
+        if let Some(until) = cooldown_until {
+            cooldowns[url.host_str().unwrap()] = json!(until);
+            atomic_json(&root.join("cooldowns.json"), cooldowns)?;
+        }
         // Keep bounded diagnostics without reading an untrusted error body or cookies.
         let mut headers = serde_json::Map::new();
         for name in ["retry-after", "content-type", "server", "via", "x-cache"] {
@@ -388,15 +406,21 @@ fn download(
             &root
                 .join("partial")
                 .join(format!("{}.refusal.json", source.id)),
-            &json!({"source_id":source.id,"request_url":url.as_str(),"response_host":response.url().host_str(),"http_status":status.as_u16(),"captured_at":now(),"cooldown_until":cooldowns[url.host_str().unwrap()],"headers":headers}),
+            &json!({"source_id":source.id,"request_url":url.as_str(),"response_host":response.url().host_str(),"http_status":status.as_u16(),"captured_at":captured_at,"cooldown_until":cooldown_until,"headers":headers}),
         )?;
-        bail!(
-            "HTTP {}: provider access/rate refusal; paused for at least {} seconds",
-            status.as_u16(),
-            delay.max(60)
-        );
+        if let Some(delay) = delay {
+            let reason = if matches!(status.as_u16(), 403 | 429 | 503) {
+                "provider access/rate refusal"
+            } else {
+                "provider Retry-After"
+            };
+            bail!(
+                "HTTP {}: {reason}; paused for at least {delay} seconds",
+                status.as_u16()
+            );
+        }
+        bail!("HTTP {status}");
     }
-    ensure!(status.is_success(), "HTTP {status}");
     if offset > 0 && status.as_u16() != 206 {
         offset = 0;
     }
@@ -491,7 +515,45 @@ fn download(
 
 #[cfg(test)]
 mod tests {
-    use super::{request_delay, request_url};
+    use super::{request_delay, request_url, retry_delay};
+    use reqwest::{StatusCode, header};
+
+    #[test]
+    fn retry_after_applies_to_server_errors_and_preserves_refusal_defaults() {
+        let mut headers = header::HeaderMap::new();
+        let at = chrono::DateTime::parse_from_rfc2822("Wed, 11 Nov 2026 05:00:00 GMT")
+            .unwrap()
+            .timestamp() as u64;
+        assert_eq!(
+            retry_delay(StatusCode::INTERNAL_SERVER_ERROR, &headers, at),
+            None
+        );
+        assert_eq!(
+            retry_delay(StatusCode::FORBIDDEN, &headers, at),
+            Some(86400)
+        );
+        assert_eq!(
+            retry_delay(StatusCode::TOO_MANY_REQUESTS, &headers, at),
+            Some(3600)
+        );
+        assert_eq!(
+            retry_delay(StatusCode::SERVICE_UNAVAILABLE, &headers, at),
+            Some(3600)
+        );
+        headers.insert(header::RETRY_AFTER, "120".parse().unwrap());
+        assert_eq!(
+            retry_delay(StatusCode::INTERNAL_SERVER_ERROR, &headers, at),
+            Some(120)
+        );
+        headers.insert(
+            header::RETRY_AFTER,
+            "Wed, 11 Nov 2026 06:00:00 GMT".parse().unwrap(),
+        );
+        assert_eq!(
+            retry_delay(StatusCode::INTERNAL_SERVER_ERROR, &headers, at),
+            Some(3600)
+        );
+    }
 
     #[test]
     fn oapen_attempts_observe_the_published_crawl_delay() {

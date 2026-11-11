@@ -308,6 +308,11 @@ fn acquisition_restarts_a_partial_from_a_different_request_url() {
 
 #[test]
 fn provider_cooldowns_defer_only_that_host_and_keep_failure_reports_current() {
+    provider_cooldown_case(503);
+    provider_cooldown_case(500);
+}
+
+fn provider_cooldown_case(status: u16) {
     let temp = tempfile::tempdir().unwrap();
     let path = root(temp.path(), true, true).unwrap();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -346,7 +351,7 @@ fn provider_cooldowns_defer_only_that_host_and_keep_failure_reports_current() {
                 break;
             }
         }
-        write!(stream,"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 3600\r\nContent-Type: text/html\r\nServer: fixture\r\nX-Cache: {}\r\nSet-Cookie: do-not-retain=private-fixture-value\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", "x".repeat(2048)).unwrap();
+        write!(stream,"HTTP/1.1 {status} Fixture Error\r\nRetry-After: 3600\r\nContent-Type: text/html\r\nServer: fixture\r\nX-Cache: {}\r\nSet-Cookie: do-not-retain=private-fixture-value\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", "x".repeat(2048)).unwrap();
     });
     assert!(acquire::run(&path, Some(1), true).is_err());
     server.join().unwrap();
@@ -357,7 +362,7 @@ fn provider_cooldowns_defer_only_that_host_and_keep_failure_reports_current() {
     assert_eq!(refusal["source_id"], blocked.id);
     assert_eq!(refusal["request_url"], blocked.url);
     assert_eq!(refusal["response_host"], "127.0.0.1");
-    assert_eq!(refusal["http_status"], 503);
+    assert_eq!(refusal["http_status"], status);
     assert_eq!(refusal["headers"]["retry-after"], "3600");
     assert_eq!(refusal["headers"]["content-type"], "text/html");
     assert_eq!(refusal["headers"]["server"], "fixture");
