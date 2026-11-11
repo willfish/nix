@@ -374,6 +374,22 @@ fn download(
             .unwrap_or(if status.as_u16() == 403 { 86400 } else { 3600 });
         cooldowns[url.host_str().unwrap()] = json!(now() + delay.max(60));
         atomic_json(&root.join("cooldowns.json"), cooldowns)?;
+        // Keep bounded diagnostics without reading an untrusted error body or cookies.
+        let mut headers = serde_json::Map::new();
+        for name in ["retry-after", "content-type", "server", "via", "x-cache"] {
+            if let Some(value) = response.headers().get(name).and_then(|v| v.to_str().ok()) {
+                headers.insert(
+                    name.to_owned(),
+                    json!(value.chars().take(1024).collect::<String>()),
+                );
+            }
+        }
+        atomic_json(
+            &root
+                .join("partial")
+                .join(format!("{}.refusal.json", source.id)),
+            &json!({"source_id":source.id,"request_url":url.as_str(),"response_host":response.url().host_str(),"http_status":status.as_u16(),"captured_at":now(),"cooldown_until":cooldowns[url.host_str().unwrap()],"headers":headers}),
+        )?;
         bail!(
             "HTTP {}: provider access/rate refusal; paused for at least {} seconds",
             status.as_u16(),

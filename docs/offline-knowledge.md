@@ -85,6 +85,10 @@ to a different request URL is restarted, not appended. Do not guess sequence
 numbers or accept extracted text in place of the preserved PDF.
 OAPEN acquisition attempts are separated by at least ten seconds, including failed attempts,
 in accordance with its published crawl delay. Provider cooldowns take precedence.
+An HTTP 403, 429 or 503 retains `partial/SOURCE_ID.refusal.json` with the request,
+status, deadline and a bounded selection of response headers. Error bodies,
+cookies and authentication headers are not retained. Inspect this receipt when
+diagnosing repeated refusals; it never authorises an early retry or another route.
 
 During explicitly authorised autonomous acquisition, `book-library-supervise.timer`
 recovers an accidentally stopped maintenance job. It respects both removal of

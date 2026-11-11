@@ -346,10 +346,29 @@ fn provider_cooldowns_defer_only_that_host_and_keep_failure_reports_current() {
                 break;
             }
         }
-        stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 3600\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+        write!(stream,"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 3600\r\nContent-Type: text/html\r\nServer: fixture\r\nX-Cache: {}\r\nSet-Cookie: do-not-retain=private-fixture-value\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", "x".repeat(2048)).unwrap();
     });
     assert!(acquire::run(&path, Some(1), true).is_err());
     server.join().unwrap();
+    let refusal_path = path
+        .join("partial")
+        .join(format!("{}.refusal.json", blocked.id));
+    let refusal: Value = serde_json::from_reader(fs::File::open(&refusal_path).unwrap()).unwrap();
+    assert_eq!(refusal["source_id"], blocked.id);
+    assert_eq!(refusal["request_url"], blocked.url);
+    assert_eq!(refusal["response_host"], "127.0.0.1");
+    assert_eq!(refusal["http_status"], 503);
+    assert_eq!(refusal["headers"]["retry-after"], "3600");
+    assert_eq!(refusal["headers"]["content-type"], "text/html");
+    assert_eq!(refusal["headers"]["server"], "fixture");
+    assert_eq!(refusal["headers"].as_object().unwrap().len(), 4);
+    assert_eq!(refusal["headers"]["x-cache"].as_str().unwrap().len(), 1024);
+    assert!(refusal["cooldown_until"].as_u64().unwrap() >= book_library::now() + 3590);
+    assert!(
+        !fs::read_to_string(&refusal_path)
+            .unwrap()
+            .contains("private-fixture-value")
+    );
     let report: Value =
         serde_json::from_reader(fs::File::open(path.join("acquisition-report.json")).unwrap())
             .unwrap();
@@ -363,6 +382,8 @@ fn provider_cooldowns_defer_only_that_host_and_keep_failure_reports_current() {
     assert_eq!(report["downloaded_this_run"], 0);
     assert!(report["failures"].as_array().unwrap().is_empty());
     assert_eq!(report["deferred_providers"]["127.0.0.1"]["sources"], 2);
+    let retained: Value = serde_json::from_reader(fs::File::open(&refusal_path).unwrap()).unwrap();
+    assert_eq!(retained, refusal);
     db::connect(&path, true)
         .unwrap()
         .execute(
