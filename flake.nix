@@ -95,7 +95,7 @@
       flake = false;
     };
     hex = {
-      url = "github:anomalyco/hex/v3.1.1";
+      url = "github:anomalyco/hex/v3.4.0";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
@@ -470,25 +470,11 @@
           };
           tor-mcp = inputs.tor-mcp.packages.${system}.default;
           # Hex's parser needs Rust >=1.97. Keep runtime libraries on the host pin.
-          hex-voice =
-            (inputs.hex.packages.${system}.default.override {
-              rustPlatform = _final.makeRustPlatform {
-                inherit (nixpkgs-unstable.legacyPackages.${system}) cargo rustc;
-              };
-            }).overrideAttrs
-              (old: {
-                # Backport Rune 4f6a53cb (Hex #1152) until the Hex input includes it.
-                cargoDeps = _final.runCommand "cargo-vendor-dir" { } ''
-                  mkdir -p $out
-                  cp -a ${old.cargoDeps}/. $out/
-                  chmod u+w $out
-                  rm $out/rune-0.0.1
-                  cp -RL ${old.cargoDeps}/rune-0.0.1 $out/rune-0.0.1
-                  chmod -R u+w $out/rune-0.0.1
-                  cd $out/rune-0.0.1
-                  patch -p3 < ${./home/user/patches/hex-fd-fix.patch}
-                '';
-              });
+          hex-voice = inputs.hex.packages.${system}.default.override {
+            rustPlatform = _final.makeRustPlatform {
+              inherit (nixpkgs-unstable.legacyPackages.${system}) cargo rustc;
+            };
+          };
         };
       mkPkgs =
         system:
