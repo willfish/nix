@@ -1,7 +1,7 @@
 # Agent usage helpers
 
 C replacements for `hypr-agent-status` and
-`omarchy-agent-usage-{claude,codex,grok,opencode,copilot}`, built with Meson, yyjson, libcurl
+`omarchy-agent-usage-{claude,codex,grok,opencode,copilot,antigravity}`, built with Meson, yyjson, libcurl
 and GLib. The updater's `--force` and `--limits-only` flags remain accepted.
 
 Collectors read Pi assistant usage under `${PI_AGENT_DIR:-$HOME/.pi/agent}/sessions`
@@ -32,12 +32,24 @@ become meters. GitHub reports metered seats as unlimited with no entitlement, so
 that case becomes a `usageNoteText` line with the credits used, not a meter.
 Unlimited means no seat quota, not free usage; billing budgets are not visible.
 
+Antigravity reads model quotas and reset times from the signed-in IDE's local
+`GetUserStatus` service. It discovers only the current user's Antigravity language
+server and its listening sockets through `/proc`. Requests stay on loopback,
+bypass proxies, and never copy, refresh or rewrite Google credentials. The app
+must be running with a project open. Closed, signed-out or incompatible app
+versions show unavailable limits, not zero. Only measured model allowances are
+shown; weekly caps, token totals and AI credit spend are not inferred. Google AI
+Pro eligibility does not establish the signed-in account's actual plan; the plan
+label comes from the app.
+
 Provider URLs are fixed, authenticated requests never follow redirects, TLS checks
 both certificate trust and hostname, and probes retain a 15-second connection/idle
 timeout without imposing a whole-response deadline. `SSL_CERT_FILE` selects the CA bundle; Nix supplies its
 public certificate store by default.
+The Antigravity loopback service alone permits its self-signed certificate and
+uses a two-second request deadline; remote provider TLS verification is unchanged.
 
-`nix build .#agent-usage` compiles all six commands without running fixtures.
+`nix build .#agent-usage` compiles all seven commands without running fixtures.
 For manual migration verification, configure Meson with
 `-Dfixtures=true --buildtype=debugoptimized`, then
 run that build's `usage-checks` executable. The fixture executable is not installed. Fixtures never

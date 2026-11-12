@@ -7,12 +7,13 @@
 int main(int argc, char **argv) {
   const char *name = strrchr(argv[0], '/');
   name = name ? name + 1 : argv[0];
-  const char *id = strstr(name, "claude")     ? "claude"
-                   : strstr(name, "codex")    ? "codex"
-                   : strstr(name, "grok")     ? "grok"
-                   : strstr(name, "opencode") ? "opencode"
-                   : strstr(name, "copilot")  ? "copilot"
-                                             : NULL;
+  const char *id = strstr(name, "claude")       ? "claude"
+                   : strstr(name, "codex")      ? "codex"
+                   : strstr(name, "grok")       ? "grok"
+                   : strstr(name, "opencode")   ? "opencode"
+                   : strstr(name, "copilot")    ? "copilot"
+                   : strstr(name, "antigravity") ? "antigravity"
+                                                : NULL;
   if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h"))) {
     if (id)
       fprintf(stderr,

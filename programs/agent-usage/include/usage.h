@@ -23,6 +23,7 @@ typedef Reply (*Transport)(Doc *, const char *, const char *, const char *,
 typedef struct {
   double now;
   Transport transport;
+  Transport local_transport;
   bool real_time;
 } Context;
 double context_now(Context *ctx);
@@ -63,6 +64,8 @@ Allowance parse_codex(Doc *d, Val *payload, double now);
 Allowance parse_opencode(Doc *d, Val *payload);
 Val *parse_grok(Doc *d, Val *payload);
 Allowance parse_copilot(Doc *d, Val *payload);
+Allowance parse_antigravity(Doc *d, Val *payload);
+Val *collect_antigravity_at(Doc *d, Context *ctx, const char *proc_root);
 Val *collect_copilot(Doc *d, Context *ctx);
 Val *collect_claude(Doc *d, Context *ctx);
 const char *grok_tier(Doc *d, Val *claims);
@@ -78,6 +81,8 @@ Val *status_records(Doc *d);
 Val *jwt_claims(Doc *d, const char *token);
 Reply http_request(Doc *d, const char *url, const char *token,
                    const char *extra_headers, const char *form);
+Reply antigravity_request(Doc *d, const char *url, const char *token,
+                         const char *extra_headers, const char *body);
 const char *oauth_access(Doc *d, Context *ctx, const char *provider,
                          const char *url, const char *client_id,
                          const char **failure);
