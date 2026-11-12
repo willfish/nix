@@ -308,7 +308,7 @@ in
       immich-go # Import Google Photos takeouts into Immich
     ]
     ++ lib.optionals (stdenv.isLinux && capabilities.desktop) [
-      antigravity # Google's agentic IDE; quotas are tracked by the agents widget
+      (pkgs.callPackage ./antigravity-cli-package.nix { }) # Google's terminal agent (agy)
       cliamp # Terminal music player (nixpkgs-unstable; 26.05 is 1.50.0)
       evince # Omarchy's PDF reader
       loupe # Omarchy's image viewer; the MIME defaults point image/* at org.gnome.Loupe.desktop

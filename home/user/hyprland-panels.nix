@@ -313,9 +313,10 @@ let
     cp -r ${source}/shell/plugins/agents "$out/shell/plugins/"
     chmod -R u+w "$out/shell/plugins/agents"
     cp ${agents}/grok.svg ${agents}/grok-light.svg ${agents}/opencode.svg ${agents}/opencode-light.svg \
-      ${agents}/copilot.svg ${agents}/copilot-light.svg \
+      ${agents}/copilot.svg ${agents}/copilot-light.svg ${agents}/antigravity.svg \
       "$out/shell/plugins/agents/assets/"
-    cp ${pkgs.antigravity}/share/pixmaps/antigravity.png "$out/shell/plugins/agents/assets/"
+    cp "$out/shell/plugins/agents/assets/antigravity.svg" \
+      "$out/shell/plugins/agents/assets/antigravity-light.svg"
     # Claude's orange mark works in both themes; upstream ships no light copy.
     cp "$out/shell/plugins/agents/assets/claude.svg" \
       "$out/shell/plugins/agents/assets/claude-light.svg"
@@ -449,7 +450,7 @@ let
   agentUpdate = pkgs.writeShellScript "omarchy-agent-usage-update" ''
     here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
     export OMARCHY_PATH=$(CDPATH= cd -- "$here/.." && pwd)
-    export PATH="${pkgs.jq}/bin:${pkgs.bash}/bin:$PATH"
+    export PATH="${antigravityUsage}/bin:${pkgs.jq}/bin:${pkgs.bash}/bin:$PATH"
     usage="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage"
     mkdir -p "$usage"
     chmod 700 "$usage" || true
@@ -459,6 +460,15 @@ let
     exit $status
   '';
   agentUsage = import ../../programs/agent-usage { inherit pkgs; };
+  antigravityUsage = pkgs.writeShellApplication {
+    name = "omarchy-antigravity-usage";
+    runtimeInputs = [
+      (pkgs.callPackage ./antigravity-cli-package.nix { })
+      pkgs.coreutils
+      pkgs.systemd
+    ];
+    text = builtins.readFile ../../programs/agent-usage/antigravity-usage.sh;
+  };
   agentCollectors =
     pkgs.runCommand "omarchy-agent-collectors" { nativeBuildInputs = [ pkgs.bash ]; }
       ''

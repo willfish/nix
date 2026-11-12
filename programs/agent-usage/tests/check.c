@@ -873,82 +873,71 @@ static void claude_errors(void) {
   free_box(&box);
 }
 static void antigravity_windows(void) {
-  check_begin("Antigravity preserves measured model quotas, zero balances, plans and reset times");
+  check_begin("Antigravity CLI preserves measured grouped quotas and skips disabled or unknown buckets");
   yyjson_doc *doc = call_op("antigravity",
-      "\"value\":{\"userStatus\":{\"planStatus\":{\"planInfo\":{\"planName\":\"Google AI Pro\"}},"
-      "\"cascadeModelConfigData\":{\"clientModelConfigs\":["
-      "{\"label\":\"Gemini Pro\",\"quotaInfo\":{\"remainingFraction\":0.75,\"resetTime\":\"2026-09-29T17:00:00Z\"}},"
-      "{\"label\":\"Gemini Flash\",\"quotaInfo\":{\"remainingFraction\":0}},"
-      "{\"label\":\"Untouched\",\"quotaInfo\":{\"remainingFraction\":1}},"
-      "{\"label\":\"Unknown\",\"quotaInfo\":{\"resetTime\":\"2026-09-29T17:00:00Z\"}},"
-      "{\"label\":\"Null\",\"quotaInfo\":{\"remainingFraction\":null}},"
-      "{\"label\":\"Invalid\",\"quotaInfo\":{\"remainingFraction\":2}}]}}}", NULL, 10);
+      "\"value\":{\"status\":\"SUCCESS\",\"command\":{\"name\":\"usage\",\"data\":{\"groups\":["
+      "{\"display_name\":\"Gemini\",\"buckets\":["
+      "{\"display_name\":\"Session\",\"remaining\":{\"remaining_fraction\":0.75},\"reset_time\":\"2026-09-29T17:00:00Z\"},"
+      "{\"display_name\":\"Weekly\",\"remaining\":{\"case\":\"remainingFraction\",\"value\":0}},"
+      "{\"display_name\":\"Unknown\",\"reset_time\":\"2026-09-29T17:00:00Z\"},"
+      "{\"display_name\":\"Null\",\"remaining_fraction\":null},"
+      "{\"display_name\":\"Invalid\",\"remaining_fraction\":2},"
+      "{\"display_name\":\"Disabled\",\"remaining_fraction\":0,\"disabled\":true}]},"
+      "{\"displayName\":\"Claude + GPT\",\"buckets\":[{\"displayName\":\"Weekly\",\"remainingFraction\":1}]}]}}}", NULL, 10);
   yyjson_val *root = yyjson_doc_get_root(doc), *limits = jget(root, "limits");
-  expect(is_str(jget(root, "plan"), "Google AI Pro"), "plan is app reported");
+  expect(is_str(jget(root, "plan"), ""), "CLI does not report a subscription plan");
   expect(yyjson_arr_size(limits) == 3, "unknown quotas omitted rather than zero filled");
-  expect(is_str(jget(yyjson_arr_get(limits, 0), "title"), "Gemini Pro"), "model title");
+  expect(is_str(jget(yyjson_arr_get(limits, 0), "title"), "Gemini Session"), "quota group title");
   expect(is_num(jget(yyjson_arr_get(limits, 0), "percent"), 0.25), "remaining to used fraction");
   expect(is_str(jget(yyjson_arr_get(limits, 0), "resetsAt"), "2026-09-29T17:00:00Z"), "reset unchanged");
   expect(is_num(jget(yyjson_arr_get(limits, 1), "percent"), 1), "zero remaining is exhausted");
   expect(is_num(jget(yyjson_arr_get(limits, 2), "percent"), 0), "observed unused is zero used");
   yyjson_doc_free(doc);
-}
-static void antigravity_local(void) {
-  check_begin("Antigravity probes only its own process sockets without exposing CSRF or inventing totals");
-  char *root = check_temp("usage-antigravity-");
-  char fields[2048];
-  snprintf(fields, sizeof fields, "\"path\":\"%s\",\"replies\":[]", root);
-  yyjson_doc *doc = call_op("antigravity_collect", fields, NULL, 10);
-  yyjson_val *out = yyjson_doc_get_root(doc), *record = jget(out, "record");
-  expect(yyjson_arr_size(jget(out, "requests")) == 0, "closed app never starts a process or login");
-  expect(is_str(jget(record, "usageStatusText"), "Limits unavailable"), "closed status");
-  expect(yyjson_is_true(jget(record, "showWhenUnavailable")), "closed card remains visible");
-  expect(is_str(jget(record, "tierLabel"), ""), "no assumed Pro subscription");
-  expect(is_str(jget(record, "usageNoteText"), "Open Antigravity and sign in with your Google AI account to read quotas."), "unavailable help is visible without hover");
+  doc = call_op("antigravity",
+      "\"value\":{\"status\":\"SUCCESS\",\"command\":{\"name\":\"usage\",\"data\":{\"groups\":["
+      "{\"name\":\"Gemini Models\",\"buckets\":[{\"id\":\"gemini-5h\",\"name\":\"Five Hour Limit Remaining\","
+      "\"window\":\"5h\",\"remaining_fraction\":0.4,\"reset_time\":\"2026-09-29T17:00:00Z\"},"
+      "{\"id\":\"gemini-weekly\",\"remaining_fraction\":0.8}]}]}}}", NULL, 10);
+  limits = jget(yyjson_doc_get_root(doc), "limits");
+  expect(yyjson_arr_size(limits) == 2, "native CLI name and id fields are recognized");
+  expect(is_str(jget(yyjson_arr_get(limits, 0), "title"), "Gemini 5-hour"), "used meter must not be titled Remaining");
+  expect(is_str(jget(yyjson_arr_get(limits, 1), "title"), "Gemini gemini-weekly"), "native bucket id fallback");
+  expect(is_num(jget(yyjson_arr_get(limits, 0), "percent"), 0.6), "native remaining fraction");
   yyjson_doc_free(doc);
-  char *pid = check_join(root, "123"), *exe = check_join(pid, "exe");
-  char *cmdline = check_join(pid, "cmdline"), *tcp = check_join(pid, "net/tcp");
-  char *fd = check_join(pid, "fd"), *socket = check_join(fd, "9");
-  check_mkdir_p(fd);
-  expect(symlink("/nix/store/fixture/lib/antigravity/bin/language_server_linux_x64", exe) == 0, "app executable");
-  expect(symlink("socket:[444]", socket) == 0, "owned socket");
-  const char args[] = "language_server_linux_x64\0--csrf_token\0fixture-csrf-private\0";
-  check_write(cmdline, args, sizeof args - 1);
-  save_json(tcp, " 0: 0100007F:1234 00000000:0000 0A 0:0 0:0 0 1000 0 999\n"
-                 " 1: 0100007F:5678 00000000:0000 0A 0:0 0:0 0 1000 0 444\n");
-  snprintf(fields, sizeof fields,
-      "\"path\":\"%s\",\"replies\":[{\"status\":200,\"body\":{\"userStatus\":{"
-      "\"email\":\"private@example.invalid\",\"planStatus\":{\"planInfo\":{\"planName\":\"Pro\"}},"
-      "\"cascadeModelConfigData\":{\"clientModelConfigs\":[{\"label\":\"Gemini\","
-      "\"quotaInfo\":{\"remainingFraction\":0.4}}]}}}}]", root);
-  doc = call_op("antigravity_collect", fields, NULL, 10);
+}
+static void antigravity_cli(void) {
+  check_begin("Antigravity CLI records exclude diagnostics and identity and require a successful usage report");
+  yyjson_doc *doc = call_op("antigravity_collect", "\"value\":null", NULL, 10);
+  yyjson_val *out = yyjson_doc_get_root(doc), *record = jget(out, "record");
+  expect(is_str(jget(record, "usageStatusText"), "Limits unavailable"), "unavailable status");
+  expect(yyjson_is_true(jget(record, "showWhenUnavailable")), "unavailable card remains visible");
+  expect(is_str(jget(record, "tierLabel"), ""), "no assumed Pro subscription");
+  expect(is_str(jget(record, "usageNoteText"), "Run agy in a terminal and sign in. Quota checks use its system-keyring login."), "help visible without hover");
+  yyjson_doc_free(doc);
+  doc = call_op("antigravity_collect",
+      "\"value\":{\"status\":\"SUCCESS\",\"private\":\"omit-me\",\"email\":\"private@example.invalid\","
+      "\"command\":{\"name\":\"usage\",\"data\":{\"groups\":[{\"display_name\":\"Gemini\","
+      "\"buckets\":[{\"display_name\":\"Weekly\",\"remaining\":{\"remaining_fraction\":0.4}}]}]}}}", NULL, 10);
   out = yyjson_doc_get_root(doc);
   record = jget(out, "record");
-  yyjson_val *request = yyjson_arr_get(jget(out, "requests"), 0);
-  expect(yyjson_arr_size(jget(out, "requests")) == 1, "only the socket owned by the app is probed");
-  expect(is_str(jget(request, "url"), "https://127.0.0.1:22136/exa.language_server_pb.LanguageServerService/GetUserStatus"), "fixed local RPC");
-  expect(is_str(jget(request, "token"), ""), "no OAuth credential");
-  expect(is_str(jget(request, "headers"), "Connect-Protocol-Version: 1\nX-Codeium-Csrf-Token: fixture-csrf-private"), "Connect CSRF header");
   expect(is_num(jget(yyjson_arr_get(jget(record, "limits"), 0), "percent"), 0.6), "usage");
+  expect(is_str(jget(record, "usageNoteText"), "Quota used"), "concise used-quota caption");
   expect(yyjson_is_false(jget(record, "hasLocalStats")) && yyjson_is_false(jget(record, "hasPromptStats")), "no fabricated totals");
   expect(is_num(jget(record, "limitsFetchedAt"), 1790683200000), "fresh measurement");
   char *encoded = yyjson_val_write(record, 0, NULL);
-  expect(encoded && !strstr(encoded, "fixture-csrf") && !strstr(encoded, "private@example"), "private data excluded");
+  expect(encoded && !strstr(encoded, "omit-me") && !strstr(encoded, "private@example"), "private data excluded");
   free(encoded);
   yyjson_doc_free(doc);
-  snprintf(fields, sizeof fields, "\"path\":\"%s\",\"replies\":[{\"failed\":true},{\"status\":401}]", root);
-  doc = call_op("antigravity_collect", fields, NULL, 10);
-  record = jget(yyjson_doc_get_root(doc), "record");
-  expect(yyjson_arr_size(jget(record, "limits")) == 0 && !jget(record, "limitsFetchedAt"), "failed service stays unavailable");
-  yyjson_doc_free(doc);
-  free(socket);
-  free(fd);
-  free(tcp);
-  free(cmdline);
-  free(exe);
-  free(pid);
-  check_rm_rf(root);
-  free(root);
+  const char *bad[] = {
+      "\"value\":{\"status\":\"FAILURE\",\"command\":{\"name\":\"usage\"}}",
+      "\"value\":{\"status\":\"SUCCESS\",\"command\":{\"name\":\"other\"}}",
+      "\"value\":{\"status\":\"SUCCESS\",\"command\":{\"name\":\"usage\",\"data\":{}}}"};
+  for (size_t i = 0; i < sizeof bad / sizeof bad[0]; i++) {
+    doc = call_op("antigravity_collect", bad[i], NULL, 10);
+    record = jget(yyjson_doc_get_root(doc), "record");
+    expect(yyjson_arr_size(jget(record, "limits")) == 0 && !jget(record, "limitsFetchedAt"), "failed reports never become measured zero");
+    yyjson_doc_free(doc);
+  }
 }
 static void fresh_oauth(void) {
   check_begin("fresh OAuth credentials use fixed usage URLs and required account/JWT headers without refresh");
@@ -1574,23 +1563,6 @@ static void https_transport(void) {
   doc = probe(json, env);
   expect(yyjson_is_true(jget(yyjson_doc_get_root(doc), "failed")), "hostname");
   yyjson_doc_free(doc);
-  char local[320];
-  snprintf(local, sizeof local,
-      "\"url\":\"https://127.0.0.1:%d/exa.language_server_pb.LanguageServerService/GetUserStatus\","
-      "\"headers\":\"X-Codeium-Csrf-Token: fixture\",\"form\":\"{}\"", port);
-  const char *proxy[] = {"HTTPS_PROXY=http://127.0.0.1:1", "NO_PROXY=", NULL};
-  doc = call_op("local_probe", local, proxy, 10);
-  expect(yyjson_is_true(jget(jget(yyjson_doc_get_root(doc), "body"), "ok")), "only local RPC accepts self-signed TLS and bypasses proxies");
-  yyjson_doc_free(doc);
-  const char *unsafe[] = {
-      "\"url\":\"https://example.invalid:443/exa.language_server_pb.LanguageServerService/GetUserStatus\"",
-      "\"url\":\"https://127.0.0.1:443/other\"",
-      "\"url\":\"https://127.0.0.1:443/exa.language_server_pb.LanguageServerService/GetUserStatus\",\"token\":\"private\""};
-  for (size_t i = 0; i < sizeof unsafe / sizeof unsafe[0]; i++) {
-    doc = call_op("local_probe", unsafe[i], NULL, 10);
-    expect(yyjson_is_true(jget(yyjson_doc_get_root(doc), "failed")), "reject nonlocal, non-quota and OAuth requests");
-    yyjson_doc_free(doc);
-  }
   kill(-pid, SIGKILL);
   waitpid(pid, NULL, 0);
   free(ca);
@@ -1625,7 +1597,7 @@ int main(void) {
   claude_login();
   claude_errors();
   antigravity_windows();
-  antigravity_local();
+  antigravity_cli();
   fresh_oauth();
   persist_refresh();
   failed_save();

@@ -98,15 +98,14 @@ int main(int argc, char **argv) {
   else if (!strcmp(op, "collect") || !strcmp(op, "antigravity_collect")) {
     requests = yyjson_mut_arr(d);
     responses = get(args, "replies");
-    Context ctx = {.now = now, .transport = fake, .local_transport = fake};
+    Context ctx = {.now = now, .transport = fake};
     out = yyjson_mut_obj(d);
     put(d, out, "record", !strcmp(op, "antigravity_collect")
-                              ? collect_antigravity_at(d, &ctx, text(get(args, "path")))
+                              ? antigravity_record(d, &ctx, v)
                               : collect(d, &ctx, text(get(args, "id"))));
     put(d, out, "requests", requests);
-  } else if (!strcmp(op, "probe") || !strcmp(op, "local_probe")) {
-    Transport send = !strcmp(op, "local_probe") ? antigravity_request : http_request;
-    Reply reply = send(
+  } else if (!strcmp(op, "probe")) {
+    Reply reply = http_request(
         d, text(get(args, "url")),
         truth(get(args, "token")) ? text(get(args, "token")) : NULL,
         text(get(args, "headers")),

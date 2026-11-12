@@ -32,22 +32,21 @@ become meters. GitHub reports metered seats as unlimited with no entitlement, so
 that case becomes a `usageNoteText` line with the credits used, not a meter.
 Unlimited means no seat quota, not free usage; billing budgets are not visible.
 
-Antigravity reads model quotas and reset times from the signed-in IDE's local
-`GetUserStatus` service. It discovers only the current user's Antigravity language
-server and its listening sockets through `/proc`. Requests stay on loopback,
-bypass proxies, and never copy, refresh or rewrite Google credentials. The app
-must be running with a project open. Closed, signed-out or incompatible app
-versions show unavailable limits, not zero. Only measured model allowances are
-shown; weekly caps, token totals and AI credit spend are not inferred. Google AI
-Pro eligibility does not establish the signed-in account's actual plan; the plan
-label comes from the app.
+Antigravity CLI reads measured quota groups and reset times from
+`agy -p /usage --output-format json`. The desktop IDE is not needed. Each probe
+uses a private empty home and workspace, so user MCP servers, plugins and hooks
+cannot start. Browser launchers are blocked, and a bounded systemd user unit reaps
+all descendants. Sign in manually with `agy` first: probes use its native system
+keyring login, not credentials copied from a file. File-only/SSH sign-ins are not
+used by this isolated probe. The CLI owns token refresh. Missing or failed reports
+remain unavailable, never zero; token totals, credit spend and plan labels are not
+inferred. The CLI package is pinned to Google's published checksum and disables
+self-updates; normal interactive `agy` retains its own settings and permissions.
 
 Provider URLs are fixed, authenticated requests never follow redirects, TLS checks
 both certificate trust and hostname, and probes retain a 15-second connection/idle
 timeout without imposing a whole-response deadline. `SSL_CERT_FILE` selects the CA bundle; Nix supplies its
 public certificate store by default.
-The Antigravity loopback service alone permits its self-signed certificate and
-uses a two-second request deadline; remote provider TLS verification is unchanged.
 
 `nix build .#agent-usage` compiles all seven commands without running fixtures.
 For manual migration verification, configure Meson with

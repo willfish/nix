@@ -134,8 +134,8 @@ static void add_header(struct curl_slist **headers, const char *value) {
     allocation_failed();
   *headers = next;
 }
-static Reply request(Doc *d, const char *url, const char *token,
-                     const char *extra_headers, const char *form, bool local) {
+Reply http_request(Doc *d, const char *url, const char *token,
+                   const char *extra_headers, const char *form) {
   Reply r = {.failed = true};
   if (token && !safe_header(token))
     return r;
@@ -171,13 +171,6 @@ static Reply request(Doc *d, const char *url, const char *token,
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
-  if (local) {
-    // The app's loopback RPC uses a self-signed certificate. Never proxy CSRF.
-    curl_easy_setopt(curl, CURLOPT_PROXY, "");
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 2000L);
-  }
   // Preserve the socket timeout without cutting off a longer response that
   // continues to make progress. Header and body activity restart the timer.
   curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 15000L);
@@ -193,8 +186,7 @@ static Reply request(Doc *d, const char *url, const char *token,
   if (ca && *ca)
     curl_easy_setopt(curl, CURLOPT_CAINFO, ca);
   if (form) {
-    add_header(&headers, local ? "Content-Type: application/json"
-                               : "Content-Type: application/x-www-form-urlencoded");
+    add_header(&headers, "Content-Type: application/x-www-form-urlencoded");
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, form);
   }
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -214,26 +206,6 @@ static Reply request(Doc *d, const char *url, const char *token,
   curl_slist_free_all(headers);
   curl_easy_cleanup(curl);
   return r;
-}
-Reply http_request(Doc *d, const char *url, const char *token,
-                   const char *extra_headers, const char *form) {
-  return request(d, url, token, extra_headers, form, false);
-}
-Reply antigravity_request(Doc *d, const char *url, const char *token,
-                         const char *extra_headers, const char *body) {
-  const char *port = NULL;
-  if (!strncmp(url, "https://127.0.0.1:", 18))
-    port = url + 18;
-  else if (!strncmp(url, "http://127.0.0.1:", 17))
-    port = url + 17;
-  if (!port || !isdigit((unsigned char)*port) || token)
-    return (Reply){.failed = true};
-  char *end;
-  unsigned long n = strtoul(port, &end, 10);
-  if (!n || n > 65535 ||
-      strcmp(end, "/exa.language_server_pb.LanguageServerService/GetUserStatus"))
-    return (Reply){.failed = true};
-  return request(d, url, NULL, extra_headers, body, true);
 }
 const char *oauth_access(Doc *d, Context *ctx, const char *provider,
                          const char *url, const char *client_id,
@@ -553,7 +525,7 @@ Val *collect_claude(Doc *d, Context *ctx) {
 }
 Val *collect(Doc *d, Context *ctx, const char *id) {
   if (!strcmp(id, "antigravity"))
-    return collect_antigravity_at(d, ctx, "/proc");
+    return collect_antigravity(d, ctx);
   if (!strcmp(id, "claude"))
     return collect_claude(d, ctx);
   if (!strcmp(id, "copilot"))
