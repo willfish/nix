@@ -63,6 +63,7 @@
     ./environment.nix
     ./git.nix
     ./llm-harness.nix
+    ./antigravity.nix
     ./local-llm.nix
     ./strata-relay.nix
     ./hermes.nix
