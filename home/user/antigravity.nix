@@ -6,8 +6,8 @@
 }:
 let
   llmMcps = import ./llm-mcps.nix { inherit config pkgs; };
-  # agy reads global MCP servers from this file and injects every discovered
-  # tool into the prompt; it has no lazy or Code Mode equivalent.
+  # agy reads global MCP servers from this file. It lists every tool name in
+  # the system prompt and loads schemas lazily through call_mcp_tool.
   mcpServers = builtins.listToAttrs (
     map (server: {
       inherit (server) name;
