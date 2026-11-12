@@ -1,0 +1,45 @@
+--- a/crates/rune/src/overlay/draw.rs
++++ b/crates/rune/src/overlay/draw.rs
+@@ -7,12 +7,23 @@
+     /// Draws a frame if one is due; true while it needs more (animating).
+     pub(super) fn draw(&mut self) -> bool {
+         self.end_fade_out(Instant::now());
+-        if !self.drawing() { return false; }
++        if !self.drawing() {
++            self.drain_hidden();
++            return false;
++        }
+         let more = self.draw_frame(false);
+         self.open_popup();
+         more
+     }
+
++    /// A prewarmed hidden layer still receives keymap events and their owned file descriptors.
++    fn drain_hidden(&mut self) {
++        #[cfg(all(unix, not(target_os = "macos"), not(target_os = "ios"), not(target_os = "android")))]
++        if let Some(Live { backing: Backing::Layer(layer), .. }) = self.live.as_mut() && layer.drain() {
++            self.hide();
++        }
++    }
++
+     /// Opens the pop-up menu a handler asked for over the overlay's panel. A hidden or occluded
+     /// overlay answers `None`, committed with its next frame. One anchored to an element waits
+     /// for the frame that commits what changed since the last.
+--- a/crates/rune/src/platform/layer_shell.rs
++++ b/crates/rune/src/platform/layer_shell.rs
+@@ -514,6 +514,15 @@
+         Changes { size: self.state.configured.take(), input: std::mem::take(&mut self.state.input), scale: self.state.scale.take(), closed: self.state.closed }
+     }
+
++    /// Dispatch hidden input so keymap descriptors close without consuming pending size or scale.
++    pub fn drain(&mut self) -> bool {
++        let _ = self.queue.dispatch_pending(&mut self.state);
++        let _ = self.queue.flush();
++        if let Some(watch) = &self.watch { watch.turned(); }
++        self.state.input.clear();
++        self.state.closed
++    }
++
+     pub fn raw_handles(&self) -> (RawDisplayHandle, RawWindowHandle) {
+         let surface = NonNull::new(self.surface.id().as_ptr().cast()).expect("live wl_surface");
+         (
