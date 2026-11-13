@@ -7,14 +7,14 @@ The repository owns the scripts. The pool owns the bytes.
 
 | Path | Contents |
 | --- | --- |
-| `/srv/media/radio-archive/audio` | one MP3 per catalogued object, named by track id |
-| `/srv/media/radio-archive/music` | the same bytes, organised and tagged for players |
-| `/srv/media/radio-archive/unsorted` | pulls whose catalog row carries no title |
+| `/srv/media/radio-archive/audio` | one MP3 per track, named by id |
+| `/srv/media/radio-archive/music` | the same bytes, organised and tagged |
+| `/srv/media/radio-archive/unsorted` | pulls without a catalog title |
 | `/srv/media/radio-archive/playlists` | generated M3U stations and `index.m3u` |
 | `/srv/media/radio-archive/artwork` | channel artwork |
 | `/srv/media/radio-archive/metadata` | catalog dump and `stations.json` |
 | `/srv/media/radio-archive/work` | downloader state and failure logs |
-| `/etc/radio-archive` | the scripts, deployed from `system/terminus/radio-archive/` |
+| `/etc/radio-archive` | deployed archive scripts |
 
 `audio/` is never rewritten. `music/` is derived from it and can be rebuilt.
 Completion is judged by byte length, not by the catalog's own size field.
@@ -31,15 +31,16 @@ than 1 MiB, so `build-stations.py` trims to that size. `playlists/index.m3u`
 lists the stations. It does not contain their songs.
 
 cliamp calls a named list of tracks a playlist. Press `L` for local
-playlists. Each archive station is one playlist. Opening it expands the
-station into songs.
+playlists. Each archive station is one playlist containing its songs.
 
 Do not play a row inside a list of station addresses. cliamp treats that
 row as a live stream and reconnects forever. Open the station playlist
 itself.
 
-Home Manager refreshes those playlists from the live index on switch.
-The station names are not stored in this repository.
+Home Manager refreshes those playlists from the live index on switch, using
+cliamp's M3U importer. A TOML track pointing at an M3U is not expanded, even
+when the containing playlist is opened directly. Failed downloads keep the
+cached playlist. The station names are not stored in this repository.
 
 ## Refreshing
 

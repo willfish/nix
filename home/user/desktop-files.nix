@@ -113,8 +113,15 @@ in
 
     syncRadioArchivePlaylists = lib.mkIf isGraphicalLinux (
       lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-        ${pkgs.python3}/bin/python3 \
-          ${configDir}/cliamp/sync-radio-archive-playlists.py || true
+        PATH=${
+          lib.makeBinPath [
+            pkgs.cliamp
+            pkgs.curl
+            pkgs.coreutils
+            pkgs.gnugrep
+          ]
+        }:$PATH \
+          ${pkgs.bash}/bin/bash ${configDir}/cliamp/sync-radio-archive-playlists.sh || true
       ''
     );
 
