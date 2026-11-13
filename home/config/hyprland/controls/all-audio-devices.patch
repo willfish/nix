@@ -1,0 +1,169 @@
+--- a/shell/plugins/panels/audio/Panel.qml
++++ b/shell/plugins/panels/audio/Panel.qml
+@@ -17,6 +17,35 @@
+   readonly property var sink: Pipewire.defaultAudioSink
+   readonly property var source: Pipewire.defaultAudioSource
+   readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
++  readonly property bool allDeviceControls: !!bar?.shell?.options?.allAudioDevices
++  property bool allDevicesKnown: false
++  property var allDevicesState: ({output: {volume: 0, muted: false, mixed: false, count: 0}, input: {volume: 0, muted: false, mixed: false, count: 0}})
++
++  function controlAllDevices(input, action, value) {
++    Quickshell.execDetached(["hypr-audio-controls", input ? "input" : "output", action, String(value)])
++  }
++
++  Process {
++    id: allDevicesStateProc
++    command: ["hypr-audio-controls", "state"]
++    stdout: StdioCollector {
++      onStreamFinished: {
++        try {
++          root.allDevicesState = JSON.parse(text)
++          root.allDevicesKnown = true
++        } catch (error) { root.allDevicesKnown = false }
++      }
++    }
++    onExited: function(code) { if (code !== 0) root.allDevicesKnown = false }
++  }
++
++  Timer {
++    interval: 500
++    repeat: true
++    triggeredOnStart: true
++    running: root.allDeviceControls && root.opened
++    onTriggered: if (!allDevicesStateProc.running) allDevicesStateProc.running = true
++  }
+   readonly property var mprisPlayers: Mpris.players ? Mpris.players.values : []
+   readonly property var mediaService: bar?.shell?.firstPartyServiceFor("omarchy.media")
+   readonly property var activeMediaPlayer: mediaService ? mediaService.activePlayer : null
+@@ -196,15 +225,15 @@
+     onFileChanged: volumeSinkResolveTimer.restart()
+   }
+
+-  readonly property real outputVolume: volumeSink && volumeSink.audio ? volumeSink.audio.volume : 0
+-  readonly property bool outputMuted: volumeSink && volumeSink.audio ? volumeSink.audio.muted : false
++  readonly property real outputVolume: allDeviceControls ? allDevicesState.output.volume : (volumeSink && volumeSink.audio ? volumeSink.audio.volume : 0)
++  readonly property bool outputMuted: allDeviceControls ? allDevicesState.output.muted : (volumeSink && volumeSink.audio ? volumeSink.audio.muted : false)
+   // A virtual source is untyped in Quickshell (see Model.isUntypedSource), so
+   // its volume and mute go through wpctl (UntypedInput), and the panel shows no
+   // level meter for it: Quickshell's peak monitor takes typed nodes only.
+   readonly property bool inputViaWpctl: UntypedInput.active
+-  readonly property bool inputLevelKnown: !inputViaWpctl || UntypedInput.known
+-  readonly property real inputVolume: inputViaWpctl ? UntypedInput.volume : (source && source.audio ? source.audio.volume : 0)
+-  readonly property bool inputMuted: inputViaWpctl ? UntypedInput.muted : (source && source.audio ? source.audio.muted : false)
++  readonly property bool inputLevelKnown: allDeviceControls ? allDevicesKnown : (!inputViaWpctl || UntypedInput.known)
++  readonly property real inputVolume: allDeviceControls ? allDevicesState.input.volume : (inputViaWpctl ? UntypedInput.volume : (source && source.audio ? source.audio.volume : 0))
++  readonly property bool inputMuted: allDeviceControls ? allDevicesState.input.muted : (inputViaWpctl ? UntypedInput.muted : (source && source.audio ? source.audio.muted : false))
+   readonly property var inputPeakNode: inputViaWpctl ? null : source
+   readonly property bool inputLevelShown: !!inputPeakNode
+
+@@ -231,8 +260,8 @@
+   // Only channels that actually exist get a vote. A box with no default source
+   // would otherwise report "input unmuted" forever, leaving the hero switch
+   // able to mute but never to unmute.
+-  readonly property bool hasOutput: !!(volumeSink && volumeSink.audio)
+-  readonly property bool hasInput: !!(source && source.audio) || (inputViaWpctl && UntypedInput.known)
++  readonly property bool hasOutput: allDeviceControls ? allDevicesKnown && allDevicesState.output.count > 0 : !!(volumeSink && volumeSink.audio)
++  readonly property bool hasInput: allDeviceControls ? allDevicesKnown && allDevicesState.input.count > 0 : (!!(source && source.audio) || (inputViaWpctl && UntypedInput.known))
+   readonly property bool anyAudible: (hasOutput && !outputMuted) || (hasInput && !inputMuted)
+   readonly property string toggleHint: anyAudible ? Commons.I18n.t("audio.mute") : Commons.I18n.t("audio.unmute")
+
+@@ -497,6 +526,11 @@
+   }
+
+   function setOutputVolume(v) {
++    if (allDeviceControls) {
++      var groupVolume = Math.max(0, Math.min(1, v))
++      controlAllDevices(false, "volume", groupVolume)
++      return groupVolume
++    }
+     if (!volumeSink || !volumeSink.audio) return outputVolume
+     var volume = Math.max(0, Math.min(1, v))
+     volumeSink.audio.volume = volume
+@@ -512,6 +546,7 @@
+   }
+
+   function setInputVolume(v) {
++    if (allDeviceControls) { controlAllDevices(true, "volume", Math.max(0, Math.min(1, v))); return }
+     if (inputViaWpctl) {
+       UntypedInput.setVolume(v)
+       return
+@@ -521,10 +556,12 @@
+   }
+
+   function toggleOutputMute() {
++    if (allDeviceControls) { controlAllDevices(false, "mute", "toggle"); return }
+     if (volumeSink && volumeSink.audio) volumeSink.audio.muted = !volumeSink.audio.muted
+   }
+
+   function toggleInputMute() {
++    if (allDeviceControls) { controlAllDevices(true, "mute", "toggle"); return }
+     if (inputViaWpctl) {
+       if (UntypedInput.known) UntypedInput.setMuted(!UntypedInput.muted)
+     }
+@@ -536,6 +573,11 @@
+   // muting a single channel from the row below flipping the master switch.
+   function toggleAllMuted() {
+     var mute = anyAudible
++    if (allDeviceControls) {
++      controlAllDevices(false, "mute", mute ? 1 : 0)
++      controlAllDevices(true, "mute", mute ? 1 : 0)
++      return
++    }
+     if (hasOutput) volumeSink.audio.muted = mute
+     if (hasInput && inputViaWpctl) UntypedInput.setMuted(mute)
+     else if (hasInput) source.audio.muted = mute
+@@ -902,7 +944,7 @@
+
+               PanelSectionHeader {
+                 id: outputHeader
+-                text: Commons.I18n.t("audio.output")
++                text: root.allDeviceControls ? "All outputs" : Commons.I18n.t("audio.output")
+                 foreground: root.bar.foreground
+                 fontFamily: root.bar.fontFamily
+                 anchors.left: parent.left
+@@ -912,7 +954,7 @@
+               Text {
+                 id: outputPercent
+                 textFormat: Text.PlainText
+-                text: Commons.I18n.formatNumber(Math.round((outputSlider.dragging ? outputSlider.liveValue : root.outputVolume) * 100)) + "%"
++                text: root.allDeviceControls && !root.allDevicesKnown ? "–" : (root.allDeviceControls && !outputSlider.dragging && root.allDevicesState.output.mixed ? "Mixed" : Commons.I18n.formatNumber(Math.round((outputSlider.dragging ? outputSlider.liveValue : root.outputVolume) * 100)) + "%")
+                 color: Qt.darker(root.bar.foreground, 1.4)
+                 font.family: root.bar.fontFamily
+                 font.pixelSize: Style.font.caption
+@@ -944,7 +986,7 @@
+                 step: 0.05
+                 value: root.outputVolume
+                 opacity: root.outputMuted ? 0.5 : 1.0
+-                enabled: !!root.sink
++                enabled: root.hasOutput
+
+                 onMoved: function(v) { root.setOutputVolume(v) }
+                 onRightClicked: root.toggleOutputMute()
+@@ -989,7 +1031,7 @@
+
+               PanelSectionHeader {
+                 id: microphoneHeader
+-                text: Commons.I18n.t("audio.input")
++                text: root.allDeviceControls ? "All microphones" : Commons.I18n.t("audio.input")
+                 foreground: root.bar.foreground
+                 fontFamily: root.bar.fontFamily
+                 anchors.left: parent.left
+@@ -999,7 +1041,7 @@
+               Text {
+                 id: microphonePercent
+                 textFormat: Text.PlainText
+-                text: root.inputLevelKnown ? Commons.I18n.formatNumber(Math.round((inputSlider.dragging ? inputSlider.liveValue : root.inputVolume) * 100)) + "%" : "–"
++                text: root.allDeviceControls && root.allDevicesKnown && !inputSlider.dragging && root.allDevicesState.input.mixed ? "Mixed" : (root.inputLevelKnown ? Commons.I18n.formatNumber(Math.round((inputSlider.dragging ? inputSlider.liveValue : root.inputVolume) * 100)) + "%" : "–")
+                 color: Qt.darker(root.bar.foreground, 1.4)
+                 font.family: root.bar.fontFamily
+                 font.pixelSize: Style.font.caption
+@@ -1041,7 +1083,7 @@
+                   step: 0.05
+                   value: root.inputVolume
+                   opacity: root.inputMuted ? 0.5 : 1.0
+-                  enabled: !!root.source
++                  enabled: root.hasInput
+
+                   onMoved: function(v) { root.setInputVolume(v) }
+                   onRightClicked: root.toggleInputMute()

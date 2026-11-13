@@ -20,6 +20,8 @@
   config = lib.mkIf isGraphicalLinux (
     let
       settings = import ../config/hyprland/settings.nix;
+      allAudioDevices = hostName == "andromeda";
+      audioControls = import ../../programs/audio-controls { inherit pkgs; };
       omarchy = import ./themes/omarchy.nix { inherit lib; };
       ttfx = pkgs.callPackage ./ttfx.nix {
         source = upstreamSources.ttfx;
@@ -589,7 +591,8 @@
         pkgs.satty
         pkgs.slurp
         pkgs.wl-clipboard
-      ];
+      ]
+      ++ lib.optional allAudioDevices audioControls;
 
       home.activation.seedHyprlandTheme = lib.hm.dag.entryBefore [ "applySelectedPalette" ] ''
         run ${themeSeed}/bin/hypr-theme-seed
@@ -681,7 +684,25 @@
             ]
             ++ workspaceBinds
             ++ voiceBinds;
-          inherit (settings.bindings) bindr bindm bindle;
+          inherit (settings.bindings) bindr bindm;
+          bindle = map (
+            if allAudioDevices then
+              lib.replaceStrings
+                [
+                  "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"
+                  "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+                  "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+                  "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+                ]
+                [
+                  "hypr-audio-controls output volume 5%+"
+                  "hypr-audio-controls output volume 5%-"
+                  "hypr-audio-controls output mute toggle"
+                  "hypr-audio-controls input mute toggle"
+                ]
+            else
+              lib.id
+          ) settings.bindings.bindle;
           windowrule =
             map (rule: {
               inherit (rule) name float;
@@ -836,21 +857,53 @@
                 ""
                 ""
               ];
-              tooltip-format = "Output: {volume}% · {desc}";
+              tooltip-format =
+                if allAudioDevices then
+                  "All outputs · selected: {desc}, {volume}%"
+                else
+                  "Output: {volume}% · {desc}";
               on-click = settings.bar.commands.audio;
-              on-click-right = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
-              on-scroll-up = "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+";
-              on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-";
+              on-click-right =
+                if allAudioDevices then
+                  "hypr-audio-controls output mute toggle"
+                else
+                  "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
+              on-scroll-up =
+                if allAudioDevices then
+                  "hypr-audio-controls output volume 5%+"
+                else
+                  "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+";
+              on-scroll-down =
+                if allAudioDevices then
+                  "hypr-audio-controls output volume 5%-"
+                else
+                  "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-";
             };
             "pulseaudio#microphone" = {
               format = "{format_source}";
               format-source = "";
               format-source-muted = "";
-              tooltip-format = "Microphone: {volume_source}%";
+              tooltip-format =
+                if allAudioDevices then
+                  "All microphones · selected: {volume_source}%"
+                else
+                  "Microphone: {volume_source}%";
               on-click = settings.bar.commands.audio;
-              on-click-right = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
-              on-scroll-up = "wpctl set-volume -l 1 @DEFAULT_AUDIO_SOURCE@ 5%+";
-              on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-";
+              on-click-right =
+                if allAudioDevices then
+                  "hypr-audio-controls input mute toggle"
+                else
+                  "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
+              on-scroll-up =
+                if allAudioDevices then
+                  "hypr-audio-controls input volume 5%+"
+                else
+                  "wpctl set-volume -l 1 @DEFAULT_AUDIO_SOURCE@ 5%+";
+              on-scroll-down =
+                if allAudioDevices then
+                  "hypr-audio-controls input volume 5%-"
+                else
+                  "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-";
             };
             "custom/media" = {
               exec = "${mediaStatus}/bin/hypr-media-status";

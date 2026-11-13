@@ -3,6 +3,7 @@
   lib,
   pkgs,
   isGraphicalLinux,
+  hostName,
   upstreamSources,
   ...
 }:
@@ -15,6 +16,7 @@ let
   # OAuth, and the rail reads the existing private iCal export instead.
   calendarPlugin = upstreamSources.omarchyCalendar;
   panelSettings = import ../../programs/panel-settings { inherit pkgs; };
+  audioControls = import ../../programs/audio-controls { inherit pkgs; };
   calendarSettings = pkgs.writeShellApplication {
     name = "hypr-calendar-settings";
     text = ''
@@ -329,6 +331,7 @@ let
     chmod -R u+w "$out"
     printf '%s\n' 'module OmarchyMenu' 'Menu 1.0 Menu.qml' > "$out/shell/plugins/menu/qmldir"
     patch --batch -d "$out" -p1 < ${local}/nixos.patch
+    patch --batch -d "$out" -p1 < ${local}/all-audio-devices.patch
     # Select mode must show before the unused menu catalogue loads.
     substituteInPlace "$out/shell/plugins/menu/Menu.qml" \
       --replace-fail 'cursorActive = mode !== "input"' \
@@ -482,41 +485,43 @@ let
         install -m755 ${agentUpdate} "$out/bin/omarchy-agent-usage-update"
         patchShebangs "$out/libexec/omarchy-agent-usage-update"
       '';
-  runtime = with pkgs; [
-    bash
-    coreutils
-    curl
-    gawk
-    gnused
-    gnugrep
-    networkmanager
-    networkmanagerapplet
-    iproute2
-    iw
-    iputils
-    jq
-    wireplumber
-    pulseaudio
-    bluez
-    util-linux
-    fontconfig
-    wl-clipboard
-    blueman
-    libnotify
-    systemd
-    which
-    tailscale
-    helpers
-    bluetoothDevice
-    browser
-    laptopClosed
-    tailscaleSend
-    calendarSettings
-    weatherSettings
-    agentCollectors
-    pkgs.findutils
-    quickshell
-  ];
+  runtime =
+    (with pkgs; [
+      bash
+      coreutils
+      curl
+      gawk
+      gnused
+      gnugrep
+      networkmanager
+      networkmanagerapplet
+      iproute2
+      iw
+      iputils
+      jq
+      wireplumber
+      pulseaudio
+      bluez
+      util-linux
+      fontconfig
+      wl-clipboard
+      blueman
+      libnotify
+      systemd
+      which
+      tailscale
+      helpers
+      bluetoothDevice
+      browser
+      laptopClosed
+      tailscaleSend
+      calendarSettings
+      weatherSettings
+      agentCollectors
+      pkgs.findutils
+      quickshell
+    ])
+    ++ lib.optional (hostName == "andromeda") audioControls;
   shell = pkgs.writeShellApplication {
     name = "hypr-controls-shell";
     runtimeInputs = runtime;
@@ -548,6 +553,7 @@ let
         lib.escapeShellArg (
           builtins.toJSON {
             inherit (settings.bar) position width;
+            allAudioDevices = hostName == "andromeda";
             font = settings.appearance.monoFont;
           }
         )
