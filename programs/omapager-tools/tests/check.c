@@ -1101,6 +1101,9 @@ static void test_prepare(void) {
   }
   EXPECT(contains_file(join_source(native, color_rel), "HYPR_CONTROLS_THEME"));
   EXPECT(contains_file(join_source(native, panel_rel), "Intersection.Subtract"));
+  EXPECT(contains_file(join_source(native, panel_rel), "item: root.yielding ? card : null"));
+  EXPECT(contains_file(join_source(native, panel_rel), "width: root.yielding ? 0 : ("));
+  EXPECT(contains_file(join_source(native, panel_rel), "height: root.yielding ? 0 : ("));
   const char *prefixes[] = {"\ufeff", NULL};
   char nul_prefix[] = {'\0', 'p', 'r', 'e', 'f', 'i', 'x', '\n'};
   for (int p = 0; p < 2; p++) {

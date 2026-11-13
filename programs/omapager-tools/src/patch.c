@@ -115,13 +115,16 @@ static void prepare(const char *out) {
           "panel bar size");
   replace(
       text,
-      "mask: Region {\n    width: root.screenW\n    height: root.screenH\n  }",
-      "mask: Region {\n    width: root.screenW\n    height: root.screenH\n    "
+      "mask: Region {\n    item: root.yielding ? card : null\n    width: "
+      "root.screenW\n    height: root.screenH\n  }",
+      "mask: Region {\n    item: root.yielding ? card : null\n    width: "
+      "root.screenW\n    height: root.screenH\n    "
       "Region {\n      intersection: Intersection.Subtract\n      x: "
       "root.barPos === \"right\" ? root.screenW - root.bar.barSize : 0\n      "
       "y: root.barPos === \"bottom\" ? root.screenH - root.bar.barSize : 0\n   "
-      "   width: root.bar.vertical ? root.bar.barSize : root.screenW\n      "
-      "height: root.bar.vertical ? root.screenH : root.bar.barSize\n    }\n  }",
+      "   width: root.yielding ? 0 : (root.bar.vertical ? root.bar.barSize : "
+      "root.screenW)\n      height: root.yielding ? 0 : (root.bar.vertical ? "
+      "root.screenH : root.bar.barSize)\n    }\n  }",
       "panel mask");
   write_text(panel, text);
   g_string_free(text, TRUE);
