@@ -124,7 +124,7 @@ let
       dest="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/emoji-target"
       install -d -m 700 -- "$(dirname "$dest")"
       umask 077
-      hyprctl activewindow -j | jq -r '[.address // "", .class // ""] | .[]' >"$dest"
+      hyprctl activewindow -j | jq -r '.address // ""' >"$dest"
     '';
   };
   emojiOpen = pkgs.writeShellApplication {
@@ -138,9 +138,8 @@ let
       exec omarchy-shell shell toggle omarchy.emojis
     '';
   };
-  # Ghostty ignores synthetic keys, including Shift+Insert and Ctrl+Shift+V.
-  # A click there can only copy. Pi reads that clipboard on Ctrl+V.
-  # Other apps still get a real paste, because they accept those keys.
+  # Use Hex's Wayland virtual-keyboard backend, but type the emoji directly:
+  # insertion must not depend on an app's paste shortcut or the running harness.
   emojiInsert = pkgs.writeShellApplication {
     name = "omarchy-menu-emoji-insert";
     runtimeInputs = [
@@ -154,42 +153,30 @@ let
     text = ''
       emoji=''${1:-}
       [[ -n $emoji ]] || exit 0
-      # The picker is not a normal window. Whatever Hyprland still calls
-      # active is the app that should receive the emoji. A saved address from
-      # an earlier shortcut must not steal a Telegram paste.
-      class=$(hyprctl activewindow -j | jq -r '.class // empty')
-      address=$(hyprctl activewindow -j | jq -r '.address // empty')
-      if [[ -z $class ]]; then
-        target="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/emoji-target"
-        if [[ -f $target ]]; then
-          {
-            IFS= read -r address
-            IFS= read -r class
-          } <"$target"
-        fi
-        if [[ -n $address ]]; then
-          hyprctl dispatch focuswindow "address:$address" >/dev/null || true
-          sleep 0.12
-          class=$(hyprctl activewindow -j | jq -r '.class // empty')
+      printf '%s' "$emoji" | wl-copy --type 'text/plain;charset=utf-8'
+      target="''${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/emoji-target"
+      address=
+      if [[ -f $target ]]; then
+        IFS= read -r address <"$target" || true
+        rm -f -- "$target"
+      fi
+      if [[ -n $address ]]; then
+        hyprctl dispatch focuswindow "address:$address" >/dev/null
+        for _ in {1..25}; do
+          current=$(hyprctl activewindow -j | jq -r '.address // empty')
+          [[ $current == "$address" ]] && break
+          sleep 0.02
+        done
+        if [[ $current != "$address" ]]; then
+          notify-send -a Emojis 'Could not restore input focus' 'The emoji is available on the clipboard.'
+          exit 1
         fi
       fi
-      case $class in
-        *ghostty* | *Ghostty*)
-          printf '%s' "$emoji" | wl-copy --type text/plain
-          notify-send -a Emojis 'Copied' 'Ctrl+V pastes into Pi'
-          ;;
-        *)
-          printf '%s' "$emoji" | wl-copy --type text/plain --foreground &
-          clip=$!
-          printf '%s' "$emoji" | wl-copy --primary --type text/plain --foreground &
-          primary=$!
-          # Let the picker release the keyboard before the paste key.
-          sleep 0.2
-          wtype -M shift -k Insert -m shift || true
-          sleep 0.3
-          kill "$clip" "$primary" 2>/dev/null || true
-          ;;
-      esac
+      # Let the picker release the keyboard before sending any text.
+      if ! wtype -s 200 -- "$emoji"; then
+        notify-send -a Emojis 'Could not insert emoji' 'The emoji is available on the clipboard.'
+        exit 1
+      fi
     '';
   };
   # Pinned arXiv bar widget. Marketplace install is unavailable and expects
