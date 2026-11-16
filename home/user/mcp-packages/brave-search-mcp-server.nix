@@ -2,25 +2,34 @@
   lib,
   buildNpmPackage,
   fetchurl,
+  source,
 }:
 
 let
-  version = "2.1.4";
+  release = lib.importJSON source.outPath;
+  runtime = lib.importJSON ./brave-search-mcp-package.json;
 in
+assert lib.assertMsg (
+  release.version == runtime.version && release.dependencies == runtime.dependencies
+) "Brave Search runtime lock needs refreshing: run nix run .#mcp-update -- .";
+assert lib.assertMsg
+  (lib.hasPrefix "https://registry.npmjs.org/@brave/brave-search-mcp-server/-/" release.dist.tarball)
+  "Brave Search release must come from its official npm registry path";
 buildNpmPackage {
   pname = "brave-search-mcp-server";
-  inherit version;
+  inherit (release) version;
 
   # Official npm pack includes dist/. The GitHub tag lockfile omits registry URLs, so
   # Nix fetches dependencies from this production lock instead of rebuilding TypeScript.
   src = fetchurl {
-    url = "https://registry.npmjs.org/@brave/brave-search-mcp-server/-/brave-search-mcp-server-${version}.tgz";
-    hash = "sha256-V3DwkfwV16Sfn0QATjl5P9gSakaEE4vmYq5o9KEN/yc=";
+    url = release.dist.tarball;
+    hash = release.dist.integrity;
   };
   sourceRoot = "package";
 
   npmDepsFetcherVersion = 2;
-  npmDepsHash = "sha256-FX53NPDgsJxXJ/rAaNTKaOHN/a3wW4k+9dnj6jvyVRk=";
+  npmDepsHash = (lib.importJSON ./brave-search-mcp-deps.json).hash;
+  npmFlags = [ "--ignore-scripts" ];
 
   postPatch = ''
     cp ${./brave-search-mcp-package.json} package.json

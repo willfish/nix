@@ -87,13 +87,6 @@ rec {
         wrapper = "mcp-dap";
       }
       {
-        name = "rea";
-        description = "Reverse engineering binaries, artifacts and runtimes";
-        enabled = config.dotfiles.capabilities.development;
-        wrapper = "mcp-rea";
-        toolTimeout = 360;
-      }
-      {
         name = "slack";
         description = "Slack messages and people";
         enabled = config.dotfiles.capabilities.work;

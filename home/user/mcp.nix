@@ -12,65 +12,17 @@ let
   slackSession = import ../../programs/slack-session { inherit pkgs; };
   inherit (import ./llm-mcps.nix { inherit config pkgs; }) servers;
   enabled = name: builtins.any (server: server.name == name) servers;
-  agentBrowserVersion = "0.39.1";
-  agentBrowserRelease =
-    {
-      x86_64-linux = {
-        asset = "agent-browser-linux-musl-x64";
-        hash = "sha256-dFB82rmKqRvcFDRsVFr/l0ZAoiXkP4w9bCMWT4wPm7k=";
-      };
-      aarch64-linux = {
-        asset = "agent-browser-linux-musl-arm64";
-        hash = "sha256-xJWfPhk8W8jzM2EzY/JfLqzuyv4loIIYQ7JxkGR0og8=";
-      };
-      x86_64-darwin = {
-        asset = "agent-browser-darwin-x64";
-        hash = "sha256-M5y5qm39QEhWz5ON80zTtHecYd/Vf8JXvhGxT9Gohfk=";
-      };
-      aarch64-darwin = {
-        asset = "agent-browser-darwin-arm64";
-        hash = "sha256-zBj6xB2dyYIZGDQKE25kMobqBVRMTdNWcbeW8ah0ze8=";
-      };
-    }
-    .${pkgs.stdenv.hostPlatform.system}
-      or (throw "agent-browser has no release binary for ${pkgs.stdenv.hostPlatform.system}");
-  agentBrowser = pkgs.stdenvNoCC.mkDerivation {
-    pname = "agent-browser";
-    version = agentBrowserVersion;
-    src = pkgs.fetchurl {
-      url = "https://github.com/vercel-labs/agent-browser/releases/download/v${agentBrowserVersion}/${agentBrowserRelease.asset}";
-      inherit (agentBrowserRelease) hash;
-    };
-    dontUnpack = true;
-    installPhase = ''
-      runHook preInstall
-      install -Dm755 "$src" "$out/bin/agent-browser"
-      runHook postInstall
-    '';
-    meta = {
-      description = "Rust-native browser automation CLI and MCP server";
-      homepage = "https://github.com/vercel-labs/agent-browser";
-      license = lib.licenses.asl20;
-      mainProgram = "agent-browser";
-      platforms = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
-    };
-  };
+  agentBrowser = pkgs.agent-browser;
   slackMcpServer = pkgs.callPackage ./mcp-packages/slack-mcp-server.nix {
     source = upstreamSources.slackMcp;
   };
-  braveSearchMcpServer = pkgs.callPackage ./mcp-packages/brave-search-mcp-server.nix { };
+  braveSearchMcpServer = pkgs.brave-search-mcp-server;
   telegramMcpServer = pkgs.callPackage ./mcp-packages/telegram-mcp.nix {
     source = upstreamSources.telegramMcp;
   };
   mcpDapServer = pkgs.callPackage ./mcp-packages/mcp-dap-server.nix {
     source = upstreamSources.mcpDap;
   };
-  reaAgents = pkgs.callPackage ./mcp-packages/rea-agents.nix { };
   # Native login glue; Telethon remains the unchanged upstream runtime.
   telegramLogin = import ../../programs/telegram-login {
     inherit pkgs;
@@ -97,7 +49,6 @@ in
           nixos = pkgs.mcp-nixos;
           filesystem = pkgs.mcp-server-filesystem;
           dap = mcpDapServer;
-          rea = reaAgents;
           slack = slackMcpServer;
           telegram = telegramMcpServer;
           gmail = pkgs.himalaya-mcp;
@@ -178,6 +129,18 @@ in
 
       exec ${agentBrowser}/bin/agent-browser mcp --tools core
     '';
+  };
+
+  # The launcher sizes this shared slice from the executing host's RAM before
+  # starting any process. Detached daemons inherit it; visible Brave does not.
+  systemd.user.slices.agent-browser = lib.mkIf pkgs.stdenv.isLinux {
+    Unit.Description = "Bounded browser automation";
+    Slice = {
+      MemoryAccounting = true;
+      MemoryHigh = "3G";
+      MemoryMax = "4G";
+      MemorySwapMax = "256M";
+    };
   };
 
   home.file.".local/bin/mcp-tor" = lib.mkIf (enabled "tor-mcp") {
@@ -278,16 +241,6 @@ in
 
       export PATH=${lib.escapeShellArg "${pkgs.delve}/bin"}:"$PATH"
       exec ${mcpDapServer}/bin/mcp-dap-server
-    '';
-  };
-
-  home.file.".local/bin/mcp-rea" = lib.mkIf (enabled "rea") {
-    executable = true;
-    text = ''
-      #!${pkgs.bash}/bin/bash
-      set -euo pipefail
-
-      exec ${reaAgents}/bin/rea mcp
     '';
   };
 

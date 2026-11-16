@@ -1,5 +1,53 @@
 {
   "nodes": {
+    "agent-browser-darwin-arm64": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-rke+gUOxyGN5Yqxakidl4Sfgq6kGlfUezawsv0P13G8=",
+        "type": "file",
+        "url": "https://github.com/vercel-labs/agent-browser/releases/download/v0.43.0/agent-browser-darwin-arm64"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-darwin-arm64"
+      }
+    },
+    "agent-browser-darwin-x64": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-vjtEpuLCNu2fBG7+FFfwU9LwTJF0VUoRX94Q/XpgH2o=",
+        "type": "file",
+        "url": "https://github.com/vercel-labs/agent-browser/releases/download/v0.43.0/agent-browser-darwin-x64"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-darwin-x64"
+      }
+    },
+    "agent-browser-linux-arm64": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-ePZ5/RhD4q3+e01VSfrb9QCY9fww0MXDsfdp8+jqEX4=",
+        "type": "file",
+        "url": "https://github.com/vercel-labs/agent-browser/releases/download/v0.43.0/agent-browser-linux-musl-arm64"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-linux-musl-arm64"
+      }
+    },
+    "agent-browser-linux-x64": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-WCRWd4gQtA9NTlLxr1iKbHhJyUxjgw133tKvrJWb22s=",
+        "type": "file",
+        "url": "https://github.com/vercel-labs/agent-browser/releases/download/v0.43.0/agent-browser-linux-musl-x64"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-linux-musl-x64"
+      }
+    },
     "agent-bus": {
       "inputs": {
         "home-manager": "home-manager",
@@ -140,6 +188,18 @@
         "ref": "release-26.05",
         "repo": "nixpkgs",
         "type": "github"
+      }
+    },
+    "brave-search-release": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-nJqr64rYzn5StIptpOhD+j9pmM+xjGOQOfEGnPBmnVM=",
+        "type": "file",
+        "url": "https://registry.npmjs.org/@brave/brave-search-mcp-server/2.1.4"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://registry.npmjs.org/@brave/brave-search-mcp-server/latest"
       }
     },
     "bun2nix": {
@@ -2226,10 +2286,15 @@
     },
     "root": {
       "inputs": {
+        "agent-browser-darwin-arm64": "agent-browser-darwin-arm64",
+        "agent-browser-darwin-x64": "agent-browser-darwin-x64",
+        "agent-browser-linux-arm64": "agent-browser-linux-arm64",
+        "agent-browser-linux-x64": "agent-browser-linux-x64",
         "agent-bus": "agent-bus",
         "arxiv-mcp": "arxiv-mcp",
         "arxiv-scanner-source": "arxiv-scanner-source",
         "brave-nixpkgs": "brave-nixpkgs",
+        "brave-search-release": "brave-search-release",
         "flake-parts": "flake-parts_2",
         "herdr": "herdr",
         "herdr-source": "herdr-source",

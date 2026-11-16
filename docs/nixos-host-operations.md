@@ -70,17 +70,48 @@ The `trade-tariff-tools` input supplies the upstream `ecs` package for work
 profiles. Update it alone with `nix flake update trade-tariff-tools`, or include it
 in a full `nix flake update`, then build and run `hmswitch`.
 
-`just update` runs the input update, prints `nix run .#upstream-status` drift,
-and builds this host's home configuration. `just status` reports the same drift
-without changing anything. The status covers the locked sources plus the three
-artifacts a lock cannot hold: agent-browser, rea-agents and the Brave Search
-server, which are release binaries or npm tarballs.
+`just update` updates the flake inputs, refreshes MCP releases, reports upstream
+drift, and builds this host's home configuration. `just status` reports drift
+without changing configuration. Pulling Git changes adopts the committed lock;
+`git fetch` alone does not update package inputs.
+
+Agent-browser's four official platform binaries and Brave Search's npm release
+metadata are flake inputs. `nix run .#mcp-update -- .` resolves their latest
+releases to versioned URLs in `flake.lock`, so a rebuild does not depend on what
+`latest` means later. It also refreshes Brave Search's production dependency lock
+and cache hash when the released manifest changes, with npm lifecycle scripts
+disabled. Use `just update` for the complete update rather than stopping after
+`nix flake update`; no hand-edited MCP versions or release hashes are needed.
 
 A bump can still leave work a flake cannot express. Derived hashes
 (`cargoHash`, `vendorHash`, `npmDepsHash`) change with the source, and patches
 must be rebased. Both fail the build rather than silently drifting; copy the
 `got: sha256-...` value into the named attribute and rebase the patch before
 switching. The `herdr-source` pin must match the `herdr-nix` release.
+
+### Browser automation resource limits
+
+The installed `agent-browser` launcher gives every CLI/MCP invocation an explicit
+15-minute idle timeout. On Linux, all its processes and detached daemon children
+share `agent-browser.slice`. Before launch, its hard limit is set to 1/16 of the
+executing host's physical RAM, clamped to 512 MiB–4 GiB. The soft limit is 75% of
+that, and swap is capped at 256 MiB. An OOM terminates the affected automation
+scope, including its daemon children, rather than exhausting the workstation.
+The launcher refuses an unbounded Linux launch
+if the user systemd manager is unavailable.
+
+Visible Brave is attached over CDP and stays outside this slice. Idle cleanup
+disconnects attached sessions without closing Brave or its tabs. macOS gets idle
+cleanup but not the Linux cgroup limits. Existing daemons from an older launcher
+must be retired separately; switching does not move already-running processes.
+
+Inspect the effective Linux limits with:
+
+```bash
+systemctl --user show agent-browser.slice -p MemoryHigh -p MemoryMax -p MemorySwapMax
+```
+
+After an interrupted financial mutation, inspect persisted state before retrying.
 
 ## Home capabilities
 

@@ -124,11 +124,12 @@ status *ARGS:
     set -euo pipefail
     direnv exec . nix run .#upstream-status -- "$@"
 
-# Refresh every flake input, report drift, and build this host's home config.
+# Refresh flake inputs and MCP releases, report drift, and build this host's home.
 update:
     #!/usr/bin/env bash
     set -euo pipefail
     direnv exec . nix flake update
+    direnv exec . nix run .#mcp-update -- .
     direnv exec . nix run .#upstream-status -- .
     host="$(hostname -s | tr '[:upper:]' '[:lower:]')"
     case "$host" in

@@ -86,6 +86,32 @@
       flake = false;
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
+    # mcp-update resolves these release selectors to immutable URLs in flake.lock.
+    agent-browser-linux-x64 = {
+      type = "file";
+      url = "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-linux-musl-x64";
+      flake = false;
+    };
+    agent-browser-linux-arm64 = {
+      type = "file";
+      url = "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-linux-musl-arm64";
+      flake = false;
+    };
+    agent-browser-darwin-x64 = {
+      type = "file";
+      url = "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-darwin-x64";
+      flake = false;
+    };
+    agent-browser-darwin-arm64 = {
+      type = "file";
+      url = "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-darwin-arm64";
+      flake = false;
+    };
+    brave-search-release = {
+      type = "file";
+      url = "https://registry.npmjs.org/@brave/brave-search-mcp-server/latest";
+      flake = false;
+    };
     opencode-source = {
       url = "github:anomalyco/opencode/v2.2.5";
       flake = false;
@@ -422,6 +448,13 @@
         {
           brave = inputs.brave-nixpkgs.legacyPackages.${system}.brave;
           ecs = inputs.trade-tariff-tools.packages.${system}.ecs;
+          agent-browser = import ./programs/agent-browser {
+            pkgs = _final;
+            source = upstreamSources.agentBrowser.${system};
+          };
+          brave-search-mcp-server = _final.callPackage ./home/user/mcp-packages/brave-search-mcp-server.nix {
+            source = inputs.brave-search-release;
+          };
           mux = mux.packages.${system}.default;
           himalaya-mcp = himalaya-mcp.packages.${system}.default;
           outlook-mcp = outlook-mcp.packages.${system}.default;
@@ -573,6 +606,12 @@
       pre-commit-check = mkPreCommitCheck linuxSystem pkgs;
       darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
       upstreamSources = {
+        agentBrowser = {
+          x86_64-linux = inputs.agent-browser-linux-x64;
+          aarch64-linux = inputs.agent-browser-linux-arm64;
+          x86_64-darwin = inputs.agent-browser-darwin-x64;
+          aarch64-darwin = inputs.agent-browser-darwin-arm64;
+        };
         arxivScanner = inputs.arxiv-scanner-source;
         mcpDap = inputs.mcp-dap-source;
         omapager = inputs.omapager-source;
@@ -752,7 +791,7 @@
 
           packages = {
             pi = pkgs.pi-coding-agent;
-            inherit (pkgs) opencode2;
+            inherit (pkgs) opencode2 agent-browser brave-search-mcp-server;
             activation-dbus = pkgs.symlinkJoin {
               name = "home-activation-dbus";
               paths = [
@@ -787,6 +826,7 @@
             hermes-config = import ./programs/hermes-config { inherit pkgs; };
             check-flake-lock-update = import ./programs/check-flake-lock-update { inherit pkgs; };
             upstream-status = import ./programs/upstream-status { inherit pkgs; };
+            mcp-update = import ./programs/mcp-update { inherit pkgs; };
             import-omarchy-community = import ./programs/import-omarchy-community { inherit pkgs; };
             audit-skills = import ./programs/audit-skills { inherit pkgs; };
             nix-storage-report = import ./programs/nix-storage-report { inherit pkgs; };

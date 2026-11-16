@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # Report pinned upstreams that trail their repositories. Read-only: it never
-# edits flake.lock, package files or the store.
+# edits flake.lock or package files.
 set -euo pipefail
 
 usage() {
   cat <<'USAGE'
 usage: upstream-status [--check] [FLAKE_DIR]
 
-Compare the revisions in FLAKE_DIR/flake.lock, plus the few artifacts pinned
-outside it, with their upstream repositories. FLAKE_DIR defaults to the current
-directory.
+Compare the Git revisions and MCP releases in FLAKE_DIR/flake.lock with their
+upstreams. FLAKE_DIR defaults to the current directory.
 
   --check   Exit 1 when any reported upstream is behind.
   -h        Show this message.
@@ -121,9 +120,7 @@ done < <(
 echo
 printf '%-30s %-10s %-10s %s\n' PACKAGE PINNED LATEST SOURCE
 report_package() {
-  local label=$1 file=$2 pattern=$3 latest=$4 source=$5
-  local pinned
-  pinned=$(sed -nE "$pattern" "$flake_dir/$file" | head -n 1)
+  local label=$1 pinned=$2 latest=$3 source=$4
   local state=current
   if [[ -z $latest ]]; then
     state=unavailable
@@ -136,16 +133,16 @@ report_package() {
 
 agent_browser_latest=$(latest_release vercel-labs agent-browser)
 agent_browser_latest=${agent_browser_latest#v}
-report_package agent-browser home/user/mcp.nix 's/^ *agentBrowserVersion = "([^"]+)";/\1/p' \
+agent_browser_pinned=$(jq -r '
+  .nodes.root.inputs["agent-browser-linux-x64"] as $node
+  | .nodes[$node].locked.url
+  | try capture("/download/v(?<version>[^/]+)/").version catch "unresolved"
+' "$lock")
+report_package agent-browser "$agent_browser_pinned" \
   "$agent_browser_latest" "github:vercel-labs/agent-browser"
 
-report_package rea-agents home/user/mcp-packages/rea-agents.nix \
-  's/^ *version = "([^"]+)";/\1/p' \
-  "$(curl -LfsS 'https://registry.npmjs.org/rea-agents/latest' 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true)" \
-  npm:rea-agents
-
-report_package brave-search-mcp-server home/user/mcp-packages/brave-search-mcp-server.nix \
-  's/^ *version = "([^"]+)";/\1/p' \
+report_package brave-search-mcp-server \
+  "$(jq -r '.version' "$flake_dir/home/user/mcp-packages/brave-search-mcp-package.json")" \
   "$(curl -LfsS 'https://registry.npmjs.org/@brave%2fbrave-search-mcp-server/latest' 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true)" \
   npm:@brave/brave-search-mcp-server
 
