@@ -1,0 +1,34 @@
+--- a/Service.qml
++++ b/Service.qml
+@@ -3575,5 +3575,6 @@
+-  function stopEngine() {
+-    localPlaybackStopped = true
++  function stopEngine(automatic) {
++    // Idle shutdown is not a user request to keep the receiver stopped.
++    localPlaybackStopped = automatic !== true
+     cancelVisibleLocalDeviceRefresh()
+     clearPendingPlayback()
+     deviceProbeTimer.stop()
+@@ -4166,5 +4167,5 @@
+     onTriggered: {
+       if (Date.now() - root.lastActivityAt >= root.idleShutdownMinutes * 60000)
+-        root.stopEngine()
++        root.stopEngine(true)
+     }
+   }
+--- a/tests/integration/AppSmoke.qml
++++ b/tests/integration/AppSmoke.qml
+@@ -60,6 +60,13 @@
+         throw new Error("Search navigation is missing")
+       spotifyService.clearSearch()
+       if (spotifyService.searchQuery !== "") throw new Error("Search state did not clear")
++      spotifyService.daemon.busy = true // Do not run a real stop command.
++      spotifyService.stopEngine(true)
++      if (spotifyService.localPlaybackStopped)
++        throw new Error("Idle shutdown must allow automatic restart")
++      spotifyService.stopEngine()
++      if (!spotifyService.localPlaybackStopped)
++        throw new Error("Explicit stop must remain stopped")
+       console.log("APP_SMOKE_PASS")
+       Qt.quit()
+     }
