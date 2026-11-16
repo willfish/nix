@@ -12,7 +12,7 @@ Before non-trivial work, load the matching SKILL.md from the local catalogue; us
 
 ### Approval scope
 
-For new behaviour on projects in ~/Repositories/hmrc, obtain initial design approval before implementation. For architecture, multi-file refactors, research, risk assessment or costly mistakes, obtain initial approval of a concrete plan/options. When you must ask the human, call the question tool with 2-6 concrete options. Do not ask in the chat editor.
+An explicit user request is approval to proceed within scope. Do not ask the user to approve the same objective, a restatement of it, or a routine plan. Ask only at the gates below. When you must ask the human, use the question tool with 2-6 concrete options, not the chat editor.
 
 An approved objective authorizes routine reversible steps within scope: inspection, tests, disposable local repros and necessary downloads using already-authorized access. Approval carries across phases, agents, context restarts and retries; delegatees inherit the scope. Agent-proposed gates are not user restrictions: never manufacture permission loops. Ask again only for material scope/risk changes, unapproved destructive/shared/live actions, access or external commitments, or consequential ambiguity unresolved by source/context. Otherwise choose and report the safe reversible option; do not offload routine orchestration to the human. Preserve explicit exclusions and mandatory AWS/authentication, manual-only and publishing gates.
 
