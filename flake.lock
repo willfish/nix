@@ -1,51 +1,20 @@
 {
   "nodes": {
-    "agent-browser-darwin-arm64": {
+    "agent-browser-source": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-rke+gUOxyGN5Yqxakidl4Sfgq6kGlfUezawsv0P13G8=",
-        "type": "file",
-        "url": "https://github.com/vercel-labs/agent-browser/releases/download/v0.43.0/agent-browser-darwin-arm64"
+        "lastModified": 1794519474,
+        "narHash": "sha256-+hmbSIgTqs5uZW7j0hAhz/9Fd24Np80DfoccqN4fGF4=",
+        "owner": "vercel-labs",
+        "repo": "agent-browser",
+        "rev": "1cc19526f3641c8543d55aa6700e7c55b37ac356",
+        "type": "github"
       },
       "original": {
-        "type": "file",
-        "url": "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-darwin-arm64"
-      }
-    },
-    "agent-browser-darwin-x64": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-vjtEpuLCNu2fBG7+FFfwU9LwTJF0VUoRX94Q/XpgH2o=",
-        "type": "file",
-        "url": "https://github.com/vercel-labs/agent-browser/releases/download/v0.43.0/agent-browser-darwin-x64"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-darwin-x64"
-      }
-    },
-    "agent-browser-linux-arm64": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-ePZ5/RhD4q3+e01VSfrb9QCY9fww0MXDsfdp8+jqEX4=",
-        "type": "file",
-        "url": "https://github.com/vercel-labs/agent-browser/releases/download/v0.43.0/agent-browser-linux-musl-arm64"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-linux-musl-arm64"
-      }
-    },
-    "agent-browser-linux-x64": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-WCRWd4gQtA9NTlLxr1iKbHhJyUxjgw133tKvrJWb22s=",
-        "type": "file",
-        "url": "https://github.com/vercel-labs/agent-browser/releases/download/v0.43.0/agent-browser-linux-musl-x64"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-linux-musl-x64"
+        "owner": "vercel-labs",
+        "ref": "v0.43.0",
+        "repo": "agent-browser",
+        "type": "github"
       }
     },
     "agent-bus": {
@@ -2286,10 +2255,7 @@
     },
     "root": {
       "inputs": {
-        "agent-browser-darwin-arm64": "agent-browser-darwin-arm64",
-        "agent-browser-darwin-x64": "agent-browser-darwin-x64",
-        "agent-browser-linux-arm64": "agent-browser-linux-arm64",
-        "agent-browser-linux-x64": "agent-browser-linux-x64",
+        "agent-browser-source": "agent-browser-source",
         "agent-bus": "agent-bus",
         "arxiv-mcp": "arxiv-mcp",
         "arxiv-scanner-source": "arxiv-scanner-source",

@@ -75,13 +75,16 @@ drift, and builds this host's home configuration. `just status` reports drift
 without changing configuration. Pulling Git changes adopts the committed lock;
 `git fetch` alone does not update package inputs.
 
-Agent-browser's four official platform binaries and Brave Search's npm release
-metadata are flake inputs. `nix run .#mcp-update -- .` resolves their latest
-releases to versioned URLs in `flake.lock`, so a rebuild does not depend on what
-`latest` means later. It also refreshes Brave Search's production dependency lock
+Agent Browser builds from a reviewed source release with the local background-safety
+patch. Its source tag stays explicit in `flake.nix`; updates need a patch rebase
+and a refreshed dashboard dependency hash. The dashboard has build-time Node
+dependencies, but the installed client is native Rust and embeds the static assets.
+Brave Search's npm release metadata is a flake input.
+`nix run .#mcp-update -- .` resolves its latest release to a versioned URL in
+`flake.lock` and refreshes Brave Search's production dependency lock
 and cache hash when the released manifest changes, with npm lifecycle scripts
 disabled. Use `just update` for the complete update rather than stopping after
-`nix flake update`; no hand-edited MCP versions or release hashes are needed.
+`nix flake update`.
 
 A bump can still leave work a flake cannot express. Derived hashes
 (`cargoHash`, `vendorHash`, `npmDepsHash`) change with the source, and patches
@@ -100,9 +103,19 @@ scope, including its daemon children, rather than exhausting the workstation.
 The launcher refuses an unbounded Linux launch
 if the user systemd manager is unavailable.
 
-Visible Brave is attached over CDP and stays outside this slice. Idle cleanup
-disconnects attached sessions without closing Brave or its tabs. macOS gets idle
-cleanup but not the Linux cgroup limits. Existing daemons from an older launcher
+The launcher enables background-only CDP. Tab creation explicitly requests a
+background tab without focus. Tab selection does not activate a tab. Foreground
+operations fail, including discarded-tab recovery that needs activation.
+
+Visible Brave is attached over CDP and stays outside this slice. Close and idle
+cleanup close only hidden tabs recorded as created by the session in the same
+browser instance. Existing bindings and blank URLs do not prove ownership.
+Visible agent tabs stay open rather than changing the selected tab during cleanup.
+Keep a stable session name to reuse its task tab. Console retention is capped at
+4 MiB and error retention at 1 MiB. Request and HAR metadata each have a 16 MiB
+budget; HAR bodies retain their separate 64 MiB budget. Network output marks
+incomplete captures. macOS gets the native safety patch and idle cleanup but not
+the Linux cgroup limits. Existing daemons from an older launcher
 must be retired separately; switching does not move already-running processes.
 
 Inspect the effective Linux limits with:

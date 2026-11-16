@@ -1,0 +1,1085 @@
+diff --git i/cli/src/mcp.rs w/cli/src/mcp.rs
+index c56fa8d..dbbc28c 100644
+--- i/cli/src/mcp.rs
++++ w/cli/src/mcp.rs
+@@ -777 +777 @@ fn initialize_result(params: Option<&Value>, config: &McpConfig) -> Value {
+-            "Use the typed agent_browser_* tools to control a browser. Active MCP tools profile(s): {}. Prefer agent_browser_snapshot after navigation to obtain stable element refs before clicking or typing. When a navigation result lists saved flows that match the task, call agent_browser_flow_run instead of driving the page. Use agent_browser_tools_profiles to see available startup profiles. {}",
++            "Use the typed agent_browser_* tools to control a browser. Active MCP tools profile(s): {}. Prefer agent_browser_snapshot after navigation to obtain stable element refs before clicking or typing. When a navigation result lists saved flows that match the task, call agent_browser_flow_run instead of driving the page. Use agent_browser_tools_profiles to see available startup profiles. With AGENT_BROWSER_BACKGROUND=1, tab selection stays in the background, foreground access fails, and close or idle shutdown closes only proven agent-created hidden tabs. Network output reports truncated captures. {}",
+diff --git i/cli/src/native/actions.rs w/cli/src/native/actions.rs
+index 405e3ca..5a7d05a 100644
+--- i/cli/src/native/actions.rs
++++ w/cli/src/native/actions.rs
+@@ -160,0 +161,46 @@ const HAR_MAX_TOTAL_BODY_BYTES: usize = 64 * 1024 * 1024;
++const NETWORK_METADATA_BYTES: usize = 16 * 1024 * 1024;
++const NETWORK_ENTRY_LIMIT: usize = 1024;
++
++impl TrackedRequest {
++    fn retained_bytes(&self) -> usize {
++        std::mem::size_of::<Self>()
++            + self.url.len()
++            + self.method.len()
++            + self.resource_type.len()
++            + self.request_id.len()
++            + self.post_data.as_ref().map_or(0, String::len)
++            + self.mime_type.as_ref().map_or(0, String::len)
++            + network::value_bytes(&self.headers)
++            + self
++                .response_headers
++                .as_ref()
++                .map_or(0, network::value_bytes)
++    }
++}
++
++impl HarEntry {
++    fn metadata_bytes(&self) -> usize {
++        std::mem::size_of::<Self>()
++            + [
++                &self.request_id,
++                &self.method,
++                &self.url,
++                &self.resource_type,
++                &self.status_text,
++                &self.http_version,
++                &self.mime_type,
++                &self.redirect_url,
++            ]
++            .iter()
++            .map(|s| s.len())
++            .sum::<usize>()
++            + self.post_data.as_ref().map_or(0, String::len)
++            + self
++                .request_headers
++                .iter()
++                .chain(&self.response_headers)
++                .map(|(k, v)| k.len() + v.len() + std::mem::size_of::<(String, String)>())
++                .sum::<usize>()
++            + self.cdp_timing.as_ref().map_or(0, network::value_bytes)
++    }
++}
+@@ -629,0 +676,2 @@ pub struct DaemonState {
++    pub har_capture_truncated: bool,
++    pub request_capture_truncated: bool,
+@@ -834,0 +883,2 @@ impl DaemonState {
++            har_capture_truncated: false,
++            request_capture_truncated: false,
+@@ -1725,4 +1775,3 @@ impl DaemonState {
+-        let rx = match self.event_rx.as_mut() {
+-            Some(rx) => rx,
+-            None => return DrainedEvents::default(),
+-        };
++        if self.event_rx.is_none() {
++            return DrainedEvents::default();
++        }
+@@ -1743 +1792 @@ impl DaemonState {
+-            match rx.try_recv() {
++            match self.event_rx.as_mut().unwrap().try_recv() {
+@@ -2283,0 +2333,5 @@ impl DaemonState {
++                    if event.method.starts_with("Network.")
++                        && (self.har_recording || self.request_tracking)
++                    {
++                        self.enforce_network_limits();
++                    }
+@@ -2318,0 +2373,30 @@ impl DaemonState {
++
++    fn enforce_network_limits(&mut self) {
++        let mut bytes: usize = self
++            .tracked_requests
++            .iter()
++            .map(TrackedRequest::retained_bytes)
++            .sum();
++        while self.tracked_requests.len() > NETWORK_ENTRY_LIMIT || bytes > NETWORK_METADATA_BYTES {
++            bytes -= self.tracked_requests.remove(0).retained_bytes();
++            self.request_capture_truncated = true;
++        }
++        let mut bytes: usize = self.har_entries.iter().map(HarEntry::metadata_bytes).sum();
++        // Preserve the prefix: flow capture uses stable offsets into this vector.
++        while self.har_entries.len() > NETWORK_ENTRY_LIMIT || bytes > NETWORK_METADATA_BYTES {
++            let entry = self.har_entries.pop().unwrap();
++            bytes -= entry.metadata_bytes();
++            self.har_body_total_bytes = self
++                .har_body_total_bytes
++                .saturating_sub(entry.response_body.as_ref().map_or(0, String::len));
++            self.har_capture_truncated = true;
++        }
++        let retained: HashSet<&str> = self
++            .har_entries
++            .iter()
++            .map(|e| e.request_id.as_str())
++            .collect();
++        self.har_progress
++            .retain(|id, _| retained.contains(id.as_str()));
++        self.flow.retain_requests(&retained);
++    }
+@@ -6633,0 +6718 @@ async fn close_session(state: &mut DaemonState, forget_settings: bool) -> Result
++        state.har_capture_truncated = false;
+@@ -12376,0 +12462 @@ async fn handle_har_start(cmd: &Value, state: &mut DaemonState) -> Result<Value,
++    state.har_capture_truncated = false;
+@@ -12440,0 +12527,3 @@ async fn handle_har_stop(cmd: &Value, state: &mut DaemonState) -> Result<Value,
++    if state.har_capture_truncated {
++        log["_truncated"] = json!(true);
++    }
+@@ -12456 +12545,3 @@ async fn handle_har_stop(cmd: &Value, state: &mut DaemonState) -> Result<Value,
+-    Ok(json!({ "path": path, "requestCount": request_count }))
++    Ok(
++        json!({ "path": path, "requestCount": request_count, "truncated": state.har_capture_truncated }),
++    )
+@@ -12473,0 +12565,5 @@ async fn handle_flow_save(cmd: &Value, state: &mut DaemonState) -> Result<Value,
++    if state.har_capture_truncated {
++        return Err(
++            "Network capture exceeded its byte budget; cannot save an incomplete flow".into(),
++        );
++    }
+@@ -13991,0 +14088 @@ async fn handle_requests(cmd: &Value, state: &mut DaemonState) -> Result<Value,
++        state.request_capture_truncated = false;
+@@ -14043 +14140 @@ async fn handle_requests(cmd: &Value, state: &mut DaemonState) -> Result<Value,
+-    Ok(json!({ "requests": requests }))
++    Ok(json!({ "requests": requests, "truncated": state.request_capture_truncated }))
+@@ -15610,0 +15708,65 @@ mod tests {
++    #[test]
++    fn tracked_network_metadata_is_byte_bounded() {
++        let mut state = super::DaemonState::new();
++        for n in 0..512 {
++            state.tracked_requests.push(super::TrackedRequest {
++                url: "https://fixture.invalid/".into(),
++                method: "POST".into(),
++                headers: serde_json::json!({"large":"x".repeat(128*1024)}),
++                timestamp: 0,
++                resource_type: "Fetch".into(),
++                request_id: n.to_string(),
++                post_data: None,
++                status: None,
++                response_headers: None,
++                mime_type: None,
++            });
++            state.har_entries.push(super::HarEntry {
++                request_id: n.to_string(),
++                wall_time: 0.0,
++                method: "POST".into(),
++                url: "https://fixture.invalid/".into(),
++                request_headers: Vec::new(),
++                post_data: Some("x".repeat(128 * 1024)),
++                request_body_size: 128 * 1024,
++                resource_type: "Fetch".into(),
++                status: None,
++                status_text: String::new(),
++                http_version: "HTTP/1.1".into(),
++                response_headers: Vec::new(),
++                mime_type: String::new(),
++                redirect_url: String::new(),
++                response_body_size: -1,
++                cdp_timing: None,
++                loading_finished_timestamp: None,
++                response_body: None,
++                response_body_base64: false,
++                remote_addr: None,
++            });
++            state
++                .har_progress
++                .insert(n.to_string(), std::time::Instant::now());
++            state.enforce_network_limits();
++        }
++        assert!(
++            state
++                .tracked_requests
++                .iter()
++                .map(super::TrackedRequest::retained_bytes)
++                .sum::<usize>()
++                <= super::NETWORK_METADATA_BYTES
++        );
++        assert!(state.request_capture_truncated);
++        assert!(state.har_capture_truncated);
++        assert!(
++            state
++                .har_entries
++                .iter()
++                .map(super::HarEntry::metadata_bytes)
++                .sum::<usize>()
++                <= super::NETWORK_METADATA_BYTES
++        );
++        assert_eq!(state.har_entries.first().unwrap().request_id, "0");
++        assert!(state.har_progress.len() <= state.har_entries.len());
++        assert_eq!(state.tracked_requests.last().unwrap().request_id, "511");
++    }
+diff --git i/cli/src/native/background.rs w/cli/src/native/background.rs
+new file mode 100644
+index 0000000..4ec05b0
+--- /dev/null
++++ w/cli/src/native/background.rs
+@@ -0,0 +1,208 @@
++//! Background-only CDP policy and durable proof of tab creation.
++
++use std::collections::HashSet;
++
++use serde::{Deserialize, Serialize};
++use serde_json::{json, Value};
++use sha2::{Digest, Sha256};
++
++use super::tab_binding;
++use crate::session_files::SessionFile;
++
++pub fn enabled() -> bool {
++    std::env::var("AGENT_BROWSER_BACKGROUND").as_deref() == Ok("1")
++}
++
++pub fn prepare(
++    method: &str,
++    params: Option<Value>,
++    background: bool,
++) -> Result<Option<Value>, String> {
++    if !background {
++        return Ok(params);
++    }
++    match method {
++        "Page.bringToFront" | "Target.activateTarget" | "Browser.setWindowBounds"
++        | "Browser.close" | "Target.sendMessageToTarget" | "Target.createBrowserContext" => Err(format!(
++            "Background-only mode refuses {method}: foreground or browser-wide access is not allowed"
++        )),
++        "Target.createTarget" => {
++            let mut params = params.unwrap_or_else(|| json!({}));
++            if params.get("newWindow").and_then(Value::as_bool) == Some(true) {
++                return Err("Background-only mode cannot open a new window".to_string());
++            }
++            let object = params.as_object_mut().ok_or("Invalid target parameters")?;
++            object.insert("background".into(), json!(true));
++            object.insert("focus".into(), json!(false));
++            object.insert("newWindow".into(), json!(false));
++            Ok(Some(params))
++        }
++        _ => Ok(params),
++    }
++}
++
++/// Untracked forwarding cannot provide durable ownership acknowledgements.
++pub fn prepare_raw(raw: String, background: bool) -> Result<String, String> {
++    if !background {
++        return Ok(raw);
++    }
++    let command: Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
++    let method = command
++        .get("method")
++        .and_then(Value::as_str)
++        .ok_or("Missing CDP method")?;
++    if matches!(method, "Target.createTarget" | "Target.closeTarget") {
++        return Err("Background-only mode requires tracked tab creation and cleanup".to_string());
++    }
++    prepare(method, command.get("params").cloned(), true)?;
++    Ok(raw)
++}
++
++#[derive(Default, Serialize, Deserialize)]
++pub struct OwnedTabs {
++    browser: String,
++    targets: HashSet<String>,
++    #[serde(skip)]
++    session: Option<String>,
++}
++
++impl OwnedTabs {
++    pub fn load(url: &str, session: Option<String>) -> Result<Self, String> {
++        // Hash the endpoint rather than persisting URLs that may contain credentials.
++        // Chrome's browser UUID changes on restart, unlike the debugging port.
++        let browser = format!("{:x}", Sha256::digest(url.as_bytes()));
++        let mut owned = Self {
++            browser,
++            session,
++            ..Self::default()
++        };
++        if let Some(session) = owned.session.as_deref() {
++            let path = SessionFile::OwnedTargets.path(session);
++            match std::fs::read(&path) {
++                Ok(raw) => {
++                    let saved: Self = serde_json::from_slice(&raw).map_err(|e| {
++                        format!("Cannot read tab ownership {}: {e}", path.display())
++                    })?;
++                    if saved.browser == owned.browser {
++                        owned.targets = saved.targets;
++                    }
++                }
++                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
++                Err(e) => return Err(format!("Cannot read tab ownership: {e}")),
++            }
++        }
++        Ok(owned)
++    }
++
++    pub fn targets(&self) -> Vec<String> {
++        self.targets.iter().cloned().collect()
++    }
++
++    pub fn contains(&self, target: &str) -> bool {
++        self.targets.contains(target)
++    }
++
++    pub fn created(&mut self, target: &str) -> Result<(), String> {
++        self.targets.insert(target.to_string());
++        self.save()
++    }
++
++    pub fn closed(&mut self, target: &str) -> Result<(), String> {
++        self.targets.remove(target);
++        self.save()?;
++        if let Some(session) = self.session.as_deref() {
++            if tab_binding::load(session)?.is_some_and(|b| b.target_id == target) {
++                tab_binding::clear(session);
++            }
++        }
++        Ok(())
++    }
++
++    fn save(&self) -> Result<(), String> {
++        if let Some(session) = self.session.as_deref() {
++            let raw = serde_json::to_string(self).map_err(|e| e.to_string())?;
++            tab_binding::save_json(&SessionFile::OwnedTargets.path(session), &raw)?;
++        }
++        Ok(())
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn background_policy_refuses_activation_and_forces_background_creation() {
++        for method in [
++            "Page.bringToFront",
++            "Target.activateTarget",
++            "Browser.close",
++            "Target.sendMessageToTarget",
++            "Target.createBrowserContext",
++        ] {
++            assert!(prepare(method, None, true)
++                .unwrap_err()
++                .contains("Background-only"));
++            assert!(prepare(method, None, false).is_ok());
++        }
++        let params = prepare(
++            "Target.createTarget",
++            Some(json!({"url":"about:blank", "focus":true, "background":false})),
++            true,
++        )
++        .unwrap()
++        .unwrap();
++        assert_eq!(params["background"], true);
++        assert_eq!(params["focus"], false);
++        assert_eq!(params["newWindow"], false);
++        assert!(prepare("Target.createTarget", Some(json!({"newWindow":true})), true).is_err());
++        assert!(prepare_raw(
++            json!({"id":-1,"method":"Page.bringToFront"}).to_string(),
++            true
++        )
++        .is_err());
++        assert!(prepare_raw(
++            json!({"id":-1,"method":"Target.createTarget"}).to_string(),
++            true
++        )
++        .is_err());
++    }
++
++    #[test]
++    fn ownership_survives_reconnect_but_does_not_adopt_bound_tabs_or_other_browsers() {
++        let guard = crate::test_utils::EnvGuard::new(&["AGENT_BROWSER_SOCKET_DIR"]);
++        let dir = tempfile::tempdir().unwrap();
++        guard.set("AGENT_BROWSER_SOCKET_DIR", dir.path().to_str().unwrap());
++        tab_binding::save(
++            "work",
++            &tab_binding::TabBinding {
++                target_id: "personal".into(),
++                url: "about:blank".into(),
++                pinned: true,
++            },
++        )
++        .unwrap();
++        let mut first = OwnedTabs::load("ws://localhost/browser/one", Some("work".into())).unwrap();
++        assert!(!first.contains("personal"));
++        first.created("agent").unwrap();
++        let mut resumed =
++            OwnedTabs::load("ws://localhost/browser/one", Some("work".into())).unwrap();
++        assert!(resumed.contains("agent"));
++        assert!(
++            !OwnedTabs::load("ws://localhost/browser/two", Some("work".into()))
++                .unwrap()
++                .contains("agent")
++        );
++        resumed.closed("agent").unwrap();
++        assert_eq!(
++            tab_binding::load("work").unwrap().unwrap().target_id,
++            "personal"
++        );
++        assert!(
++            OwnedTabs::load("ws://localhost/browser/one", Some("work".into()))
++                .unwrap()
++                .targets()
++                .is_empty()
++        );
++    }
++}
+diff --git i/cli/src/native/browser.rs w/cli/src/native/browser.rs
+index 869d849..f378171 100644
+--- i/cli/src/native/browser.rs
++++ w/cli/src/native/browser.rs
+@@ -1229,0 +1230,4 @@ impl BrowserManager {
++
++        if self.client.background_only {
++            return Err("Background-only mode: the tab is not responding; recovery would require foreground activation".to_string());
++        }
+@@ -1655,0 +1660,8 @@ impl BrowserManager {
++        let cleanup = tokio::time::timeout(Duration::from_secs(8), self.client.close_owned_tabs())
++            .await
++            .unwrap_or_else(|_| {
++                Err(
++                    "Owned-tab cleanup timed out; ownership is retained for the next connection"
++                        .into(),
++                )
++            });
+@@ -1678 +1690 @@ impl BrowserManager {
+-        Ok(())
++        cleanup
+@@ -2061,5 +2073,6 @@ impl BrowserManager {
+-        // Bring tab to front
+-        let _ = self
+-            .client
+-            .send_command("Page.bringToFront", None, Some(&session_id))
+-            .await;
++        if !self.client.background_only {
++            let _ = self
++                .client
++                .send_command("Page.bringToFront", None, Some(&session_id))
++                .await;
++        }
+diff --git i/cli/src/native/cdp/client.rs w/cli/src/native/cdp/client.rs
+index f06379b..a2da978 100644
+--- i/cli/src/native/cdp/client.rs
++++ w/cli/src/native/cdp/client.rs
+@@ -20,0 +21 @@ use super::types::{CdpCommand, CdpError, CdpEvent, CdpMessage};
++use crate::native::background::{self, OwnedTabs};
+@@ -139,5 +140,7 @@ const PRIVATE_SESSION_BUFFER: usize = 16;
+-/// Lossless taps for events that must each get a reply (paused requests,
+-/// auth challenges, targets waiting for the debugger). Unlike the bounded
+-/// broadcast, a tap never drops an event when its reader falls behind.
+-type MethodTaps =
+-    Arc<std::sync::Mutex<Vec<(&'static [&'static str], mpsc::UnboundedSender<CdpEvent>)>>>;
++/// Bounded taps for events that need replies. Overflow disconnects rather than
++/// silently losing paused requests or retaining an unbounded queue.
++type MethodTaps = Arc<std::sync::Mutex<Vec<(&'static [&'static str], mpsc::Sender<CdpEvent>)>>>;
++
++const EVENT_BUFFER: usize = 256;
++const MAX_EVENT_BYTES: usize = 256 * 1024;
++const MAX_MESSAGE_BYTES: usize = 64 * 1024 * 1024;
+@@ -338,0 +342,2 @@ pub struct CdpClient {
++    pub(crate) background_only: bool,
++    owned_tabs: std::sync::Mutex<OwnedTabs>,
+@@ -413,2 +418,2 @@ impl CdpClient {
+-            max_message_size: None,
+-            max_frame_size: None,
++            max_message_size: Some(MAX_MESSAGE_BYTES),
++            max_frame_size: Some(MAX_MESSAGE_BYTES),
+@@ -425,0 +431,9 @@ impl CdpClient {
++        let background_only = background::enabled();
++        let owned_tabs = OwnedTabs::load(
++            &request.uri().to_string(),
++            if background_only {
++                std::env::var("AGENT_BROWSER_SESSION").ok()
++            } else {
++                None
++            },
++        )?;
+@@ -447,2 +461,2 @@ impl CdpClient {
+-        let (event_tx, _) = broadcast::channel(4096);
+-        let (raw_tx, _) = broadcast::channel(4096);
++        let (event_tx, _) = broadcast::channel(EVENT_BUFFER);
++        let (raw_tx, _) = broadcast::channel(16);
+@@ -462,0 +477,3 @@ impl CdpClient {
++        let reader_socket = socket
++            .try_clone()
++            .map_err(|e| format!("Failed to duplicate reader socket: {e}"))?;
+@@ -501 +518 @@ impl CdpClient {
+-                if raw_tx_clone.receiver_count() > 0 {
++                if raw_tx_clone.receiver_count() > 0 && msg.len() <= MAX_EVENT_BYTES {
+@@ -576,0 +594,8 @@ impl CdpClient {
++                    // Count limits alone let large console arguments exhaust memory.
++                    // Critical events cannot be dropped: disconnect to release interception.
++                    if msg.len() > MAX_EVENT_BYTES {
++                        if method.starts_with("Fetch.") || method == "Target.attachedToTarget" {
++                            break;
++                        }
++                        continue;
++                    }
+@@ -619,0 +645 @@ impl CdpClient {
++                        let mut overflow = false;
+@@ -621,2 +647,11 @@ impl CdpClient {
+-                            !methods.contains(&event.method.as_str())
+-                                || tx.send(event.clone()).is_ok()
++                            if !methods.contains(&event.method.as_str()) {
++                                return true;
++                            }
++                            match tx.try_send(event.clone()) {
++                                Ok(()) => true,
++                                Err(mpsc::error::TrySendError::Closed(_)) => false,
++                                Err(mpsc::error::TrySendError::Full(_)) => {
++                                    overflow = true;
++                                    false
++                                }
++                            }
+@@ -624,0 +660,3 @@ impl CdpClient {
++                        if overflow {
++                            break;
++                        }
+@@ -633,0 +672,3 @@ impl CdpClient {
++            // A local queue overflow must detach interception at the browser,
++            // not just mark this client closed while its write half stays open.
++            let _ = reader_socket.shutdown(Shutdown::Both);
+@@ -635,0 +677,5 @@ impl CdpClient {
++            taps_clone.lock().unwrap_or_else(|e| e.into_inner()).clear();
++            private_clone
++                .lock()
++                .unwrap_or_else(|e| e.into_inner())
++                .clear();
+@@ -664,0 +711,2 @@ impl CdpClient {
++            background_only,
++            owned_tabs: std::sync::Mutex::new(owned_tabs),
+@@ -755,0 +804,31 @@ impl CdpClient {
++        let params = background::prepare(method, params, self.background_only)?;
++        if self.background_only {
++            let owned = self.owned_tabs.lock().unwrap_or_else(|e| e.into_inner());
++            if method == "Target.createTarget" && owned.targets().len() >= 32 {
++                return Err("Background-only mode limits each session to 32 owned tabs; reuse an existing tab".into());
++            }
++            if method == "Target.closeTarget"
++                && !params
++                    .as_ref()
++                    .and_then(|p| p.get("targetId"))
++                    .and_then(Value::as_str)
++                    .is_some_and(|id| owned.contains(id))
++            {
++                return Err(
++                    "Background-only mode will not close a tab without proof of agent ownership"
++                        .into(),
++                );
++            }
++        }
++        if self.background_only && method == "Target.closeTarget" {
++            let target = params
++                .as_ref()
++                .and_then(|p| p.get("targetId"))
++                .and_then(Value::as_str)
++                .unwrap();
++            tokio::time::timeout(Duration::from_secs(2), self.ensure_tab_hidden(target))
++                .await
++                .map_err(|_| {
++                    "Background-only mode could not verify that the owned tab is hidden".to_string()
++                })??;
++        }
+@@ -821 +900,28 @@ impl CdpClient {
+-        Ok(response.result.unwrap_or(Value::Null))
++        let result = response.result.unwrap_or(Value::Null);
++        if method == "Target.closeTarget"
++            && result.get("success").and_then(Value::as_bool) == Some(false)
++        {
++            return Err("Browser refused to close the owned tab; ownership is retained".into());
++        }
++        if self.background_only {
++            let mut owned = self.owned_tabs.lock().unwrap_or_else(|e| e.into_inner());
++            if method == "Target.createTarget" {
++                let target = result
++                    .get("targetId")
++                    .and_then(Value::as_str)
++                    .ok_or("Missing created target ID")?;
++                owned.created(target)?;
++            } else if method == "Target.closeTarget"
++                && result.get("success").and_then(Value::as_bool) != Some(false)
++            {
++                if let Some(target) = cmd
++                    .params
++                    .as_ref()
++                    .and_then(|p| p.get("targetId"))
++                    .and_then(Value::as_str)
++                {
++                    owned.closed(target)?;
++                }
++            }
++        }
++        Ok(result)
+@@ -828,8 +934,4 @@ impl CdpClient {
+-    /// Deliver every event whose method is in `methods` to the returned
+-    /// receiver without loss. The events still reach the broadcast. Dropping
+-    /// the receiver ends the tap on the next matching event.
+-    pub fn subscribe_methods(
+-        &self,
+-        methods: &'static [&'static str],
+-    ) -> mpsc::UnboundedReceiver<CdpEvent> {
+-        let (tx, rx) = mpsc::unbounded_channel();
++    /// Deliver matching events through a bounded queue. Overflow disconnects;
++    /// silently dropping a paused request would leave the browser wedged.
++    pub fn subscribe_methods(&self, methods: &'static [&'static str]) -> mpsc::Receiver<CdpEvent> {
++        let (tx, rx) = mpsc::channel(128);
+@@ -877,0 +980 @@ impl CdpClient {
++            background_only: self.background_only,
+@@ -917,0 +1021,8 @@ impl CdpClient {
++        // Lifecycle replies must update the same ownership ledger as normal sends.
++        if matches!(method, "Target.createTarget" | "Target.closeTarget") {
++            let result = self
++                .send_command(method, Some(params_value), session_id)
++                .await?;
++            return serde_json::from_value(result).map_err(|e| e.to_string());
++        }
++        let params_value = background::prepare(method, Some(params_value), self.background_only)?;
+@@ -922 +1033 @@ impl CdpClient {
+-            params: Some(params_value),
++            params: params_value,
+@@ -1009,0 +1121,4 @@ impl CdpClient {
++        let params = background::prepare(method, params, self.background_only)?;
++        if self.background_only && matches!(method, "Target.createTarget" | "Target.closeTarget") {
++            return Err("Background-only mode requires tracked tab creation and cleanup".into());
++        }
+@@ -1031,0 +1147 @@ impl CdpClient {
++        let json = background::prepare_raw(json, self.background_only)?;
+@@ -1039,0 +1156,80 @@ impl CdpClient {
++    pub async fn close_owned_tabs(&self) -> Result<(), String> {
++        if !self.background_only {
++            return Ok(());
++        }
++        let targets = self
++            .owned_tabs
++            .lock()
++            .unwrap_or_else(|e| e.into_inner())
++            .targets();
++        if targets.is_empty() {
++            return Ok(());
++        }
++        let live = self
++            .send_command_no_params("Target.getTargets", None)
++            .await?;
++        let live_ids: HashSet<&str> = live
++            .get("targetInfos")
++            .and_then(Value::as_array)
++            .into_iter()
++            .flatten()
++            .filter_map(|t| t.get("targetId").and_then(Value::as_str))
++            .collect();
++        let mut errors = Vec::new();
++        for target in targets {
++            if !live_ids.contains(target.as_str()) {
++                self.owned_tabs
++                    .lock()
++                    .unwrap_or_else(|e| e.into_inner())
++                    .closed(&target)?;
++                continue;
++            }
++            let close = self.send_command(
++                "Target.closeTarget",
++                Some(serde_json::json!({"targetId":target})),
++                None,
++            );
++            match tokio::time::timeout(Duration::from_secs(2), close).await {
++                Ok(Ok(_)) => {}
++                Ok(Err(e)) => errors.push(e),
++                Err(_) => errors.push(format!("Timed out closing owned tab {target}")),
++            }
++        }
++        if errors.is_empty() {
++            Ok(())
++        } else {
++            Err(errors.join("; "))
++        }
++    }
++
++    async fn ensure_tab_hidden(&self, target: &str) -> Result<(), String> {
++        let attached = Box::pin(self.send_command(
++            "Target.attachToTarget",
++            Some(serde_json::json!({"targetId":target,"flatten":true})),
++            None,
++        ))
++        .await?;
++        let session = attached
++            .get("sessionId")
++            .and_then(Value::as_str)
++            .ok_or("Missing cleanup session")?;
++        let result = Box::pin(self.send_command(
++            "Runtime.evaluate",
++            Some(
++                serde_json::json!({"expression":"document.visibilityState", "returnByValue":true}),
++            ),
++            Some(session),
++        ))
++        .await;
++        let _ = Box::pin(self.send_command(
++            "Target.detachFromTarget",
++            Some(serde_json::json!({"sessionId":session})),
++            None,
++        ))
++        .await;
++        if result?.pointer("/result/value").and_then(Value::as_str) != Some("hidden") {
++            return Err("Background-only mode will not close a visible tab; move away from the agent tab first".into());
++        }
++        Ok(())
++    }
++
+@@ -1057,0 +1254 @@ pub struct InspectProxyHandle {
++    background_only: bool,
+@@ -1064,0 +1262 @@ impl InspectProxyHandle {
++        let json = background::prepare_raw(json, self.background_only)?;
+@@ -1112,0 +1311,154 @@ mod tests {
++    #[tokio::test]
++    async fn stalled_critical_event_tap_disconnects_at_its_bound() {
++        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
++        let url = format!("ws://{}", listener.local_addr().unwrap());
++        let (ready_tx, ready_rx) = oneshot::channel::<()>();
++        let (disconnected_tx, disconnected_rx) = oneshot::channel::<()>();
++        let server = tokio::spawn(async move {
++            let (stream, _) = listener.accept().await.unwrap();
++            let mut ws = tokio_tungstenite::accept_async(stream).await.unwrap();
++            ready_rx.await.unwrap();
++            for n in 0..256 {
++                if ws
++                    .send(Message::Text(
++                        serde_json::json!({"method":"Fetch.requestPaused","params":{"n":n}})
++                            .to_string(),
++                    ))
++                    .await
++                    .is_err()
++                {
++                    break;
++                }
++            }
++            let _ = ws.next().await;
++            let _ = disconnected_tx.send(());
++        });
++        let client = CdpClient::connect(&url).await.unwrap();
++        let mut tap = client.subscribe_methods(&["Fetch.requestPaused"]);
++        ready_tx.send(()).unwrap();
++        tokio::time::timeout(Duration::from_secs(2), async {
++            while !client.closed.load(Ordering::SeqCst) {
++                tokio::task::yield_now().await;
++            }
++        })
++        .await
++        .unwrap();
++        let mut retained = 0;
++        while tap.recv().await.is_some() {
++            retained += 1;
++        }
++        assert_eq!(retained, 128);
++        tokio::time::timeout(Duration::from_secs(2), disconnected_rx)
++            .await
++            .unwrap()
++            .unwrap();
++        assert!(client
++            .send_command_no_params("Browser.getVersion", None)
++            .await
++            .is_err());
++        client.close().await;
++        server.abort();
++    }
++
++    #[tokio::test]
++    async fn background_transport_guards_every_send_path_and_cleans_only_owned_hidden_tabs() {
++        use serde_json::json;
++        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
++        let url = format!("ws://{}", listener.local_addr().unwrap());
++        let calls = Arc::new(std::sync::Mutex::new(Vec::<Value>::new()));
++        let seen = calls.clone();
++        let visible = Arc::new(AtomicBool::new(false));
++        let visibility = visible.clone();
++        let server = tokio::spawn(async move {
++            let (stream, _) = listener.accept().await.unwrap();
++            let mut ws = tokio_tungstenite::accept_async(stream).await.unwrap();
++            while let Some(Ok(Message::Text(text))) = ws.next().await {
++                let command: Value = serde_json::from_str(&text).unwrap();
++                let result = match command["method"].as_str().unwrap() {
++                    "Target.createTarget" => json!({"targetId":"agent-tab"}),
++                    "Target.getTargets" => {
++                        json!({"targetInfos":[{"targetId":"personal"},{"targetId":"agent-tab"}]})
++                    }
++                    "Target.attachToTarget" => json!({"sessionId":"cleanup-session"}),
++                    "Runtime.evaluate" => {
++                        json!({"result":{"value":if visibility.load(Ordering::SeqCst) {"visible"} else {"hidden"}}})
++                    }
++                    "Target.closeTarget" => json!({"success":true}),
++                    _ => json!({}),
++                };
++                seen.lock().unwrap().push(command.clone());
++                ws.send(Message::Text(
++                    json!({"id":command["id"],"result":result}).to_string(),
++                ))
++                .await
++                .unwrap();
++            }
++        });
++        let mut client = CdpClient::connect(&url).await.unwrap();
++        client.background_only = true;
++        assert!(client
++            .send_command_no_params("Page.bringToFront", None)
++            .await
++            .is_err());
++        assert!(client
++            .send_command_typed_raw::<_, Value>("Target.activateTarget", &json!({}), None)
++            .await
++            .is_err());
++        assert!(client
++            .send_command_no_wait("Page.bringToFront", None, None)
++            .await
++            .is_err());
++        assert!(client
++            .send_raw(json!({"id":1,"method":"Target.activateTarget"}).to_string())
++            .await
++            .is_err());
++        assert!(client
++            .inspect_handle()
++            .send_raw(json!({"id":-1,"method":"Page.bringToFront"}).to_string())
++            .await
++            .is_err());
++        assert!(client
++            .send_command(
++                "Target.closeTarget",
++                Some(json!({"targetId":"personal"})),
++                None
++            )
++            .await
++            .is_err());
++        client
++            .send_command(
++                "Target.createTarget",
++                Some(json!({"url":"about:blank"})),
++                None,
++            )
++            .await
++            .unwrap();
++        visible.store(true, Ordering::SeqCst);
++        assert!(client
++            .close_owned_tabs()
++            .await
++            .unwrap_err()
++            .contains("visible tab"));
++        visible.store(false, Ordering::SeqCst);
++        client.close_owned_tabs().await.unwrap();
++        let sent = calls.lock().unwrap().clone();
++        let create = sent
++            .iter()
++            .find(|c| c["method"] == "Target.createTarget")
++            .unwrap();
++        assert_eq!(create["params"]["background"], true);
++        assert_eq!(create["params"]["focus"], false);
++        let closed: Vec<_> = sent
++            .iter()
++            .filter(|c| c["method"] == "Target.closeTarget")
++            .collect();
++        assert_eq!(closed.len(), 1);
++        assert_eq!(closed[0]["params"]["targetId"], "agent-tab");
++        assert!(!sent.iter().any(|c| matches!(
++            c["method"].as_str(),
++            Some("Page.bringToFront" | "Target.activateTarget" | "Browser.close")
++        )));
++        client.close().await;
++        server.abort();
++    }
++
+@@ -2101 +2453 @@ mod tests {
+-            for i in 0..7000 {
++            for i in 0..700 {
+@@ -2121 +2473 @@ mod tests {
+-        for expected in (0..7000).step_by(7) {
++        for expected in (0..700).step_by(7) {
+diff --git i/cli/src/native/flow/recorder.rs w/cli/src/native/flow/recorder.rs
+index 431e881..e14c9fe 100644
+--- i/cli/src/native/flow/recorder.rs
++++ w/cli/src/native/flow/recorder.rs
+@@ -394,0 +395,5 @@ impl FlowRecorder {
++    pub fn retain_requests(&mut self, retained: &std::collections::HashSet<&str>) {
++        self.request_tags
++            .retain(|id, _| retained.contains(id.as_str()));
++    }
++
+diff --git i/cli/src/native/mod.rs w/cli/src/native/mod.rs
+index 1b6f42c..a4130ec 100644
+--- i/cli/src/native/mod.rs
++++ w/cli/src/native/mod.rs
+@@ -7,0 +8,2 @@ pub mod auth;
++pub mod background;
++#[allow(dead_code)]
+diff --git i/cli/src/native/network.rs w/cli/src/native/network.rs
+index 775239f..1929877 100644
+--- i/cli/src/native/network.rs
++++ w/cli/src/native/network.rs
+@@ -605,0 +606,52 @@ pub struct EventTracker {
++    console_bytes: usize,
++    error_bytes: usize,
++}
++
++const CONSOLE_BYTE_LIMIT: usize = 4 * 1024 * 1024;
++const ERROR_BYTE_LIMIT: usize = 1024 * 1024;
++pub(crate) const TEXT_BYTE_LIMIT: usize = 16 * 1024;
++
++pub(crate) fn bounded_text(text: &str, limit: usize) -> String {
++    if text.len() <= limit {
++        return text.to_string();
++    }
++    let suffix = "[truncated]";
++    let mut end = limit.saturating_sub(suffix.len());
++    while !text.is_char_boundary(end) {
++        end -= 1;
++    }
++    format!("{}{}", &text[..end], suffix)
++}
++
++/// Account for container storage as well as string payloads, not JSON output size.
++pub(crate) fn value_bytes(value: &Value) -> usize {
++    std::mem::size_of::<Value>()
++        + match value {
++            Value::String(s) => s.capacity(),
++            Value::Array(a) => a.iter().map(value_bytes).sum(),
++            Value::Object(o) => o
++                .iter()
++                .map(|(k, v)| k.capacity() + 64 + value_bytes(v))
++                .sum(),
++            _ => 0,
++        }
++}
++
++pub(crate) fn bounded_value(value: &Value, limit: usize) -> Value {
++    if value_bytes(value) <= limit {
++        value.clone()
++    } else {
++        json!({"_truncated":true})
++    }
++}
++
++impl ConsoleEntry {
++    fn bytes(&self) -> usize {
++        self.level.len() + self.text.len() + self.args.iter().map(value_bytes).sum::<usize>()
++    }
++}
++
++impl ErrorEntry {
++    fn bytes(&self) -> usize {
++        self.text.len() + self.url.as_ref().map_or(0, String::len)
++    }
+@@ -613,0 +666,2 @@ impl EventTracker {
++            console_bytes: 0,
++            error_bytes: 0,
+@@ -618,2 +672,15 @@ impl EventTracker {
+-        if self.console_entries.len() >= self.max_entries {
+-            self.console_entries.remove(0);
++        let entry = ConsoleEntry {
++            level: bounded_text(level, 128),
++            text: bounded_text(text, TEXT_BYTE_LIMIT),
++            args: if args.iter().map(value_bytes).sum::<usize>() <= TEXT_BYTE_LIMIT {
++                args
++            } else {
++                Vec::new()
++            },
++        };
++        self.console_bytes += entry.bytes();
++        self.console_entries.push(entry);
++        while self.console_entries.len() > self.max_entries
++            || self.console_bytes > CONSOLE_BYTE_LIMIT
++        {
++            self.console_bytes -= self.console_entries.remove(0).bytes();
+@@ -621,5 +687,0 @@ impl EventTracker {
+-        self.console_entries.push(ConsoleEntry {
+-            level: level.to_string(),
+-            text: text.to_string(),
+-            args,
+-        });
+@@ -635,6 +697,3 @@ impl EventTracker {
+-        if self.error_entries.len() >= self.max_entries {
+-            self.error_entries.remove(0);
+-        }
+-        self.error_entries.push(ErrorEntry {
+-            text: text.to_string(),
+-            url: url.map(String::from),
++        let entry = ErrorEntry {
++            text: bounded_text(text, TEXT_BYTE_LIMIT),
++            url: url.map(|s| bounded_text(s, 8 * 1024)),
+@@ -643 +702,6 @@ impl EventTracker {
+-        });
++        };
++        self.error_bytes += entry.bytes();
++        self.error_entries.push(entry);
++        while self.error_entries.len() > self.max_entries || self.error_bytes > ERROR_BYTE_LIMIT {
++            self.error_bytes -= self.error_entries.remove(0).bytes();
++        }
+@@ -647,0 +712 @@ impl EventTracker {
++        self.console_bytes = 0;
+@@ -652,0 +718 @@ impl EventTracker {
++        self.error_bytes = 0;
+@@ -692,0 +759,20 @@ mod tests {
++    #[test]
++    fn retained_console_and_errors_are_byte_bounded() {
++        let mut tracker = EventTracker::new();
++        let huge = "x".repeat(128 * 1024);
++        for _ in 0..1000 {
++            tracker.add_console("log", &huge, vec![json!({"value":huge})]);
++            tracker.add_error(&huge, Some(&huge), None, None);
++        }
++        assert!(tracker.console_bytes <= CONSOLE_BYTE_LIMIT);
++        assert!(tracker.error_bytes <= ERROR_BYTE_LIMIT);
++        assert!(tracker.console_entries.len() < 1000);
++        assert!(tracker
++            .console_entries
++            .iter()
++            .all(|e| e.text.len() <= TEXT_BYTE_LIMIT && e.args.is_empty()));
++        tracker.clear_console();
++        tracker.clear_errors();
++        assert_eq!((tracker.console_bytes, tracker.error_bytes), (0, 0));
++    }
++
+diff --git i/cli/src/native/tab_binding.rs w/cli/src/native/tab_binding.rs
+index 8df1ce1..986ed55 100644
+--- i/cli/src/native/tab_binding.rs
++++ w/cli/src/native/tab_binding.rs
+@@ -107,0 +108,4 @@ pub fn save(session: &str, binding: &TabBinding) -> Result<(), String> {
++    save_json(&path, &raw)
++}
++
++pub(crate) fn save_json(path: &std::path::Path, raw: &str) -> Result<(), String> {
+@@ -112 +116,5 @@ pub fn save(session: &str, binding: &TabBinding) -> Result<(), String> {
+-    let tmp = path.with_extension(format!("target.tmp.{}", std::process::id()));
++    let tmp = path.with_extension(format!(
++        "{}.tmp.{}",
++        path.extension().unwrap_or_default().to_string_lossy(),
++        std::process::id()
++    ));
+@@ -129 +137 @@ pub fn save(session: &str, binding: &TabBinding) -> Result<(), String> {
+-        fs::rename(&tmp, &path).map_err(|e| {
++        fs::rename(&tmp, path).map_err(|e| {
+diff --git i/cli/src/output.rs w/cli/src/output.rs
+index ad1206e..bbf5130 100644
+--- i/cli/src/output.rs
++++ w/cli/src/output.rs
+@@ -4816,0 +4817 @@ Environment:
++  AGENT_BROWSER_BACKGROUND      Set to 1 for background-only CDP and owned-tab cleanup
+diff --git i/cli/src/session_files.rs w/cli/src/session_files.rs
+index 3696dc1..1697016 100644
+--- i/cli/src/session_files.rs
++++ w/cli/src/session_files.rs
+@@ -35,0 +36,2 @@ pub enum SessionFile {
++    /// Proof of agent-created tabs. Survives daemon restarts for reconnects.
++    OwnedTargets,
+@@ -55,0 +58 @@ impl SessionFile {
++        SessionFile::OwnedTargets,
+@@ -71,0 +75 @@ impl SessionFile {
++            SessionFile::OwnedTargets => "owned",
+@@ -89 +93,4 @@ impl SessionFile {
+-            SessionFile::Target | SessionFile::Settings | SessionFile::Log => false,
++            SessionFile::Target
++            | SessionFile::OwnedTargets
++            | SessionFile::Settings
++            | SessionFile::Log => false,
+@@ -147 +154 @@ mod tests {
+-        assert_eq!(left, ["s.log", "s.settings", "s.target"]);
++        assert_eq!(left, ["s.log", "s.owned", "s.settings", "s.target"]);
+diff --git i/docs/content/docs/configuration.mdx w/docs/content/docs/configuration.mdx
+index 1630d0a..8fe43ba 100644
+--- i/docs/content/docs/configuration.mdx
++++ w/docs/content/docs/configuration.mdx
+@@ -7,0 +8,2 @@ Create `./agent-browser.json` to set persistent project defaults instead of repe
++The local background-safety build supports `AGENT_BROWSER_BACKGROUND=1` for CDP connections. It creates tabs in the background and refuses foreground activation, new windows, and browser-wide shutdown. Tab selection changes only the automation session. Close and idle shutdown close only hidden tabs with persisted proof of creation in the same browser instance. Existing bindings do not prove ownership. Visible agent tabs stay open. Console, error, and network caches have byte budgets. Network output marks incomplete captures, and flow save rejects incomplete captures.
++
+diff --git i/skill-data/core/references/session-management.md w/skill-data/core/references/session-management.md
+index 32a6cd0..cdc798f 100644
+--- i/skill-data/core/references/session-management.md
++++ w/skill-data/core/references/session-management.md
+@@ -20,0 +21,2 @@ Multiple isolated browser sessions with state persistence and concurrent browsin
++The local background-safety build supports `AGENT_BROWSER_BACKGROUND=1`. Tab selection does not activate the tab. Foreground operations fail instead of activating a tab or window. Reuse a stable session name. Close and idle shutdown clean up only hidden tabs with persisted proof of creation in the same browser instance. Existing bindings do not prove ownership. Visible agent tabs stay open so cleanup does not change the selected tab. Console and network retention have byte limits; network output marks incomplete captures.
++

@@ -82,8 +82,8 @@ printf '%-30s %-10s %-11s %-40s %s\n' INPUT PINNED DATE UPSTREAM RELEASE
 while IFS=$'\t' read -r name owner repo rev lastmod; do
   read -r head head_date <<<"$(head_commit "$owner" "$repo")" || true
   release=$(latest_release "$owner" "$repo")
-  if [[ $name == herdr-source || $name == hermes-agent ]]; then
-    # These two follow upstream release tags through explicit pins in flake.nix,
+  if [[ $name == herdr-source || $name == hermes-agent || $name == agent-browser-source ]]; then
+    # These follow upstream release tags through explicit pins in flake.nix,
     # so a newer HEAD is expected; compare against the latest release instead.
     release_sha=$(release_commit "$owner" "$repo" "${release:-HEAD}")
     if [[ -z $release_sha ]]; then
@@ -130,16 +130,6 @@ report_package() {
   fi
   printf '%-30s %-10s %-10s %s\n' "$label" "${pinned:--}" "$state" "$source"
 }
-
-agent_browser_latest=$(latest_release vercel-labs agent-browser)
-agent_browser_latest=${agent_browser_latest#v}
-agent_browser_pinned=$(jq -r '
-  .nodes.root.inputs["agent-browser-linux-x64"] as $node
-  | .nodes[$node].locked.url
-  | try capture("/download/v(?<version>[^/]+)/").version catch "unresolved"
-' "$lock")
-report_package agent-browser "$agent_browser_pinned" \
-  "$agent_browser_latest" "github:vercel-labs/agent-browser"
 
 report_package brave-search-mcp-server \
   "$(jq -r '.version' "$flake_dir/home/user/mcp-packages/brave-search-mcp-package.json")" \

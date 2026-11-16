@@ -86,27 +86,12 @@
       flake = false;
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
-    # mcp-update resolves these release selectors to immutable URLs in flake.lock.
-    agent-browser-linux-x64 = {
-      type = "file";
-      url = "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-linux-musl-x64";
+    # Keep the background-safety patch on a reviewed source release.
+    agent-browser-source = {
+      url = "github:vercel-labs/agent-browser/v0.43.0";
       flake = false;
     };
-    agent-browser-linux-arm64 = {
-      type = "file";
-      url = "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-linux-musl-arm64";
-      flake = false;
-    };
-    agent-browser-darwin-x64 = {
-      type = "file";
-      url = "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-darwin-x64";
-      flake = false;
-    };
-    agent-browser-darwin-arm64 = {
-      type = "file";
-      url = "https://github.com/vercel-labs/agent-browser/releases/latest/download/agent-browser-darwin-arm64";
-      flake = false;
-    };
+    # mcp-update resolves the release selector to an immutable URL in flake.lock.
     brave-search-release = {
       type = "file";
       url = "https://registry.npmjs.org/@brave/brave-search-mcp-server/latest";
@@ -450,7 +435,7 @@
           ecs = inputs.trade-tariff-tools.packages.${system}.ecs;
           agent-browser = import ./programs/agent-browser {
             pkgs = _final;
-            source = upstreamSources.agentBrowser.${system};
+            source = inputs.agent-browser-source;
           };
           brave-search-mcp-server = _final.callPackage ./home/user/mcp-packages/brave-search-mcp-server.nix {
             source = inputs.brave-search-release;
@@ -606,12 +591,6 @@
       pre-commit-check = mkPreCommitCheck linuxSystem pkgs;
       darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
       upstreamSources = {
-        agentBrowser = {
-          x86_64-linux = inputs.agent-browser-linux-x64;
-          aarch64-linux = inputs.agent-browser-linux-arm64;
-          x86_64-darwin = inputs.agent-browser-darwin-x64;
-          aarch64-darwin = inputs.agent-browser-darwin-arm64;
-        };
         arxivScanner = inputs.arxiv-scanner-source;
         mcpDap = inputs.mcp-dap-source;
         omapager = inputs.omapager-source;

@@ -19,10 +19,7 @@ trap 'rm -rf -- "$work"' EXIT
 cp "$lock" "$work/flake.lock"
 
 curl --fail --silent --show-error --location \
-  https://api.github.com/repos/vercel-labs/agent-browser/releases/latest >"$work/browser.json"
-curl --fail --silent --show-error --location \
   https://registry.npmjs.org/@brave/brave-search-mcp-server/latest >"$work/search.json"
-tag=$(jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))' "$work/browser.json")
 
 lock_file() {
   local input=$1 url=$2 result
@@ -35,18 +32,8 @@ lock_file() {
   mv "$work/next.lock" "$work/flake.lock"
 }
 
-for platform in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
-  asset="agent-browser-$platform"
-  case "$platform" in
-  linux-*) asset="agent-browser-linux-musl-${platform#linux-}" ;;
-  esac
-  url="https://github.com/vercel-labs/agent-browser/releases/download/$tag/$asset"
-  jq -e --arg name "$asset" --arg url "$url" '
-    [.assets[] | select(.name == $name) | .browser_download_url]
-    | . == [$url]
-  ' "$work/browser.json" >/dev/null
-  lock_file "agent-browser-$platform" "$url"
-done
+# Agent Browser is a patched source build. Update its explicit source tag,
+# rebase the patch, and refresh the dashboard dependency hash before switching.
 
 version=$(jq -er '.version | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+([+-][A-Za-z0-9.-]+)?$"))' "$work/search.json")
 lock_file brave-search-release "https://registry.npmjs.org/@brave/brave-search-mcp-server/$version"
@@ -79,5 +66,4 @@ if [[ $refresh == true ]]; then
   install -m 644 "$work/npm-deps.json" "$packages/brave-search-mcp-deps.json"
 fi
 install -m 644 "$work/flake.lock" "$lock"
-printf 'Locked agent-browser %s and Brave Search %s\n' \
-  "$(jq -r '.tag_name' "$work/browser.json")" "$version"
+printf 'Kept the reviewed Agent Browser source pin; locked Brave Search %s\n' "$version"
