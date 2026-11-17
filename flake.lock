@@ -674,6 +674,22 @@
         "type": "github"
       }
     },
+    "inference-optimisation-skill-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794854403,
+        "narHash": "sha256-TD84WHgM9gCZtOmdSpqFxHKSFrnaUH58Kcxy6qETaAA=",
+        "owner": "sybil-solutions",
+        "repo": "inference-optimisation-skill",
+        "rev": "fda968e7fc1996aa23c67139c755fe541c9d4be0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sybil-solutions",
+        "repo": "inference-optimisation-skill",
+        "type": "github"
+      }
+    },
     "llm-agents": {
       "inputs": {
         "bun2nix": "bun2nix_2",
@@ -2268,6 +2284,7 @@
         "hex": "hex",
         "himalaya-mcp": "himalaya-mcp",
         "home-manager": "home-manager_3",
+        "inference-optimisation-skill-source": "inference-optimisation-skill-source",
         "llm-agents": "llm-agents",
         "mcp-dap-source": "mcp-dap-source",
         "mux": "mux",

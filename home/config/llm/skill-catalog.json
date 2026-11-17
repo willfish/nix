@@ -118,6 +118,13 @@
     "references": {}
   },
   {
+    "name": "inference-optimisation",
+    "kind": "shared",
+    "invocation": "reference-backed domain skill",
+    "hermes": false,
+    "references": {}
+  },
+  {
     "name": "javascript-supply-chain-security",
     "kind": "shared",
     "invocation": "model-invoked discipline",

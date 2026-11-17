@@ -133,6 +133,10 @@
       url = "github:linuskelsey/arxiv-scanner";
       flake = false;
     };
+    inference-optimisation-skill-source = {
+      url = "github:sybil-solutions/inference-optimisation-skill";
+      flake = false;
+    };
     mcp-dap-source = {
       url = "github:go-delve/mcp-dap-server";
       flake = false;
@@ -592,6 +596,7 @@
       darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
       upstreamSources = {
         arxivScanner = inputs.arxiv-scanner-source;
+        inferenceOptimisationSkill = inputs.inference-optimisation-skill-source;
         mcpDap = inputs.mcp-dap-source;
         omapager = inputs.omapager-source;
         omarchyCalendar = inputs.omarchy-calendar-source;

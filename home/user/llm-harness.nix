@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  upstreamSources,
   ...
 }:
 let
@@ -244,7 +245,20 @@ let
     skill: !builtins.hasAttr skill skillDirectoryAliases
   ) sharedSkillNames;
   mkSharedSkillSources = lib.genAttrs deployedSharedSkillNames (
-    skill: mkSkillDirectory "shared-skill-${skill}" (sharedSkillFiles skill)
+    skill:
+    let
+      localSkill = mkSkillDirectory "shared-skill-${skill}" (sharedSkillFiles skill);
+    in
+    if skill == "inference-optimisation" then
+      pkgs.runCommand "shared-skill-${skill}-upstream" { } ''
+        cp -r ${upstreamSources.inferenceOptimisationSkill}/skills/inference-optimisation "$out"
+        chmod u+w "$out"
+        mv "$out/SKILL.md" "$out/UPSTREAM.md"
+        cp ${localSkill}/SKILL.md "$out/SKILL.md"
+        cp ${upstreamSources.inferenceOptimisationSkill}/LICENSE "$out/LICENSE"
+      ''
+    else
+      localSkill
   );
   mkSharedSkillFiles = lib.listToAttrs (
     (map (skill: {
