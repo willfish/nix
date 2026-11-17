@@ -21,7 +21,7 @@ static const char *const runtime[] = {
 static const char *const managed[] = {
     "crunch-attention-check.sh",     "hmrc-vat-messages-check.sh",
     "hmrc-vat-messages-telegram.sh", "weekly-hermes-update.sh",
-    "mac-studio-512-check.sh",       "apply-house-telegram.py"};
+    "apply-house-telegram.py"};
 static yyjson_val *field(yyjson_val *object, const char *name) {
   yyjson_val *key, *value, *found = NULL;
   size_t i, n, length = strlen(name);
