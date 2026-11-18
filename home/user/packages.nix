@@ -201,14 +201,12 @@ in
       ssh-to-age # Convert SSH Ed25519 keys to age recipients/identities
       tree # Displays directory tree structure
       unzip # Tool to extract ZIP archives
-      yq # Command-line YAML processor (like jq for YAML)
+      yq-go # Native YAML processor
       zip # Tool to create ZIP archives
 
       nh
-      nix-prefetch-github
       nix-tree
-      python3
-      pre-commit
+      prek # Native pre-commit hook runner
       pi-coding-agent # Pi terminal agent, available on every Home Manager host
       herdr
       muxWithDefaultBackend
@@ -223,7 +221,6 @@ in
     ++ lib.optionals capabilities.work [
       valkey
       postgresql
-      pgcli
       awscli2
       ssm-session-manager-plugin
       terraform
@@ -268,10 +265,7 @@ in
       go # Go compiler and tooling
       gnumake # GNU Make build automation tool
       makeWrapper # Nix utility to wrap executables with env vars
-      nodejs_24 # JavaScript runtime used by frontend and diagram tooling
-      uv # Python package runner used by MCP stdio servers
-
-      markdownlint-cli # Linter for Markdown files
+      rumdl # Native Markdown linter
       ruby
     ]
     ++ lib.optionals capabilities.personal [

@@ -8,19 +8,19 @@ let
   inherit (pkgs) stdenv;
   aliases = {
     a = "herdr";
+    ag = "rg";
     c = "opencode";
+    cat = "bat";
     co = "opencode";
     code = "opencode";
-    ag = "rg";
-    cat = "bat";
     la = "lsd -la";
     ll = "lsd -l";
+    p = "p";
     v = "nvim";
     vi = "nvim";
     vim = "nvim";
     vimdiff = "nvim -d";
-  }
-  // lib.optionalAttrs config.dotfiles.capabilities.work { psql = "pgcli"; };
+  };
   abbreviations = {
     a = "herdr";
     ag = "rg";

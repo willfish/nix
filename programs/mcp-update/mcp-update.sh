@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() { echo "usage: mcp-update [--refresh-deps] [FLAKE_DIR]"; }
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then
-  echo "usage: mcp-update [FLAKE_DIR]"
-  echo "Resolve current MCP releases to immutable flake inputs and refresh the npm runtime lock."
+  usage
+  echo "Resolve MCP releases to immutable inputs; use --refresh-deps for a lock-only security update."
   exit 0
 fi
+refresh=false
+if [[ ${1:-} == --refresh-deps ]]; then
+  refresh=true
+  shift
+fi
 if (($# > 1)); then
-  echo "usage: mcp-update [FLAKE_DIR]" >&2
+  usage >&2
   exit 2
 fi
 
@@ -45,10 +51,10 @@ jq '{name: "brave-search-mcp-server", version, bin, dependencies}' \
   "$work/search.json" >"$work/package.json"
 jq -S . "$packages/brave-search-mcp-package.json" >"$work/old-package.json"
 jq -S . "$work/package.json" >"$work/new-package.json"
-refresh=false
 if ! cmp -s "$work/old-package.json" "$work/new-package.json"; then
   refresh=true
-  cp "$packages/brave-search-mcp-package-lock.json" "$work/package-lock.json"
+fi
+if [[ $refresh == true ]]; then
   (
     cd "$work"
     npm install --package-lock-only --ignore-scripts --no-audit --no-fund \

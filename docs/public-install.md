@@ -31,7 +31,7 @@ After installation, open a new shell and use `hmswitch`, or run `~/.bin/hmswitch
 
 ## What is disabled without credentials?
 
-The public home retains the desktop, terminal, editor, development tools and Pi. It excludes owner account integrations, private skills and guides, secret declarations, Git identity/signing defaults, owner model credentials and agent-bus integration. Credential-dependent MCPs and William's SSH-backed arXiv service are not registered. Local browser, filesystem, debugger and NixOS MCP tooling remain available.
+The public home retains the desktop, terminal, editor, development tools and Pi. It excludes owner account integrations, private skills and guides, secret declarations, Git identity/signing defaults, owner model credentials and agent-bus integration. Credential-dependent MCPs and William's SSH-backed arXiv service are not registered. Local browser, debugger and NixOS MCP tooling remain available. Use Pi's built-in file tools for local files.
 
 Pi still needs the new user's own provider login or API key before it can call a model. Existing user-managed credentials are not revoked by switching to public mode.
 

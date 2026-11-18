@@ -567,8 +567,7 @@ require("conform").setup({
 			end,
 		},
 	},
-	-- prettier/stylua live in project shells when needed (not on the neovim
-	-- wrap PATH). isort + black stay on the wrap PATH for Python formatting.
+	-- Prettier/stylua live in project shells. Ruff handles Python imports and formatting.
 	-- Outside ~/.dotfiles, format_on_save falls back to LSP after formatters.
 	formatters_by_ft = {
 		fish = { "treefmt_dotfiles", "fish_indent", stop_after_first = true },
@@ -576,7 +575,7 @@ require("conform").setup({
 		json = { "treefmt_dotfiles" },
 		lua = { "treefmt_dotfiles" },
 		nix = { "treefmt_dotfiles" },
-		python = { "isort", "black" },
+		python = { "ruff_organize_imports", "ruff_format" },
 		sh = { "treefmt_dotfiles" },
 		yaml = { "treefmt_dotfiles" },
 	},

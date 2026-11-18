@@ -75,12 +75,6 @@ rec {
         wrapper = "mcp-nixos";
       }
       {
-        name = "filesystem";
-        description = "Permission-scoped file access";
-        enabled = true;
-        wrapper = "mcp-filesystem";
-      }
-      {
         name = "dap";
         description = "Native debugger sessions";
         enabled = config.dotfiles.capabilities.development;

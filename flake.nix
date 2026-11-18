@@ -455,14 +455,8 @@
           pi-coding-agent = _final.callPackage ./home/user/pi-package.nix {
             source = inputs.pi-source;
           };
-          # Supply the missing import for nixpkgs' stateful-proxy teardown backport.
-          mcp-nixos = _prev.mcp-nixos.override {
-            python3Packages = _prev.python3Packages // {
-              fastmcp = _prev.python3Packages.fastmcp.overrideAttrs (old: {
-                patches = (old.patches or [ ]) ++ [ ./home/user/mcp-packages/fastmcp-stateful-disconnect.patch ];
-              });
-            };
-          };
+          # Use the newer MCP and TLS stack with this server, not across the home.
+          inherit (nixpkgs-unstable.legacyPackages.${system}) mcp-nixos;
           # Other agent CLIs come from llm-agents, not the nixpkgs pin.
           opencode = llm-agents.packages.${system}.opencode;
           opencode2 = _final.callPackage ./home/user/opencode-package.nix {
@@ -529,6 +523,7 @@
         pre-commit-hooks.lib.${system}.run {
           src = ./.;
           configPath = ".pre-commit-config-nix.yaml";
+          package = pkgsFor.prek;
           hooks = {
             actionlint.enable = true;
             check-added-large-files = {
@@ -906,6 +901,8 @@
                   d2
                   just
                   nodejs
+                  python3
+                  uv
                 ]);
               shellHook =
                 preCommitCheck.shellHook

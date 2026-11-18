@@ -39,7 +39,6 @@ in
       (
         server:
         {
-          jira = pkgs.uv;
           github = pkgs.github-mcp-server;
           arxiv = pkgs.openssh;
           "web-search" = braveSearchMcpServer;
@@ -47,7 +46,6 @@ in
           "tor-mcp" = pkgs.tor-mcp;
           terraform = pkgs.terraform-mcp-server;
           nixos = pkgs.mcp-nixos;
-          filesystem = pkgs.mcp-server-filesystem;
           dap = mcpDapServer;
           slack = slackMcpServer;
           telegram = telegramMcpServer;
@@ -218,18 +216,6 @@ in
       set -euo pipefail
 
       exec ${pkgs.mcp-nixos}/bin/mcp-nixos
-    '';
-  };
-
-  # Read-write roots for Pi.
-  home.file.".local/bin/mcp-filesystem" = lib.mkIf (enabled "filesystem") {
-    executable = true;
-    text = ''
-      #!${pkgs.bash}/bin/bash
-      set -euo pipefail
-
-      exec ${pkgs.mcp-server-filesystem}/bin/mcp-server-filesystem \
-        "$HOME" /tmp
     '';
   };
 

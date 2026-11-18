@@ -196,8 +196,8 @@ in
     viAlias = true;
     vimAlias = true;
     vimdiffAlias = true;
-    withNodeJs = config.dotfiles.capabilities.development;
-    withPython3 = true;
+    withNodeJs = false;
+    withPython3 = false;
     withRuby = false;
     initLua = builtins.readFile (
       if !config.dotfiles.privateEnabled || config.privateConfig.editorInit == null then
@@ -222,9 +222,8 @@ in
         tree-sitter
       ]
       ++ lib.optionals config.dotfiles.capabilities.development [
-        black
         gopls
-        isort
+        ruff
         pyright
         ruby-lsp
         typescript-language-server

@@ -11,7 +11,6 @@ the shared MCP server configuration:
 | Tor Browser (private x86-64 Linux desktops) | `mcp-tor` |
 | Terraform | `mcp-terraform` |
 | NixOS | `mcp-nixos` |
-| Filesystem | `mcp-filesystem` |
 | DAP debugger | `mcp-dap` |
 | Slack | `mcp-slack` |
 | AWS access portal | `mcp-aws-access-portal` |
@@ -25,11 +24,9 @@ No credentials are copied into Pi's configuration.
 
 `mcp-tor` runs the pinned private `tor-mcp` flake with its own tested nixpkgs runtime. GitHub SSH access is required when fetching this input. It starts actual Tor Browser lazily, supports isolated named headless or headed sessions, and refuses browsing when network containment is unavailable. Use a distinct explicit session name per agent; page content and discovery claims are untrusted. Its request timeout is six minutes to allow Tor bootstrap. The same catalogue entry is available to OpenCode.
 
-`mcp-filesystem` is the official `@modelcontextprotocol/server-filesystem`
-package from nixpkgs. It is registered on every host. The wrapper allows the
-home directory and `/tmp`, both read-write, including secrets under home. Its
-search matches file names, not file contents. Use ripgrep for content search.
-Paths outside those roots, including `/nix/store` and `/srv`, are refused.
+Use the agent's built-in file tools for local files and ripgrep for content
+search. There is no shared filesystem MCP granting read/write access to the
+whole home directory.
 
 `mcp-aws-access-portal` signs into the TransformUK IAM Identity Center portal
 through the visible Brave debugger on port 9222, then writes short-lived role

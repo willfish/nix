@@ -319,6 +319,13 @@ Super+Shift+V to choose a destination.
 
 ## Home Manager
 
+Use project dev shells for Python, Node.js, and uv instead of adding them to the
+shared home package list. The dotfiles dev shell supplies them for repository
+maintenance; integrations may still carry their own pinned runtimes. Use `psql`
+for PostgreSQL, `rumdl` for Markdown, and `nix flake prefetch` when a workflow
+needs the contents and hash of a flake reference. The bundled `yq` command uses
+the Go implementation, not the Python jq wrapper.
+
 Use `hmswitch` for normal activation; it chooses `william-darwin`, a known `william@<host>` Linux configuration, or `william-linux`:
 
 ```bash
