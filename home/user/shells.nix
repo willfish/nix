@@ -15,7 +15,7 @@ let
     code = "opencode";
     la = "lsd -la";
     ll = "lsd -l";
-    p = "p";
+    p = "pi";
     v = "nvim";
     vi = "nvim";
     vim = "nvim";
