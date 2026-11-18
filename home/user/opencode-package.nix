@@ -19,10 +19,7 @@ let
       rev = source.shortRev;
     }
     // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux") {
-      hash = "sha256-hV75d+Zs51vB6MfZ9luH1JB6jO+tqp9RYqqYyi3zQM4=";
-    }
-    // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") {
-      hash = "sha256-bp2jsa4iX5jX4O3vWQC9TRSwsAtnkzXX86O90NaJdq8=";
+      hash = "sha256-T05vLavvt6Awt39N7rVWDB1J2eZfuR83Deeae3bLX+0=";
     }
   );
   upstream = pkgs.callPackage "${source}/nix/opencode.nix" (

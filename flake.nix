@@ -98,7 +98,7 @@
       flake = false;
     };
     opencode-source = {
-      url = "github:anomalyco/opencode/v2.2.5";
+      url = "github:anomalyco/opencode";
       flake = false;
     };
     hex = {

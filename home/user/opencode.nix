@@ -215,7 +215,7 @@ in
     ".config/opencode/opencode.json".text = builtins.toJSON (
       {
         "$schema" = "https://opencode.ai/config.json";
-        model = "openai/gpt-6.1-sol";
+        model = "openai/gpt-6.2-sol";
         mcp.servers = mcpServers;
         autoupdate = false;
         experimental.todo = true;
@@ -281,7 +281,7 @@ in
             };
           }
           // {
-            openai.models."gpt-6.1-sol".settings.reasoningEffort = "medium";
+            openai.settings.reasoningEffort = "medium";
           };
       }
     );
