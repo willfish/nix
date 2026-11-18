@@ -56,7 +56,14 @@ let
     nativeCheckInputs = [
       pkgs.which
       pkgs.writableTmpDirAsHomeHook
-    ];
+    ]
+    # macOS install tests shell out to sw_vers, which the Darwin build sandbox
+    # lacks. Report a supported version so the trusted-install paths are tested.
+    ++ lib.optional pkgs.stdenv.isDarwin (
+      pkgs.writeShellScriptBin "sw_vers" ''
+        printf '14.0.0\n'
+      ''
+    );
     checkFlags = [
       "--quiet"
       "--test-threads=1"
