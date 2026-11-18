@@ -164,7 +164,7 @@
       "locked": {
         "narHash": "sha256-LK9gY2rOK+xCfnqPx3cANFcfYmxQ+80+sqM54WaRQLA=",
         "type": "file",
-        "url": "https://registry.npmjs.org/@brave/brave-search-mcp-server/latest"
+        "url": "https://registry.npmjs.org/@brave/brave-search-mcp-server/2.1.5"
       },
       "original": {
         "type": "file",

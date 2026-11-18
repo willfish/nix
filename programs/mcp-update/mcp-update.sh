@@ -54,7 +54,8 @@ if ! cmp -s "$work/old-package.json" "$work/new-package.json"; then
     npm install --package-lock-only --ignore-scripts --no-audit --no-fund \
       --registry=https://registry.npmjs.org --cache "$work/npm-cache"
   )
-  hash=$(prefetch-npm-deps "$work/package-lock.json")
+  # Must match npmDepsFetcherVersion in brave-search-mcp-server.nix.
+  hash=$(NPM_FETCHER_VERSION=2 prefetch-npm-deps "$work/package-lock.json")
   [[ $hash =~ ^sha256-[A-Za-z0-9+/]+=*$ ]]
   jq -n --arg hash "$hash" '{hash: $hash}' >"$work/npm-deps.json"
 fi
