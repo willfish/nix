@@ -153,7 +153,9 @@ layout.
 
 On Herdr Desktop 0.1.16 or newer, press `Ctrl+B`, then `[` for
 [copy mode](https://github.com/willfish/herdr-copy-mode) in the active pane.
-Move with `hjkl`, press `v` to select, then `y` to copy or `Esc` to cancel.
+Move with `hjkl` or `w`/`b`/`e`. Press `v` to select, then `e` and `y` to
+copy through the end of a word. Use `W`/`B`/`E` for whitespace-delimited words
+such as paths. `q` exits without copying.
 `/` leaves copy mode and opens Herdr's find bar; `Ctrl+Shift+F` opens it directly.
 
 ## Checks and maintenance
