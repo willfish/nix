@@ -524,6 +524,22 @@
         "type": "github"
       }
     },
+    "herdr-copy-mode-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1795081771,
+        "narHash": "sha256-3+S9RoXHMcphq8TLeC4Pq7wvtZAOstKb5PyyIEcrlW4=",
+        "owner": "willfish",
+        "repo": "herdr-copy-mode",
+        "rev": "74b91e2ed152e52c0a9d8c61d6922da53d592704",
+        "type": "github"
+      },
+      "original": {
+        "owner": "willfish",
+        "repo": "herdr-copy-mode",
+        "type": "github"
+      }
+    },
     "herdr-source": {
       "flake": false,
       "locked": {
@@ -2261,6 +2277,7 @@
         "brave-search-release": "brave-search-release",
         "flake-parts": "flake-parts_2",
         "herdr": "herdr",
+        "herdr-copy-mode-source": "herdr-copy-mode-source",
         "herdr-source": "herdr-source",
         "hermes-agent": "hermes-agent",
         "hex": "hex",

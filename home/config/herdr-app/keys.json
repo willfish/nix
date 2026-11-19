@@ -91,7 +91,6 @@
     "ctrl-b x": "pane.close",
     "ctrl-b z": "pane.zoom",
     "ctrl-b b": "layout.toggle:sidebar",
-    "ctrl-b [": "mod.open:scrollback-copy",
     "ctrl-b 1": "tab.select:1",
     "ctrl-b 2": "tab.select:2",
     "ctrl-b 3": "tab.select:3",
@@ -103,6 +102,7 @@
     "ctrl-b 9": "tab.select:9"
   },
   "terminal": {
+    "ctrl-b [": "mod.open:copy-mode",
     "ctrl-backspace": "send:\u0017",
     "ctrl-left": "send:\u001bb",
     "ctrl-right": "send:\u001bf",

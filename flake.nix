@@ -80,6 +80,10 @@
     pilot-reviews.url = "git+ssh://git@github.com/willfish/pilot-reviews?ref=main";
     # Official release binary. Do not follow nixpkgs: store paths must match herdr.cachix.org.
     herdr.url = "github:herdrdev/herdr-nix";
+    herdr-copy-mode-source = {
+      url = "github:willfish/herdr-copy-mode";
+      flake = false;
+    };
     # Source for the Pi integration asset. Keep this on the same stable tag as herdr-nix.
     herdr-source = {
       url = "github:herdrdev/herdr/v0.9.5";
@@ -583,6 +587,7 @@
       darwin-pre-commit-check = mkPreCommitCheck darwinSystem darwinPkgs;
       upstreamSources = {
         arxivScanner = inputs.arxiv-scanner-source;
+        herdrCopyMode = inputs.herdr-copy-mode-source;
         inferenceOptimisationSkill = inputs.inference-optimisation-skill-source;
         mcpDap = inputs.mcp-dap-source;
         omapager = inputs.omapager-source;

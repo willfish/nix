@@ -151,10 +151,10 @@ The dotfiles-managed `balance-panes` mod reads the active layout and uses native
 resize commands. It does not use the older TUI plugin or replace the shared
 layout.
 
-Press `Ctrl+B`, then `[` to open a read-only Neovim snapshot of the focused
-terminal's screen and up to 5,000 lines of history. Use `/` to search, `hjkl`
-to move, `v` to select, and `y` to copy to the clipboard and return. `q` closes
-without copying. `Ctrl+Shift+F` still opens Herdr's built-in find bar.
+On Herdr Desktop 0.1.16 or newer, press `Ctrl+B`, then `[` for
+[copy mode](https://github.com/willfish/herdr-copy-mode) in the active pane.
+Move with `hjkl`, press `v` to select, then `y` to copy or `Esc` to cancel.
+`/` leaves copy mode and opens Herdr's find bar; `Ctrl+Shift+F` opens it directly.
 
 ## Checks and maintenance
 

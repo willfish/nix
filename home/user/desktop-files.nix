@@ -6,6 +6,7 @@
   hostName ? null,
   hostTheme,
   herdrThemeFile,
+  upstreamSources,
   ...
 }:
 let
@@ -209,10 +210,10 @@ in
             installHerdrAppFile "$source/$file" "$target/$file"
           done
         done
-        run mkdir -p "${config.xdg.configHome}/herdr-app/mods/scrollback-copy"
-        for file in main.js mod.json; do
-          installHerdrAppFile "${../config/herdr-app/mods/scrollback-copy}/$file" \
-            "${config.xdg.configHome}/herdr-app/mods/scrollback-copy/$file"
+        target="${config.xdg.configHome}/herdr-app/mods/copy-mode"
+        run mkdir -p "$target"
+        for file in ${upstreamSources.herdrCopyMode}/mods/copy-mode/*; do
+          installHerdrAppFile "$file" "$target/$(basename "$file")"
         done
       ''
     );
