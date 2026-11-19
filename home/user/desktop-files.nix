@@ -209,6 +209,11 @@ in
             installHerdrAppFile "$source/$file" "$target/$file"
           done
         done
+        run mkdir -p "${config.xdg.configHome}/herdr-app/mods/scrollback-copy"
+        for file in main.js mod.json; do
+          installHerdrAppFile "${../config/herdr-app/mods/scrollback-copy}/$file" \
+            "${config.xdg.configHome}/herdr-app/mods/scrollback-copy/$file"
+        done
       ''
     );
 

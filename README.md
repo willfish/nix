@@ -151,6 +151,11 @@ The dotfiles-managed `balance-panes` mod reads the active layout and uses native
 resize commands. It does not use the older TUI plugin or replace the shared
 layout.
 
+Press `Ctrl+B`, then `[` to open a read-only Neovim snapshot of the focused
+terminal's screen and up to 5,000 lines of history. Use `/` to search, `hjkl`
+to move, `v` to select, and `y` to copy to the clipboard and return. `q` closes
+without copying. `Ctrl+Shift+F` still opens Herdr's built-in find bar.
+
 ## Checks and maintenance
 
 There is **no CI workflow in this checkout**. Local commit hooks are not host builds, and pushes do not build NixOS or Home Manager configurations.

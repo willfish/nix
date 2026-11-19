@@ -1,0 +1,10 @@
+{
+  "place": "none",
+  "title": "Copy scrollback",
+  "overlay": {
+    "kind": "window",
+    "frame": "none",
+    "width": 1,
+    "height": 1
+  }
+}

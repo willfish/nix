@@ -91,7 +91,7 @@
     "ctrl-b x": "pane.close",
     "ctrl-b z": "pane.zoom",
     "ctrl-b b": "layout.toggle:sidebar",
-    "ctrl-b [": "terminal.search",
+    "ctrl-b [": "mod.open:scrollback-copy",
     "ctrl-b 1": "tab.select:1",
     "ctrl-b 2": "tab.select:2",
     "ctrl-b 3": "tab.select:3",
