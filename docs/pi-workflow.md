@@ -93,6 +93,13 @@ The [port notes](../home/config/pi/goal/README.md) record the upstream revision
 and Pi-specific lifecycle and accounting differences. No new model supervisor
 or npm dependency is installed.
 
+## Herdr App tab titles
+
+Pi updates the tab locally. A new tab uses the project folder until there is a
+session title. `pi --name` and `/name` work even with Switchboard disabled, and
+any saved Switchboard label remains available. Renaming the tab in Herdr App
+keeps your custom title instead of the automatic one.
+
 ## Voice sessions
 
 On Andromeda and Foundation, interactive `pi` and `qwen-pi` sessions in Herdr

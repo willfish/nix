@@ -138,6 +138,7 @@ in
   '';
   home.file.".pi/agent/extensions/herdr-ui.ts".source = ../config/pi/extensions/herdr-ui.ts;
   home.file.".pi/agent/extensions/herdr-model.ts".source = ../config/pi/extensions/herdr-model.ts;
+  home.file.".pi/agent/extensions/herdr-tab.ts".source = ../config/pi/extensions/herdr-tab.ts;
   home.file.".pi/agent/extensions/context-window.ts".source =
     ../config/pi/extensions/context-window.ts;
   home.file.".pi/agent/extensions/usage.ts".source = ../config/pi/extensions/usage.ts;
