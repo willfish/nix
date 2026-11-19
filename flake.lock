@@ -527,11 +527,11 @@
     "herdr-copy-mode-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1795083075,
-        "narHash": "sha256-JOBGCQ+ED589AoF3TtAU3OxzDINzfUM03S5JImgk0t4=",
+        "lastModified": 1795084158,
+        "narHash": "sha256-8UBT5oUVChvX+S5//OccsmgujQAlr7twvalhzUXWuKs=",
         "owner": "willfish",
         "repo": "herdr-copy-mode",
-        "rev": "6537ed33cc7ece03b6ccc0eb352c06ca51b2134c",
+        "rev": "14d010e25a2171258beb134ac92ccbc2720c8cd1",
         "type": "github"
       },
       "original": {
