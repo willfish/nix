@@ -20,6 +20,9 @@ let
     vi = "nvim";
     vim = "nvim";
     vimdiff = "nvim -d";
+  }
+  // lib.optionalAttrs (stdenv.isLinux && config.dotfiles.capabilities.desktop) {
+    agy = "agy --dangerously-skip-permissions";
   };
   abbreviations = {
     a = "herdr";
