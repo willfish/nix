@@ -613,6 +613,18 @@
       privateHomeModules = [
         nix-config.homeModules.default
         agent-bus.homeManagerModules.default
+        (
+          { lib, pkgs, ... }:
+          {
+            programs.pi-agent-bus.package = lib.mkDefault (
+              pkgs.applyPatches {
+                name = "pi-switchboard-herdr-app";
+                src = agent-bus.packages.${pkgs.stdenv.hostPlatform.system}.pi-extension;
+                patches = [ ./home/user/pi-packages/agent-bus-herdr-app.patch ];
+              }
+            );
+          }
+        )
         ./home/private.nix
         inputs.pilot-reviews.homeManagerModules.default
         ./home/user/pilot-reviews.nix

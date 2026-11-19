@@ -1,0 +1,61 @@
+--- a/extension/herdr-tab.ts
++++ b/extension/herdr-tab.ts
+@@ -1,21 +1,54 @@
++import { execFile } from 'node:child_process';
+ import { createConnection } from 'node:net';
+ import { randomUUID } from 'node:crypto';
++import { promisify } from 'node:util';
+
+ type Environment = Record<string, string | undefined>;
+ type Call = (method: string, params: Record<string, string>) => Promise<unknown>;
+
+ export const HERDR_LABEL_ENTRY = 'agent-bus-herdr-label';
+-export type TabOwnership = { socket: string; pane: string; tab: string; label: string };
++export type TabOwnership = { socket: string; pane: string; tab: string; label: string; index?: string };
+ type Pane = { pane_id?: string; tab_id?: string; workspace_id?: string };
++type DesktopTab = { id: string; name: string; terminals?: { terminal: string }[] };
++type DesktopLayout = { spaces: { machine: string | null; tabs: DesktopTab[] }[] };
++const execute = promisify(execFile);
+
+-/** Only the oldest pane owns a shared tab. Manual names always win over automation. */
++async function nameDesktopTab(label: string, env: Environment, terminal: string,
++  previous: TabOwnership | undefined, current: () => boolean): Promise<TabOwnership | void> {
++  const socket = `herdr-app:${env.HERDR_APP_HOME || 'default'}`;
++  const app = (...args: string[]) => execute('herdr-app', args, { env, timeout: 2000, maxBuffer: 1024 * 1024 });
++  const locate = async () => {
++    const layout: DesktopLayout = JSON.parse((await app('ls')).stdout);
++    // Core terminal IDs are machine-local. Only the lead terminal names a split tab.
++    return layout.spaces.filter(space => space.machine === null).flatMap(space => space.tabs)
++      .find(tab => tab.terminals?.[0]?.terminal === terminal);
++  };
++  const tab = await locate();
++  if (!tab || !current()) return;
++  const owned = previous?.socket === socket && previous.pane === terminal && previous.tab === tab.id && previous.label === tab.name;
++  // The app's New menu starts Pi in a tab named after the program.
++  const numbered = /^[0-9]+$/.test(tab.name);
++  if (!owned && tab.name !== 'Pi' && !numbered) return;
++  const index = owned ? previous.index : numbered ? tab.name : undefined;
++  const next = `${index ? `${index} ` : ''}${Array.from(label).slice(0, 48).join('')}`;
++  const ownership = { socket, pane: terminal, tab: tab.id, label: next, index };
++  if (next === tab.name) return ownership;
++  const latest = await locate();
++  if (latest?.id !== tab.id || latest.name !== tab.name || !current()) return;
++  await app('do', 'tab.rename', JSON.stringify({ id: tab.id, name: next }));
++  return current() ? ownership : undefined;
++}
++
++/** Only the lead pane names a shared tab. Keep non-default names unless we own them. */
+ export async function nameUnlabelledTab(label: string, env: Environment, call: Call = (method, params) =>
+   herdrCall(env.HERDR_SOCKET_PATH!, method, params), options: {
+     previous?: TabOwnership; isCurrent?: () => boolean;
+   } = {}): Promise<TabOwnership | void> {
+   const current = options.isCurrent ?? (() => true);
+-  if (env.HERDR_ENV !== '1' || !env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID || !label || !current()) return;
+-  if (/[\u0000-\u001f\u007f-\u009f<>]/.test(label)) return;
++  if (!label || !current() || /[\u0000-\u001f\u007f-\u009f<>]/.test(label)) return;
++  // Desktop shells may inherit stale legacy pane variables.
++  if (env.HC_TERMINAL_ID) return nameDesktopTab(label, env, env.HC_TERMINAL_ID, options.previous, current);
++  if (env.HERDR_ENV !== '1' || !env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID) return;
+   const paneResult = await call('pane.get', { pane_id: env.HERDR_PANE_ID }) as { pane?: Pane };
+   const pane = paneResult?.pane;
+   if (!pane?.tab_id || !pane.pane_id || !pane.workspace_id || !current()) return;

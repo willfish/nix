@@ -139,7 +139,9 @@ export default async function agentBus(input) {
         appendEntry: remember,
       },
       fetch: globalThis.fetch,
-      env: { ...process.env, HERDR_ENV: "0", PI_AGENT_BUS_AUTO_LABEL: "0" },
+      env: { ...process.env, PI_AGENT_BUS_AUTO_LABEL: "0" },
+      // The OpenCode TUI synchronizes its own Herdr titles.
+      nameTab: async () => {},
       hostname,
       cwd: () => input.directory,
       pid: () => process.pid,
