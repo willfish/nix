@@ -36,8 +36,8 @@ lib.mkIf enabled {
 
   xdg.configFile = {
     "newrelic-brief/config.json".text = builtins.toJSON {
-      provider = "github-copilot";
-      model = "claude-opus-5.5";
+      provider = "openai-codex";
+      model = "gpt-6.2-sol";
       thinking = "medium";
       timeout_seconds = 600;
       pi_command = "${config.home.homeDirectory}/.local/bin/pi";

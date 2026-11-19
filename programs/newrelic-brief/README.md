@@ -51,8 +51,8 @@ fail visibly in the service journal; partial coverage is recorded separately.
 ## Configuration and safety
 
 `home/user/newrelic-brief.nix` deploys configuration under
-`~/.config/newrelic-brief/` on work-enabled graphical Linux hosts. It uses the same
-Pi provider/model as the standup recap, with a ten-minute collection timeout.
+`~/.config/newrelic-brief/` on work-enabled graphical Linux hosts. It uses Pi's
+OpenAI Codex sign-in, with a ten-minute collection timeout.
 `config.json` selects the Pi executable, adapter extension, exclusive MCP config,
 prompt, provider, model, thinking and timeout. The maintained reporting prompt is
 `home/config/newrelic-brief/prompt.md`.
