@@ -145,11 +145,11 @@
     },
     "brave-nixpkgs": {
       "locked": {
-        "lastModified": 1795177846,
-        "narHash": "sha256-Fi/FDbZTWeNAnjHP5cry8M3voTf1T+6lJBR7cy/QOFs=",
+        "lastModified": 1795185942,
+        "narHash": "sha256-hbwNkItzp5Nyn7yW2PIBqMiGMNSbFA4Ft22q+T3+d9I=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "6038dc99534b538a3c13a048ea029e694b7c961b",
+        "rev": "d1a20261ac3d05e0ba3e1ce9d35370f77dfd2063",
         "type": "github"
       },
       "original": {
@@ -164,7 +164,7 @@
       "locked": {
         "narHash": "sha256-5HrbrPB3WljZTXfIxoadebIGoWc9wYOtBUexgBE5MVY=",
         "type": "file",
-        "url": "https://registry.npmjs.org/@brave/brave-search-mcp-server/latest"
+        "url": "https://registry.npmjs.org/@brave/brave-search-mcp-server/2.2.0"
       },
       "original": {
         "type": "file",
@@ -2048,11 +2048,11 @@
     "opencode-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1795183533,
-        "narHash": "sha256-+vW0I3bERSegZ4K4CqDUY8F+yXqblIdBTpBOov4dRDw=",
+        "lastModified": 1795187806,
+        "narHash": "sha256-dX/kNVvGUR4UZWssJyXF68r9c6AGswCwuIsf+1UkJFw=",
         "owner": "anomalyco",
         "repo": "opencode",
-        "rev": "2002222d132ab9d138e285d993a52e1e21797bff",
+        "rev": "55c6827566ed4b45dd22e2fdb5660374e87faf11",
         "type": "github"
       },
       "original": {

@@ -509,74 +509,50 @@ index 4f8a5c6..c99903d 100644
        McpPool.node,
      ],
 diff --git a/packages/core/src/mcp/instructions.ts b/packages/core/src/mcp/instructions.ts
-index d8d0871..3a2cced 100644
 --- a/packages/core/src/mcp/instructions.ts
 +++ b/packages/core/src/mcp/instructions.ts
-@@ -6,6 +6,7 @@ import { Permission } from "../permission.js"
- import { McpTool } from "../tool/mcp.js"
- import { Mcp } from "./index.js"
- import { Instructions } from "../instructions/index.js"
+@@ -2,0 +3 @@
 +import type { Session } from "@opencode/schema/session"
-
- const Summary = Schema.Struct({
-   server: Schema.String,
-@@ -44,7 +45,7 @@ const update = Instructions.listUpdate<Summary>({
-
- export interface Interface {
-   /** Lists server instructions reachable under the given ruleset; callers pass the merged agent and Session permissions. */
--  readonly load: (permissions: Permission.Ruleset) => Effect.Effect<Instructions.List>
-+  readonly load: (permissions: Permission.Ruleset, sessionID?: Session.ID) => Effect.Effect<Instructions.List>
- }
-
- export class Service extends Context.Service<Service, Interface>()("@opencode/McpInstructions") {}
-@@ -55,7 +56,7 @@ export const layer = Layer.effect(
-     const mcp = yield* Mcp.Service
-
-     return Service.of({
--      load: Effect.fn("McpInstructions.load")(function* (permissions) {
-+      load: Effect.fn("McpInstructions.load")(function* (permissions, sessionID) {
-         const source = (value: ReadonlyArray<Summary> | Instructions.Removed) =>
-           Instructions.make<ReadonlyArray<Summary>>({
-             key: Instructions.Key.make("core/mcp-guidance"),
-@@ -67,9 +68,12 @@ export const layer = Layer.effect(
-               removed: () => "MCP server instructions are no longer available.",
-             },
-           })
+@@ -5,0 +7 @@
++import { Permission } from "../permission.js"
+@@ -58,2 +60,5 @@
+-  /** Lists instructions for MCP servers that have at least one tool in the Session's tool snapshot. */
+-  readonly load: (tools: Pick<Tool.Snapshot, "definitions" | "codeModeCatalog">) => Effect.Effect<Instructions.List>
++  /** Lists instructions for MCP servers reachable through the Session's tool snapshot. */
++  readonly load: (
++    tools: Pick<Tool.Snapshot, "definitions" | "codeModeCatalog">,
++    session?: { id: Session.ID; permissions: Permission.Ruleset },
++  ) => Effect.Effect<Instructions.List>
+@@ -70 +75 @@
+-      load: Effect.fn("McpInstructions.load")(function* (snapshot) {
++      load: Effect.fn("McpInstructions.load")(function* (snapshot, session) {
+@@ -82,3 +87,4 @@
 -        const [instructions, tools] = yield* Effect.all([mcp.instructions(), mcp.tools()], {
 -          concurrency: "unbounded",
 -        })
 +        const [instructions, tools] = yield* Effect.all(
-+          [sessionID === undefined ? mcp.instructions() : mcp.sessionInstructions(sessionID), mcp.tools()],
-+          {
-+            concurrency: "unbounded",
-+          },
++          [session === undefined ? mcp.instructions() : mcp.sessionInstructions(session.id), mcp.tools()],
++          { concurrency: "unbounded" },
 +        )
-         const canExecute = Permission.evaluate("execute", "*", permissions).effect !== "deny"
-         // Instructions are useful only when this Session can reach at least one server tool.
-         const visible = instructions
-@@ -77,10 +81,14 @@ export const layer = Layer.effect(
-             const owned = tools.filter((tool) => tool.server === item.server)
-             // Without execute, Code Mode server tools are exposed directly.
-             const codemode = canExecute && owned[0]?.codemode !== false
+@@ -87 +93 @@
+-        // Instructions are useful only when this Session can reach at least one server tool.
++        // Instructions are useful only when this Session can reach a server tool or resource.
+@@ -94 +100,11 @@
+-            if (!inCodeMode && !inDirect) return []
 +            const reachableResource =
-+              sessionID !== undefined &&
-+              (Permission.evaluate("opencode_read_mcp_resource", `${item.server}:*`, permissions).effect !== "deny" ||
-+                Permission.evaluate("opencode_list_mcp_resources", item.server, permissions).effect !== "deny")
-             if (
-+              !reachableResource &&
-               !owned.some(
--                (tool) =>
--                  Permission.evaluate(McpTool.name(tool.server, tool.name), "*", permissions).effect !== "deny",
-+                (tool) => Permission.evaluate(McpTool.name(tool.server, tool.name), "*", permissions).effect !== "deny",
-               )
-             )
-               return []
-@@ -91,7 +99,25 @@ export const layer = Layer.effect(
-             ]
-           })
-           .toSorted((a, b) => a.server.localeCompare(b.server))
++              session !== undefined &&
++              (["read_mcp_resource", "list_mcp_resources"] as const).some((name) => {
++                const action = `opencode_${name}`
++                const resource = name === "read_mcp_resource" ? `${item.server}:*` : item.server
++                return (
++                  (direct.has(action) || codemode.has(`opencode.${name}`)) &&
++                  Permission.evaluate(action, resource, session.permissions).effect !== "deny"
++                )
++              })
++            if (!inCodeMode && !inDirect && !reachableResource) return []
+@@ -102 +118,19 @@
 -        return source(visible.length === 0 ? Instructions.removed : visible)
-+        if (sessionID === undefined) return source(visible.length === 0 ? Instructions.removed : visible)
++        if (session === undefined) return source(visible.length === 0 ? Instructions.removed : visible)
 +        const servers = (yield* mcp.servers())
 +          .filter((server) => server.status.status !== "disabled")
 +          .map((server) =>
@@ -595,38 +571,16 @@ index d8d0871..3a2cced 100644
 +          },
 +        })
 +        return Instructions.combine([index, source(visible.length === 0 ? Instructions.removed : visible)])
-       }),
-     })
-   }),
 diff --git a/packages/core/src/session/context.ts b/packages/core/src/session/context.ts
-index bd55a9a..3c26eb7 100644
 --- a/packages/core/src/session/context.ts
 +++ b/packages/core/src/session/context.ts
-@@ -5,7 +5,6 @@ import { Permission } from "../permission.js"
- import { Context, Effect, Layer } from "effect"
- import { Agent } from "../agent.js"
- import type { SessionRequestKind } from "@opencode/plugin/effect/session"
+@@ -8 +7,0 @@
 -import { CodeModeInstructions } from "../codemode/instructions.js"
- import { CodeModeTool } from "../codemode/tool.js"
- import { Database } from "../database/database.js"
- import { Environment } from "../environment/index.js"
-@@ -157,7 +156,7 @@ const layer = Layer.effect(
-           discovery: discovery.load(),
-           skills: skillInstructions.load(permissions),
-           references: referenceInstructions.load(),
--          mcp: mcpInstructions.load(permissions),
-+          mcp: mcpInstructions.load(permissions, sessionID),
-           entries: entries.load(sessionID),
-         },
-         { concurrency: "unbounded" },
-@@ -169,7 +168,6 @@ const layer = Layer.effect(
-         // prompt-cache prefix: user-level catalog and guidance, then project instructions, then
-         // the date and environment, which vary by day and directory.
-         instructions: Instructions.combine([
--          CodeModeInstructions.make(loaded.tools.codeModeCatalog),
-           loaded.mcp,
-           loaded.references,
-           loaded.skills,
+@@ -184 +183 @@
+-          mcp: mcpInstructions.load(tools),
++          mcp: mcpInstructions.load(tools, { id: sessionID, permissions }),
+@@ -197 +195,0 @@
+-          CodeModeInstructions.make(tools.codeModeCatalog),
 diff --git a/packages/core/src/session/model-request.ts b/packages/core/src/session/model-request.ts
 index aea3440..6c55e75 100644
 --- a/packages/core/src/session/model-request.ts

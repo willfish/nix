@@ -561,8 +561,8 @@ let
   keybindingsScript = pkgs.runCommand "omarchy-menu-keybindings-script" { } ''
     install -Dm755 ${source}/bin/omarchy-menu-keybindings "$out/omarchy-menu-keybindings"
     substituteInPlace "$out/omarchy-menu-keybindings" \
-      --replace-fail 'echo "SHIFT ALT,L,Copy URL from Web App,sendshortcut,SHIFT ALT,L,"' 'return 0' \
-      --replace-fail 'echo "SHIFT ALT,D,Download Video from Web App,sendshortcut,SHIFT ALT,D,"' 'return 0'
+      --replace-fail "printf '%s\x1f%s\x1f%s\x1f%s\x1f%s\n' \"SHIFT ALT\" \"L\" \"Copy URL from Web App\" \"sendshortcut\" \"SHIFT ALT,L,\"" 'return 0' \
+      --replace-fail "printf '%s\x1f%s\x1f%s\x1f%s\x1f%s\n' \"SHIFT ALT\" \"D\" \"Download Video from Web App\" \"sendshortcut\" \"SHIFT ALT,D,\"" ':'
     patchShebangs "$out/omarchy-menu-keybindings"
   '';
   omarchyShell = pkgs.writeShellApplication {
