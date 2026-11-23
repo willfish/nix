@@ -19,7 +19,7 @@ let
       rev = source.shortRev;
     }
     // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux") {
-      hash = "sha256-ElBL9FHtH/mFpCcnSV5gzCjqnlMDBYUbB9h82Uiuz4w=";
+      hash = "sha256-sdMjb/l8SIthDbBJO3VzpyoOL9auoFGjVb6HdlxkQGg=";
     }
   );
   upstream = pkgs.callPackage "${source}/nix/opencode.nix" (
@@ -40,4 +40,7 @@ upstream.overrideAttrs (old: {
     builtins.substring 0 8 (builtins.hashFile "sha256" ./opencode-packages/deferred-mcp.patch)
   }";
   patches = (old.patches or [ ]) ++ [ ./opencode-packages/deferred-mcp.patch ];
+  passthru = (old.passthru or { }) // {
+    inherit nodeModules;
+  };
 })

@@ -582,7 +582,7 @@ diff --git a/packages/core/src/session/context.ts b/packages/core/src/session/co
 @@ -197 +195,0 @@
 -          CodeModeInstructions.make(tools.codeModeCatalog),
 diff --git a/packages/core/src/session/model-request.ts b/packages/core/src/session/model-request.ts
-index aea3440..6c55e75 100644
+index 61941c7..6c55e75 100644
 --- a/packages/core/src/session/model-request.ts
 +++ b/packages/core/src/session/model-request.ts
 @@ -35,6 +35,8 @@ import { HttpClientRequest, HttpClientResponse } from "effect/http"
@@ -606,17 +606,6 @@ index aea3440..6c55e75 100644
        {
          ...SystemPart.make(Instructions.join(input.initial)),
          metadata: { experimental: { instructions: input.initial } },
-@@ -128,9 +135,7 @@ export const baseTranscript = (input: {
-     messages: input.messages.flatMap((message) =>
-       toLLMMessages([message], input.model.ref, providerMetadataKey).map(
-         (item): SessionRequestMessage =>
--          message.metadata === undefined || item.id !== message.id
--            ? item
--            : { ...item, metadata: message.metadata },
-+          message.metadata === undefined || item.id !== message.id ? item : { ...item, metadata: message.metadata },
-       ),
-     ),
-   }
 diff --git a/packages/core/src/tool/mcp.ts b/packages/core/src/tool/mcp.ts
 index cd181b6..905924b 100644
 --- a/packages/core/src/tool/mcp.ts

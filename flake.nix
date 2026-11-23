@@ -780,6 +780,9 @@
           packages = {
             pi = pkgs.pi-coding-agent;
             inherit (pkgs) opencode2 agent-browser brave-search-mcp-server;
+            pi-mcp-adapter = pkgs.callPackage ./home/user/mcp-packages/pi-mcp-adapter.nix {
+              source = upstreamSources.piMcpAdapter;
+            };
             activation-dbus = pkgs.symlinkJoin {
               name = "home-activation-dbus";
               paths = [

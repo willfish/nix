@@ -124,17 +124,22 @@ status *ARGS:
     set -euo pipefail
     direnv exec . nix run .#upstream-status -- "$@"
 
-# Refresh flake inputs and MCP releases, report drift, and build this host's home.
+# Refresh inputs and dependency hashes, report drift, and build this host's home.
 update:
     #!/usr/bin/env bash
     set -euo pipefail
     direnv exec . nix flake update
     direnv exec . nix run .#mcp-update -- .
+    just refresh-dependency-hashes
     direnv exec . nix run .#upstream-status -- .
     host="$(hostname -s | tr '[:upper:]' '[:lower:]')"
     case "$host" in
-      andromeda|foundation|starfish|terminus) configuration="william@$host" ;;
+      andromeda|foundation|relay|starfish|terminus) configuration="william@$host" ;;
       *) configuration="william-linux" ;;
     esac
     direnv exec . nix build --no-link ".#homeConfigurations.\"$configuration\".activationPackage"
     echo "Build passed. Rebase any patch a future bump breaks, then run hmswitch."
+
+# Refresh known dependency caches for the current lock without updating inputs.
+refresh-dependency-hashes:
+    direnv exec . bash scripts/refresh-dependency-hashes.sh

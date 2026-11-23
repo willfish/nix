@@ -126,11 +126,11 @@ index 87f160c1..59e60b7e 100644
    // The hero switch is the Wi-Fi radio, so it only exists when there is a
    // radio to switch. On a wired box it would otherwise sit there reading
    // "off" beside a perfectly live Ethernet connection.
-@@ -139,7 +139,7 @@ Panel {
-   readonly property bool speedHeaderHasCursor: cursorActive && focusSection === "header" && headerIndex === speedHeaderIndex
-   readonly property bool toggleHeaderHasCursor: cursorActive && focusSection === "header" && headerIndex === toggleHeaderIndex
-   readonly property string toggleHint: Networking.wifiEnabled ? Commons.I18n.t("network.turnWifiOff") : Commons.I18n.t("network.turnWifiOn")
--  readonly property var dnsProviders: ["DHCP", "Cloudflare", "Google", "Custom"]
+@@ -162,7 +162,7 @@ Panel {
+   // China offers Alibaba's resolver in place of Cloudflare's and Google's
+   // (docs/regions.md); the region comes with the DNS reading.
+   property string region: "global"
+-  readonly property var dnsProviders: region === "cn" ? ["DHCP", "AliDNS", "Custom"] : ["DHCP", "Cloudflare", "Google", "Custom"]
 +  readonly property var dnsProviders: ["Advanced settings"]
    property int dnsIndex: 0
    // ["2.4", "5", ...], or empty when there is nothing to choose between.
@@ -144,12 +144,12 @@ index 87f160c1..59e60b7e 100644
    property int bandIndex: 0
    // The band section has up to two cursor rows: the Automatic switch on the
    // header line, then the pills. Same shape as wifiActionFocused.
-@@ -572,10 +572,6 @@ Panel {
+@@ -614,10 +614,6 @@ Panel {
      checkConnectivity()
      if (scanWifi === undefined) scanWifi = false
      if (!detailsProc.running) detailsProc.running = true
 -    if (!dnsProc.running) {
--      dnsProc.command = ["bash", "-c", root.dnsCommand("")]
+-      dnsProc.command = ["bash", "-c", root.dnsCommand("") + "; omarchy-region"]
 -      dnsProc.running = true
 -    }
      if (!bandProc.running) {
@@ -208,7 +208,7 @@ index 87f160c1..59e60b7e 100644
    }
 
    // Creates and activates the 802.1X profile (see Model.enterpriseConnectScript).
-@@ -1586,7 +1577,7 @@ Panel {
+@@ -1653,7 +1643,7 @@ Panel {
          spacing: Style.space(10)
 
          PanelSectionHeader {
@@ -217,45 +217,35 @@ index 87f160c1..59e60b7e 100644
            foreground: root.bar.foreground
            fontFamily: root.bar.fontFamily
          }
-@@ -1596,38 +1587,11 @@ Panel {
+@@ -1663,24 +1653,15 @@ Panel {
            width: parent.width
            spacing: Style.space(6)
 
--          readonly property int count: 4
+-          readonly property int count: root.dnsProviders.length
 -          readonly property real cellWidth: (width - spacing * (count - 1)) / count
 -
-           DnsProviderPill {
--            provider: "DHCP"
+-          Repeater {
+-            model: root.dnsProviders
+-
+-            DnsProviderPill {
+-              required property string modelData
+-              provider: modelData
+-              tooltipText: modelData === "DHCP" ? Commons.I18n.t("network.dnsFromDhcp")
+-                : modelData === "Custom" ? Commons.I18n.t("network.setCustomDns")
+-                : Commons.I18n.t("network.setDnsTo").arg(modelData)
+-              width: dnsRow.cellWidth
+-              onClicked: root.setDns(provider)
+-            }
+-          }
++          DnsProviderPill {
 +            provider: "Advanced settings"
-             index: 0
--            tooltipText: Commons.I18n.t("network.dnsFromDhcp")
--            width: dnsRow.cellWidth
--            onClicked: root.setDns(provider)
--          }
--
--          DnsProviderPill {
--            provider: "Cloudflare"
--            index: 1
--            tooltipText: Commons.I18n.t("network.setDnsTo").arg("Cloudflare")
--            width: dnsRow.cellWidth
--            onClicked: root.setDns(provider)
--          }
--
--          DnsProviderPill {
--            provider: "Google"
--            index: 2
--            tooltipText: Commons.I18n.t("network.setDnsTo").arg("Google")
--            width: dnsRow.cellWidth
--            onClicked: root.setDns(provider)
--          }
--
--          DnsProviderPill {
--            provider: "Custom"
--            index: 3
--            tooltipText: Commons.I18n.t("network.setCustomDns")
--            width: dnsRow.cellWidth
++            index: 0
 +            tooltipText: "Edit DNS, VPN and enterprise connection profiles"
 +            width: dnsRow.width
-             onClicked: root.setDns(provider)
-           }
++            onClicked: root.setDns(provider)
++          }
          }
+       }
+
+
+       // Wi-Fi networks (only if a Wi-Fi station is available).

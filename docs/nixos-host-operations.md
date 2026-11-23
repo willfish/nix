@@ -70,10 +70,12 @@ The `trade-tariff-tools` input supplies the upstream `ecs` package for work
 profiles. Update it alone with `nix flake update trade-tariff-tools`, or include it
 in a full `nix flake update`, then build and run `hmswitch`.
 
-`just update` updates the flake inputs, refreshes MCP releases, reports upstream
-drift, and builds this host's home configuration. `just status` reports drift
-without changing configuration. Pulling Git changes adopts the committed lock;
-`git fetch` alone does not update package inputs.
+`just update` updates the flake inputs, refreshes MCP releases and known
+dependency hashes, reports upstream drift, and builds this host's home
+configuration. `just refresh-dependency-hashes` refreshes the Pi MCP adapter
+npm cache hash and, on x86_64 Linux, the local OpenCode Bun cache override
+without updating inputs. Review the diff before committing. `just status`
+reports drift without changing configuration.
 
 Agent Browser builds from a reviewed source release with the local background-safety
 patch. Its source tag stays explicit in `flake.nix`; updates need a patch rebase
@@ -86,11 +88,8 @@ and cache hash when the released manifest changes, with npm lifecycle scripts
 disabled. Use `just update` for the complete update rather than stopping after
 `nix flake update`.
 
-A bump can still leave work a flake cannot express. Derived hashes
-(`cargoHash`, `vendorHash`, `npmDepsHash`) change with the source, and patches
-must be rebased. Both fail the build rather than silently drifting; copy the
-`got: sha256-...` value into the named attribute and rebase the patch before
-switching. The `herdr-source` pin must match the `herdr-nix` release.
+Other dependency hashes and broken patches still require manual review when
+the build fails. The `herdr-source` pin must match the `herdr-nix` release.
 
 ### Browser automation resource limits
 
