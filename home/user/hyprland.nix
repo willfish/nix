@@ -20,6 +20,49 @@
   config = lib.mkIf isGraphicalLinux (
     let
       settings = import ../config/hyprland/settings.nix;
+      isFoundation = hostName == "foundation";
+      dockDisplays = pkgs.writeShellApplication {
+        name = "hypr-dock-displays";
+        runtimeInputs = [
+          pkgs.hyprland
+          pkgs.jq
+          pkgs.socat
+        ];
+        text = ''
+          apply_layout() {
+            local state docked panel_disabled result
+            state=$(hyprctl -j monitors all | jq -r '
+              any(.[]; (.name | test("^(DP|HDMI-A|DVI-[DI]|VGA)-")) and (.disabled | not)) as $docked
+              | .[] | select(.name == "eDP-1")
+              | [$docked, .disabled] | @tsv
+            ')
+            [[ -n "$state" ]] || return 0
+            read -r docked panel_disabled <<< "$state"
+            [[ "$docked" != "$panel_disabled" ]] || return 0
+
+            if [[ "$docked" == true ]]; then
+              result=$(hyprctl keyword monitor 'eDP-1,disable')
+            else
+              # Restore the configured panel immediately, even with no external
+              # output left to render a frame and apply a deferred monitor rule.
+              result=$(hyprctl reload)
+            fi
+            if [[ "$result" != ok ]]; then
+              printf 'hypr-dock-displays: %s\n' "$result" >&2
+              return 1
+            fi
+          }
+
+          socat -u "UNIX-CONNECT:$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock" - | {
+            apply_layout
+            while IFS= read -r event; do
+              case "$event" in
+                monitoradded\>\>*|monitorremoved\>\>*|configreloaded\>\>*) apply_layout ;;
+              esac
+            done
+          }
+        '';
+      };
       allAudioDevices = hostName == "andromeda";
       audioControls = import ../../programs/audio-controls { inherit pkgs; };
       omarchy = import ./themes/omarchy.nix { inherit lib; };
@@ -609,7 +652,14 @@
         portalPackage = null;
         settings = {
           source = themeFile "hyprland.conf";
-          monitor = ",preferred,auto,auto";
+          monitor = [
+            ",preferred,auto,auto"
+          ]
+          ++ lib.optionals isFoundation [
+            "eDP-1,preferred,auto,2"
+            # The ultrawide advertises a 16:9 4K input as preferred on this link.
+            "desc:LG Electronics LG ULTRAGEAR+,3440x1440@144,auto,1"
+          ];
           exec-once = [ "theme-menu --reapply" ];
           "$mainMod" = settings.bindings.mainMod;
           exec-shutdown = "${pkgs.systemd}/bin/systemctl --user stop hyprland-session.target";
@@ -1100,6 +1150,21 @@
       '';
 
       xdg.dataFile."theme-menu/omarchy-LICENSE".source = omarchy.license;
+
+      systemd.user.services.hypr-dock-displays = lib.mkIf isFoundation {
+        Unit = {
+          Description = "Switch Foundation to external displays when docked";
+          PartOf = [ "hyprland-session.target" ];
+          After = [ "hyprland-session.target" ];
+          ConditionEnvironment = "HYPRLAND_INSTANCE_SIGNATURE";
+        };
+        Service = {
+          ExecStart = "${dockDisplays}/bin/hypr-dock-displays";
+          Restart = "always";
+          RestartSec = 2;
+        };
+        Install.WantedBy = [ "hyprland-session.target" ];
+      };
 
       systemd.user.services.hypr-wallpaper = {
         Unit = {
