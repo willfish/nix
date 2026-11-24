@@ -576,10 +576,13 @@ diff --git a/packages/core/src/session/context.ts b/packages/core/src/session/co
 +++ b/packages/core/src/session/context.ts
 @@ -8 +7,0 @@
 -import { CodeModeInstructions } from "../codemode/instructions.js"
-@@ -184 +183 @@
+@@ -184 +183,4 @@
 -          mcp: mcpInstructions.load(tools),
-+          mcp: mcpInstructions.load(tools, { id: sessionID, permissions }),
-@@ -197 +195,0 @@
++          mcp: mcpInstructions.load(tools, {
++            id: sessionID,
++            permissions: Permission.merge(agent.info.permissions, session.permissions ?? []),
++          }),
+@@ -197 +198,0 @@
 -          CodeModeInstructions.make(tools.codeModeCatalog),
 diff --git a/packages/core/src/session/model-request.ts b/packages/core/src/session/model-request.ts
 index 61941c7..6c55e75 100644
