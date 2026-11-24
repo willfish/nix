@@ -323,6 +323,9 @@ in
     ++ lib.optionals (capabilities.work && capabilities.desktop) [
       (if stdenv.isLinux then import ../../programs/slack-themed { inherit pkgs; } else slack)
     ]
+    ++ lib.optionals (stdenv.isLinux && capabilities.desktop && hostName == "foundation") [
+      (pkgs.callPackage ../../programs/herdr-app { })
+    ]
     ++ lib.optionals (stdenv.isLinux && capabilities.desktop && hostName == "andromeda") [
       gimp # Image editor; Andromeda only
       libation # Audible ripper; Andromeda only
