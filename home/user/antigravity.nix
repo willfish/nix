@@ -20,5 +20,11 @@ let
   );
 in
 lib.mkIf (pkgs.stdenv.isLinux && config.dotfiles.capabilities.desktop) {
-  home.file.".gemini/config/mcp_config.json".text = builtins.toJSON { inherit mcpServers; };
+  home.file = {
+    ".gemini/config/mcp_config.json".text = builtins.toJSON { inherit mcpServers; };
+    ".gemini/config/AGENTS.md".source =
+      config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.agents/AGENTS.md";
+    ".gemini/config/skills".source =
+      config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.agents/skills";
+  };
 }
