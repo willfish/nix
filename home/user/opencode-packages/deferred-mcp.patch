@@ -376,7 +376,7 @@ index 4f8a5c6..c99903d 100644
                .filter((tool) => !shadowed.has(`${tool.server}\0${tool.name}`)),
              ...clients,
            ].toSorted((a, b) => a.server.localeCompare(b.server) || a.name.localeCompare(b.name))
-@@ -1003,17 +1131,81 @@ export const layer = (options?: Options) =>
+@@ -1003,18 +1131,82 @@ export const layer = (options?: Options) =>
                tool: input.name,
                message: unavailable(server, target.entry.status),
              })
@@ -388,7 +388,8 @@ index 4f8a5c6..c99903d 100644
              .flatMap(([server, entry]) => {
 -              const instructions = entry.connection.client?.instructions
 +              const instructions = entry.connection.client?.instructions ?? entry.instructions
-               if (!instructions) return []
+               // A server that offers skills says what it needs to in them. Dynamic skills aren't registered.
+               if (!instructions || entry.connection.skills?.some((skill) => skill.resources !== "dynamic")) return []
                return [{ server, instructions }]
              })
              .toSorted((a, b) => a.server.localeCompare(b.server))
@@ -505,9 +506,9 @@ index 4f8a5c6..c99903d 100644
        Integration.node,
        Credential.node,
 +      KV.node,
+       Flag.node,
        httpFetch,
        McpPool.node,
-     ],
 diff --git a/packages/core/src/mcp/instructions.ts b/packages/core/src/mcp/instructions.ts
 --- a/packages/core/src/mcp/instructions.ts
 +++ b/packages/core/src/mcp/instructions.ts
@@ -775,6 +776,14 @@ index 48a1426..a637c67 100644
      )
 
      expect(shown(catalog)).toBe(2)
+@@ -110,6 +110,6 @@ describe("CodeModeCatalog.summarize", () => {
+   test("shows pinned tools' full descriptions", () => {
+     const tool = entry("alpha.one", `Summary  \n\n  indented ${"x".repeat(2_001)}\nLast\n`, undefined, true)
+-    expect(CodeModeCatalog.summarize({ tools: [tool] }, { budget: 0 }).namespaces[0]?.entries[0]?.line).toBe(
++    expect(CodeModeCatalog.summarize({ tools: [tool] }, { budget: 1 }).namespaces[0]?.entries[0]?.line).toBe(
+       `  - ${tool.signature} // Summary\n    //\n    //   indented ${"x".repeat(2_001)}\n    // Last`,
+     )
+   })
 diff --git a/packages/core/test/codemode/instructions.test.ts b/packages/core/test/codemode/instructions.test.ts
 index 58c62af..05b0621 100644
 --- a/packages/core/test/codemode/instructions.test.ts
