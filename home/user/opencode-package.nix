@@ -19,7 +19,7 @@ let
       rev = source.shortRev;
     }
     // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux") {
-      hash = "sha256-LhAICCt8oDBwcwwxDf11PBxJPgKx9gz0TcLcWEoSxp4=";
+      hash = "sha256-qRaUFo09EK62LP1xIAjZbIPnFhomyVZACnGxOMiWvsU=";
     }
   );
   upstream = pkgs.callPackage "${source}/nix/opencode.nix" (
