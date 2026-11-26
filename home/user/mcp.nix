@@ -356,8 +356,11 @@ in
       github_token_file=${lib.escapeShellArg config.sops.secrets.GITHUB_CLASSIC_PERSONAL_ACCESS_TOKEN.path}
       if [ -r "$github_token_file" ]; then
         github_token="$(${readSopsSecret}/bin/read-sops-secret "$github_token_file")"
-        if ! printf '%s' "$github_token" | ${pkgs.gh}/bin/gh auth login --hostname github.com --with-token >/dev/null; then
-          echo "warning: failed to configure GitHub CLI auth from sops secret" >&2
+        current_token="$(${pkgs.coreutils}/bin/env -u GH_TOKEN -u GITHUB_TOKEN GH_PROMPT_DISABLED=1 ${pkgs.coreutils}/bin/timeout 5s ${pkgs.gh}/bin/gh auth token --hostname github.com 2>/dev/null || true)"
+        if [ "$current_token" != "$github_token" ]; then
+          if ! printf '%s' "$github_token" | ${pkgs.coreutils}/bin/env -u GH_TOKEN -u GITHUB_TOKEN GH_PROMPT_DISABLED=1 ${pkgs.coreutils}/bin/timeout 15s ${pkgs.gh}/bin/gh auth login --hostname github.com --with-token >/dev/null; then
+            echo "warning: failed to configure GitHub CLI auth from sops secret" >&2
+          fi
         fi
       fi
     ''
