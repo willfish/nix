@@ -14,12 +14,17 @@ let
       ++ [ pkgs.stdenv.cc.cc.lib ];
   };
   nodeModules = pkgs.callPackage "${source}/nix/node_modules.nix" (
+    # bun install output differs from upstream's pinned bun, so pin the
+    # node_modules hashes produced by the unstable bun passed in here.
     {
       inherit bun;
       rev = source.shortRev;
     }
     // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux") {
       hash = "sha256-qRaUFo09EK62LP1xIAjZbIPnFhomyVZACnGxOMiWvsU=";
+    }
+    // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") {
+      hash = "sha256-i5wVLbUhG+4u3OrhaN4HRUA3O190rgsqMN5Pu+X9OWA=";
     }
   );
   upstream = pkgs.callPackage "${source}/nix/opencode.nix" (
