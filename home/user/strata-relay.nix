@@ -87,7 +87,7 @@ let
     export STRATA_ROUTE_TAIL_SKIP=0
     cd "$source"
     exec "$source/.venv/bin/python" serve/server.py --engine strata \
-      --config ${lib.escapeShellArg runtimeConfig} --host 127.0.0.1 --port 8081 --fit-max-tokens
+      --config ${lib.escapeShellArg runtimeConfig} --host 0.0.0.0 --port 8081 --fit-max-tokens
   '';
   server = pkgs.writeShellApplication {
     name = "strata-relay-server";

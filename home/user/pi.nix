@@ -24,22 +24,18 @@ let
   sopsApiKey =
     name:
     "!${readSopsSecret}/bin/read-sops-secret ${lib.escapeShellArg config.sops.secrets.${name}.path}";
-  qwenBaseUrl =
-    host:
-    if hostName == host then "http://127.0.0.1:8081/v1" else "http://${host}.taile09696.ts.net:8081/v1";
   # Preserve the source document's layout; builtins.toJSON would minify it.
   piModelsJson = pkgs.runCommand "pi-models.json" { src = ../config/pi/models.json; } ''
     ${pkgs.jq}/bin/jq \
       --arg go ${lib.escapeShellArg (sopsApiKey "OPENCODE_GO_KEY")} \
       --arg relay ${lib.escapeShellArg (sopsApiKey "LOCAL_LLM_RELAY_API_KEY")} \
       --arg andromeda ${lib.escapeShellArg (sopsApiKey "LOCAL_LLM_ANDROMEDA_API_KEY")} \
-      --arg relayUrl ${lib.escapeShellArg (qwenBaseUrl "relay")} \
-      --arg andromedaUrl ${lib.escapeShellArg (qwenBaseUrl "andromeda")} \
+      --arg host ${lib.escapeShellArg hostName} \
       '.providers["opencode-go"].apiKey = $go
        | .providers.relay.apiKey = $relay
        | .providers.andromeda.apiKey = $andromeda
-       | .providers.relay.baseUrl = $relayUrl
-       | .providers.andromeda.baseUrl = $andromedaUrl' \
+       | if $host == "relay" or $host == "andromeda"
+         then .providers[$host].baseUrl = "http://127.0.0.1:8081/v1" else . end' \
       "$src" > "$out"
   '';
 in

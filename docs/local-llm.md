@@ -208,12 +208,13 @@ profile; it does not replace the shared Pi configuration. See
 ### OpenAI / Astra in Pi
 
 Use plain `pi` for cloud models and local Qwen providers. Relay's Strata API
-listens on localhost only. Andromeda's API is available on localhost and over
+is available on localhost and at `http://relay.fritz.box:8081/v1` on the LAN.
+Andromeda's API is available on localhost and over
 Tailscale. OpenCode lists the same model IDs under the `relay` and `andromeda`
 providers. The API keys live in SOPS.
 
 ```sh
-pi --provider relay --model qwen3.8-flash-next-unsloth-ud-iq4_xs-v31  # On Relay
+pi --provider relay --model qwen3.8-flash-next-unsloth-ud-iq4_xs-v31
 pi --provider andromeda --model qwen3.8-flash-next
 ```
 
@@ -306,7 +307,7 @@ Andromeda's API base URL is `http://127.0.0.1:8081/v1` locally or
 `http://andromeda.taile09696.ts.net:8081/v1` over Tailscale. Use the existing
 Bearer API key and `qwen3.8-flash-next` alias. The LAN can also reach port
 8081 with the key.
-Relay's Metal endpoint is localhost-only, with model ID
+Relay's Metal endpoint uses the same key on the LAN and localhost, with model ID
 `qwen3.8-flash-next-unsloth-ud-iq4_xs-v31`; see its separate [operations guide](strata-relay.md).
 Plain API clients must implement their own tool loop.
 

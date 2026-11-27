@@ -1,7 +1,7 @@
 {
   "providers": {
     "relay": {
-      "baseUrl": "http://relay.taile09696.ts.net:8081/v1",
+      "baseUrl": "http://relay.fritz.box:8081/v1",
       "api": "openai-completions",
       "models": [
         {

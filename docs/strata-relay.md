@@ -4,9 +4,9 @@ Relay runs Qwen3.8-Flash-Next Unsloth Dynamic v3.1 (`UD-IQ4_XS-v31`) through
 Strata's native Metal engine. Its API model ID is
 `qwen3.8-flash-next-unsloth-ud-iq4_xs-v31`.
 Hermes keeps the existing Qwen topic and `qwen-local` provider, using the
-key-authenticated API at `http://127.0.0.1:8081/v1`. This is local-only;
-it does not replace Tailscale or publish an unauthenticated model on the LAN.
-Other hosts keep their existing inference configuration.
+key-authenticated API at `http://127.0.0.1:8081/v1`. OpenCode and Pi on the
+LAN use `http://relay.fritz.box:8081/v1` with the Relay API key. The service
+listens on all IPv4 interfaces. Do not forward port 8081 from the internet.
 
 The approximately 4-bit model favors quality over speed. On the 64 GiB M4 Pro
 its experts stream from the internal SSD into a bounded memory arena. It streams
