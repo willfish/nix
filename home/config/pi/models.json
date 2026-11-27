@@ -5,8 +5,8 @@
       "api": "openai-completions",
       "models": [
         {
-          "id": "huihui-qwen3.6-35b-a3b",
-          "name": "Relay Huihui Qwen 3.6 35B-A3B",
+          "id": "qwen3.8-flash-next-unsloth-ud-iq4_xs-v31",
+          "name": "Relay Qwen 3.8 Flash-Next (Unsloth v3.1)",
           "reasoning": true,
           "input": ["text"],
           "contextWindow": 65536,

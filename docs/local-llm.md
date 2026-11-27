@@ -207,16 +207,14 @@ profile; it does not replace the shared Pi configuration. See
 
 ### OpenAI / Astra in Pi
 
-Use plain `pi` for cloud models and for remote Qwen. `qwen-pi` remains the
-isolated local launcher on the GPU host. Every Home Manager home can select
-`relay/huihui-qwen3.6-35b-a3b` or `andromeda/qwen3.8-27b`. Other machines use
-Tailscale; the GPU host talks to its own model on localhost. Grok stays the
-default. The API keys live in sops, not in Git. Full Pi skills and
-subagents make a heavier prompt than `qwen-pi`.
+Use plain `pi` for cloud models and local Qwen providers. Relay's Strata API
+listens on localhost only. Andromeda's API is available on localhost and over
+Tailscale. OpenCode lists the same model IDs under the `relay` and `andromeda`
+providers. The API keys live in SOPS.
 
 ```sh
-pi --provider relay --model huihui-qwen3.6-35b-a3b
-pi --provider andromeda --model qwen3.8-27b
+pi --provider relay --model qwen3.8-flash-next-unsloth-ud-iq4_xs-v31  # On Relay
+pi --provider andromeda --model qwen3.8-flash-next
 ```
 
 Home Manager deploys a credential-free ChatGPT subscription definition for
