@@ -114,6 +114,13 @@ overlay_box() {
 }
 
 camera_device() {
+  # Use the external camera's stable ID; /dev/video numbers can change.
+  local preferred=/dev/v4l/by-id/usb-Razer_Inc_Razer_Kiyo_Pro_Ultra-video-index0
+  if [[ -c $preferred ]]; then
+    printf '%s\n' "$preferred"
+    return 0
+  fi
+
   local dev index
   for dev in /dev/video*; do
     [[ -e $dev ]] || return 1
