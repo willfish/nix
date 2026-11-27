@@ -7,7 +7,8 @@
   servedName = "qwen3.8-flash-next-unsloth-ud-iq4_xs-v31";
   sizeGb = 93.7;
   cards = 1;
-  image = "ghcr.io/niko1221/strata@sha256:871e1e79c063b240184b08075ba0676b6cd2585eac11f76a9d179f4739d2c857";
+  # Strata 0.2.22, flavor cuda13 (engine strata-engine 0.1.69, Control 0.1.69).
+  image = "ghcr.io/niko1221/strata@sha256:bd66d4d33ddb896274c72d2fc05a425670f544e1506afa5401621f6d5b6c70ca";
   minDriver = "580.65";
   weights = [
     {
@@ -41,12 +42,10 @@
       "-c"
       ''
         export STRATA_CONTROL_INSTALL=1 STRATA_INSTALL_DIR=/prepared/install
-        mkdir -p "$STRATA_INSTALL_DIR/third_party"
-        ln -s /opt/strata/seed/third_party/llama.cpp "$STRATA_INSTALL_DIR/third_party/llama.cpp"
         cd /opt/strata/terminal
         exec python/bin/python3 setup.py --yes --family unsloth --model UD-IQ4_XS-v31 \
           --gguf-dir /models/v31-iq4/UD-IQ4_XS --data-dir /prepared --context 262144 \
-          --vision no --mtp off --parallel 1 --vram-reserve-mib 4096 \
+          --vision no --mtp off --parallel 1 --vram-reserve-mib 4608 \
           --host 0.0.0.0 --port 8080 --no-browser --no-start
       ''
     ];

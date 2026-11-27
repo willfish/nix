@@ -33,13 +33,15 @@ to the recipe's served model. The clients keep their conservative 128K context
 and 16K output limits, while the recipe advertises 256K. A declared server
 limit is not evidence of a successful full-context run.
 
-The recipe pins Strata v0.2.11's CUDA 13 image (engine 0.1.57) and Unsloth's
+The recipe pins Strata v0.2.22's CUDA 13 image (engine 0.1.69) and Unsloth's
 November 4 Dynamic v3.1 `UD-IQ4_XS` GGUF shards at revision
 `d96201194f103c906994f283f504209dc8d2a10c`. Local AI verifies the downloads,
 prepares the pack privately, then mounts both weights and pack read-only.
 The engine is reachable only through the authenticated gateway. Its key is not
-passed into the engine. Drafting and expert skipping are disabled; 4 GiB of VRAM
-is reserved for the desktop. The recipe permits one running inference request.
+passed into the engine. MTP/DFlash2 drafting and expert skipping are
+disabled; the engine's built-in text lookahead remains; the 4.5 GiB VRAM
+reserve is a configured target, and the memory actually free varies with
+desktop load. The recipe permits one running inference request.
 Reasoning and visible output share the client's output allowance.
 
 The former `qwen3.8-flash-next.sglang.256k.rtx-5090-32gb` recipe and its
