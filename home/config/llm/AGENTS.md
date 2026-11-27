@@ -44,6 +44,8 @@ Before completion claims, commits, pushes, PR creation/update or branch extracti
 
 ## Tools and secrets
 
+For SSH to home hosts on the LAN, prefer `<host>.fritz.box`. If a short hostname reaches Tailscale and it is unavailable or requires reauthentication, try the LAN name before asking for login.
+
 Use ephemeral Nix for missing tools: `nix shell nixpkgs#<package> -c <command>` or `nix-shell -p <package>`. Never add temporary tooling to manifests, Home Manager, overlays or flake inputs. No host installers unless the user explicitly requests persistent installation.
 
 For direnv repos use `direnv exec <repo-path> <command>` unless that exact checkout's environment is known active. In worktrees copy/symlink a missing untracked source .envrc, inspect it if unfamiliar and allow when appropriate. Never bypass a missing environment with direct package-manager setup.

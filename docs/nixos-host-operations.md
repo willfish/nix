@@ -468,10 +468,10 @@ just terminus-health  # detailed ZFS/SMART check; prompts for remote sudo
 The routine report includes failed systemd units, `zpool status -x`, the next
 scheduled ZFS scrub, and `smartd` state when those services exist on a host.
 
-Tailscale SSH may require interactive re-authentication. Once authenticated, collect the read-only pre-activation state:
+On the home LAN, use `terminus.fritz.box` for native SSH. If `ssh terminus` uses Tailscale and requires reauthentication, try the LAN name. Collect the read-only pre-activation state:
 
 ```bash
-ssh -t terminus 'sudo zpool status -P; systemctl --failed; systemctl is-active immich-server audiobookshelf'
+ssh -t terminus.fritz.box 'sudo zpool status -P; systemctl --failed; systemctl is-active immich-server audiobookshelf'
 ```
 
 After `nh os test` or `nh os switch`, repeat that command and additionally confirm the services over LAN or Tailscale. Include the ZFS and SMART health checks:
