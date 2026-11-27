@@ -9,12 +9,12 @@ let
   isAutomationDarwin = pkgs.stdenv.isDarwin && config.dotfiles.role == "automation";
   isAndromeda = pkgs.stdenv.isLinux && hostName == "andromeda";
   isRelay = isAutomationDarwin && hostName == "relay";
-  # Relay's Hermes Qwen topic stays on 127.0.0.1:8081. Strata owns that port.
+  # Relay's Hermes Qwen topic stays on 127.0.0.1:8081, served by Inkling MLX.
   # Do not start llama-server or the chat-UI helper on this host.
   serveDarwinLlama = isAutomationDarwin && !isRelay;
   # Hermes rejects models serving fewer than 64,000 tokens.
   hermesContextSize = 65536;
-  hermesReasoning = if isRelay then "high" else "medium";
+  hermesReasoning = "medium";
   llamaCpp =
     if isAndromeda then
       (pkgs.llama-cpp.override {
@@ -73,7 +73,7 @@ let
   hermesOverlay = pkgs.writeText "local-qwen-hermes.json" (
     builtins.toJSON {
       model = {
-        default = if isRelay then "qwen3.8-flash-next-unsloth-ud-iq4_xs-v31" else modelAlias;
+        default = if isRelay then "inkling-2-mini" else modelAlias;
         provider = "qwen-local";
         base_url = "http://127.0.0.1:8081/v1";
         api_key = "";
@@ -86,19 +86,24 @@ let
           api_key = "";
           key_env = "LOCAL_QWEN_API_KEY";
           api_mode = "chat_completions";
-          extra_body = {
-            chat_template_kwargs = {
-              enable_thinking = true;
-              preserve_thinking = true;
-              reasoning_effort = hermesReasoning;
-            };
-            temperature = 1.0;
-            top_p = 0.95;
-            top_k = 20;
-            min_p = 0.0;
-            presence_penalty = 0.0;
-            repetition_penalty = 1.0;
-          };
+          extra_body =
+            if isRelay then
+              # MLX reads the effort from the OpenAI request body.
+              { reasoning_effort = hermesReasoning; }
+            else
+              {
+                chat_template_kwargs = {
+                  enable_thinking = true;
+                  preserve_thinking = true;
+                  reasoning_effort = hermesReasoning;
+                };
+                temperature = 1.0;
+                top_p = 0.95;
+                top_k = 20;
+                min_p = 0.0;
+                presence_penalty = 0.0;
+                repetition_penalty = 1.0;
+              };
         }
       ];
       agent = {
@@ -130,15 +135,19 @@ let
           timeout = 1800;
           reasoning_effort = "none";
           fallback_chain = [ ];
-          extra_body = {
-            chat_template_kwargs = {
-              enable_thinking = false;
-              preserve_thinking = true;
-            };
-            temperature = 0.7;
-            top_p = 0.8;
-            presence_penalty = 1.5;
-          };
+          extra_body =
+            if isRelay then
+              { reasoning_effort = "none"; }
+            else
+              {
+                chat_template_kwargs = {
+                  enable_thinking = false;
+                  preserve_thinking = true;
+                };
+                temperature = 0.7;
+                top_p = 0.8;
+                presence_penalty = 1.5;
+              };
         };
         title_generation = {
           enabled = false;

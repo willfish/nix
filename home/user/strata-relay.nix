@@ -96,7 +96,7 @@ let
     '';
   };
   job = {
-    ProgramArguments = [ "${server}/bin/strata-relay-server" ];
+    ProgramArguments = [ "${inkling.server}/bin/inkling-relay-server" ];
     RunAtLoad = true;
     KeepAlive.SuccessfulExit = false;
     ThrottleInterval = 30;
@@ -104,12 +104,15 @@ let
     StandardOutPath = "${config.home.homeDirectory}/Library/Logs/strata.log";
     StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/strata.log";
   };
+  inkling = import ./inkling-relay.nix { inherit config lib pkgs; };
 in
 {
   config = lib.mkIf enabled {
     home.packages = [
       setup
       server
+      inkling.setup
+      inkling.server
     ];
     dotfiles.darwinDaemons.strata = lib.mkIf config.dotfiles.darwinSystemServices job;
     launchd.agents.strata = lib.mkIf (!config.dotfiles.darwinSystemServices) {

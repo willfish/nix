@@ -5,9 +5,10 @@
       "api": "openai-completions",
       "models": [
         {
-          "id": "qwen3.8-flash-next-unsloth-ud-iq4_xs-v31",
-          "name": "Relay Qwen 3.8 Flash-Next (Unsloth v3.1)",
+          "id": "inkling-2-mini",
+          "name": "Relay Inkling 2 Mini (MLX 4-bit)",
           "reasoning": true,
+          "thinkingLevelMap": { "off": "none" },
           "input": ["text"],
           "contextWindow": 65536,
           "maxTokens": 16384,
@@ -15,9 +16,8 @@
           "compat": {
             "supportsStore": false,
             "supportsDeveloperRole": false,
-            "supportsReasoningEffort": false,
-            "maxTokensField": "max_tokens",
-            "thinkingFormat": "qwen-chat-template"
+            "supportsReasoningEffort": true,
+            "maxTokensField": "max_tokens"
           }
         }
       ]

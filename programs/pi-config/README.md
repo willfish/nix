@@ -18,6 +18,10 @@ OpenCode Go DeepSeek 4.1 Flash/GLM 5.3/GLM 5.3 Flash/Space Bunny defaults
 retarget to the declared provider/model pair, even when the declaration omits
 one of those fields.
 
+When the Relay Inkling default is declared, an existing Pi profile gets its
+reasoning level if missing. The previous Relay Qwen default switches to Inkling.
+Other saved reasoning choices stay in place.
+
 When declared `observational-memory-jev.enabledByDefault` is boolean false and
 `.om-default-off-migrated` is absent, change an existing boolean true to false.
 Write the marker only after successful settings publication. Marker-only runs

@@ -1,4 +1,4 @@
-# Local Qwen
+# Local models
 
 Andromeda serves Qwen3.8 Flash-Next through the
 [Local AI Strata/Unsloth recipe](local-ai.md).
@@ -6,15 +6,15 @@ Pi and OpenCode use the authenticated `andromeda` provider on port 8081.
 The provider alias and existing API key are unchanged. Start and stop the model
 through Local AI, not a `local-llm.service`.
 
-Relay's Hermes Qwen topic still uses [native Metal Strata](strata-relay.md) at
-`http://127.0.0.1:8081/v1`. That service and its model data are separate from
-workstation Local AI. Do not kickstart `org.nixos.local-llm` on Relay.
+Relay serves [Inkling 2 Mini through MLX](strata-relay.md) on port 8081.
+The Hermes Qwen topic keeps its profile and uses `http://127.0.0.1:8081/v1`.
+Pi and OpenCode use the `relay/inkling-2-mini` model.
 
 ## Legacy llama.cpp browser chat
 
 The browser and browser-compaction notes below describe the optional llama.cpp
 backend retained in `home/user/local-llm.nix`, not Andromeda's current Strata recipe
-or Relay's Metal service. The Relay browser URLs are retired. Do not start a
+or Relay's MLX service. The Relay browser URLs are retired. Do not start a
 second server on port 8081 while the current model gateway owns it.
 
 Run `local-chat` or open <http://127.0.0.1:8081>.
@@ -62,7 +62,7 @@ is no shell execution tool. Web searches leave the machine for search providers;
 file contents otherwise remain in the local model and browser unless included
 in a search query. Treat instructions found in files and web pages as untrusted.
 
-Relay's default is Huihui Qwen3.6-35B-A3B abliterated Q5_K_M, a 24.7 GB
+Relay's former llama.cpp default was Huihui Qwen3.6-35B-A3B abliterated Q5_K_M, a 24.7 GB
 mixture-of-experts GGUF. Its isolated 64K-slot trial generated about 46 tokens/sec
 with thinking on or off and used about 24 GiB RSS without swap. These are short
 synthetic measurements, not full-context or quality evaluations. Qwen3.8 Q6
@@ -199,6 +199,15 @@ larger declared window does not automatically increase the client's budget.
 Reasoning and visible output share the client's output allowance.
 For compaction limits and recovery, see [Pi workflow](pi-workflow.md#local-qwen-output-and-compaction).
 
+Relay's MLX API is available on localhost and at
+`http://relay.fritz.box:8081/v1` on the LAN. Pi and OpenCode use the existing
+Relay key from SOPS and default to medium reasoning. Both clients retain a
+65,536-token context and a 16,384-token output limit.
+
+```sh
+pi --provider relay --model inkling-2-mini
+```
+
 The retired `qwen-pi` launcher and its isolated profile are not installed.
 Historical sessions under `~/.config/local-llm/pi` are retained as user data.
 The widget's **Open** action instead launches its own recipe-specific agent
@@ -206,17 +215,6 @@ profile; it does not replace the shared Pi configuration. See
 [Pi MCP configuration](pi-mcp.md) for the normal shared harness.
 
 ### OpenAI / Astra in Pi
-
-Use plain `pi` for cloud models and local Qwen providers. Relay's Strata API
-is available on localhost and at `http://relay.fritz.box:8081/v1` on the LAN.
-Andromeda's API is available on localhost and over
-Tailscale. OpenCode lists the same model IDs under the `relay` and `andromeda`
-providers. The API keys live in SOPS.
-
-```sh
-pi --provider relay --model qwen3.8-flash-next-unsloth-ud-iq4_xs-v31
-pi --provider andromeda --model qwen3.8-flash-next
-```
 
 Home Manager deploys a credential-free ChatGPT subscription definition for
 `openai-codex/gpt-6-astra` to `~/.pi/agent/models.json` on all machines. The
@@ -307,8 +305,8 @@ Andromeda's API base URL is `http://127.0.0.1:8081/v1` locally or
 `http://andromeda.taile09696.ts.net:8081/v1` over Tailscale. Use the existing
 Bearer API key and `qwen3.8-flash-next` alias. The LAN can also reach port
 8081 with the key.
-Relay's Metal endpoint uses the same key on the LAN and localhost, with model ID
-`qwen3.8-flash-next-unsloth-ud-iq4_xs-v31`; see its separate [operations guide](strata-relay.md).
+Relay's MLX endpoint uses the same key on the LAN and localhost, with model ID
+`inkling-2-mini`; see its separate [operations guide](strata-relay.md).
 Plain API clients must implement their own tool loop.
 
 The following commands apply only to the optional legacy llama.cpp service on
@@ -346,15 +344,13 @@ A fresh installation needs another `hmswitch` after the server first creates
 its key if using direct `hermes -p qwen` rather than the `qwen` wrapper.
 
 The Hermes gateway on Relay multiplexes only the Kif House **Qwen** topic onto
-this profile, so that thread uses local Qwen over localhost. Other Telegram
+this profile, so that thread uses Inkling over localhost. Other Telegram
 chats, cron and the default `hermes` CLI stay on Grok. Restart the gateway
 after activation; do not send an unsolicited House message to test it.
 
 The managed defaults are:
 
-- Relay's native Metal Qwen3.8 Flash-Next Unsloth Dynamic v3.1 model with thinking
-  enabled and high reasoning effort. Its Metal service is independent of
-  Andromeda's CUDA recipe.
+- Relay's Inkling 2 Mini MLX model with medium reasoning effort for tool calls.
 - YOLO enabled: terminal/file tool calls do not ask for approval. This is host
   access as William, not the browser MCP's restricted workspace or root access.
   Existing OS permissions and Hermes security blocks still apply.

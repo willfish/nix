@@ -257,9 +257,9 @@ in
             "opencode-go" = {
               settings.apiKey = "{env:OPENCODE_GO_KEY}";
             };
-            relay =
-              localProvider "Relay" (qwenBaseUrl "relay") "LOCAL_LLM_RELAY_API_KEY"
-                piModels.providers.relay.models;
+            relay = lib.recursiveUpdate (localProvider "Relay" (qwenBaseUrl "relay") "LOCAL_LLM_RELAY_API_KEY"
+              piModels.providers.relay.models
+            ) { settings.reasoningEffort = "medium"; };
             andromeda =
               localProvider "Andromeda" (qwenBaseUrl "andromeda") "LOCAL_LLM_ANDROMEDA_API_KEY"
                 piModels.providers.andromeda.models;

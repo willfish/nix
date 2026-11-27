@@ -46,12 +46,26 @@ int config_settings(const char *defaults_path, const char *settings_path) {
        *model = get(settings, "defaultModel");
   if (unhashable(provider) || unhashable(model))
     goto done;
+  const char *level_key = "relay/inkling-2-mini";
+  Json *inkling_level = get(get(defaults, "modelThinkingLevels"), level_key);
+  bool inkling_declared = inkling_level && inkling_level->kind == J_STRING;
+  Json *levels = get(settings, "modelThinkingLevels");
+  if (inkling_declared && levels && levels->kind == J_OBJECT &&
+      !get(levels, level_key)) {
+    set(levels, level_key, json_ref(inkling_level));
+    changed = true;
+  }
   if (old_pair(provider, model)) {
     const char *names[] = {"defaultProvider", "defaultModel"};
     for (size_t i = 0; i < 2; i++) {
       Json *value = get(defaults, names[i]);
       set(settings, names[i], value ? json_ref(value) : json_node(J_NULL));
     }
+    changed = true;
+  } else if (inkling_declared && is_string(provider, "relay") &&
+             is_string(model, "qwen3.8-flash-next-unsloth-ud-iq4_xs-v31")) {
+    const char inkling[] = "inkling-2-mini";
+    set(settings, "defaultModel", json_text(inkling, sizeof inkling - 1));
     changed = true;
   }
   bool marker = false;

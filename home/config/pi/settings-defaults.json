@@ -5,7 +5,8 @@
   "modelThinkingLevels": {
     "andromeda/qwen3.8-flash-next": "high",
     "opencode-go/glm-5.3-flash": "high",
-    "openai-codex/gpt-6.1-sol": "max"
+    "openai-codex/gpt-6.1-sol": "max",
+    "relay/inkling-2-mini": "medium"
   },
   "quietStartup": true,
   "editorPaddingX": 1,
