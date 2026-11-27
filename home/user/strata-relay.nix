@@ -100,7 +100,8 @@ let
     RunAtLoad = true;
     KeepAlive.SuccessfulExit = false;
     ThrottleInterval = 30;
-    ProcessType = "Background";
+    # Background launchd scheduling throttles MLX decode even with idle memory.
+    ProcessType = "Interactive";
     StandardOutPath = "${config.home.homeDirectory}/Library/Logs/strata.log";
     StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/strata.log";
   };
