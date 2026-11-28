@@ -2,10 +2,11 @@
   config,
   lib,
   pkgs,
+  modelRoot,
 }:
 let
   data = "${config.xdg.dataHome}/inkling-relay";
-  model = "${data}/mlx-4bit";
+  model = "${modelRoot}/Inkling/mlx-4bit";
   environment = "${data}/mlx-vlm-0.8.1";
   keyFile = "${config.xdg.configHome}/local-llm/api-key";
   repository = "VisualInference/Inkling-2-Mini-MLX-4bit";
@@ -66,6 +67,7 @@ in
     runtimeInputs = [ pkgs.uv ];
     text = ''
       umask 077
+      test -d ${lib.escapeShellArg modelRoot} || { echo 'Mount the Expansion model SSD first.' >&2; exit 1; }
       export UV_PYTHON_INSTALL_DIR=${lib.escapeShellArg "${data}/python"}
       environment=${lib.escapeShellArg environment}
       if [ -f "$environment/.prepared" ] &&

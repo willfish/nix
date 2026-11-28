@@ -11,7 +11,8 @@ let
   revision = "c3b3f5035506f3e966f1b4b7b188aeaabae92f1d";
   model = "UD-IQ4_XS-v31";
   tag = "unsloth-${lib.toLower model}";
-  data = "${config.xdg.dataHome}/strata";
+  modelRoot = "/Volumes/Expansion/Models";
+  data = "${modelRoot}/Strata";
   keyFile = "${config.xdg.configHome}/local-llm/api-key";
   runtimeConfig = "${config.xdg.stateHome}/strata/runtime.json";
   # Build against Apple's current SDK, not the Nix development shell's older SDK.
@@ -29,6 +30,7 @@ let
     runtimeInputs = [ pkgs.git ];
     text = ''
       umask 077
+      test -d ${lib.escapeShellArg modelRoot} || { echo 'Mount the Expansion model SSD first.' >&2; exit 1; }
       source=${lib.escapeShellArg source}
       if [ ! -d "$source/.git" ]; then
         mkdir -p "$(dirname "$source")"
@@ -105,10 +107,18 @@ let
     StandardOutPath = "${config.home.homeDirectory}/Library/Logs/strata.log";
     StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/strata.log";
   };
-  inkling = import ./inkling-relay.nix { inherit config lib pkgs; };
+  inkling = import ./inkling-relay.nix {
+    inherit
+      config
+      lib
+      pkgs
+      modelRoot
+      ;
+  };
 in
 {
   config = lib.mkIf enabled {
+    home.sessionVariables.OLLAMA_MODELS = "${modelRoot}/Ollama/models";
     home.packages = [
       setup
       server
